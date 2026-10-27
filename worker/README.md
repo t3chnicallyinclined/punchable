@@ -16,6 +16,24 @@ Each pass it also pulls what he did on the phone back to the PC:
   still replay after the local ones; otherwise reported and left alone.
 That is what lets `infra/ship.sh dbload` run later without losing phone work (it refuses until this has run).
 
+## Online-first mode (`PK_ONLINE_FIRST=1` or `--online`)
+After the cutover the database on the server is the source of truth and this PC keeps nothing as the truth
+(`worker/online.py`):
+- each job runs on a disposable **workspace** (`<PK_CACHE_DIR>/worker`, or `PK_WORKSPACE`) rebuilt from the API
+  (`/api/worker/files`, decisions, creative logs), never on your data folder;
+- results go back through `/api/worker/files` (pipeline output, transcripts), `/api/worker/ideas` and
+  `/api/worker/events`, each with its actor (`import:youtube`, `import:upload`, `ai:attach`, ...); court material
+  is checked with the legal rules here and again on the server;
+- every recording is deleted from the workspace after the job (YouTube audio, uploads, decoded wavs), also when the
+  job fails; what stays online is the transcript, the jokes and laughs, and a reference (the video id, the Drive
+  file, the file's name and date);
+- two more job kinds run: `embed` (vectors for new notes) and `memolink` (memo <-> bit linking, offline Claude);
+- nothing is pulled into a data folder. `python -m worker.online pull --into DIR` writes everything the database
+  holds into DIR (the rollback path).
+gsync and the voice-memo processor follow the same switch (`PK_ONLINE_FIRST=1` in `~/.punchable/punchable.env`,
+then re-run both `install_task.ps1`): they write through the worker routes with the worker's token, post their own
+state, and keep no memo audio.
+
 ## One-time setup
 1. After `infra/ship.sh keycloak` has created client `pk-worker`: Keycloak admin console (https://auth.punchable.io,
    realm **punchable**) > Clients > `pk-worker` > Credentials > copy the client secret.
