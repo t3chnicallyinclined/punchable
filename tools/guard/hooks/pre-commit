@@ -1,0 +1,6 @@
+#!/bin/sh
+# Punchable commit guard: blocks a commit that adds secrets, private terms or the owner's own material.
+# Installed by tools/guard/install.ps1 (git config core.hooksPath tools/guard/hooks). Logic: tools/guard/check.py.
+PY="$(git config --get punchable.guardPython)"
+[ -n "$PY" ] || PY="${PK_GUARD_PY:-python}"
+exec "$PY" "$(git rev-parse --show-toplevel)/tools/guard/check.py" --staged
