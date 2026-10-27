@@ -1,0 +1,62 @@
+# Punchable web app: the static Expo web export served by unprivileged nginx (infra/web/Dockerfile).
+# PREPARED, NOT ROLLED OUT until told. __IMAGE_REF__ filled by infra/ship.sh rollout web.
+# Zero-downtime rollout (2026-10-26, after ~15 s of 502 with 1 replica): surge one new pod, keep the old one until the
+# new one is Ready, and sleep in preStop so ingress-nginx drops the old endpoint before nginx gets its stop signal.
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-web, namespace: punchable }
+spec:
+  selector: { app: punchable-web }
+  ports: [ { port: 80, targetPort: 8080 } ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-web, namespace: punchable }
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  minReadySeconds: 3
+  progressDeadlineSeconds: 300
+  selector: { matchLabels: { app: punchable-web } }
+  template:
+    metadata: { labels: { app: punchable-web } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: __IMAGE_REF__
+          ports: [ { containerPort: 8080 } ]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 250m, memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 30
+            timeoutSeconds: 3
+          lifecycle:
+            # nginx-unprivileged (Debian) has /bin/sleep; its stop signal is SIGQUIT (graceful) after this
+            preStop: { exec: { command: ["sleep", "10"] } }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 16Mi }

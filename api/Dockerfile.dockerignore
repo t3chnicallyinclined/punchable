@@ -1,0 +1,11 @@
+# BuildKit reads <Dockerfile>.dockerignore: send only what api/Dockerfile copies (never app/node_modules, never data).
+*
+!api/entry.py
+!api/requirements.txt
+!api-dev/*.py
+!db/*.py
+!db/*.surql
+!tools/explorer/kb.py
+!creative/*.py
+!infer/__init__.py
+!infer/scriptdiff.py

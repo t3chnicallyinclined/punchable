@@ -1,0 +1,20 @@
+# Register (or remove) the Punchable home worker as a per-user scheduled task that starts at logon.
+#   powershell -ExecutionPolicy Bypass -File worker\install_task.ps1 [-Remove]
+param([switch]$Remove)
+$ErrorActionPreference = "Stop"
+$Name = "Punchable worker"
+if ($Remove) { Unregister-ScheduledTask -TaskName $Name -Confirm:$false; "removed $Name"; return }
+$Desk = Split-Path -Parent $PSScriptRoot
+$Py = (Get-Command python).Source
+$Log = Join-Path $env:USERPROFILE "punchable-data\db\punchable\logs"
+New-Item -ItemType Directory -Force $Log | Out-Null
+# cmd /c so stdout+stderr go to the log; the secret is read from secrets.env by the worker, never passed here.
+$Action = New-ScheduledTaskAction -Execute "cmd.exe" -WorkingDirectory $Desk `
+  -Argument "/c `"`"$Py`" -m worker >> `"$Log\worker.log`" 2>&1`""
+$Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$Settings = New-ScheduledTaskSettingsSet -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
+  -ExecutionTimeLimit (New-TimeSpan -Days 0) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Settings $Settings `
+  -Description "Punchable: runs queued drafts/ask/set jobs from punchable.io locally; pulls phone decisions" -Force | Out-Null
+Start-ScheduledTask -TaskName $Name
+"registered and started: $Name (log: $Log\worker.log)"

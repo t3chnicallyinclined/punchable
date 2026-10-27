@@ -1,0 +1,31 @@
+# One public host: / -> web, /api -> API (same origin, so no CORS and one certificate).
+# Apply ONLY after __PK_DOMAIN__ resolves to the server AND the web/API Deployments are rolled out (infra/ship.sh ingress).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable
+  namespace: punchable
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    # Set uploads (audio) up to 1 GB stream through to the API (api-dev MAX_UPLOAD).
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: punchable-api, port: { number: 80 } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: punchable-web, port: { number: 80 } } }

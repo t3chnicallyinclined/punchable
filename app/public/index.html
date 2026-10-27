@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <!-- Punchable brand (docs/DESIGN.md §7). Files come from app/public/, made by app/scripts/brand/brand.mjs.
+         Absolute URLs use https://punchable.io; infra/web/Dockerfile rewrites them to PK_DOMAIN. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Punchable" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Punchable" />
+    <meta property="og:title" content="Punchable" />
+    <meta property="og:description" content="Every bit you've written, and how long they laughed." />
+    <meta property="og:url" content="https://punchable.io/" />
+    <meta property="og:image" content="https://punchable.io/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="robots" content="noindex" />
+    <!-- The react-native-web style reset, plus the app background so a load never flashes white. -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background: #111214;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript> Punchable needs JavaScript. </noscript>
+    <div id="root"></div>
+  </body>
+</html>

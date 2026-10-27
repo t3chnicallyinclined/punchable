@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Punchable",
+    "slug": "punchable",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "punchable",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#111214",
+    "ios": {
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.tristanrega.punchable",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#111214",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Punchable",
+      "backgroundColor": "#111214",
+      "themeColor": "#111214",
+      "description": "Every bit you've written, and how long they laughed."
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#111214",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Punchable records your sets and voice notes so it can find each joke and measure the laughs. Audio goes only to your own server."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": false
+    }
+  }
+}

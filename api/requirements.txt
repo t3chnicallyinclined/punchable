@@ -1,0 +1,4 @@
+# Hosted API + dbload (api/Dockerfile). Wheels only; the same versions the tests run on (Python 3.13).
+cbor2==6.1.5
+websocket-client==1.9.0
+numpy==2.2.6

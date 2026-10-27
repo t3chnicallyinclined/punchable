@@ -1,0 +1,54 @@
+{
+ "run_id": "auto-20261025-2215-laughs",
+ "detector": "fixture@0",
+ "room_baseline": {
+  "rms_db": -38.0
+ },
+ "laughs": [
+  {
+   "id": "l41000",
+   "start_ms": 41000,
+   "end_ms": 43000,
+   "strength": 0.7,
+   "bars": 3,
+   "kind": "laugh",
+   "confidence": 0.8
+  },
+  {
+   "id": "l52000",
+   "start_ms": 52000,
+   "end_ms": 53500,
+   "strength": 0.3,
+   "bars": 1,
+   "kind": "laugh",
+   "confidence": 0.8
+  },
+  {
+   "id": "l60000",
+   "start_ms": 60000,
+   "end_ms": 64000,
+   "strength": 0.95,
+   "bars": 4,
+   "kind": "applause",
+   "confidence": 0.8
+  },
+  {
+   "id": "l101000",
+   "start_ms": 101000,
+   "end_ms": 102500,
+   "strength": 0.5,
+   "bars": 2,
+   "kind": "laugh",
+   "confidence": 0.8
+  },
+  {
+   "id": "l230000",
+   "start_ms": 230000,
+   "end_ms": 231000,
+   "strength": 0.2,
+   "bars": 1,
+   "kind": "laugh",
+   "confidence": 0.8
+  }
+ ]
+}

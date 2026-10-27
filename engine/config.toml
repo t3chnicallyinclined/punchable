@@ -1,0 +1,124 @@
+# Punchable engine configuration. Paths may use {comedy} and {engine}.
+# Every path can be overridden on the CLI (--root makes a whole temp copy point elsewhere).
+
+[paths]
+comedy_dir    = "~/punchable-data"   # or set COMEDY_DIR
+kb_dir        = "{comedy}/kb/v0"
+corpus_dir    = "{comedy}/corpus"          # read: gdocs_units.json, sets/*/transcript.json
+out_corpus_dir = "{comedy}/corpus"         # write: transcripts/laughs of inbox recordings
+inbox_dir     = "{comedy}/tapes/inbox"
+processed_dir = "{comedy}/tapes/processed"
+vocab_file    = "{comedy}/voice/JOKE_SCIENCE.md"
+tools_dir     = "{engine}/../tools"
+vectors_dir   = "{engine}/../tools/kb/cache" # bge-small vectors built by tools/kb (read only)
+bge_dir       = "{engine}/../spikes/01-vector-graph/node_modules/@huggingface/transformers/.cache/Xenova/bge-small-en-v1.5"
+laughs_python = "~/.venvs/laughs/Scripts/python.exe"
+secrets_env   = "~/.punchable/secrets.env"   # ANTHROPIC_API_KEY=... (never logged, never committed)
+
+[inbox]
+set_min_seconds = 240      # without a sidecar, recordings at least this long are sets, shorter are voice notes
+match_candidates = 5
+match_min_confidence = 0.5
+link_candidates = 3
+audio_ext = [".mp3", ".m4a", ".wav", ".opus", ".ogg", ".aac", ".flac", ".webm", ".mp4", ".mov", ".mkv", ".m4v"]
+
+# ---- providers --------------------------------------------------------------
+# kind: openai_compatible | anthropic | claude_code
+[providers.ollama]
+kind = "openai_compatible"
+base_url = "http://127.0.0.1:11434/v1"
+api_key = "ollama"
+autostart = "ollama serve"   # started if the endpoint is down
+
+[providers.anthropic]
+kind = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"    # also read from paths.secrets_env; provider is skipped when neither has it
+max_tokens = 16000
+thinking = "adaptive"
+
+[providers.custom]
+kind = "openai_compatible"
+base_url_env = "ENGINE_CUSTOM_BASE_URL"   # skipped unless set
+api_key_env = "ENGINE_CUSTOM_API_KEY"
+
+[providers.claude_code]
+# Personal use on the comic's own machine via the official Claude Code CLI (his subscription).
+# Not for serving other users. Off unless a task lists it; batch/offline tasks only.
+kind = "claude_code"
+command = "claude"
+enabled = true    # the comic 2026-10-26: "we will use my subscription, this is my personal app"
+concurrency = 1
+timeout_s = 600
+backoff_s = [30, 120]       # waits after a rate-limit error before retrying; then falls back
+
+# ---- routing per task -------------------------------------------------------
+# provider: first available in the list wins. model: per provider.
+# offline = true marks batch tasks; claude_code is only ever used for offline tasks.
+[tasks.default]
+providers = ["ollama"]
+models = { ollama = "gpt-oss:20b", anthropic = "claude-opus-5-5", claude_code = "claude-opus-5-5" }
+reasoning_effort = "low"
+
+[tasks.split]          # recording -> units (writing task)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.match_judge]    # unit vs candidate jokes: yes/no + confidence + reason
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.propose_joke]
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.label]
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.link_judge]
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.ask_plan]       # request path: never claude_code
+providers = ["ollama"]
+models = { ollama = "gpt-oss:20b", anthropic = "claude-opus-5-5" }
+
+[tasks.ask_answer]
+providers = ["ollama"]
+models = { ollama = "gpt-oss:20b", anthropic = "claude-opus-5-5" }
+reasoning_effort = "low"
+
+[tasks.creative_bridge]    # storyboard bridge drafts (creative/story.py)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.creative_punchup]   # working-set punch-up drafts (creative/workingset.py)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.merge_judge]        # same-idea pairs for merge candidates (creative/merge.py); offline batch, cached
+providers = ["claude_code"]  # Claude only: the local 20b judged every same bit "different" in the 2026-10-26 check
+models = { claude_code = "opus" }   # the CLI alias: Claude Code 2.1.278 refuses "claude-opus-5-5" (needs >= 2.1.280)
+offline = true
+
+[tasks.creative_facts]     # Write's "Check this": plain facts with a source each (creative/write.py); the worker checks every source
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.creative_riff]      # Write's folded "Ideas from the AI": drafts grounded in his riff and his own bits (creative/write.py)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+offline = true
+
+[tasks.ask_chat]           # Ask (creative/askchat.py): one turn of a conversation with his notebook; the API retrieves and gates
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }   # the CLI alias (Claude Code 2.1.278 refuses "claude-opus-5-5")
+offline = true

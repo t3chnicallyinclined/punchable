@@ -1,0 +1,56 @@
+# ---- your material never goes in git ------------------------------------------------------------
+# Keep your data folder OUTSIDE the repo (default ~/punchable-data, or COMEDY_DIR / PUNCH_COMEDY).
+/punchable-data/
+/comedy/
+/corpus/
+/tapes/
+/kb/
+/notes/
+*.m4a
+*.mp3
+*.wav
+*.opus
+*.mov
+*.mp4
+*.surql.gz
+gsync/data/
+api-dev/fixtures/sets/
+api-dev/fixtures/inferred.json
+app/public/dev-fixtures/
+tools/kb/cache/
+
+# ---- secrets and local config --------------------------------------------------------------------
+.env
+.env.*
+*.env
+!*.env.example
+secrets.env
+infra/config.env
+.punchable/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+google_token.json
+google_client.json
+google-oauth.env
+keycloak_*_token.json
+legal_rules.json
+gsync_docs.json
+venues.json
+
+# ---- build output and caches ---------------------------------------------------------------------
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+web-build/
+.expo/
+app/dist/
+*.log
+.DS_Store
+Thumbs.db

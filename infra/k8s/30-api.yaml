@@ -1,0 +1,94 @@
+# Punchable API: api/Dockerfile (api/entry.py over api-dev/). Rolled out only when told (infra/ship.sh rollout api).
+# __IMAGE_REF__ is a digest (localhost:32000/punchable-api@sha256:...) filled by infra/ship.sh rollout api.
+# Env contract below: api/entry.py reads these names (or this file changes with it).
+# /api/health is open (no token): 200 while SurrealDB answers (`loaded: false` until the first dbload), 503 when it
+# does not (liveness). /api/health?ready=1 (readiness) is 200 only once this pod SERVES the data (or no dbload has ever
+# run), so a rollout keeps the old pod until the new one has materialized the bundle. Every other route needs a
+# Keycloak token (PK_AUTH=1).
+# Zero-downtime rollout (2026-10-26, after ~15 s of 502 on a 1-replica web rollout): surge one new pod, never take the
+# old one away before the new one is Ready, and on shutdown sleep in preStop so ingress-nginx drops the endpoint
+# before the process gets SIGTERM.
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-api, namespace: punchable }
+spec:
+  selector: { app: punchable-api }
+  ports: [ { port: 80, targetPort: 8080 } ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-api, namespace: punchable }
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  selector: { matchLabels: { app: punchable-api } }
+  template:
+    metadata: { labels: { app: punchable-api } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: api
+          image: __IMAGE_REF__
+          ports: [ { containerPort: 8080 } ]
+          env:
+            - { name: PORT, value: "8080" }
+            - { name: PK_AUTH, value: "1" }
+            - { name: PK_DATA, value: /tmp/punchable }
+            - { name: PUBLIC_URL, value: "https://__PK_DOMAIN__" }
+            - { name: OIDC_ISSUER, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__" }
+            - { name: OIDC_AUDIENCE, value: pk-api }
+            # In-cluster JWKS (same keys as the public issuer; avoids hairpinning through the internet).
+            - { name: OIDC_JWKS_URL, value: "http://keycloak.__PK_KC_NS__.svc.cluster.local/realms/__PK_REALM__/protocol/openid-connect/certs" }
+            - { name: SURREAL_URL, value: "ws://surrealdb:8000/rpc" }
+            - { name: SURREAL_NS, value: punchable }
+            - { name: SURREAL_DB, value: main }
+          envFrom:
+            # SURREAL_API_USER / SURREAL_API_PASS: a DATABASE-level user (EDITOR), never root (infra/db-init.sh).
+            - secretRef: { name: punchable-api }
+            # R2_* for punchable-audio: a bucket-scoped token ONLY (infra/R2_TOKEN.md). Optional until it exists.
+            - secretRef: { name: punchable-r2, optional: true }
+            # ANTHROPIC_API_KEY etc. Optional.
+            - secretRef: { name: punchable-ai, optional: true }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          # Burstable on purpose: evicted before the box's Guaranteed databases.
+          # Request raised 128 -> 256 Mi on evidence (2026-10-26, real data, infra/README.md "Memory"): RSS 146 MiB
+          # warm and idle, 202 MiB peak under 8 concurrent clients (3,416 requests over every route incl. creative).
+          # The 512 Mi limit is unchanged.
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe:
+            httpGet: { path: "/api/health?ready=1", port: 8080 }
+            periodSeconds: 3
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          lifecycle:
+            # stay up while the endpoint is removed from the Service/ingress (slim image has /bin/sleep)
+            preStop: { exec: { command: ["sleep", "10"] } }
+          livenessProbe:
+            httpGet: { path: /api/health, port: 8080 }
+            timeoutSeconds: 3
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 5
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 2Gi }

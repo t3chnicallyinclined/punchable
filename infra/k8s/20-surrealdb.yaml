@@ -1,0 +1,80 @@
+# SurrealDB 3.3.4 (docs/SURREALDB_AUDIT.md), SurrealKV with versioning, ClusterIP only, never exposed.
+# Root credentials: Secret punchable-surrealdb, created by hand on the server (infra/secrets.sh), never in git.
+# Proven in Docker on the server with these exact settings (2026-10-26): uid 65532, read-only root, cap-drop ALL,
+# export -> import 500/500 rows with the CHANGEFEED kept, truncated export fails the import, wrong password refused,
+# idle RSS ~31 MiB.
+apiVersion: v1
+kind: Service
+metadata: { name: surrealdb, namespace: punchable, labels: { app: surrealdb } }
+spec:
+  type: ClusterIP
+  selector: { app: surrealdb }
+  ports:
+    - { name: http, port: 8000, targetPort: 8000 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: surrealdb, namespace: punchable }
+spec:
+  # ONE writer on a ReadWriteOnce SurrealKV store. Never scale this.
+  replicas: 1
+  serviceName: surrealdb
+  selector: { matchLabels: { app: surrealdb } }
+  template:
+    metadata: { labels: { app: surrealdb } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: surrealdb
+          image: surrealdb/surrealdb@sha256:649a60a3b9c0177d9923c938e1c2563e48cde2a9d06ac2c0519714be719b02af  # v3.3.4
+          args: ["start", "--bind", "0.0.0.0:8000"]
+          ports: [ { containerPort: 8000, name: http } ]
+          env:
+            - { name: SURREAL_PATH, value: "surrealkv:///data/db?versioned=true" }
+            - { name: SURREAL_NO_BANNER, value: "true" }
+            - { name: SURREAL_LOG, value: info }
+            # Only Keycloak's in-cluster JWKS may be fetched (DEFINE ACCESS ... WITH JWT URL). Nothing else.
+            - { name: SURREAL_CAPS_ALLOW_NET, value: "keycloak.__PK_KC_NS__.svc.cluster.local" }
+            - name: SURREAL_USER
+              valueFrom: { secretKeyRef: { name: punchable-surrealdb, key: SURREAL_USER } }
+            - name: SURREAL_PASS
+              valueFrom: { secretKeyRef: { name: punchable-surrealdb, key: SURREAL_PASS } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          # Guaranteed QoS (requests == limits): this box's databases are Guaranteed so they are the LAST to be
+          # OOM-killed (oom_score_adj -997). 512 Mi against ~31 Mi idle; the HNSW index lives in RAM.
+          resources:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          startupProbe:
+            exec: { command: ["/surreal", "is-ready", "--endpoint", "http://127.0.0.1:8000"] }
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            exec: { command: ["/surreal", "is-ready", "--endpoint", "http://127.0.0.1:8000"] }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec: { command: ["/surreal", "is-ready", "--endpoint", "http://127.0.0.1:8000"] }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - { name: data, mountPath: /data }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: microk8s-hostpath
+        # A request, not a quota: hostpath enforces nothing; the store shares the server's root disk.
+        resources: { requests: { storage: 5Gi } }

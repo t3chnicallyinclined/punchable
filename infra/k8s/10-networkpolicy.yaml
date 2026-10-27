@@ -1,0 +1,121 @@
+# Default deny, both directions, for every pod in the namespace; then only the paths below.
+#
+# Ingress from the HOST: the nginx ingress controller is hostNetwork, and host->pod traffic leaves with source
+# 203.0.113.10 (`ip route get <podIP>` on the server, 2026-10-26), so kubelet httpGet probes and the ingress both match
+# the node-IP rules. SurrealDB gets NO host rule: its probes are exec (`surreal is-ready`), so nothing on the host
+# network reaches 8000. (default-deny-ingress + allow-from-ingress).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: punchable }
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: dns-egress, namespace: punchable }
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# SurrealDB: in from the API only. Out to Keycloak only (JWKS, if DEFINE ACCESS ... WITH JWT is used).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: surrealdb, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: surrealdb } }
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: punchable-api } }
+        - podSelector: { matchLabels: { app: punchable-dbload } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: __PK_KC_NS__ } }
+          podSelector: { matchLabels: { app: keycloak } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+# dbload pod (infra/ship.sh dbload, db/push_remote.py apply): nothing in, out to SurrealDB only. Its own label, so the
+# punchable-api Service never routes a request to it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-dbload, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-dbload } }
+  policyTypes: ["Ingress", "Egress"]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: surrealdb } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+---
+# API: in from the ingress controller (host IP). Out to SurrealDB, Keycloak (JWKS) and the public internet on 443
+# (R2, model providers) -- never the cluster's private ranges.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-api, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-api } }
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+      ports:
+        - { protocol: TCP, port: 8080 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: surrealdb } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: __PK_KC_NS__ } }
+          podSelector: { matchLabels: { app: keycloak } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+              - 100.64.0.0/10
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+# Web (static files): in from the ingress controller only. No egress at all beyond DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-web, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-web } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+# cert-manager's HTTP-01 solver pods for the punchable.io certificate.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: acme-solver-from-ingress, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { acme.cert-manager.io/http01-solver: "true" } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+      ports:
+        - { protocol: TCP, port: 8089 }

@@ -1,0 +1,15 @@
+# Punchable on the server: its own namespace with a default-deny ingress.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: punchable
+  labels:
+    app.kubernetes.io/part-of: punchable
+    # Every Punchable pod is written to the `restricted` profile (non-root, drop ALL, seccomp RuntimeDefault).
+    # Enforce `baseline` only: cert-manager's HTTP-01 solver pods also run here, and their restricted compliance
+    # is INFERRED, not verified -- a rejected solver pod would silently block the certificate. `warn`/`audit` flag
+    # any restricted violation at apply time.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

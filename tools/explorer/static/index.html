@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Desk explorer</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="#/">Desk explorer</a>
+  <nav class="nav" id="nav">
+    <a href="#/" data-r="jokes">Jokes</a>
+    <a href="#/review" data-r="review">Review<span class="badge" id="qbadge" hidden></span></a>
+    <a href="#/labels" data-r="labels">Labels</a>
+    <a href="#/learned" data-r="learned">Learned</a>
+  </nav>
+  <span id="gstate" class="tiny muted"></span>
+</div></header>
+<main class="wrap" id="main"><p class="muted">Loading…</p></main>
+<div id="snack" class="snack" role="status" aria-live="polite"><span id="snackMsg"></span><button id="snackUndo" type="button">Undo</button></div>
+<script src="/static/graph.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

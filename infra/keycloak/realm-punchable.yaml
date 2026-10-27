@@ -1,0 +1,287 @@
+# Declarative Keycloak config for Punchable, applied by keycloak-config-cli (infra/keycloak/apply.sh) in its OWN
+# job, so applying it never re-imports the other realms.
+# No secrets in this file: the env-substituted values (PK_*, CF_EMAIL_TOKEN, GOOGLE_CLIENT_*) come from the job's env.
+#
+# Deliberately NOT in this file: users. keycloak-config-cli updates existing users to match the file on every run,
+# so a user declared here with UPDATE_PASSWORD would be forced to reset after every re-import. The one user is
+# created once by first-login.sh.
+
+realm: punchable
+enabled: true
+displayName: "Punchable"
+# Login look: infra/keycloak/theme (docs/DESIGN.md section 9). Lives on the shared Keycloak only after
+# `infra/ship.sh keycloak-theme`; until then apply.sh imports the realm WITHOUT this line (Keycloak's default look).
+loginTheme: punchable
+# Personal app: no self sign-up. The owner's account is created by first-login.sh.
+registrationAllowed: false
+registrationEmailAsUsername: true
+loginWithEmailAllowed: true
+duplicateEmailsAllowed: false
+verifyEmail: true
+resetPasswordAllowed: true
+rememberMe: true
+sslRequired: external
+
+attributes:
+  frontendUrl: "https://$(env:PK_AUTH_HOST)"
+
+# NIST SP 800-63B: length over composition rules.
+passwordPolicy: "length(10) and maxLength(256) and notUsername and notEmail and passwordHistory(3)"
+
+bruteForceProtected: true
+failureFactor: 5
+waitIncrementSeconds: 60
+maxFailureWaitSeconds: 900
+maxDeltaTimeSeconds: 43200
+
+# Identity plan: access 300 s, refresh rotation on (a used refresh token is dead; reuse => invalid_grant).
+accessTokenLifespan: 300
+revokeRefreshToken: true
+refreshTokenMaxReuse: 0
+# A phone app stays signed in: 14 days idle, 30 days max.
+ssoSessionIdleTimeout: 1209600
+ssoSessionMaxLifespan: 2592000
+# Admin-sent "set your password" links live 24 h.
+actionTokenGeneratedByAdminLifespan: 86400
+
+smtpServer:
+  # Cloudflare Email Sending (token from an existing keycloak-smtp-cloudflare Secret).
+  # The From domain must be onboarded for sending, or mail is refused.
+  host: smtp.mx.cloudflare.net
+  port: "465"
+  starttls: "false"
+  ssl: "true"
+  auth: "true"
+  user: api_token
+  password: "$(env:CF_EMAIL_TOKEN)"
+  from: "$(env:PK_MAIL_FROM)"
+  fromDisplayName: "Punchable"
+
+requiredActions:
+  - alias: VERIFY_PROFILE
+    name: "Verify Profile"
+    providerId: "VERIFY_PROFILE"
+    enabled: false
+    defaultAction: false
+    priority: 90
+    config: {}
+  - alias: VERIFY_EMAIL
+    name: "Verify Email"
+    providerId: "VERIFY_EMAIL"
+    enabled: true
+    defaultAction: false
+    priority: 50
+    config: {}
+  - alias: UPDATE_PASSWORD
+    name: "Update Password"
+    providerId: "UPDATE_PASSWORD"
+    enabled: true
+    defaultAction: false
+    priority: 40
+    config: {}
+
+# The home worker's role (worker/README.md). Only pk-worker's tokens carry it (hardcoded-role mapper below); the API
+# lets a `worker` token use /api/worker/* and nothing else, and keeps every other token off those routes.
+roles:
+  realm:
+    - name: worker
+      description: "Punchable home worker (pk-worker service account): claims queued jobs, pulls decisions"
+    # Keycloak's defaults plus broker/read-token, so the owner's user may read his stored Google token
+    # (GET /realms/punchable/broker/google/token). Only clients with a broker scope mapping (pk-gsync) put the role in
+    # a token, and the endpoint checks the token's resource_access, so pk-web / pk-mobile tokens still can't read it.
+    - name: default-roles-punchable
+      description: "${role_default-roles}"
+      composite: true
+      composites:
+        realm: [offline_access, uma_authorization]
+        client:
+          account: [view-profile, manage-account]
+          broker: [read-token]
+
+# "Sign in with Google" (one Google sign-in = Punchable login + Drive access for gsync, gsync/GSYNC.md).
+# - storeToken: Keycloak keeps Google's token response; gsync reads it from /broker/google/token.
+# - (until 2026-10-26) offlineAccess + prompt=consent + drive scope on sign-in; see the config comment below.
+# - First broker login is LINK-ONLY (flow below): nobody can create an account by signing in with Google. A Google
+#   identity works only after the owner links it from the Account Console while signed in (Linked accounts > Google),
+#   which links to the signed-in user whatever the Google address is (his Google is not his Punchable email).
+# - trustEmail false: Google never vouches for a Punchable email; verifyEmail stays on for the realm.
+# - Scope `drive` (not drive.readonly + drive.file): gsync must rewrite docs the Claude connector made (the board doc,
+#   the five joke docs) and create docs in the connector-made "Punchable" folder; drive.file reaches only files this
+#   OAuth app created. gsync's code write gate enforces "never his own docs" (gsync/drive.py, tested).
+identityProviders:
+  - alias: google
+    providerId: google
+    displayName: Google
+    enabled: true
+    trustEmail: true
+    storeToken: true
+    addReadTokenRoleOnCreate: true
+    linkOnly: false
+    hideOnLogin: false
+    firstBrokerLoginFlowAlias: pk-google-link-only
+    config:
+      clientId: "$(env:GOOGLE_CLIENT_ID)"
+      clientSecret: "$(env:GOOGLE_CLIENT_SECRET)"
+      clientAuthMethod: client_secret_post
+      # 2026-10-26: sign-in asks Google for basic scopes only and no forced consent, so the login shows no
+      # "Google hasn't verified this app" screen (that screen is triggered by the restricted `drive` scope, and
+      # prompt=consent showed it on EVERY sign-in). Drive was granted once (2026-10-26) and gsync keeps its own Google
+      # refresh token (~/.punchable/google_token.json) and refreshes it directly against Google; the broker token is
+      # only gsync's fallback and no longer carries drive. Re-granting Drive later is a separate one-off flow.
+      defaultScope: "openid email profile"
+      offlineAccess: "false"
+      syncMode: IMPORT
+      guiOrder: "1"
+
+authenticationFlows:
+  # First login through Google (the comic 2026-10-26: "this should be social login with google", no password).
+  # An account with the same email must already exist (else a 401 "federated identity unavailable" page, event
+  # USER_NOT_FOUND). It is then linked automatically: Google has verified that address, registration is off, and the
+  # only account is the owner's (email = his Gmail). Never creates a user.
+  - alias: pk-google-link-only
+    description: "Google first login: auto-link to the existing account with the same verified email; never create a user"
+    providerId: basic-flow
+    topLevel: true
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: idp-detect-existing-broker-user
+        requirement: REQUIRED
+        priority: 10
+        authenticatorFlow: false
+        userSetupAllowed: false
+      - authenticator: idp-auto-link
+        requirement: REQUIRED
+        priority: 20
+        authenticatorFlow: false
+        userSetupAllowed: false
+
+# Every token for pk-web / pk-mobile carries aud=pk-api, and the claims SurrealDB's DEFINE ACCESS ... WITH JWT
+# requires (ns, db, ac) if the database ever verifies tokens itself (SURREALDB_AUDIT.md, DEFINE ACCESS row).
+clientScopes:
+  - name: pk-api-audience
+    description: "aud=pk-api plus SurrealDB ns/db/ac claims (access token only)"
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "false"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: aud-pk-api
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        config:
+          included.client.audience: pk-api
+          access.token.claim: "true"
+          id.token.claim: "false"
+          introspection.token.claim: "true"
+      - name: surreal-ns
+        protocol: openid-connect
+        protocolMapper: oidc-hardcoded-claim-mapper
+        config: { claim.name: ns, claim.value: punchable, jsonType.label: String, access.token.claim: "true", id.token.claim: "false", userinfo.token.claim: "false" }
+      - name: surreal-db
+        protocol: openid-connect
+        protocolMapper: oidc-hardcoded-claim-mapper
+        config: { claim.name: db, claim.value: main, jsonType.label: String, access.token.claim: "true", id.token.claim: "false", userinfo.token.claim: "false" }
+      - name: surreal-ac
+        protocol: openid-connect
+        protocolMapper: oidc-hardcoded-claim-mapper
+        config: { claim.name: ac, claim.value: keycloak, jsonType.label: String, access.token.claim: "true", id.token.claim: "false", userinfo.token.claim: "false" }
+
+clients:
+  # The API's audience. Not a login client: every flow off.
+  - clientId: pk-api
+    name: Punchable API (audience only)
+    enabled: true
+    protocol: openid-connect
+    publicClient: false
+    standardFlowEnabled: false
+    implicitFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+
+  - clientId: pk-web
+    name: Punchable (web)
+    enabled: true
+    protocol: openid-connect
+    publicClient: true
+    standardFlowEnabled: true
+    implicitFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+    frontchannelLogout: true
+    fullScopeAllowed: false
+    rootUrl: "https://$(env:PK_DOMAIN)"
+    baseUrl: "/"
+    redirectUris:
+      - "https://$(env:PK_DOMAIN)/auth/callback"
+    webOrigins:
+      - "https://$(env:PK_DOMAIN)"
+    defaultClientScopes: [web-origins, acr, basic, profile, email, roles, pk-api-audience]
+    optionalClientScopes: [offline_access]
+    attributes:
+      pkce.code.challenge.method: S256
+      post.logout.redirect.uris: "https://$(env:PK_DOMAIN)/"
+
+  - clientId: pk-mobile
+    name: Punchable (iOS / Android)
+    enabled: true
+    protocol: openid-connect
+    publicClient: true
+    standardFlowEnabled: true
+    implicitFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+      - "punchable://auth/callback"
+    defaultClientScopes: [web-origins, acr, basic, profile, email, roles, pk-api-audience]
+    optionalClientScopes: [offline_access]
+    attributes:
+      pkce.code.challenge.method: S256
+      post.logout.redirect.uris: "punchable://auth/logout"
+
+  # The home worker on the comic's PC (worker/). Confidential, client credentials only: no browser flow, no users.
+  # The secret is NOT in this file: Keycloak generates it when the client is created and re-imports leave it alone.
+  # Copy it once from the admin console (Clients > pk-worker > Credentials) into %USERPROFILE%\.punchable\secrets.env
+  # as PK_WORKER_SECRET=... (worker/README.md). Rotate there too ("Regenerate").
+  - clientId: pk-worker
+    name: Punchable home worker
+    enabled: true
+    protocol: openid-connect
+    publicClient: false
+    clientAuthenticatorType: client-secret
+    standardFlowEnabled: false
+    implicitFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: true
+    fullScopeAllowed: false
+    defaultClientScopes: [pk-api-audience, roles]  # roles: writes realm_access, where the hardcoded worker role lands
+    optionalClientScopes: []
+    protocolMappers:
+      - name: role-worker
+        protocol: openid-connect
+        protocolMapper: oidc-hardcoded-role-mapper
+        config: { role: worker }
+
+  # gsync on the comic's PC (gsync/GSYNC.md). Public, device authorization grant only (no redirect URI, no listener):
+  # `python -m gsync auth` shows a code, he signs in (with Google) in the browser, gsync keeps an offline refresh
+  # token and uses it only to call /broker/google/token. Its tokens carry broker/read-token and nothing else.
+  - clientId: pk-gsync
+    name: Punchable Google Docs sync
+    enabled: true
+    protocol: openid-connect
+    publicClient: true
+    standardFlowEnabled: false
+    implicitFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    defaultClientScopes: [basic, roles]
+    optionalClientScopes: [offline_access]
+    attributes:
+      oauth2.device.authorization.grant.enabled: "true"
+
+# Only pk-gsync's tokens may carry broker/read-token (fullScopeAllowed is false everywhere).
+clientScopeMappings:
+  broker:
+    - client: pk-gsync
+      roles: [read-token]

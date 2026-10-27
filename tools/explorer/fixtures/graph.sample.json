@@ -1,0 +1,988 @@
+{
+ "version": 0,
+ "generated_at": "2026-10-25T22:30:00+00:00",
+ "runs": [
+  {
+   "run_id": "auto-20261025-2200-bits",
+   "pipeline": "bits",
+   "model": "fixture",
+   "notes": "fixture"
+  },
+  {
+   "run_id": "auto-20261025-2210-links",
+   "pipeline": "links",
+   "model": "fixture",
+   "notes": "fixture"
+  },
+  {
+   "run_id": "auto-20261025-2220-match",
+   "pipeline": "match",
+   "model": "fixture",
+   "notes": "fixture"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "joke:airport-belt",
+   "type": "joke",
+   "title": "Airport belt",
+   "stage": "testing",
+   "summary": "TSA agent holds my belt like evidence.",
+   "first_seen": "2019-03-02",
+   "last_seen": "2025-10-11"
+  },
+  {
+   "id": "joke:gps-voice",
+   "type": "joke",
+   "title": "GPS voice",
+   "stage": "working",
+   "summary": "My GPS sounds disappointed in me.",
+   "first_seen": "2016-05-10",
+   "last_seen": "2025-10-11"
+  },
+  {
+   "id": "joke:plant-dad",
+   "type": "joke",
+   "title": "Plant dad",
+   "stage": "to_try",
+   "summary": "I keep a cactus alive and call it parenting.",
+   "first_seen": "2023-01-20",
+   "last_seen": "2023-04-28"
+  },
+  {
+   "id": "joke:gym-mirror",
+   "type": "joke",
+   "title": "Gym mirror",
+   "stage": "idea",
+   "summary": "The gym mirror is the only one that lies in my favor.",
+   "first_seen": "2024-08-01",
+   "last_seen": "2024-08-01"
+  },
+  {
+   "id": "joke:dating-40",
+   "type": "joke",
+   "title": "Dating at 40",
+   "stage": "testing",
+   "summary": "Dating apps at 40 feel like a used-car lot.",
+   "first_seen": "2022-02-14",
+   "last_seen": "2025-10-11"
+  },
+  {
+   "id": "joke:old-phone",
+   "type": "joke",
+   "title": "Old phone",
+   "stage": "retired",
+   "summary": "My phone is so old it asks me to charge it emotionally.",
+   "first_seen": "2015-06-26",
+   "last_seen": "2017-10-10"
+  },
+  {
+   "id": "unit:u-belt-1",
+   "type": "unit",
+   "text": "The TSA guy holds my belt up like it's evidence. Sir, that's not a weapon, that's a cry for help.",
+   "kind": "setup+punch",
+   "source": "gdoc",
+   "doc_id": "1AbCdocBelt",
+   "doc_title": "Airport stuff REV 2",
+   "date": "2019-03-02",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-belt-2",
+   "type": "unit",
+   "text": "He sniffed it. Twice.",
+   "kind": "tag",
+   "source": "gdoc",
+   "doc_id": "1AbCdocBelt",
+   "doc_title": "Airport stuff REV 2",
+   "date": "2019-03-02",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-belt-3",
+   "type": "unit",
+   "text": "Now I fly with suspenders. Nobody searches a man in suspenders. They just feel sorry for him.",
+   "kind": "topper",
+   "source": "gdoc",
+   "doc_id": "1AbCdocBelt2",
+   "doc_title": "Belt new tags",
+   "date": "2024-11-09",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-gps-1",
+   "type": "unit",
+   "text": "My GPS says 'recalculating' the way my mom says 'interesting choice'.",
+   "kind": "setup+punch",
+   "source": "gdoc",
+   "doc_id": "1GpsDoc",
+   "doc_title": "GPS",
+   "date": "2016-05-10",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-gps-2",
+   "type": "unit",
+   "text": "Recalculating. Recalculating. Okay she's not recalculating anymore, she's just sighing.",
+   "kind": "tag",
+   "source": "gdoc",
+   "doc_id": "1GpsDoc",
+   "doc_title": "GPS",
+   "date": "2016-05-10",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-plant-1",
+   "type": "unit",
+   "text": "I have a cactus. It needs water once a month and I still forget. That's my kid now.",
+   "kind": "premise",
+   "source": "gdoc",
+   "doc_id": "1PlantDoc",
+   "doc_title": "Plant dad idea",
+   "date": "2023-01-20",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-mirror-1",
+   "type": "unit",
+   "text": "Gym mirrors are tilted. That's the only reason anyone goes back.",
+   "kind": "note",
+   "source": "gdoc",
+   "doc_id": "1GymDoc",
+   "doc_title": "Gym notes",
+   "date": "2024-08-01",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-dating-1",
+   "type": "unit",
+   "text": "Dating at 40 is a used-car lot. Everybody's got miles, nobody's telling you about the transmission.",
+   "kind": "setup+punch",
+   "source": "gdoc",
+   "doc_id": "1DateDoc",
+   "doc_title": "Dating 40",
+   "date": "2022-02-14",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-dating-2",
+   "type": "unit",
+   "text": "Her profile said 'no drama'. That's the drama. That's the whole show.",
+   "kind": "tag",
+   "source": "gdoc",
+   "doc_id": "1DateDoc",
+   "doc_title": "Dating 40",
+   "date": "2022-02-14",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "unit:u-phone-1",
+   "type": "unit",
+   "text": "My phone is so old it asks me to charge it emotionally.",
+   "kind": "setup+punch",
+   "source": "gdoc",
+   "doc_id": "1PhoneDoc",
+   "doc_title": "Phone",
+   "date": "2015-06-26",
+   "locator": {
+    "para_start": 0,
+    "para_end": 0
+   }
+  },
+  {
+   "id": "set:20230428_AAAAAAAAAAA",
+   "type": "set",
+   "title": "Open mic, Brooklyn",
+   "date": "2023-04-28",
+   "venue": "Brooklyn open mic",
+   "duration_s": 420
+  },
+  {
+   "id": "set:20251011_BBBBBBBBBBB",
+   "type": "set",
+   "title": "Showcase, Manhattan",
+   "date": "2025-10-11",
+   "venue": "Manhattan showcase",
+   "duration_s": 900
+  },
+  {
+   "id": "perf:20230428_AAAAAAAAAAA@15000",
+   "type": "performance",
+   "set": "set:20230428_AAAAAAAAAAA",
+   "start_ms": 15000,
+   "end_ms": 32000,
+   "text": "I have a cactus. It needs water once a month and I still forget. That's my kid now."
+  },
+  {
+   "id": "perf:20251011_BBBBBBBBBBB@30000",
+   "type": "performance",
+   "set": "set:20251011_BBBBBBBBBBB",
+   "start_ms": 30000,
+   "end_ms": 61000,
+   "text": "The TSA guy holds my belt up like evidence. He sniffed it. Twice."
+  },
+  {
+   "id": "perf:20251011_BBBBBBBBBBB@90000",
+   "type": "performance",
+   "set": "set:20251011_BBBBBBBBBBB",
+   "start_ms": 90000,
+   "end_ms": 118000,
+   "text": "My GPS says recalculating the way my mom says interesting choice."
+  },
+  {
+   "id": "perf:20251011_BBBBBBBBBBB@200000",
+   "type": "performance",
+   "set": "set:20251011_BBBBBBBBBBB",
+   "start_ms": 200000,
+   "end_ms": 240000,
+   "text": "Dating at 40 is a used car lot, everybody's got miles."
+  },
+  {
+   "id": "label:device:literal-interpretation",
+   "type": "label",
+   "kind": "device",
+   "name": "literal interpretation",
+   "definition": "Takes an expression at face value."
+  },
+  {
+   "id": "label:device:specificity",
+   "type": "label",
+   "kind": "device",
+   "name": "specificity",
+   "definition": "A concrete detail beats a generic one."
+  },
+  {
+   "id": "label:device:repetition",
+   "type": "label",
+   "kind": "device",
+   "name": "repetition",
+   "definition": "Repeats for rhythm or emphasis."
+  },
+  {
+   "id": "label:device:analogy",
+   "type": "label",
+   "kind": "device",
+   "name": "analogy",
+   "definition": "Maps one world onto another."
+  },
+  {
+   "id": "label:structure:tag-topper-chain",
+   "type": "label",
+   "kind": "structure",
+   "name": "tag / topper chain",
+   "definition": "Stacks punches on one setup."
+  },
+  {
+   "id": "label:structure:misdirect",
+   "type": "label",
+   "kind": "structure",
+   "name": "misdirect",
+   "definition": "Leads one way, then pulls the rug."
+  },
+  {
+   "id": "label:form:observational",
+   "type": "label",
+   "kind": "form",
+   "name": "observational",
+   "definition": ""
+  },
+  {
+   "id": "label:attitude:hard",
+   "type": "label",
+   "kind": "attitude",
+   "name": "hard",
+   "definition": "Carter attitude: this is hard."
+  },
+  {
+   "id": "label:theory:incongruity-resolution",
+   "type": "label",
+   "kind": "theory",
+   "name": "incongruity-resolution",
+   "definition": "Setup builds one picture; the punch reveals a second that also fits."
+  },
+  {
+   "id": "label:topic:travel",
+   "type": "label",
+   "kind": "topic",
+   "name": "travel",
+   "definition": ""
+  },
+  {
+   "id": "label:topic:dating",
+   "type": "label",
+   "kind": "topic",
+   "name": "dating",
+   "definition": ""
+  },
+  {
+   "id": "label:persona:plant-parent",
+   "type": "label",
+   "kind": "persona",
+   "name": "plant parent",
+   "definition": ""
+  }
+ ],
+ "edges": [
+  {
+   "id": "e:e60db2b7a394",
+   "src": "unit:u-belt-1",
+   "dst": "joke:airport-belt",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-1",
+     "quote": "The TSA guy holds my belt up like it's evidence. Sir, that's",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:97c905b75a68",
+   "src": "unit:u-belt-2",
+   "dst": "joke:airport-belt",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-2",
+     "quote": "He sniffed it. Twice.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:9d92422fac70",
+   "src": "unit:u-belt-3",
+   "dst": "joke:airport-belt",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.62,
+   "reason": "Same belt premise five years later; might be a new bit.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-3",
+     "quote": "Now I fly with suspenders. Nobody searches a man in suspende",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:0b3d706e6103",
+   "src": "unit:u-gps-1",
+   "dst": "joke:gps-voice",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-1",
+     "quote": "My GPS says 'recalculating' the way my mom says 'interesting",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:931e23525742",
+   "src": "unit:u-gps-2",
+   "dst": "joke:gps-voice",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-2",
+     "quote": "Recalculating. Recalculating. Okay she's not recalculating a",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:b3aa00cbd24d",
+   "src": "unit:u-plant-1",
+   "dst": "joke:plant-dad",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-plant-1",
+     "quote": "I have a cactus. It needs water once a month and I still for",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:f9986fc80838",
+   "src": "unit:u-mirror-1",
+   "dst": "joke:gym-mirror",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-mirror-1",
+     "quote": "Gym mirrors are tilted. That's the only reason anyone goes b",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:ac2acf599de2",
+   "src": "unit:u-dating-1",
+   "dst": "joke:dating-40",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-1",
+     "quote": "Dating at 40 is a used-car lot. Everybody's got miles, nobod",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:c78ccb072912",
+   "src": "unit:u-dating-2",
+   "dst": "joke:dating-40",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-2",
+     "quote": "Her profile said 'no drama'. That's the drama. That's the wh",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:ea6a4e477d51",
+   "src": "unit:u-phone-1",
+   "dst": "joke:old-phone",
+   "kind": "part_of",
+   "status": "proposed",
+   "confidence": 0.95,
+   "reason": "This passage is the same bit.",
+   "evidence": [
+    {
+     "node": "unit:u-phone-1",
+     "quote": "My phone is so old it asks me to charge it emotionally.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2200-bits"
+  },
+  {
+   "id": "e:631f308936e5",
+   "src": "joke:plant-dad",
+   "dst": "perf:20230428_AAAAAAAAAAA@15000",
+   "kind": "performed_as",
+   "status": "proposed",
+   "confidence": 0.81,
+   "reason": "The transcript matches the written bit.",
+   "evidence": [
+    {
+     "node": "perf:20230428_AAAAAAAAAAA@15000",
+     "quote": "I have a cactus. It needs water once a month and I",
+     "start_ms": 15000
+    }
+   ],
+   "source": "auto:auto-20261025-2220-match"
+  },
+  {
+   "id": "e:eab8ec8b058f",
+   "src": "joke:airport-belt",
+   "dst": "perf:20251011_BBBBBBBBBBB@30000",
+   "kind": "performed_as",
+   "status": "proposed",
+   "confidence": 0.93,
+   "reason": "The transcript matches the written bit.",
+   "evidence": [
+    {
+     "node": "perf:20251011_BBBBBBBBBBB@30000",
+     "quote": "The TSA guy holds my belt up like evidence. He sni",
+     "start_ms": 30000
+    }
+   ],
+   "source": "auto:auto-20261025-2220-match"
+  },
+  {
+   "id": "e:671d12f5e76c",
+   "src": "joke:gps-voice",
+   "dst": "perf:20251011_BBBBBBBBBBB@90000",
+   "kind": "performed_as",
+   "status": "proposed",
+   "confidence": 0.88,
+   "reason": "The transcript matches the written bit.",
+   "evidence": [
+    {
+     "node": "perf:20251011_BBBBBBBBBBB@90000",
+     "quote": "My GPS says recalculating the way my mom says inte",
+     "start_ms": 90000
+    }
+   ],
+   "source": "auto:auto-20261025-2220-match"
+  },
+  {
+   "id": "e:79db4f1a1206",
+   "src": "joke:dating-40",
+   "dst": "perf:20251011_BBBBBBBBBBB@200000",
+   "kind": "performed_as",
+   "status": "proposed",
+   "confidence": 0.52,
+   "reason": "The transcript matches the written bit.",
+   "evidence": [
+    {
+     "node": "perf:20251011_BBBBBBBBBBB@200000",
+     "quote": "Dating at 40 is a used car lot, everybody's got mi",
+     "start_ms": 200000
+    }
+   ],
+   "source": "auto:auto-20261025-2220-match"
+  },
+  {
+   "id": "e:e1c2f9f5deda",
+   "src": "unit:u-belt-2",
+   "dst": "unit:u-belt-1",
+   "kind": "tag_of",
+   "status": "proposed",
+   "confidence": 0.9,
+   "reason": "An extra punch on the same setup.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-2",
+     "quote": "He sniffed it. Twice.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:0772653bcffa",
+   "src": "unit:u-gps-2",
+   "dst": "unit:u-gps-1",
+   "kind": "tag_of",
+   "status": "proposed",
+   "confidence": 0.86,
+   "reason": "Keeps hitting the 'recalculating' setup.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-2",
+     "quote": "Recalculating. Recalculating.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:502c0531856a",
+   "src": "joke:gps-voice",
+   "dst": "joke:dating-40",
+   "kind": "same_shape",
+   "status": "proposed",
+   "confidence": 0.48,
+   "reason": "Both map a machine or market onto a judgmental relative.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-1",
+     "quote": "the way my mom says 'interesting choice'",
+     "start_ms": null
+    },
+    {
+     "node": "unit:u-dating-1",
+     "quote": "Dating at 40 is a used-car lot",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:ded43ed4cfa6",
+   "src": "joke:airport-belt",
+   "dst": "joke:old-phone",
+   "kind": "same_shape",
+   "status": "proposed",
+   "confidence": 0.35,
+   "reason": "Both treat an object as if it had feelings.",
+   "evidence": [
+    {
+     "node": "unit:u-phone-1",
+     "quote": "charge it emotionally",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:f2d5b93a6562",
+   "src": "joke:plant-dad",
+   "dst": "joke:gym-mirror",
+   "kind": "same_premise",
+   "status": "proposed",
+   "confidence": 0.22,
+   "reason": "Both about keeping up appearances at home.",
+   "evidence": [
+    {
+     "node": "unit:u-mirror-1",
+     "quote": "Gym mirrors are tilted",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:8d95f057697a",
+   "src": "joke:dating-40",
+   "dst": "joke:old-phone",
+   "kind": "callback_to",
+   "status": "proposed",
+   "confidence": 0.41,
+   "reason": "'Miles' could call back the old-phone battery line.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-1",
+     "quote": "Everybody's got miles",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:33caac848e1b",
+   "src": "joke:gps-voice",
+   "dst": "joke:airport-belt",
+   "kind": "segue",
+   "status": "proposed",
+   "confidence": 0.57,
+   "reason": "Driving to flying is a natural segue.",
+   "evidence": [
+    {
+     "node": "perf:20251011_BBBBBBBBBBB@90000",
+     "quote": "recalculating",
+     "start_ms": 90000
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:554c175cf081",
+   "src": "joke:old-phone",
+   "dst": "joke:gps-voice",
+   "kind": "variant_of",
+   "status": "proposed",
+   "confidence": 0.3,
+   "reason": "Both are 'my device judges me' bits.",
+   "evidence": [
+    {
+     "node": "unit:u-phone-1",
+     "quote": "asks me to charge it emotionally",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:80aaac8af480",
+   "src": "joke:airport-belt",
+   "dst": "label:device:specificity",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.84,
+   "reason": "The belt held 'like evidence' is a concrete picture.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-1",
+     "quote": "holds my belt up like it's evidence",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:7ccd697eaab0",
+   "src": "joke:airport-belt",
+   "dst": "label:device:repetition",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.71,
+   "reason": "'Twice.' lands as a one-word repeat.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-2",
+     "quote": "He sniffed it. Twice.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:914f9925d58c",
+   "src": "joke:airport-belt",
+   "dst": "label:structure:tag-topper-chain",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.66,
+   "reason": "Belt, sniff, suspenders stack on one setup.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-3",
+     "quote": "Now I fly with suspenders.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:f4cb912469ad",
+   "src": "joke:airport-belt",
+   "dst": "label:topic:travel",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.97,
+   "reason": "It's about airport security.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-1",
+     "quote": "The TSA guy",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:9afd59d5723f",
+   "src": "joke:gps-voice",
+   "dst": "label:device:analogy",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.78,
+   "reason": "GPS mapped onto a disappointed mom.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-1",
+     "quote": "the way my mom says",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:104c100ebcc7",
+   "src": "joke:gps-voice",
+   "dst": "label:device:repetition",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.55,
+   "reason": "'Recalculating' repeated.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-2",
+     "quote": "Recalculating. Recalculating.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:3683d3d7fba4",
+   "src": "joke:gps-voice",
+   "dst": "label:theory:incongruity-resolution",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.5,
+   "reason": "A machine word turns into a parent's judgement.",
+   "evidence": [
+    {
+     "node": "unit:u-gps-1",
+     "quote": "interesting choice",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:f1782dab1beb",
+   "src": "joke:dating-40",
+   "dst": "label:attitude:hard",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.62,
+   "reason": "Dating at 40 is presented as hard.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-1",
+     "quote": "Dating at 40",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:567d8bd3679c",
+   "src": "joke:dating-40",
+   "dst": "label:topic:dating",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.98,
+   "reason": "It's about dating.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-1",
+     "quote": "Dating at 40",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:def4c40fb39a",
+   "src": "joke:dating-40",
+   "dst": "label:device:analogy",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.74,
+   "reason": "Dating mapped onto a used-car lot.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-1",
+     "quote": "a used-car lot",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:3d2baf5e6705",
+   "src": "joke:dating-40",
+   "dst": "label:structure:misdirect",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.45,
+   "reason": "'No drama' turns into the drama.",
+   "evidence": [
+    {
+     "node": "unit:u-dating-2",
+     "quote": "That's the drama.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:c1a1dddbdd7a",
+   "src": "joke:plant-dad",
+   "dst": "label:persona:plant-parent",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.58,
+   "reason": "Talks about the plant as his kid.",
+   "evidence": [
+    {
+     "node": "unit:u-plant-1",
+     "quote": "That's my kid now.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:ca635364c158",
+   "src": "joke:old-phone",
+   "dst": "label:device:literal-interpretation",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.6,
+   "reason": "Takes 'charge' literally and emotionally.",
+   "evidence": [
+    {
+     "node": "unit:u-phone-1",
+     "quote": "charge it emotionally",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:03b1398ccc0e",
+   "src": "joke:gym-mirror",
+   "dst": "label:form:observational",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.69,
+   "reason": "An everyday observation about gyms.",
+   "evidence": [
+    {
+     "node": "unit:u-mirror-1",
+     "quote": "Gym mirrors are tilted.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  },
+  {
+   "id": "e:2f3b946170c4",
+   "src": "unit:u-belt-2",
+   "dst": "label:device:repetition",
+   "kind": "has_label",
+   "status": "proposed",
+   "confidence": 0.8,
+   "reason": "The tag is the repeat.",
+   "evidence": [
+    {
+     "node": "unit:u-belt-2",
+     "quote": "Twice.",
+     "start_ms": null
+    }
+   ],
+   "source": "auto:auto-20261025-2210-links"
+  }
+ ]
+}

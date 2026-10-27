@@ -1,0 +1,50 @@
+# Punchable's realm import in the shared Keycloak namespace (__PK_KC_NS__). Applied by infra/keycloak/apply.sh.
+# Its OWN job, so applying it never re-imports the other realms in a shared Keycloak. Images pinned by digest.
+# __PK_*__ placeholders are filled by infra/render.sh from infra/config.env.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-config-punchable
+  namespace: __PK_KC_NS__
+  labels: { app.kubernetes.io/part-of: punchable }
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app: keycloak-config-punchable, app.kubernetes.io/part-of: punchable }
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      containers:
+        - name: config
+          image: adorsys/keycloak-config-cli@sha256:44fcacaba522c159f4bb23a6bef0dd9e82291c5c84be3ed0ada77f6ff4663fd4
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          env:
+            - { name: KEYCLOAK_URL, value: "http://keycloak" }
+            - name: KEYCLOAK_USER
+              valueFrom: { secretKeyRef: { name: keycloak-admin-secret, key: KEYCLOAK_ADMIN } }
+            - name: KEYCLOAK_PASSWORD
+              valueFrom: { secretKeyRef: { name: keycloak-admin-secret, key: KEYCLOAK_ADMIN_PASSWORD } }
+            - { name: KEYCLOAK_AVAILABILITYCHECK_ENABLED, value: "true" }
+            - { name: KEYCLOAK_AVAILABILITYCHECK_TIMEOUT, value: "120s" }
+            - { name: IMPORT_FILES_LOCATIONS, value: "/config/*" }
+            - { name: IMPORT_VARSUBSTITUTION_ENABLED, value: "true" }
+            - { name: PK_DOMAIN, value: "__PK_DOMAIN__" }
+            - { name: PK_AUTH_HOST, value: "__PK_AUTH_HOST__" }
+            - { name: PK_MAIL_FROM, value: "__PK_MAIL_FROM__" }
+            # The Cloudflare Email Sending token (an existing keycloak-smtp-cloudflare Secret).
+            - name: CF_EMAIL_TOKEN
+              valueFrom: { secretKeyRef: { name: keycloak-smtp-cloudflare, key: CF_EMAIL_TOKEN } }
+            # "Sign in with Google": made by `infra/ship.sh google-idp` from the comic's google-oauth.env (never in git).
+            - name: GOOGLE_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: punchable-google-idp, key: GOOGLE_CLIENT_ID } }
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: punchable-google-idp, key: GOOGLE_CLIENT_SECRET } }
+          volumeMounts:
+            - { name: cfg, mountPath: /config }
+      volumes:
+        - name: cfg
+          configMap: { name: keycloak-realm-punchable }

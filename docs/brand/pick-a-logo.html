@@ -1,0 +1,84 @@
+<title>Punchable Logo Pick</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: three concept rows, each with the real app icon at the sizes it ships at, then the mark and a lockup on the page ground.
+   Tokens are Punchable's own Backstage Amber (app/src/lib/theme.ts): dark first, light variant below. */
+:root { --bg:#111214; --surface:#1a1c20; --line:#2d3139; --fg:#f3f4f6; --mut:#9ca3af; --accent:#f5b544; --on-accent:#111214;
+  --display:"Space Grotesk","Segoe UI",system-ui,sans-serif; --body:Inter,"Segoe UI",system-ui,sans-serif; color-scheme:dark; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#f6f6f4; --surface:#ffffff; --line:#d9d9d4; --fg:#111214; --mut:#5d6169; --accent:#b47a0e; --on-accent:#ffffff; color-scheme:light; } }
+:root[data-theme="light"] { --bg:#f6f6f4; --surface:#ffffff; --line:#d9d9d4; --fg:#111214; --mut:#5d6169; --accent:#b47a0e; --on-accent:#ffffff; color-scheme:light; }
+body { background:var(--bg); color:var(--fg); font:15px/1.5 var(--body); }
+main { max-width:1040px; margin:0 auto; padding-block:28px 56px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:28px; }
+h1, h2 { font-family:var(--display); margin:0; text-wrap:balance; }
+h1 { font-size:clamp(26px, 5vw, 38px); letter-spacing:-0.02em; line-height:1.1; }
+h2 { font-size:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.lede { color:var(--mut); max-width:62ch; margin:8px 0 0; }
+.tag { font:700 11px/1 var(--display); letter-spacing:.08em; text-transform:uppercase; background:var(--accent); color:var(--on-accent); border-radius:4px; padding:4px 7px; }
+.concept { display:grid; gap:14px; padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:14px; }
+.concept.recommended { border-color:var(--accent); }
+.idea { margin:0; color:var(--mut); max-width:64ch; }
+.row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:22px; }
+figure { margin:0; display:grid; justify-items:center; gap:6px; }
+figcaption { font:12px/1 var(--body); color:var(--mut); font-variant-numeric:tabular-nums; }
+.icon svg { display:block; }
+.mark svg { display:block; height:96px; width:auto; }
+.lockup { display:flex; align-items:center; gap:10px; }
+.lockup svg { height:40px; width:auto; display:block; }
+.lockup span { font:700 34px/1 var(--display); letter-spacing:-0.02em; }
+.why { margin:0; font-size:14px; max-width:70ch; }
+.why b { font-weight:600; }
+.note { color:var(--mut); font-size:13px; margin:0; }
+</style>
+
+<main>
+  <header>
+    <h1>Pick Punchable's logo</h1>
+    <p class="lede">Three concepts, each shown the way it will actually appear: the app icon from favicon size up, the mark on its own, and next to the name. Tell me A, B or C, or what to change.</p>
+  </header>
+
+  <section class="concept recommended" aria-labelledby="a-h">
+    <h2 id="a-h">A · Mic P <span class="tag">Recommended</span></h2>
+    <p class="idea">A stage mic drawn as a P. The three slots on the bowl are the mic grille.</p>
+    <div class="row">
+      <figure class="icon"><svg width="16" height="16" viewBox="0 0 512 512" role="img" aria-label="Mic P at 16 pixels"><rect width="512" height="512" rx="96" fill="#111214"/><path fill="#f5b544" fill-rule="evenodd" transform="translate(256 256) scale(1.16) translate(-256 -256)" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM249 177h66a17 17 0 0 1 0 34h-66a17 17 0 0 1 0 -34z"/></svg><figcaption>16 px tab</figcaption></figure>
+      <figure class="icon"><svg width="32" height="32" viewBox="0 0 512 512" role="img" aria-label="Mic P at 32 pixels"><rect width="512" height="512" rx="96" fill="#111214"/><path fill="#f5b544" fill-rule="evenodd" transform="translate(256 256) scale(1.16) translate(-256 -256)" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM249 177h66a17 17 0 0 1 0 34h-66a17 17 0 0 1 0 -34z"/></svg><figcaption>32 px</figcaption></figure>
+      <figure class="icon"><svg width="64" height="64" viewBox="0 0 512 512" role="img" aria-label="Mic P app icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" fill-rule="evenodd" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM242 139h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20zM242 184h84a10 10 0 0 1 0 20h-84a10 10 0 0 1 0 -20zM242 229h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20z"/></svg><figcaption>64 px</figcaption></figure>
+      <figure class="icon"><svg width="128" height="128" viewBox="0 0 512 512" role="img" aria-label="Mic P home screen icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" fill-rule="evenodd" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM242 139h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20zM242 184h84a10 10 0 0 1 0 20h-84a10 10 0 0 1 0 -20zM242 229h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20z"/></svg><figcaption>Home screen</figcaption></figure>
+      <figure class="mark"><svg viewBox="140 78 232 356" role="img" aria-label="Mic P mark"><path style="fill:var(--accent)" fill-rule="evenodd" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM242 139h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20zM242 184h84a10 10 0 0 1 0 20h-84a10 10 0 0 1 0 -20zM242 229h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20z"/></svg><figcaption>Mark</figcaption></figure>
+      <figure><div class="lockup"><svg viewBox="140 78 232 356" aria-hidden="true"><path style="fill:var(--accent)" fill-rule="evenodd" d="M148 194A108 108 0 1 1 224 297.15V388A38 38 0 0 1 148 388ZM242 139h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20zM242 184h84a10 10 0 0 1 0 20h-84a10 10 0 0 1 0 -20zM242 229h72a10 10 0 0 1 0 20h-72a10 10 0 0 1 0 -20z"/></svg><span>punchable</span></div><figcaption>With the name</figcaption></figure>
+    </div>
+    <p class="why"><b>Why it's the pick:</b> it's the initial and the tool of the trade in one shape. It still reads as a P and a mic in a browser tab, and it works in one colour on a shirt or a flyer.</p>
+  </section>
+
+  <section class="concept" aria-labelledby="b-h">
+    <h2 id="b-h">B · Punch line</h2>
+    <p class="idea">The letter P with an amber underline: the punch line, underlined.</p>
+    <div class="row">
+      <figure class="icon"><svg width="16" height="16" viewBox="0 0 512 512" role="img" aria-label="Punch line at 16 pixels"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f3f4f6" transform="translate(146.77 272.15) scale(3.3)" d="M7 20V-49.6H19.4V-43.6H21.2Q22.9 -46.5 26.5 -48.75Q30.1 -51 36.8 -51Q42.8 -51 47.9 -48.05Q53 -45.1 56.1 -39.4Q59.2 -33.7 59.2 -25.6V-24Q59.2 -15.9 56.1 -10.2Q53 -4.5 47.9 -1.55Q42.8 1.4 36.8 1.4Q32.3 1.4 29.25 0.35Q26.2 -0.7 24.35 -2.35Q22.5 -4 21.4 -5.7H19.6V20ZM33 -9.6Q38.9 -9.6 42.75 -13.35Q46.6 -17.1 46.6 -24.3V-25.3Q46.6 -32.5 42.7 -36.25Q38.8 -40 33 -40Q27.2 -40 23.3 -36.25Q19.4 -32.5 19.4 -25.3V-24.3Q19.4 -17.1 23.3 -13.35Q27.2 -9.6 33 -9.6Z"/><path fill="#f5b544" d="M183.87 368.15h144.26a20 20 0 0 1 0 40h-144.26a20 20 0 0 1 0 -40z"/></svg><figcaption>16 px tab</figcaption></figure>
+      <figure class="icon"><svg width="32" height="32" viewBox="0 0 512 512" role="img" aria-label="Punch line at 32 pixels"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f3f4f6" transform="translate(146.77 272.15) scale(3.3)" d="M7 20V-49.6H19.4V-43.6H21.2Q22.9 -46.5 26.5 -48.75Q30.1 -51 36.8 -51Q42.8 -51 47.9 -48.05Q53 -45.1 56.1 -39.4Q59.2 -33.7 59.2 -25.6V-24Q59.2 -15.9 56.1 -10.2Q53 -4.5 47.9 -1.55Q42.8 1.4 36.8 1.4Q32.3 1.4 29.25 0.35Q26.2 -0.7 24.35 -2.35Q22.5 -4 21.4 -5.7H19.6V20ZM33 -9.6Q38.9 -9.6 42.75 -13.35Q46.6 -17.1 46.6 -24.3V-25.3Q46.6 -32.5 42.7 -36.25Q38.8 -40 33 -40Q27.2 -40 23.3 -36.25Q19.4 -32.5 19.4 -25.3V-24.3Q19.4 -17.1 23.3 -13.35Q27.2 -9.6 33 -9.6Z"/><path fill="#f5b544" d="M183.87 368.15h144.26a20 20 0 0 1 0 40h-144.26a20 20 0 0 1 0 -40z"/></svg><figcaption>32 px</figcaption></figure>
+      <figure class="icon"><svg width="64" height="64" viewBox="0 0 512 512" role="img" aria-label="Punch line app icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f3f4f6" transform="translate(146.77 272.15) scale(3.3)" d="M7 20V-49.6H19.4V-43.6H21.2Q22.9 -46.5 26.5 -48.75Q30.1 -51 36.8 -51Q42.8 -51 47.9 -48.05Q53 -45.1 56.1 -39.4Q59.2 -33.7 59.2 -25.6V-24Q59.2 -15.9 56.1 -10.2Q53 -4.5 47.9 -1.55Q42.8 1.4 36.8 1.4Q32.3 1.4 29.25 0.35Q26.2 -0.7 24.35 -2.35Q22.5 -4 21.4 -5.7H19.6V20ZM33 -9.6Q38.9 -9.6 42.75 -13.35Q46.6 -17.1 46.6 -24.3V-25.3Q46.6 -32.5 42.7 -36.25Q38.8 -40 33 -40Q27.2 -40 23.3 -36.25Q19.4 -32.5 19.4 -25.3V-24.3Q19.4 -17.1 23.3 -13.35Q27.2 -9.6 33 -9.6Z"/><path fill="#f5b544" d="M183.87 368.15h144.26a20 20 0 0 1 0 40h-144.26a20 20 0 0 1 0 -40z"/></svg><figcaption>64 px</figcaption></figure>
+      <figure class="icon"><svg width="128" height="128" viewBox="0 0 512 512" role="img" aria-label="Punch line home screen icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f3f4f6" transform="translate(146.77 272.15) scale(3.3)" d="M7 20V-49.6H19.4V-43.6H21.2Q22.9 -46.5 26.5 -48.75Q30.1 -51 36.8 -51Q42.8 -51 47.9 -48.05Q53 -45.1 56.1 -39.4Q59.2 -33.7 59.2 -25.6V-24Q59.2 -15.9 56.1 -10.2Q53 -4.5 47.9 -1.55Q42.8 1.4 36.8 1.4Q32.3 1.4 29.25 0.35Q26.2 -0.7 24.35 -2.35Q22.5 -4 21.4 -5.7H19.6V20ZM33 -9.6Q38.9 -9.6 42.75 -13.35Q46.6 -17.1 46.6 -24.3V-25.3Q46.6 -32.5 42.7 -36.25Q38.8 -40 33 -40Q27.2 -40 23.3 -36.25Q19.4 -32.5 19.4 -25.3V-24.3Q19.4 -17.1 23.3 -13.35Q27.2 -9.6 33 -9.6Z"/><path fill="#f5b544" d="M183.87 368.15h144.26a20 20 0 0 1 0 40h-144.26a20 20 0 0 1 0 -40z"/></svg><figcaption>Home screen</figcaption></figure>
+      <figure class="mark"><svg viewBox="155.87 95.85 200.26 320.3" role="img" aria-label="Punch line mark"><path style="fill:var(--fg)" transform="translate(146.77 272.15) scale(3.3)" d="M7 20V-49.6H19.4V-43.6H21.2Q22.9 -46.5 26.5 -48.75Q30.1 -51 36.8 -51Q42.8 -51 47.9 -48.05Q53 -45.1 56.1 -39.4Q59.2 -33.7 59.2 -25.6V-24Q59.2 -15.9 56.1 -10.2Q53 -4.5 47.9 -1.55Q42.8 1.4 36.8 1.4Q32.3 1.4 29.25 0.35Q26.2 -0.7 24.35 -2.35Q22.5 -4 21.4 -5.7H19.6V20ZM33 -9.6Q38.9 -9.6 42.75 -13.35Q46.6 -17.1 46.6 -24.3V-25.3Q46.6 -32.5 42.7 -36.25Q38.8 -40 33 -40Q27.2 -40 23.3 -36.25Q19.4 -32.5 19.4 -25.3V-24.3Q19.4 -17.1 23.3 -13.35Q27.2 -9.6 33 -9.6Z"/><path style="fill:var(--accent)" d="M183.87 368.15h144.26a20 20 0 0 1 0 40h-144.26a20 20 0 0 1 0 -40z"/></svg><figcaption>Mark</figcaption></figure>
+      <figure><div class="lockup"><span>punchable</span></div><figcaption>With the name (the underline sits under "punch")</figcaption></figure>
+    </div>
+    <p class="why"><b>Trade-off:</b> the simplest of the three and very clean, but at tab size it's just a P. It reads as "a P app" more than a comedy tool.</p>
+  </section>
+
+  <section class="concept" aria-labelledby="c-h">
+    <h2 id="c-h">C · Laugh meter</h2>
+    <p class="idea">The app's own 4-bar laugh meter: chuckle, laugh, big laugh, applause break.</p>
+    <div class="row">
+      <figure class="icon"><svg width="16" height="16" viewBox="0 0 512 512" role="img" aria-label="Laugh meter at 16 pixels"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path fill="#f5b544" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path fill="#f5b544" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path fill="#f5b544" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><figcaption>16 px tab</figcaption></figure>
+      <figure class="icon"><svg width="32" height="32" viewBox="0 0 512 512" role="img" aria-label="Laugh meter at 32 pixels"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path fill="#f5b544" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path fill="#f5b544" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path fill="#f5b544" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><figcaption>32 px</figcaption></figure>
+      <figure class="icon"><svg width="64" height="64" viewBox="0 0 512 512" role="img" aria-label="Laugh meter app icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path fill="#f5b544" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path fill="#f5b544" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path fill="#f5b544" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><figcaption>64 px</figcaption></figure>
+      <figure class="icon"><svg width="128" height="128" viewBox="0 0 512 512" role="img" aria-label="Laugh meter home screen icon"><rect width="512" height="512" rx="112" fill="#111214"/><path fill="#f5b544" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path fill="#f5b544" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path fill="#f5b544" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path fill="#f5b544" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><figcaption>Home screen</figcaption></figure>
+      <figure class="mark"><svg viewBox="88 68 368 376" role="img" aria-label="Laugh meter mark"><path style="fill:var(--accent)" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path style="fill:var(--accent)" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path style="fill:var(--accent)" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path style="fill:var(--accent)" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><figcaption>Mark</figcaption></figure>
+      <figure><div class="lockup"><svg viewBox="88 68 368 376" aria-hidden="true"><path style="fill:var(--accent)" opacity="0.35" d="M96 338a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H96z"/><path style="fill:var(--accent)" opacity="0.6" d="M192 258a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H192z"/><path style="fill:var(--accent)" opacity="0.85" d="M288 178a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H288z"/><path style="fill:var(--accent)" d="M384 98a22 22 0 0 1 22 -22h20a22 22 0 0 1 22 22V436H384z"/></svg><span>punchable</span></div><figcaption>With the name</figcaption></figure>
+    </div>
+    <p class="why"><b>Trade-off:</b> it's literally what the app measures, and it's very legible small. It also looks like a phone's signal-strength icon, so it can get lost on a home screen.</p>
+  </section>
+
+  <p class="note">The lockups here set the name in the app's display font. The final versions in the repo have it drawn as outlines. Every concept has dark, light and one-colour versions in <code>punchable/docs/brand/</code>. Concept A is already wired in as the app icon, favicon and splash; switching to B or C is a one-line change.</p>
+</main>

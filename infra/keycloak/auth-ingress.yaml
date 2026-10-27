@@ -1,0 +1,30 @@
+# Public login host for Punchable: only the punchable realm and static resources are routed.
+# Apply ONLY after auth.__PK_DOMAIN__ resolves to the server: cert-manager's HTTP-01 challenge needs it, and failed
+# challenges count against Let's Encrypt's rate limits.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-auth
+  namespace: __PK_KC_NS__
+  labels: { app.kubernetes.io/part-of: punchable }
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: public
+  rules:
+    - host: __PK_AUTH_HOST__
+      http:
+        paths:
+          - path: /realms/__PK_REALM__
+            pathType: Prefix
+            backend: { service: { name: keycloak, port: { number: 80 } } }
+          - path: /resources
+            pathType: Prefix
+            backend: { service: { name: keycloak, port: { number: 80 } } }
+  tls:
+    - hosts: [__PK_AUTH_HOST__]
+      secretName: punchable-auth-tls
