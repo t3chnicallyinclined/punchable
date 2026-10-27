@@ -16,8 +16,8 @@ RUN python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true
 COPY --from=deps /venv /venv
 WORKDIR /app
 COPY api/entry.py api/
-COPY api-dev/server.py api-dev/auth.py api-dev/creative_api.py api-dev/surreal_kb.py api-dev/ai_overlay.py \
-     api-dev/merge_api.py api-dev/ask_api.py api-dev/mysets_api.py api-dev/memos_api.py api-dev/ingest_api.py      api-dev/suggest_api.py api-dev/
+# every api-dev module: a hand-kept list shipped an image without say_api.py (health 500, pod never ready)
+COPY api-dev/*.py api-dev/
 COPY db/sdb.py db/kbmap.py db/load.py db/push_remote.py db/srcpaths.py db/schema.surql db/schema_extra.surql db/
 # the legal rules gsync applies (court material is never stored); only this file of gsync, read by api-dev/ingest_api.py
 COPY gsync/rules.py gsync/
@@ -26,7 +26,7 @@ COPY tools/explorer/kb.py tools/explorer/
 COPY creative/*.py creative/
 COPY infer/__init__.py infer/scriptdiff.py infer/
 RUN /venv/bin/python -m compileall -q /app \
- && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import server, merge_api, creative_api, ask_api, mysets_api, memos_api, ingest_api, suggest_api"
+ && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')] + [importlib.import_module('server')]"
 ENV PATH=/venv/bin:$PATH \
     HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
