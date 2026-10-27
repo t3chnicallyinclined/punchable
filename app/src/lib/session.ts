@@ -54,7 +54,7 @@ export function profileFrom(idToken: string | null | undefined, accessToken: str
 
 // ---------------------------------------------------------------- where he goes after signing in
 /** Routes a signed-out visitor may see. Everything else sends him to /login?next=<that route>. */
-export const PUBLIC_PATHS = ['/login', '/auth/callback', '/privacy', '/terms'];
+export const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/logout', '/privacy', '/terms'];
 export const isPublicPath = (p: string) => PUBLIC_PATHS.some((x) => p === x || p.startsWith(x + '/') || p.startsWith(x + '.'));
 
 /**

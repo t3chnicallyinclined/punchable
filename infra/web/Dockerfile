@@ -9,6 +9,8 @@ COPY app/ ./
 # Public, non-secret build-time config for the web bundle (EXPO_PUBLIC_* is inlined by Metro).
 ARG PK_DOMAIN=punchable.io
 ARG PK_AUTH_HOST=auth.punchable.io
+# The Apple Team ID for Universal Links (infra/config.env PK_APPLE_TEAM_ID); the placeholder stays until it is set.
+ARG PK_APPLE_TEAM_ID=TEAMID
 ENV EXPO_PUBLIC_API_URL=https://${PK_DOMAIN}/api \
     EXPO_PUBLIC_OIDC_ISSUER=https://${PK_AUTH_HOST}/realms/punchable \
     EXPO_PUBLIC_OIDC_CLIENT_ID=pk-web \
@@ -17,6 +19,8 @@ ENV EXPO_PUBLIC_API_URL=https://${PK_DOMAIN}/api \
 RUN npx expo export --platform web --output-dir /out
 # app/public/index.html names https://punchable.io in its og: tags; keep PK_DOMAIN the one place the host is set.
 RUN sed -i "s#https://punchable.io#https://${PK_DOMAIN}#g" /out/index.html
+# public/.well-known/apple-app-site-association names TEAMID.<bundle id>; fill the team id in (served as JSON, no redirect: nginx.conf)
+RUN sed -i "s#TEAMID\.#${PK_APPLE_TEAM_ID}.#g" /out/.well-known/apple-app-site-association && grep -q "${PK_APPLE_TEAM_ID}.com." /out/.well-known/apple-app-site-association
 # app/public/dev-fixtures holds real material for local dev only; it must never be served (2026-10-26 leak fix).
 RUN rm -rf /out/dev-fixtures && ! find /out -path "*dev-fixtures*" | grep -q .
 

@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.tristanrega.punchable",
+        "paths": ["/joke/*", "/set/*", "/list/*", "/board/*", "/bits", "/sets", "/inbox", "/say", "/map", "/map/*", "/stage/*", "/settings", "/"]
+      }
+    ]
+  },
+  "webcredentials": { "apps": ["TEAMID.com.tristanrega.punchable"] }
+}

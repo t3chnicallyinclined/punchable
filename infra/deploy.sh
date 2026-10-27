@@ -71,7 +71,7 @@ case "$STEP" in
     WHAT="${1:?build api|web}"; SHA="${SHA:?SHA}"; TAG="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:12}"
     REPO="localhost:32000/punchable-$WHAT"
     case "$WHAT" in
-      web) DF=infra/web/Dockerfile; ARGS=(--build-arg "PK_DOMAIN=$PK_DOMAIN" --build-arg "PK_AUTH_HOST=$PK_AUTH_HOST") ;;
+      web) DF=infra/web/Dockerfile; ARGS=(--build-arg "PK_DOMAIN=$PK_DOMAIN" --build-arg "PK_AUTH_HOST=$PK_AUTH_HOST" --build-arg "PK_APPLE_TEAM_ID=${PK_APPLE_TEAM_ID:-TEAMID}") ;;
       api) DF="${API_DOCKERFILE:-api/Dockerfile}"; ARGS=()
            [ -f "$DF" ] || { echo "!! $DF not in this commit: the API image cannot be built yet"; exit 1; } ;;
       *) echo "build api|web"; exit 1 ;;

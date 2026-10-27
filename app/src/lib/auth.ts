@@ -21,7 +21,7 @@ import { Platform } from 'react-native';
 import { API_URL, setAuthHeaderProvider } from './api';
 import { Profile, endSessionUrl, loginHref, originSlash, profileFrom } from './session';
 
-WebBrowser.maybeCompleteAuthSession(); // web: the popup's /auth/callback hands the code back to the opener
+if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession(); // web only: the popup's /auth/callback hands the code back to the opener
 
 const env = (k: string) => (process.env as Record<string, string | undefined>)[k];
 export const ISSUER = env('EXPO_PUBLIC_OIDC_ISSUER') || 'https://auth.punchable.io/realms/punchable';
