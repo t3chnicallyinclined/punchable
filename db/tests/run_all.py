@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-TESTS = ["test_guards.py", "test_hidden.py", "test_mutation_live.py", "test_baseline.py", "test_creative.py", "test_wal.py"]
+TESTS = ["test_guards.py", "test_hidden.py", "test_mutation_live.py", "test_baseline.py", "test_creative.py", "test_wal.py", "test_online.py"]
 
 
 def main():

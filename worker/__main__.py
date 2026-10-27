@@ -237,7 +237,9 @@ def replays(name: str, lines: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------- jobs
-def run_one(cl: Client, kinds: list[str] | None) -> bool:
+def run_one(cl: Client, kinds: list[str] | None, ws=None) -> bool:
+    """Claim one job and run it. `ws` (worker/online.Workspace): online-first mode, the job runs on a workspace
+    mirrored from the API, its results are posted back and its media deleted."""
     from worker import execute
     r = cl.call("POST", "/api/worker/claim", {"kinds": kinds, "worker": os.environ.get("COMPUTERNAME", "home")[:40]})
     if not r:
@@ -247,12 +249,23 @@ def run_one(cl: Client, kinds: list[str] | None) -> bool:
     file = None
     try:
         if job["kind"] == "process_set":
-            from engine.config import Config
-            inbox = Config().p("inbox_dir")
+            if ws is not None:
+                inbox = ws.root / "upload"
+            else:
+                from engine.config import Config
+                inbox = Config().p("inbox_dir")
             inbox.mkdir(parents=True, exist_ok=True)
             file = inbox / Path(job["input"]["file"]).name
             cl.download(f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/file", file)
-        res = execute.run(job, file=file)
+        if ws is not None:
+            from worker import online
+            try:
+                res = online.run_job(cl, ws, job, file=file)
+            finally:
+                if file is not None:
+                    file.unlink(missing_ok=True)  # the API deletes its staged copy when it gets our result
+        else:
+            res = execute.run(job, file=file)
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result", {"ok": True, "result": res})
         log(f"job {job['id']} done ({res.get('status') if isinstance(res, dict) else 'ok'})")
     except Exception as e:  # noqa: BLE001
@@ -269,7 +282,10 @@ def main(argv=None):
     ap.add_argument("--token-url", default=s.get("PK_TOKEN_URL", DEFAULT_TOKEN_URL))
     ap.add_argument("--no-auth", action="store_true", help="the local dev API on loopback (auth off)")
     ap.add_argument("--once", action="store_true")
-    ap.add_argument("--kinds", default="bridge,punchup,ask,process_set,import_youtube,facts,riff,ask_chat")
+    ap.add_argument("--kinds", default="bridge,punchup,ask,process_set,import_youtube,facts,riff,ask_chat,embed,memolink")
+    ap.add_argument("--online", action="store_true", default=os.environ.get("PK_ONLINE_FIRST") == "1",
+                    help="online-first: run jobs on a workspace mirrored from the API (worker/online.py), post the "
+                         "results, keep nothing; no pulls into the data folder (also PK_ONLINE_FIRST=1)")
     ap.add_argument("--idle", type=float, default=15.0, help="seconds between polls when there is nothing to do")
     ap.add_argument("--no-pull", action="store_true", help="do not pull decisions / creative edits")
     a = ap.parse_args(argv)
@@ -277,6 +293,13 @@ def main(argv=None):
         raise SystemExit("--no-auth is only for the loopback dev API")
     cl = Client(a.api, auth=not a.no_auth, token_url=a.token_url, client_id=s.get("PK_WORKER_CLIENT_ID", "pk-worker"),
                 secret=s.get("PK_WORKER_SECRET"))
+    ws = None
+    if a.online:
+        from worker import online
+        ws = online.Workspace(cl)
+        ws.activate()  # before creative/ is imported: its caches and data folder are the workspace's
+        a.no_pull = True  # nothing is pulled into a data folder: the database is the truth
+        log(f"online-first: workspace {ws.root}")
     from creative.data import comedy_dir, creative_dir
     decisions = comedy_dir() / "kb" / "v0" / "decisions.jsonl"
     kinds = [k for k in a.kinds.split(",") if k]
@@ -290,7 +313,7 @@ def main(argv=None):
                 if n or any(c.values()):
                     log(f"pulled {n} decision line(s), creative {c}")
                 last_pull = time.time()
-            busy = run_one(cl, kinds)
+            busy = run_one(cl, kinds, ws)
             backoff = 5
             if a.once and not busy:
                 return 0

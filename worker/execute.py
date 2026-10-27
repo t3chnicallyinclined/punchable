@@ -34,10 +34,12 @@ _CORPUS = None
 
 
 def corpus(reload: bool = False):
+    """The corpus over the data folder (online-first: the workspace). reload=True really re-reads it: load_corpus()
+    caches per process, so a long-running worker kept the corpus of its first job (fixed 2026-10-27)."""
     global _CORPUS
-    from creative.data import load_corpus
+    from creative.data import Corpus, comedy_dir
     if _CORPUS is None or reload:
-        _CORPUS = load_corpus()
+        _CORPUS = Corpus.load(comedy_dir())
     return _CORPUS
 
 
@@ -78,6 +80,8 @@ def run(job: dict, inbox: Path | None = None, file: Path | None = None, complete
     if kind == "ask_chat":
         from creative import askchat as AC
         return AC.run_job(inp, complete=complete)
+    if kind in ("embed", "memolink"):
+        raise ValueError(f"{kind} runs in online-first mode only (python -m worker --online)")
     raise ValueError(f"unknown job kind {kind}")
 
 

@@ -46,9 +46,21 @@ MEMO_STAGE_MB = 300     # at most this much downloaded-but-not-yet-transcribed a
 MEMO_BATCH = 25         # downloads per gsync pass
 
 
+def _default_comedy() -> Path:
+    """The data folder. Online-first (PK_ONLINE_FIRST=1) it is the home worker's disposable workspace
+    (worker/online.py): gsync's state and memo transcripts are written there, then posted to the database."""
+    if os.environ.get("PK_ONLINE_FIRST") == "1":
+        if os.environ.get("PK_WORKSPACE"):
+            return Path(os.environ["PK_WORKSPACE"]) / "comedy"
+        if os.environ.get("PK_CACHE_DIR"):
+            return Path(os.environ["PK_CACHE_DIR"]) / "worker" / "comedy"
+        return Path.home() / ".punchable-worker" / "comedy"
+    return Path(os.environ.get("COMEDY_DIR", Path.home() / "punchable-data"))
+
+
 @dataclass
 class Config:
-    comedy: Path = field(default_factory=lambda: Path(os.environ.get("COMEDY_DIR", Path.home() / "punchable-data")))
+    comedy: Path = field(default_factory=_default_comedy)
     api: str = field(default_factory=lambda: os.environ.get("PUNCHABLE_API", "http://127.0.0.1:8796"))
     home: Path = field(default_factory=lambda: Path(os.environ.get("PUNCHABLE_HOME", Path.home() / ".punchable")))
     scopes_mode: str = field(default_factory=lambda: os.environ.get("GSYNC_SCOPES", "full"))

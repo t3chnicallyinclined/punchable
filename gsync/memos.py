@@ -35,7 +35,7 @@ from pathlib import Path
 
 from . import rules
 from .config import FOLDER_MIME, IDEA_MAX, MEMO_FOLDER_NAME, Config
-from .punchable import GDOCS, ApiDown, Punchable
+from .punchable import GDOCS, ApiDown, Punchable, make
 from .store import now_iso, write_atomic
 
 DESK = Path(__file__).resolve().parent.parent
@@ -440,9 +440,10 @@ def transcript_text(tx: dict) -> str:
 # ---------------------------------------------------------------------------------------------------------- processor
 class MemoProcessor:
     def __init__(self, cfg: Config | None = None, pk: Punchable | None = None, transcriber=None, normalizer=None,
-                 prober=None, log=print):
+                 prober=None, log=print, online: bool | None = None):
         self.cfg = cfg or Config()
-        self.pk = pk or Punchable(self.cfg)
+        self.pk = pk or make(self.cfg, actor="import:memo")
+        self.online = os.environ.get("PK_ONLINE_FIRST") == "1" if online is None else online
         self._tr, self._norm = transcriber, normalizer
         self.prober = prober or probe
         self.store = MemoStore(self.cfg.memos_state)
@@ -556,7 +557,7 @@ class MemoProcessor:
         reason = f"{GDOCS} voice memo '{label}' (memo {key}, recorded {date or 'unknown'})"
         r = self.pk._req("POST", "/api/ideas", {"text": text, "title": title or "",
                                                 "from": {"note": f"Voice memo '{label}', recorded {date or 'unknown'}"},
-                                                "reason": reason})
+                                                "reason": reason, "actor": "import:memo"})
         att = r.get("attach") or None
         if att:
             att = {k: att.get(k) for k in ("decision", "id", "into", "title") if att.get(k) is not None}
@@ -625,6 +626,10 @@ class MemoProcessor:
             else:
                 filed = self.file_idea(key, text, idea_title(label), label, date)
             self._done_original(it, path, adir)
+            if self.online:
+                # online-first: no media library. The transcript and the idea are in the database; the reference is
+                # the Drive file id (or the file's name and date); the Opus copy is not kept on this PC.
+                shutil.rmtree(adir, ignore_errors=True)
             rel = lambda p: str(p.relative_to(self.cfg.comedy)).replace("\\", "/")  # noqa: E731
             self.store.set_item(key, status="done", sha256=sha, title=label, recorded_at=at, date=date, date_source=src,
                                 duration_s=dur, name_dir=name,
@@ -633,6 +638,8 @@ class MemoProcessor:
                                 joke_id=filed["joke_id"], attach=filed["attach"], **flags)
             self.log(f"memos: {label!r} ({dur:.0f}s, {date}) -> "
                      f"{(filed['attach'] or {}).get('title') or filed['joke_id'] or ('no speech' if not text else 'long note')}")
+            if self.online:
+                self.pk.push_state([rel(tdir / "transcript.json"), rel(tdir / "meta.json")])
             return "done"
         except ApiDown:
             self.store.set_item(key, status="downloaded")
