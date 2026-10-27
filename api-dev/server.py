@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "tools" / "explorer"))
 import kb as K  # noqa: E402  (the explorer's replay core, reused as-is)
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))  # the creative package (short names, the say route's store)
 import ai_overlay as AI  # noqa: E402  (inferred.json + analysis.json over graph.json)
 import auth as AUTH  # noqa: E402  (Keycloak bearer tokens when PK_AUTH=1)
 
@@ -91,6 +92,13 @@ def punch_line(text: str) -> str | None:
         p = m.group(0) if m else p
     p = p.strip()
     return p if p and p in (text or "") else None
+
+
+def short_name_of(title: str, custom: str | None = None) -> str:
+    """What he writes on a paper set list (docs/UX_2026-10.md): his own short name, else the title cut at a word
+    break inside 18 characters. The one definition is creative/notebook.py; the creative package is always here."""
+    from creative.notebook import short_name_of as _sn
+    return _sn(title, custom)
 
 
 def short_title(title: str) -> str:
@@ -543,6 +551,7 @@ class AppIndex:
                             "yours": s.get("yours", False), "stage_ai": st["stage_ai"], "stage_confidence": st["stage_confidence"],
                             "who": "edited" if s.get("yours") else self.who.get(s["id"], "ai"),
                             "short_title": short_title(s["title"]), "punch": self.joke_punch(s["id"]),
+                            "short_name": short_name_of(s["title"], (self.v.nodes.get(s["id"]) or {}).get("short_name")),
                             "nights": rooms["sets"], "avg_vs_room": js.get("avg_vs_room"),
                             "avg_laugh_s_per_min": js.get("avg_laugh_s_per_min"), "last_performed": js.get("last_performed")})
             out.sort(key=lambda x: (STAGE_ORDER.index(x["stage"]) if x["stage"] in STAGE_ORDER else 9,
@@ -1126,8 +1135,10 @@ class Handler(BaseHTTPRequestHandler):
         import ask_api as AK  # /api/ask/chats* (docs/API_CONTRACT.md "Ask")
         import mysets_api as MS  # /api/mysets* (docs/API_CONTRACT.md "Your sets")
         import suggest_api as SG  # /api/suggestions/not-a-joke ("not a joke?" voice memos; hide is his tap)
+        import say_api as SY  # /api/say + /api/tonight/screen (docs/UX_2026-10.md)
         limit = 8 * 1024 * 1024 if path.startswith("/api/worker/") else MAX_BODY
-        return (SG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+        return (SY.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+                or SG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or MS.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or AK.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or MG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
@@ -1267,8 +1278,13 @@ class Handler(BaseHTTPRequestHandler):
                     items = sort_jokes(items, arg("sort"))
                 off = max(0, int(arg("offset", "0")))
                 lim = max(1, min(int(arg("limit", "40")), MAX_JOKES_PAGE))
-                return self.send_json({"items": [{k: x[k] for k in x if k != "label_ids"} for x in items[off:off + lim]],
-                                       "total": len(items), "offset": off, "limit": lim})
+                page = [{k: x[k] for k in x if k != "label_ids"} for x in items[off:off + lim]]
+                if self.creative is not None:  # the Bits tab's row: how long it runs (from his tapes, else estimated)
+                    c = self.creative.corpus(kb)
+                    for x in page:
+                        d, basis = c.duration(x["id"])
+                        x["duration_s"], x["duration_estimated"] = d, not basis.startswith("tape")
+                return self.send_json({"items": page, "total": len(items), "offset": off, "limit": lim})
             if path == "/api/pipeline":
                 out = {}
                 for st in K.STAGES:
@@ -1792,7 +1808,11 @@ class Handler(BaseHTTPRequestHandler):
             raise K.DecisionError("op must be rate|match|new|crowd|bit|banter|confirm")
 
     def idea(self, b: dict, by: str | None = None):
-        """A new idea (a joke node at stage idea). `by` = who: the comic (OWNER_ID) or an import (import:<source>)."""
+        """POST /api/ideas: a new idea (a joke node at stage idea). `by` = who: the comic (OWNER_ID) or an import."""
+        return self.send_json(self.idea_result(b, by))
+
+    def idea_result(self, b: dict, by: str | None = None) -> dict:
+        """The idea flow as a value (POST /api/say reuses it): the node add line, the auto-attach, the embed job."""
         kb = self.kb
         by = by or self.actor(b)
         text = (b.get("text") or "").strip()
@@ -1822,7 +1842,7 @@ class Handler(BaseHTTPRequestHandler):
                         self.creative.enqueue_followup(self.creative.stores(kb), "embed", OWNER_ID)
                 except Exception as e:  # noqa: BLE001  the idea is saved either way
                     self.log_message("embed job not queued: %r", e)
-        return self.send_json(out)
+        return out
 
     def save_tonight(self, b: dict):
         kb = self.kb

@@ -29,7 +29,8 @@ REJECTED = {"rejected", "ruled_out", "superseded"}
 KIND_WEIGHT = {"same_shape": 1.0, "callback_to": 1.0, "variant_of": 1.0, "same_premise": 0.95, "has_label": 0.95,
                "segue": 0.85, "performed_as": 0.85, "part_of": 0.8, "tag_of": 0.75, "custom": 0.9}
 # joke `hidden`: a merge folds a joke into another one (api-dev/merge_api.py); undo sets it back.
-NODE_EDIT_FIELDS = {"joke": {"stage", "title", "summary", "hidden"}, "label": {"name", "definition", "merged_into"},
+# joke `short_name`: what he writes on a paper set list (docs/UX_2026-10.md), 1-24 characters or null = the default.
+NODE_EDIT_FIELDS = {"joke": {"stage", "title", "summary", "hidden", "short_name"}, "label": {"name", "definition", "merged_into"},
                     # Punchable (API_CONTRACT "Requested by app"): his show date / venue / "audio is bad" on a set,
                     # and what a stretch of tape is (a bit, crowd work or banter) on a performance.
                     "set": {"show_date", "venue", "audio_unreliable"},
@@ -821,6 +822,8 @@ class KB:
                 raise DecisionError("audio_unreliable must be true or false")
             if k == "hidden" and not isinstance(x, bool):
                 raise DecisionError("hidden must be true or false")
+            if k == "short_name" and x is not None and (not isinstance(x, str) or not x.strip() or len(x.strip()) > 24):
+                raise DecisionError("short_name must be 1-24 characters (or null for the default)")
             if k == "kind" and x not in PERF_KINDS:
                 raise DecisionError(f"kind must be one of {', '.join(PERF_KINDS)}")
             if x != n.get(k):

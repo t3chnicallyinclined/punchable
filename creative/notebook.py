@@ -69,6 +69,23 @@ def short_title(t: str | None) -> str:
     return (t or "").split(" (")[0].strip()
 
 
+SHORT_NAME_MAX = 18
+
+
+def short_name_of(title: str | None, custom: str | None = None) -> str:
+    """The name on a paper set list: his own (`short_name` on the joke) when he set one, else the title cut at
+    its first parenthesis and at a word break inside 18 characters ("Haunted dishwasher saga" -> "Haunted dishwasher")."""
+    if isinstance(custom, str) and custom.strip():
+        return custom.strip()
+    t = short_title(title) or (title or "").strip()
+    if len(t) <= SHORT_NAME_MAX:
+        return t
+    cut = t[:SHORT_NAME_MAX + 1]
+    sp = cut.rfind(" ")
+    out = (cut[:sp] if sp >= 4 else t[:SHORT_NAME_MAX]).rstrip(" ,.;:!?-")
+    return out or t[:SHORT_NAME_MAX]
+
+
 def month_year(date: str | None) -> str:
     """'2015-06-26' -> 'Jun 2015'; '2015' -> '2015'."""
     d = date or ""
@@ -178,7 +195,8 @@ def card(c: Corpus, jid: str, terms: set[str] | None = None, **extra) -> dict:
     line = best_line(c, jid, terms) or {}
     st_line, proven, nights = stage_words(c, jid)
     d, basis = c.duration(jid)
-    out = {"joke_id": jid, "title": short_title(n.get("title")), "stage": c.stage(jid)[0],
+    out = {"joke_id": jid, "title": short_title(n.get("title")), "short_name": short_name_of(n.get("title"), n.get("short_name")),
+           "stage": c.stage(jid)[0],
            "quote": line.get("quote"), "quote_node": line.get("quote_node"), "cut_start": line.get("cut_start", False),
            "cut_end": line.get("cut_end", False),
            "date": line.get("date") or (n.get("first_seen") or "")[:10] or None,

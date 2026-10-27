@@ -599,8 +599,31 @@ def _int(v, name, lo=0, hi=6 * 3600):
 
 def board_summary(c: Corpus, b: dict) -> dict:
     run = sum(c.duration(j)[0] for j in b["joke_ids"])
+    # `names`: each joke's short name in order (the Sets tab draws the list on its card without a call per board)
+    names = [N.short_name_of((c.jokes.get(j) or {}).get("title"), (c.jokes.get(j) or {}).get("short_name")) for j in b["joke_ids"]]
     return {"id": b["id"], "title": b["title"], "n": len(b["joke_ids"]), "runtime_s": round(run, 1), "runtime": mmss(run),
-            "target_s": b["target_s"], "updated": b["updated_at"], "source": b["source"]}
+            "target_s": b["target_s"], "updated": b["updated_at"], "source": b["source"], "names": names}
+
+
+def tonight_board(c: Corpus, st) -> dict | None:
+    """The set list for tonight: the board he touched last (his own first, else the newest seeded chunk), built
+    once here so the Tonight screen needs no second request. One segment per bit; `gap` = a weak transition in."""
+    bs = [b for b in st["storyboards"].items.values() if not b.get("deleted") and b.get("joke_ids")]
+    if not bs:
+        return None
+    b = max(bs, key=lambda x: (x.get("source") == "his", x["updated_at"], x["id"]))
+    out = N.build(c, b, cap=0)
+    segs = [{"joke_id": s["joke_id"], "short_name": s["short_name"], "duration_s": s["duration_s"],
+             "gap": bool((s.get("transition_in") or {}).get("weak"))} for s in out["steps"]]
+    first_gap = next(((s["transition_in"]["from"], s["transition_in"]["to"]) for s in out["steps"]
+                      if (s.get("transition_in") or {}).get("weak")), None)
+    return {"id": b["id"], "title": b["title"], "target_s": out["board"]["target_s"], "runtime_s": out["runtime_s"],
+            "runtime": out["runtime"], "status": out["status"], "status_words": out["status_words"],
+            "weak_n": out["weak_n"], "segments": segs, "source": b.get("source"),
+            "first_gap": {"from": first_gap[0], "to": first_gap[1],
+                          "from_name": N.short_name_of(c.title(first_gap[0]), (c.jokes.get(first_gap[0]) or {}).get("short_name")),
+                          "to_name": N.short_name_of(c.title(first_gap[1]), (c.jokes.get(first_gap[1]) or {}).get("short_name"))}
+            if first_gap else None}
 
 
 def latest_ws(st) -> dict | None:

@@ -31,6 +31,10 @@ DEFINE INDEX OVERWRITE srcfile_path ON srcfile FIELDS path UNIQUE;
 DEFINE FIELD OVERWRITE show_date        ON set TYPE option<string | null>;
 DEFINE FIELD OVERWRITE audio_unreliable ON set TYPE option<bool | null>;
 
+-- the comic's short name for a joke (what he writes on a paper set list; kb.py NODE_EDIT_FIELDS["joke"]).
+-- Written only by a decision; null = the default cut of the title (creative/notebook.py short_name_of).
+DEFINE FIELD OVERWRITE short_name ON joke TYPE option<string | null>;
+
 -- Schema bookkeeping (db/load.py apply_schema): the sha256 of the schema files last applied. An unchanged schema is
 -- not re-applied, because DEFINE INDEX ... OVERWRITE rebuilds every index from scratch even when nothing changed.
 DEFINE FIELD OVERWRITE schema_sha ON meta TYPE option<string>;
