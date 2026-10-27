@@ -26,7 +26,7 @@ COPY tools/explorer/kb.py tools/explorer/
 COPY creative/*.py creative/
 COPY infer/__init__.py infer/scriptdiff.py infer/
 RUN /venv/bin/python -m compileall -q /app \
- && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')] + [importlib.import_module('server')]"
+ && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib, server; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')]"
 ENV PATH=/venv/bin:$PATH \
     HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
