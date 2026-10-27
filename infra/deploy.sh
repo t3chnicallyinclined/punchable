@@ -12,6 +12,8 @@
 #   ingress                  punchable.io Ingress + certificate (after DNS and both rollouts)
 #   backup-secret            Secret punchable-r2-backup from STDIN (ship.sh backup-secret; R2_* lines, never shown)
 #   legal-rules              Secret punchable-legal-rules from STDIN (ship.sh legal-rules; the private legal_rules.json)
+#   cutover [--undo]         online-first: the database becomes the source of truth (db/push_remote.py cutover in a
+#                            pod); every later dbload is refused. --undo rolls it back. Both are logged in meta:state.
 #   backup                   ConfigMap from infra/backup/backup.py + NetworkPolicies + the nightly CronJob
 #   backup-now               one backup now (a Job from the CronJob), waits, prints its log
 #   backup-list              the backups in the bucket (a one-off pod with the same image, Secret and policy)
@@ -119,8 +121,28 @@ case "$STEP" in
     set -e
     rm -f "$B"   # private material: never left on the host (ship.sh packs a fresh one each time)
     [ -z "$CHECK" ] && [ $rc -eq 0 ] && echo "$(date -u +%FT%TZ) dbload ok" >> "$STATE/deploys.log"
-    [ $rc -eq 0 ] || echo "!! dbload exited $rc (3 = refused: run the home worker once, then infra/ship.sh dbload again)"
+    [ $rc -eq 0 ] || echo "!! dbload exited $rc (3 = refused: phone writes the PC lacks -> run the home worker once and pack again; or the online-first cutover was made -> the database is the source of truth)"
     exit $rc ;;
+  cutover)
+    U="${1:-}"
+    [ -z "$U" ] || [ "$U" = --undo ] || { echo "!! cutover [--undo]"; exit 1; }
+    REF=$(grep " api " "$STATE/images.log" 2>/dev/null | tail -1 | awk '{print $3}')
+    [[ "$REF" =~ ^localhost:32000/punchable-api@sha256:[0-9a-f]{64}$ ]] || { echo "!! no api image: infra/ship.sh build api first"; exit 1; }
+    $K -n $NS delete pod pk-cutover --ignore-not-found --wait=true >/dev/null
+    CMDJ='["python","/app/db/push_remote.py","cutover"'"${U:+,\"--undo\"}"']'
+    OV='{"spec":{"automountServiceAccountToken":false,"enableServiceLinks":false,
+      "securityContext":{"runAsNonRoot":true,"runAsUser":10001,"runAsGroup":10001,"seccompProfile":{"type":"RuntimeDefault"}},
+      "containers":[{"name":"pk-cutover","image":"'$REF'","command":'$CMDJ',"tty":false,
+        "env":[{"name":"SURREAL_URL","value":"ws://surrealdb:8000/rpc"},{"name":"SURREAL_NS","value":"punchable"},
+               {"name":"SURREAL_DB","value":"main"}],
+        "envFrom":[{"secretRef":{"name":"punchable-api"}}],
+        "resources":{"requests":{"cpu":"50m","memory":"128Mi"},"limits":{"cpu":"500m","memory":"256Mi"}},
+        "securityContext":{"allowPrivilegeEscalation":false,"readOnlyRootFilesystem":true,"capabilities":{"drop":["ALL"]}},
+        "volumeMounts":[{"name":"tmp","mountPath":"/tmp"}]}],
+      "volumes":[{"name":"tmp","emptyDir":{"sizeLimit":"64Mi"}}]}}'
+    # label app=punchable-dbload: the same NetworkPolicy (out to surrealdb:8000 only, nothing in)
+    $K -n $NS run pk-cutover --rm -i --quiet --restart=Never --labels=app=punchable-dbload --image="$REF" --overrides="$OV"
+    echo "$(date -u +%FT%TZ) cutover ${U:-made}" >> "$STATE/deploys.log" ;;
   ingress)
     getent hosts "$PK_DOMAIN" | grep -q "$PK_ORIGIN_IP" || { echo "!! $PK_DOMAIN does not resolve to $PK_ORIGIN_IP"; exit 1; }
     for d in punchable-web punchable-api; do

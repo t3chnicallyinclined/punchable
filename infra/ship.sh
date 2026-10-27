@@ -2,6 +2,7 @@
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
 #   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web | rollout api|web
 #                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
+#                 | legal-rules | cutover [--undo]
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
 #   legal-rules sends ~/.punchable/legal_rules.json (gsync/rules.py's private list) over ssh STDIN into the Secret

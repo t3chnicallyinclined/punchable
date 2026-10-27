@@ -182,3 +182,9 @@ def test_an_uploaded_note_becomes_an_import_upload_idea(ws, tmp_path):
     assert r == {"status": "skipped_legal"} and len(api.ideas) == n
     assert not list((w.comedy / "corpus" / "memos").glob("*/transcript.json")) or \
         all("petitioner" not in p.read_text() for p in (w.comedy / "corpus" / "memos").glob("*/transcript.json"))
+
+
+def test_local_mode_never_asks_for_online_only_kinds():
+    import worker.__main__ as WM
+    assert "embed" not in WM.default_kinds(False) and "memolink" not in WM.default_kinds(False)
+    assert {"embed", "memolink"} <= set(WM.default_kinds(True))

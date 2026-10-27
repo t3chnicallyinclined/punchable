@@ -432,3 +432,30 @@ def _run_all(ws: Workspace, set_dir: str):
                        encoding="utf-8", errors="replace", timeout=4 * 3600, env={**os.environ, **ws.env(), "PYTHONUTF8": "1"})
     if r.returncode != 0:
         raise RuntimeError(f"set pipeline failed (rc {r.returncode}): {(r.stderr or r.stdout)[-400:]}")
+
+
+# ---------------------------------------------------------------------------------------------------------- CLI
+def main(argv=None) -> int:
+    """python -m worker.online pull [--into DIR] [--api URL --no-auth]
+    Everything the database holds as files, decisions and creative logs, written under DIR/comedy (default: the
+    workspace). The rollback path of the online-first cutover uses it to bring online writes back to the PC."""
+    import argparse
+    import worker.__main__ as W
+    s = W.secrets()
+    ap = argparse.ArgumentParser(prog="python -m worker.online")
+    ap.add_argument("cmd", choices=["pull"])
+    ap.add_argument("--into", type=Path, default=None)
+    ap.add_argument("--api", default=s.get("PK_API", W.DEFAULT_API))
+    ap.add_argument("--no-auth", action="store_true")
+    a = ap.parse_args(argv)
+    if a.no_auth and urllib.parse.urlparse(a.api).hostname not in ("127.0.0.1", "localhost"):
+        raise SystemExit("--no-auth is only for the loopback dev API")
+    cl = W.Client(a.api, auth=not a.no_auth, token_url=s.get("PK_TOKEN_URL", W.DEFAULT_TOKEN_URL),
+                  client_id=s.get("PK_WORKER_CLIENT_ID", "pk-worker"), secret=s.get("PK_WORKER_SECRET"))
+    ws = Workspace(cl, a.into)
+    print(json.dumps({"root": str(ws.root), **ws.refresh()}, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

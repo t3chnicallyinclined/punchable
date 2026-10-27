@@ -275,6 +275,16 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None) -> bool:
     return True
 
 
+BASE_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat")
+ONLINE_KINDS = ("embed", "memolink")
+
+
+def default_kinds(online: bool) -> list[str]:
+    """The job kinds to ask for. embed and memolink run only online-first; asking a hosted API that predates them
+    for them is refused (400) on every poll, so the local mode never asks (found 2026-10-27 on the live worker)."""
+    return list(BASE_KINDS) + (list(ONLINE_KINDS) if online else [])
+
+
 def main(argv=None):
     s = secrets()
     ap = argparse.ArgumentParser(prog="python -m worker", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -282,7 +292,8 @@ def main(argv=None):
     ap.add_argument("--token-url", default=s.get("PK_TOKEN_URL", DEFAULT_TOKEN_URL))
     ap.add_argument("--no-auth", action="store_true", help="the local dev API on loopback (auth off)")
     ap.add_argument("--once", action="store_true")
-    ap.add_argument("--kinds", default="bridge,punchup,ask,process_set,import_youtube,facts,riff,ask_chat,embed,memolink")
+    ap.add_argument("--kinds", default=None, help="default: every kind this mode runs (online-first adds embed, "
+                                                  "memolink; an older API refuses kinds it does not know)")
     ap.add_argument("--online", action="store_true", default=os.environ.get("PK_ONLINE_FIRST") == "1",
                     help="online-first: run jobs on a workspace mirrored from the API (worker/online.py), post the "
                          "results, keep nothing; no pulls into the data folder (also PK_ONLINE_FIRST=1)")
@@ -302,7 +313,7 @@ def main(argv=None):
         log(f"online-first: workspace {ws.root}")
     from creative.data import comedy_dir, creative_dir
     decisions = comedy_dir() / "kb" / "v0" / "decisions.jsonl"
-    kinds = [k for k in a.kinds.split(",") if k]
+    kinds = [k for k in a.kinds.split(",") if k] if a.kinds else default_kinds(a.online)
     log(f"worker up: {a.api} ({'auth' if not a.no_auth else 'no auth'}), kinds {kinds}")
     backoff, last_pull = 5, 0.0
     while True:
