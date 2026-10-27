@@ -11,7 +11,7 @@ import { BAR_WORDS, RATINGS, Rating, fmt1, fmtDur, fmtPct, fmtSec, fmtShortDate,
 import { DensityStrip, LaughHeadline, RatingTag, ReceptionLegend, ReceptionMeter, VsRoomBar } from '@/lib/metrics';
 import { RowM, editSet, newTonight, setMetrics, useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
-import { playSegment, stopPlayback } from '@/lib/media';
+import { playSegment, stopPlayback, youtubeSource } from '@/lib/media';
 import { C, F } from '@/lib/theme';
 import { AIBadge, AddBtn, Btn, Card, Empty, ErrorCard, FixtureBanner, List, ListRow, Screen, Sheet, T, TextBtn, Yours, s, useUI, useWide } from '@/lib/ui';
 import { WhyLine, useWhy } from '@/lib/why';
@@ -46,7 +46,8 @@ export default function SetScreen() {
     }, 60);
     if (play) {
       const r = m?.rows.find((x) => x.idx === idx);
-      if (r && an.data?.audio?.opus) playSegment(an.data.audio.opus, r.row.play?.start_ms ?? Math.max(0, r.row.start_ms - 4000), r.row.play?.end_ms ?? r.row.end_ms, `row-${idx}`).catch(() => {});
+      const src = an.data?.audio?.opus || youtubeSource(an.data?.reference);
+      if (r && src) playSegment(src, r.row.play?.start_ms ?? Math.max(0, r.row.start_ms - 4000), r.row.play?.end_ms ?? r.row.end_ms, `row-${idx}`).catch(() => {});
     }
   };
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function SetScreen() {
   if (an.error && !an.data) return <Screen title="Set" back><ErrorCard error={an.error} onRetry={an.reload} /></Screen>;
   if (!an.data || !m) return <Screen title="Set" back><Empty text="Loading the set…" /></Screen>;
   const S = an.data.summary || {};
-  const audio = an.data.audio?.opus || null;
+  const audio = an.data.audio?.opus || youtubeSource(an.data.reference);  // a YouTube set plays from YouTube
   const title = info?.title || an.data.set?.title || id;
   const unreliable = !!info?.unreliable;
   const recS = S.duration_s || info?.card.duration_s || m.durationMs / 1000;

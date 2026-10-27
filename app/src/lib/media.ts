@@ -4,7 +4,7 @@
 // (useAudioPlayer + seekTo) and recording (useAudioRecorder with RecordingPresets.HIGH_QUALITY,
 // background audio mode for locked-screen recording), plus a Live Activity timer.
 // Those are stubbed for v0 so the web build stays the focus.
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { API_URL } from './api';
 
 export const isWeb = Platform.OS === 'web';
@@ -46,7 +46,20 @@ function audioEl(): HTMLAudioElement {
 }
 
 /** Play [fromMs, toMs] of an API audio path. Seeks into the file (the API serves byte ranges). */
+/** A YouTube set keeps no audio (online-first): its "audio" is `youtube:<url>`, and playing it opens the video at the
+ * moment (&t=<seconds>s). Every existing play button keeps working through playSegment. */
+export function youtubeSource(ref?: { kind: string; url?: string } | null): string | null {
+  return ref?.kind === 'youtube' && ref.url ? `youtube:${ref.url}` : null;
+}
+export function youtubeAt(url: string, ms: number) {
+  return `${url}${url.includes('?') ? '&' : '?'}t=${Math.max(0, Math.floor(ms / 1000))}s`;
+}
+
 export async function playSegment(path: string, fromMs: number, toMs: number, key: string) {
+  if (path.startsWith('youtube:')) {
+    await Linking.openURL(youtubeAt(path.slice('youtube:'.length), fromMs));
+    return;
+  }
   if (!isWeb) {
     // TODO(native): expo-audio useAudioPlayer(source).seekTo(fromMs / 1000).play()
     throw new Error('Playback on the phone build is not wired yet');

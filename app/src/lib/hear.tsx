@@ -1,7 +1,7 @@
 // "▶ Hear it": plays a span of a set's audio, seeking into the file.
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { onPlayState, playSegment } from './media';
+import { onPlayState, playSegment, youtubeAt } from './media';
 import { C, fmtMs } from './theme';
 import { T, s, useUI } from './ui';
 
@@ -14,9 +14,6 @@ function usePlaying() {
 /** Where a recording lives when Punchable keeps no copy of it (online-first): YouTube, his Drive, or his phone. */
 export type Reference = { kind: 'youtube' | 'drive' | 'file'; url?: string; name?: string | null; video_id?: string };
 
-export function youtubeAt(url: string, ms: number) {
-  return `${url}${url.includes('?') ? '&' : '?'}t=${Math.max(0, Math.floor(ms / 1000))}s`;
-}
 
 export function HearIt({ audio, play, k, sub, testID, reference }: { audio: string | null; play: { start_ms: number; end_ms: number }; k: string; sub: string; testID?: string; reference?: Reference | null }) {
   const ui = useUI();

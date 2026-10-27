@@ -191,3 +191,16 @@ def test_new_vectors_from_the_worker_are_picked_up_without_a_restart(tmp_path):
                                             encoding="utf-8")
     v = cr.vectors().get("summary:joke:x")
     assert v is not None and len(v) == 384
+
+
+def test_youtube_sets_carry_their_link_instead_of_audio(api):
+    a, t = api
+    s, d = a.get("/api/sets")
+    yt = [x for x in d["sets"] if x.get("source") == "youtube"]
+    if not yt:
+        pytest.skip("no YouTube set in this data")
+    x = yt[0]
+    vid = x["reference"]["video_id"]
+    assert x["reference"]["kind"] == "youtube" and x["reference"]["url"].endswith("v=" + vid) and x["id"].endswith(vid)
+    s, an = a.get("/api/sets/" + quote(x["id"], safe=":") + "/analysis")
+    assert s == 200 and (an.get("reference") or {}).get("video_id") == vid

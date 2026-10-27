@@ -790,7 +790,8 @@ def set_analysis(kb: AppKB, a: AppIndex, sid: str) -> dict | None:
     return {"set": {k: s.get(k) for k in ("id", "title", "date", "venue", "duration_s")},
             "source": meta.get("source"), "run_id": meta.get("run_id"), "generated_at": meta.get("generated_at"),
             "summary": _summary(rows, meta, sid, kb, a), "rows": rows, "laughs": laughs,
-            "audio": {"opus": f"/api/audio/{sid}", "wav": f"/api/audio/{sid}?fmt=wav"} if kb.audio_path(sid) else None}
+            "audio": {"opus": f"/api/audio/{sid}", "wav": f"/api/audio/{sid}?fmt=wav"} if kb.audio_path(sid) else None,
+            "reference": a.set_info(sid).get("reference")}
 
 
 def latest_analyzed(a: AppIndex) -> dict | None:
@@ -1349,7 +1350,8 @@ class Handler(BaseHTTPRequestHandler):
                           "effective_rating": eff, "rating_by": by, "kind": node.get("kind"),
                           "suggested": suggest_rating(laughs["max_bars"]), "punch": {k: pu[k] for k in ("text", "start_ms", "end_ms")},
                           "play": {"start_ms": play_from, "end_ms": max(play_from + 3000, ((lb or {}).get("end_ms") or pu["end_ms"] or 0) + 1200)},
-                          "audio": f"/api/audio/{p['set'].get('id')}" if kb.audio_path(p["set"].get("id")) else None})
+                          "audio": f"/api/audio/{p['set'].get('id')}" if kb.audio_path(p["set"].get("id")) else None,
+                          "reference": a.set_info(p["set"].get("id")).get("reference") if p["set"].get("id") else None})
         for e in d["edges"]:
             a.deco(e)
         for g in d["unit_groups"]:

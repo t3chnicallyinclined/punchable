@@ -11,7 +11,7 @@ import { confWord, fmt1, fmtDur, fmtShortDate, fmtVs, mergeNights, trendWord } f
 import { Sparkline } from '@/lib/metrics';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
-import { playSegment } from '@/lib/media';
+import { playSegment, youtubeSource } from '@/lib/media';
 import { C, F, STAGES, stageInfo, stageWord } from '@/lib/theme';
 import {
   AIBadge, AddBtn, Btn, Card, Chips, Chip, Empty, ErrorCard, FixtureBanner, IconBtn, Icon, List, ListRow, Proven, Screen, Seg, Sheet, T, TextBtn, Yours, s, useUI, useWide,
@@ -125,7 +125,7 @@ export default function Joke() {
       const text = p.perf?.text || p.punch?.text || '';
       const info = sets.index.get(best.set);
       return { kind: 'stage' as const, text, reveal: reveal && text.toLowerCase().includes(reveal.toLowerCase()) ? reveal : (p.punch?.text || reveal),
-        caption: `On stage · ${info?.venue.name.replace(/\?$/, '') || ''} · ${fmtShortDate(best.date)}`, play: p.play, audio: p.audio, set: best.set };
+        caption: `On stage · ${info?.venue.name.replace(/\?$/, '') || ''} · ${fmtShortDate(best.date)}`, play: p.play, audio: p.audio || youtubeSource(p.reference), set: best.set };
     }
     const units: any[] = (d.data?.versions || []).flatMap((v: any) => v.units);
     const u = [...units].reverse().find((x) => x.kind === 'setup+punch') || units[units.length - 1];
@@ -587,7 +587,7 @@ function VersionsTab({ d, nights, bestSet, unit, onChanged }: { d: any; nights: 
                   {bestSet === e.n.set && <View style={{ paddingHorizontal: 6, borderRadius: 4, backgroundColor: C.amberSoft }}><Text style={{ fontFamily: F.g7, fontSize: 11, color: C.amber }}>best</Text></View>}
                 </View>
                 {!!e.n.perf.punch?.text && <T style={{ fontSize: 15 }}>“{e.n.perf.punch.text}”</T>}
-                {e.n.perf.audio && <Btn small v="ghost" label="▶ Hear it" onPress={() => playSegment(e.n.perf.audio, e.n.perf.play.start_ms, e.n.perf.play.end_ms, `v-${e.n.set}`).catch((er) => ui.snack(er.message))} />}
+                {(e.n.perf.audio || youtubeSource(e.n.perf.reference)) && <Btn small v="ghost" label="▶ Hear it" onPress={() => playSegment(e.n.perf.audio || youtubeSource(e.n.perf.reference)!, e.n.perf.play.start_ms, e.n.perf.play.end_ms, `v-${e.n.set}`).catch((er) => ui.snack(er.message))} />}
               </View>
             ))}
           </View>
