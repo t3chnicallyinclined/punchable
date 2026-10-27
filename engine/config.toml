@@ -56,32 +56,32 @@ backoff_s = [30, 120]       # waits after a rate-limit error before retrying; th
 # offline = true marks batch tasks; claude_code is only ever used for offline tasks.
 [tasks.default]
 providers = ["ollama"]
-models = { ollama = "gpt-oss:20b", anthropic = "claude-opus-5-5", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", anthropic = "claude-opus-5-5", claude_code = "opus" }
 reasoning_effort = "low"
 
 [tasks.split]          # recording -> units (writing task)
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.match_judge]    # unit vs candidate jokes: yes/no + confidence + reason
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.propose_joke]
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.label]
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.link_judge]
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.ask_plan]       # request path: never claude_code
@@ -95,12 +95,12 @@ reasoning_effort = "low"
 
 [tasks.creative_bridge]    # storyboard bridge drafts (creative/story.py)
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.creative_punchup]   # working-set punch-up drafts (creative/workingset.py)
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.merge_judge]        # same-idea pairs for merge candidates (creative/merge.py); offline batch, cached
@@ -115,12 +115,12 @@ offline = true
 
 [tasks.creative_facts]     # Write's "Check this": plain facts with a source each (creative/write.py); the worker checks every source
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.creative_riff]      # Write's folded "Ideas from the AI": drafts grounded in his riff and his own bits (creative/write.py)
 providers = ["claude_code", "ollama"]
-models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
 [tasks.ask_chat]           # Ask (creative/askchat.py): one turn of a conversation with his notebook; the API retrieves and gates
