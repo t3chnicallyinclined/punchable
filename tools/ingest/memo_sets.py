@@ -61,6 +61,8 @@ def plan(c: Path, all_lengths: bool) -> list[dict]:
 
 def make_set(c: Path, p: dict, legal) -> str:
     sets, raw = c / "corpus" / "sets" / p["set_dir"], c / "tapes" / "raw" / p["set_dir"]
+    if (sets / "laughs_auto.json").is_file() and (sets / "meta.json").is_file():
+        return "done"  # analysed already (its decoded audio may be gone: never decoded or copied again)
     if (sets / "meta.json").is_file() and (raw / "audio16k.wav").is_file():
         return "exists"
     if legal(p["text"]):
@@ -91,6 +93,7 @@ def main(argv=None) -> int:
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--all-lengths", action="store_true")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--keep-wav", action="store_true", help="keep the decoded audio after the set pipeline")
     a = ap.parse_args(argv)
     c = comedy()
     ps = plan(c, a.all_lengths)[: a.limit]
@@ -114,7 +117,21 @@ def main(argv=None) -> int:
     py = os.environ.get("PK_LAUGHS_PY", str(Path.home() / ".venvs" / "laughs" / "Scripts" / "python.exe"))
     r = subprocess.run([py, "-m", "tools.audio.run_all", "--sets", *made], cwd=str(DESK),
                        env={**os.environ, "PYTHONUTF8": "1", "COMEDY_DIR": str(c)})
+    if r.returncode == 0 and not a.keep_wav:
+        purge_wavs(c, made)
     return r.returncode
+
+
+def purge_wavs(c: Path, sets: list[str]) -> int:
+    """No media library: once a set's laughs are measured, its decoded audio goes (the memo's own audio and its
+    Drive original are the recording). A set whose pipeline did not finish keeps it, so a rerun can resume."""
+    n = 0
+    for d in sets:
+        wav = c / "tapes" / "raw" / d / "audio16k.wav"
+        if wav.is_file() and (c / "corpus" / "sets" / d / "laughs_auto.json").is_file():
+            wav.unlink()
+            n += 1
+    return n
 
 
 if __name__ == "__main__":
