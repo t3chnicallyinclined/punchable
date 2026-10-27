@@ -9,7 +9,7 @@ import { JokeSummary, post, useApi } from './api';
 import { fmtDur } from './laughs';
 import { Memo, MemosResp, memoTitle } from './memos';
 import { BitCard, Build, Related, quoteText } from './simple';
-import { isQuestion, shortNameOf } from './say';
+import { isQuestion, positionIn, shortNameOf } from './say';
 import { C, F } from './theme';
 import { Btn, Chip, Chips, Sheet, T } from './ui';
 
@@ -46,7 +46,6 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
   const kills = useApi<{ items: JokeSummary[] }>(visible && filter === 'kills' && !dq ? '/api/jokes?sort=strongest&limit=30' : null);
   const never = useApi<{ items: JokeSummary[] }>(visible && filter === 'never' && !dq ? '/api/jokes?sort=written&limit=200' : null);
   const memos = useApi<MemosResp>(visible && filter === 'memos' && !dq ? '/api/memos' : null, { cache: false });
-  const pos = useMemo(() => new Map(inSet.map((x) => [x.joke_id, x.position])), [inSet]);
 
   const rows: RowT[] = useMemo(() => {
     if (dq && !question) return (rel.data?.items || []).map(fromCard);
@@ -73,7 +72,7 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
   };
 
   const row = ({ item: r }: { item: RowT }) => {
-    const at = pos.get(r.joke_id);
+    const at = positionIn(inSet, r.joke_id);
     const inside = at != null;
     return (
       <View testID={`add-row-${r.joke_id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border, opacity: inside ? 0.45 : 1 }}>

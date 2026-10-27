@@ -38,7 +38,7 @@ export const say = {
   tonight: () => get<TonightScreen>('/api/tonight/screen'),
 };
 
-export { guessKind, isQuestion, shortNameOf } from './sayRules';
+export { guessKind, isQuestion, positionIn, shortNameOf } from './sayRules';
 
 // ---------------------------------------------------------------- the outbox (per-device; flushed when the API is back)
 const OUTBOX = 'pk.say.outbox.v1';

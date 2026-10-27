@@ -600,7 +600,7 @@ def _int(v, name, lo=0, hi=6 * 3600):
 def board_summary(c: Corpus, b: dict) -> dict:
     run = sum(c.duration(j)[0] for j in b["joke_ids"])
     # `names`: each joke's short name in order (the Sets tab draws the list on its card without a call per board)
-    names = [N.short_name_of((c.jokes.get(j) or {}).get("title"), (c.jokes.get(j) or {}).get("short_name")) for j in b["joke_ids"]]
+    names = [N.short_name_of(c.jokes[j].get("title"), c.jokes[j].get("short_name")) for j in b["joke_ids"] if j in c.jokes]
     return {"id": b["id"], "title": b["title"], "n": len(b["joke_ids"]), "runtime_s": round(run, 1), "runtime": mmss(run),
             "target_s": b["target_s"], "updated": b["updated_at"], "source": b["source"], "names": names}
 

@@ -32,3 +32,9 @@ export function shortNameOf(title: string, custom?: string | null): string {
   return out || t.slice(0, 18);
 }
 
+
+/** Where a joke already sits in a set list (0-based), else null: the add sheet greys it and says "already at #n". */
+export function positionIn(inSet: { joke_id: string; position: number }[], jokeId: string): number | null {
+  const hit = inSet.find((x) => x.joke_id === jokeId);
+  return hit ? hit.position : null;
+}
