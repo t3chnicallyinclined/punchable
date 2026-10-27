@@ -94,9 +94,24 @@ the deploy steps and the restore drill are in `infra/README.md` "Backups"). It e
 one, each exported, restored into a scratch server and compared table by table: every count, table definition and
 change feed equal, full-text and KNN answering.
 
-**Compaction.** SurrealKV keeps an append-only log, so the store grows with churn. It reached 1.2 GB after test runs on the real store; tests no longer use it.
-- To shrink it: `db\stop.ps1`, delete `comedy\db\punchable\data`, `db\start.ps1`, `python db\load.py`, then restart the API.
-- This is safe whenever `/api/health` `decision_lines` equals the line count of `decisions.jsonl`.
+**Compaction.** SurrealKV (an LSM in 3.3.4: write-ahead log + memtable, flushed to compacted `sstables/` + `vlog/`)
+keeps every write in `data\wal` until the memtable reaches its size limit. It reached 1.2 GB after test runs on the
+real store (tests no longer use it), and **853 MB in one day** in normal use (2026-10-27), which filled the disk once.
+- **What wrote so much** (measured by attributing the WAL's bytes to their keys): 76% were index keys of `unit` under
+  26 different index ids. Every incremental sync (each memo the API filed, each watcher pass) re-applied
+  `schema.surql`, and `DEFINE INDEX ... OVERWRITE` rebuilds an index from every row even when nothing changed (the
+  HNSW over 2,243 vectors + the full-text index: ~22 MB of writes per sync).
+- **Fixes:** `load.apply_schema` keeps the schema's sha256 in `meta:state.schema_sha` and skips an unchanged schema
+  (`--sync` with nothing changed now writes 0.8 MB instead of 22 MB; `db/tests/test_wal.py`). `db/start.ps1` (and the
+  hosted StatefulSet) set `SURREAL_SURREALKV_MAX_MEMTABLE_SIZE=67108864` (64 MiB; the default is 1 GiB, more than the
+  hosted pod's memory limit, and a restart replays the whole log into RAM): over 4 full loads the WAL stayed under
+  31 MB. A big transaction that spans a memtable flush can fail with "Transaction write conflict ... can be retried";
+  `sdb.Rpc.query` retries single statements and BEGIN/COMMIT blocks (it happened on every load that crossed the limit).
+- **To shrink an existing store** (keeps the database's own rows, so it also works when the database is the source of
+  truth): export it (`db\backup.ps1`), `db\stop.ps1`, move `data` aside (keep it until the check passes), `db\start.ps1`,
+  import the export, compare per-table counts, restart the API. Or, while the files are still the source of truth,
+  `python db\load.py` into the empty store (safe whenever `/api/health` `decision_lines` equals the line count of
+  `decisions.jsonl`).
 - A fresh v1 load is **59 MB**.
 
 ## Schema (`db/schema.surql`)

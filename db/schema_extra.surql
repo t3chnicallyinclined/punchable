@@ -30,3 +30,8 @@ DEFINE INDEX OVERWRITE srcfile_path ON srcfile FIELDS path UNIQUE;
 -- and "audio is bad" (the set drops out of trends). `venue` is already a set field. Written only by a decision.
 DEFINE FIELD OVERWRITE show_date        ON set TYPE option<string | null>;
 DEFINE FIELD OVERWRITE audio_unreliable ON set TYPE option<bool | null>;
+
+-- Schema bookkeeping (db/load.py apply_schema): the sha256 of the schema files last applied. An unchanged schema is
+-- not re-applied, because DEFINE INDEX ... OVERWRITE rebuilds every index from scratch even when nothing changed.
+DEFINE FIELD OVERWRITE schema_sha ON meta TYPE option<string>;
+DEFINE FIELD OVERWRITE extra_sha  ON meta TYPE option<string>;

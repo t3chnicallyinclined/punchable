@@ -216,13 +216,26 @@ class Rpc:
         else:
             self.notifications.append(msg)
 
+    RETRY_WAITS = (0.2, 0.5, 1.0, 2.0)
+
     def query(self, sql: str, vars: dict | None = None) -> list:
-        """All statements; raises if any statement failed."""
-        res = self.call("query", [sql, vars or {}])
-        for i, r in enumerate(res):
-            if r.get("status") != "OK":
-                raise SurrealError(f"statement {i} failed: {r.get('result')}\n--- {sql[:600]}")
-        return res
+        """All statements; raises if any statement failed.
+
+        A "Transaction write conflict ... can be retried" is retried (up to 4 times) when that is safe: a single
+        statement, or one BEGIN ... COMMIT block (a failed transaction leaves nothing behind). SurrealKV reports it
+        when a big write (e.g. DELETE of every unit, with its HNSW + full-text index upkeep) spans a memtable flush;
+        measured 2026-10-27: deterministic on the load that crosses the memtable size, and the retry succeeds."""
+        for wait in self.RETRY_WAITS + (None,):
+            res = self.call("query", [sql, vars or {}])
+            bad = [(i, r) for i, r in enumerate(res) if r.get("status") != "OK"]
+            if not bad:
+                return res
+            msg = str(bad[0][1].get("result"))
+            atomic = len(res) == 1 or sql.lstrip()[:5].upper() == "BEGIN"
+            if wait is None or not atomic or "can be retried" not in msg:
+                raise SurrealError(f"statement {bad[0][0]} failed: {msg}\n--- {sql[:600]}")
+            time.sleep(wait)
+        raise AssertionError("unreachable")
 
     def last(self, sql: str, vars: dict | None = None):
         return self.query(sql, vars)[-1]["result"]

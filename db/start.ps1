@@ -36,6 +36,10 @@ New-Item -ItemType Directory -Force $data, $logs | Out-Null
 $env:SURREAL_USER = $cfg['SURREAL_USER']
 $env:SURREAL_PASS = $cfg['SURREAL_PASS']
 $env:SURREAL_NO_BANNER = 'true'
+# SurrealKV keeps every write in its write-ahead log until the in-memory table reaches this size (SurrealDB's default
+# is 1 GiB, so the log reached 850 MB and filled the disk once; a restart replays all of it into RAM). 64 MiB flushes
+# to compacted tables early. db/DB.md "Compaction". Override with SURREAL_SURREALKV_MAX_MEMTABLE_SIZE.
+if (-not $env:SURREAL_SURREALKV_MAX_MEMTABLE_SIZE) { $env:SURREAL_SURREALKV_MAX_MEMTABLE_SIZE = '67108864' }
 $store = 'surrealkv://' + ($data -replace '\\', '/')
 $proc = Start-Process -FilePath $exe -ArgumentList @('start', '--log', 'info', '--bind', "127.0.0.1:$port", '--deny-scripting', $store) `
     -RedirectStandardOutput (Join-Path $logs 'surreal.log') -RedirectStandardError (Join-Path $logs 'surreal.err.log') `

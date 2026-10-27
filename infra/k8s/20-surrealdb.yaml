@@ -41,6 +41,10 @@ spec:
             - { name: SURREAL_PATH, value: "surrealkv:///data/db?versioned=true" }
             - { name: SURREAL_NO_BANNER, value: "true" }
             - { name: SURREAL_LOG, value: info }
+            # SurrealKV holds writes in its WAL + memtable until the memtable reaches this size. The default is 1 GiB:
+            # more than this pod's 512 Mi limit (a restart replays the whole WAL into RAM). 64 MiB, measured on the
+            # real data 2026-10-27: WAL stays under ~40 MB across repeated full loads (db/DB.md "Compaction").
+            - { name: SURREAL_SURREALKV_MAX_MEMTABLE_SIZE, value: "67108864" }
             # Only Keycloak's in-cluster JWKS may be fetched (DEFINE ACCESS ... WITH JWT URL). Nothing else.
             - { name: SURREAL_CAPS_ALLOW_NET, value: "keycloak.__PK_KC_NS__.svc.cluster.local" }
             - name: SURREAL_USER

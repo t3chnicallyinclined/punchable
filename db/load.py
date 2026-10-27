@@ -136,13 +136,52 @@ def load_vectors() -> dict[str, list[float]]:
     return out
 
 
-def apply_schema(r: sdb.Rpc, ns: str, db: str):
+def _sha(*texts: str) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    for t in texts:
+        h.update(t.encode("utf-8") + b"\0")
+    return h.hexdigest()
+
+
+def schema_shas() -> tuple[str, str]:
+    """(sha of schema.surql + schema_extra.surql, sha of schema_extra.surql alone)."""
+    main, extra = (HERE / "schema.surql").read_text(encoding="utf-8"), (HERE / "schema_extra.surql").read_text(encoding="utf-8")
+    return _sha(main, extra), _sha(extra)
+
+
+def _stored_shas(r: sdb.Rpc) -> tuple[str | None, str | None]:
+    if "meta" not in ((r.last("INFO FOR DB;") or {}).get("tables") or {}):
+        return None, None
+    row = r.last("SELECT schema_sha, extra_sha FROM ONLY meta:state;")
+    row = sdb.strip_none(row) if isinstance(row, dict) else {}
+    return row.get("schema_sha"), row.get("extra_sha")
+
+
+def apply_schema(r: sdb.Rpc, ns: str, db: str, force: bool = False) -> bool:
+    """Apply db/schema.surql + schema_extra.surql, ONLY when they changed since the last time (or force=True).
+
+    Why the check (2026-10-27): every `DEFINE INDEX ... OVERWRITE` gives the index a new id and REBUILDS it from every
+    row, even when the definition is identical. This ran on every incremental sync (every memo the API filed, every
+    watcher pass), so the HNSW and full-text indexes on unit/joke were rebuilt ~26 times in one day: 76% of an 853 MB
+    SurrealKV write-ahead log was index keys of `unit` (db/DB.md "Compaction"). The schema's sha256 is now kept in
+    meta:state.schema_sha; an unchanged schema with every change feed present is not re-applied.
+    Returns True when the schema was applied."""
     if not r.db_user:  # a database-level user (hosted dbload) cannot define namespaces; infra/db-init.sh made them
         r.query(f"DEFINE NAMESPACE IF NOT EXISTS {ns}; USE NS {ns}; DEFINE DATABASE IF NOT EXISTS {db} STRICT;")
     r.use(ns, db)
+    sha, xsha = schema_shas()
+    if not force and _stored_shas(r)[0] == sha and not sdb.check_changefeeds(r):
+        return False
     r.query((HERE / "schema.surql").read_text(encoding="utf-8"))
-    apply_extra_schema(r)
+    apply_extra_schema(r, force=True)
     r.query("IF !record::exists(meta:state) { CREATE meta:state CONTENT { gen: 0, ord_next: 0, orphans: 0, loading: false, load_info: {} } };")
+    _repair_changefeeds(r)
+    r.write("UPDATE meta:state SET schema_sha = $s, extra_sha = $x RETURN id;", {"s": sha, "x": xsha})
+    return True
+
+
+def _repair_changefeeds(r: sdb.Rpc):
     missing = sdb.check_changefeeds(r)
     if missing:
         # Trap T6: something re-defined a table without its CHANGEFEED clause. IF NOT EXISTS can't restore it, so
@@ -160,10 +199,17 @@ def apply_schema(r: sdb.Rpc, ns: str, db: str):
             raise SystemExit(f"change feed still missing after repair: {missing}")
 
 
-def apply_extra_schema(r: sdb.Rpc):
+def apply_extra_schema(r: sdb.Rpc, force: bool = False) -> bool:
     """Tables added for hosting (db/schema_extra.surql: creative events, the job queue, the hosted file mirror).
-    Additive and idempotent, so the API also applies it at startup without a reload."""
+    Additive and idempotent, so the API also applies it at startup without a reload; skipped when unchanged since the
+    last time (meta:state.extra_sha), because its DEFINE INDEX ... OVERWRITE lines rebuild those indexes each time."""
+    _, xsha = schema_shas()
+    if not force and _stored_shas(r)[1] == xsha:
+        return False
     r.query((HERE / "schema_extra.surql").read_text(encoding="utf-8"))
+    if not force and r.last("RETURN record::exists(meta:state);"):
+        r.write("UPDATE meta:state SET extra_sha = $x RETURN id;", {"x": xsha})
+    return True
 
 
 def insert_rows(r: sdb.Rpc, table: str | None, rows: list[dict], relation: bool = False):
