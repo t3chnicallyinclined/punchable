@@ -56,6 +56,10 @@ spec:
             - { name: SURREAL_URL, value: "ws://surrealdb:8000/rpc" }
             - { name: SURREAL_NS, value: punchable }
             - { name: SURREAL_DB, value: main }
+            # Online-first (2026-10-27): the legal rules every ingest route applies (api-dev/ingest_api.py, the same
+            # rules gsync uses). Secret punchable-legal-rules from ~/.punchable/legal_rules.json (infra/ship.sh
+            # legal-rules). Without it the generic court markers still apply.
+            - { name: PUNCHABLE_LEGAL_RULES, value: /etc/punchable/legal/legal_rules.json }
           envFrom:
             # SURREAL_API_USER / SURREAL_API_PASS: a DATABASE-level user (EDITOR), never root (infra/db-init.sh).
             - secretRef: { name: punchable-api }
@@ -91,6 +95,11 @@ spec:
             failureThreshold: 5
           volumeMounts:
             - { name: tmp, mountPath: /tmp }
+            - { name: legal, mountPath: /etc/punchable/legal, readOnly: true }
       volumes:
         - name: tmp
+          # also stages uploads from the app until the home worker has processed them (then deleted: no media
+          # library), so 2 Gi bounds what can wait at once
           emptyDir: { sizeLimit: 2Gi }
+        - name: legal
+          secret: { secretName: punchable-legal-rules, optional: true, defaultMode: 0440 }

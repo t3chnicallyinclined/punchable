@@ -18,7 +18,8 @@ Punchable on your own computer; see the top-level README for that.
 | `keycloak` | the realm ConfigMap and its own import job (other realms are not touched) |
 | `keycloak-ingress` | the `auth.<domain>` Ingress and certificate |
 | `build api\|web` / `rollout api\|web` | build the images on the server, then roll out pinned to the digest |
-| `dbload [--check]` | pack your text/JSON data here (`db/push_remote.py`), load it into SurrealDB from a pod |
+| `dbload [--check]` | pack your text/JSON data here (`db/push_remote.py`), load it into SurrealDB from a pod. Refused after the online-first cutover |
+| `legal-rules` | your private `~/.punchable/legal_rules.json`, over ssh stdin, into the Secret the API's ingest routes read |
 | `ingress` | the `<domain>` Ingress and certificate |
 | `status` | what is live |
 | `backup-secret` | the R2 token for the backup bucket, from `~/.punchable/r2.env`, over ssh stdin, into a Secret |
@@ -26,6 +27,14 @@ Punchable on your own computer; see the top-level README for that.
 
 `infra/ship.sh dns plan|apply|undo` runs locally against the Cloudflare API (`CF_API_TOKEN` in
 `~/.punchable/cloudflare.env`) and only touches the records it created.
+
+## Online-first
+The database on the server is the source of truth once you cut over; your PC becomes a compute worker that posts
+results through `/api/worker/*` (`api-dev/ingest_api.py`, `worker/online.py`). The order (one last `dbload`, then
+`db/push_remote.py cutover` in the dbload pod's image, then `PK_ONLINE_FIRST=1` for the worker and gsync) and the
+rollback are in your private notes. `legal-rules` must run before the first worker post, so court material is
+refused on the server too. Uploads from the app wait in the API pod's `/tmp` (2 Gi) until the worker has processed
+them, then they are deleted; no recording is kept on the server.
 
 ## Files
 | Path | What |

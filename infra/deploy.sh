@@ -11,6 +11,7 @@
 #   dbload <bundle.tgz> [--check]   load Punchable's text/JSON data into SurrealDB from a pod (db/push_remote.py)
 #   ingress                  punchable.io Ingress + certificate (after DNS and both rollouts)
 #   backup-secret            Secret punchable-r2-backup from STDIN (ship.sh backup-secret; R2_* lines, never shown)
+#   legal-rules              Secret punchable-legal-rules from STDIN (ship.sh legal-rules; the private legal_rules.json)
 #   backup                   ConfigMap from infra/backup/backup.py + NetworkPolicies + the nightly CronJob
 #   backup-now               one backup now (a Job from the CronJob), waits, prints its log
 #   backup-list              the backups in the bucket (a one-off pod with the same image, Secret and policy)
@@ -129,6 +130,16 @@ case "$STEP" in
     $K -n $NS wait --for=condition=Ready certificate/punchable-tls --timeout=5m
     curl -fsS -o /dev/null -w "https://$PK_DOMAIN/ %{http_code}\n" "https://$PK_DOMAIN/"
     curl -fsS -o /dev/null -w "https://$PK_DOMAIN/api/health %{http_code}\n" "https://$PK_DOMAIN/api/health" ;;
+  legal-rules)
+    # STDIN = ~/.punchable/legal_rules.json (from ship.sh legal-rules): the court-material rules every ingest route
+    # applies. Private terms: a variable, printf, a pipe into the Secret; never argv, a file on the host, or the output.
+    RULES="$(cat)"
+    python3 -c 'import json,sys; json.loads(sys.stdin.read())' <<<"$RULES" || { echo "!! legal rules on stdin are not JSON"; exit 1; }
+    printf '%s' "$RULES" | $K -n $NS create secret generic punchable-legal-rules --from-file=legal_rules.json=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset RULES
+    echo "punchable-legal-rules applied (not shown). The API reads it on its next start (infra/ship.sh rollout api)." ;;
   backup-secret)
     # STDIN = R2_ENDPOINT / R2_BUCKET / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY lines (from ship.sh backup-secret): a
     # token scoped to the backup bucket only. Same path as google-idp: a variable, printf, a pipe; never argv or a file.
