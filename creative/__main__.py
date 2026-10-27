@@ -10,6 +10,7 @@
   venues [--offline]
   today [--ws ID] [--date YYYY-MM-DD]
   merge groups [--cap N] | for JOKE | match TEXT | judge     same-idea groups (judge = offline, Claude via claude_code)
+  memolink report | embed | judge | triage | attach [--apply] | all [--apply]    voice memos <-> bits (creative/memolink.py)
   demo-all [--no-drafts] [--offline]      write every demo output under the creative dir
 
 --dir overrides the creative dir (default comedy/kb/creative, or PUNCHABLE_CREATIVE_DIR).
@@ -68,7 +69,13 @@ def main(argv=None):
     ap.add_argument("--date")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--no-drafts", action="store_true")
+    ap.add_argument("--apply", action="store_true", help="memolink attach: write the clear attaches (ai:attach)")
     a = ap.parse_args(argv)
+    if a.cmd == "memolink":  # before load_corpus: it loads (and reloads) the corpus itself
+        from . import memolink as ML
+        from .data import VECTORS_DIR, comedy_dir
+        return _out(ML.cli(comedy_dir(), Path(a.dir) if a.dir else creative_dir(), VECTORS_DIR,
+                           list(a.args) + (["--apply"] if a.apply else [])))
     d = Path(a.dir) if a.dir else creative_dir()
     c = load_corpus()
     x = a.args

@@ -22,6 +22,13 @@ from .util import mean, median, prefix_words, r2
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
+
+def his_material(by: str | None) -> bool:
+    """A decision line whose content is the comic's own material: his action (OWNER_ID) or an import of his own
+    notes, docs, memos or sets (`import:<source>`). Machine judgments (`ai:*`) are not."""
+    return by == OWNER_ID or (isinstance(by, str) and by.startswith("import:"))
+
+
 DEFAULT_COMEDY = os.path.expanduser("~/punchable-data")
 DESK = Path(__file__).resolve().parent.parent
 # PK_CACHE_DIR: keep the caches (they hold your text) outside the repo: <PK_CACHE_DIR>/kb, /infer, /audio
@@ -83,6 +90,20 @@ class Vectors:
                         for i, k in enumerate(ids):
                             self._row.setdefault(k, n + i)
                         n += len(ids)
+            # extra_<name>.json: {"dim": 384, "rows": {key: [384 floats]}} written by the home worker for text the
+            # tools/kb caches never saw, e.g. `summary:<joke id>` for an idea that has no units yet (a voice memo,
+            # an app jot). creative/memolink.py makes them; on the hosted API they arrive as srcfile vectors/.
+            for xp in sorted(vd.glob("extra_*.json")) if vd.is_dir() else []:
+                try:
+                    rows = json.loads(xp.read_text(encoding="utf-8")).get("rows") or {}
+                except (OSError, ValueError):
+                    continue
+                keys = [k for k, v in rows.items() if isinstance(v, list) and len(v) == 384 and k not in self._row]
+                if keys:
+                    mats.append(np.asarray([rows[k] for k in keys], dtype=np.float32))
+                    for i, k in enumerate(keys):
+                        self._row[k] = n + i
+                    n += len(keys)
             if mats:
                 self._m = np.concatenate(mats)
 
@@ -180,7 +201,8 @@ class Corpus:
         self.his_nodes, self.his_stage, self.perf_overrides, self.his_lists = set(), set(), {}, {}
         # replay decisions (last one wins, in file order)
         for d in self.decisions:
-            if d.get("by", OWNER_ID) != OWNER_ID or d.get("auto"):
+            # his own lines and imports of his own material (import:gsync, import:memo, ...); never ai:* lines
+            if not his_material(d.get("by", OWNER_ID)) or d.get("auto"):
                 continue
             tgt, act, after = d.get("target"), d.get("action"), d.get("after") or {}
             if tgt == "edge":

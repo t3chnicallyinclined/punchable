@@ -34,6 +34,9 @@ class Config:
         for k, v in raw.items():
             v = str(v).replace("{comedy}", comedy).replace("{engine}", str(ENGINE_DIR))
             self.paths[k] = Path(os.path.normpath(os.path.expanduser(v)))
+        bge = bge_dir_override()
+        if bge:
+            self.paths["bge_dir"] = bge
 
     # convenience -------------------------------------------------------------
     def p(self, key: str) -> Path:
@@ -56,6 +59,18 @@ class Config:
     @property
     def runs_log(self) -> Path:
         return self.p("kb_dir") / "runs.jsonl"
+
+
+def bge_dir_override() -> Path | None:
+    """Where the bge-small ONNX model is, if not the config's spike folder: PK_BGE_DIR, else
+    <PK_CACHE_DIR>/models/bge-small-en-v1.5 (tools/kb/fetch_bge.py puts it there). Only a folder that has the model."""
+    cands = [os.environ.get("PK_BGE_DIR")]
+    if os.environ.get("PK_CACHE_DIR"):
+        cands.append(os.path.join(os.environ["PK_CACHE_DIR"], "models", "bge-small-en-v1.5"))
+    for c in cands:
+        if c and (Path(c) / "onnx" / "model.onnx").is_file() and (Path(c) / "tokenizer.json").is_file():
+            return Path(c)
+    return None
 
 
 def _deep_update(dst: dict, src: dict):

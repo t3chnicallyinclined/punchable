@@ -97,10 +97,12 @@ class Index:
         self.ttoks = {j: {_stem(w) for w in _toks(c.jokes[j].get("title")) if w not in TITLE_STOP and len(w) > 2}
                       for j in self.jokes}
         self.df_t = Counter(w for s in self.ttoks.values() for w in s)
-        # unit vectors (bge-small, read-only cache) with each unit's own similarity band
-        self.vec_units = [u for j in self.jokes for u in self.units[j] if c.vectors.get(u) is not None]
+        # unit vectors (bge-small, read-only cache) with each unit's own similarity band; a joke with no units (an
+        # app or Google Docs idea, a voice memo) takes part through its summary's vector `summary:<joke>` when the
+        # home worker has made one (creative/memolink.py), so new notes can be matched by meaning too
+        self.vec_units = [u for j in self.jokes for u in self.parts[j] if c.vectors.get(u) is not None]
         self.urow = {u: i for i, u in enumerate(self.vec_units)}
-        self.ujoke = {u: j for j in self.jokes for u in self.units[j]}
+        self.ujoke = {u: j for j in self.jokes for u in self.parts[j]}
         if self.vec_units:
             m = np.stack([np.asarray(c.vectors.get(u), dtype=np.float32) for u in self.vec_units])
             m /= np.maximum(np.linalg.norm(m, axis=1, keepdims=True), 1e-9)
@@ -248,7 +250,7 @@ JUDGE_SYSTEM = (
 
 
 def _excerpt(c: Corpus, ix: Index, j: str, unit: str | None, n: int = 900) -> str:
-    t = c.nodes[unit].get("text") if unit else None
+    t = (c.nodes.get(unit) or {}).get("text") if unit else None  # `summary:<joke>` parts have no node: the summary
     t = t or c.jokes[j].get("summary") or c.jokes[j].get("title") or ""
     t = " ".join(t.split())
     return t[:n] + ("..." if len(t) > n else "")

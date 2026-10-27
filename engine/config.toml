@@ -108,6 +108,11 @@ providers = ["claude_code"]  # Claude only: the local 20b judged every same bit 
 models = { claude_code = "opus" }   # the CLI alias: Claude Code 2.1.278 refuses "claude-opus-5-5" (needs >= 2.1.280)
 offline = true
 
+[tasks.memo_triage]        # each voice memo: joke material / performed set / conversation / note (creative/memolink.py); offline, cached
+providers = ["claude_code"]
+models = { claude_code = "opus" }   # the CLI alias, as merge_judge
+offline = true
+
 [tasks.creative_facts]     # Write's "Check this": plain facts with a source each (creative/write.py); the worker checks every source
 providers = ["claude_code", "ollama"]
 models = { ollama = "gpt-oss:20b", claude_code = "claude-opus-5-5" }
