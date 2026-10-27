@@ -57,6 +57,20 @@ def test_candidates_shape(api):
     assert s == 200 and one["joke_id"] == MAIN and "group" in one and "others" in one and "history" in one
 
 
+def test_candidates_batch_is_one_call_for_many(api):
+    a, _ = api
+    s, one = a.get(f"/api/merge/candidates?joke={q(MAIN)}")
+    s, many = a.get(f"/api/merge/candidates?jokes={q(MAIN)},{q(OTHER)}")
+    assert s == 200 and set(many["items"]) == {MAIN, OTHER}, many
+    it = many["items"][MAIN]
+    assert set(it) == {"joke_id", "group", "others", "attached_to"} and len(it["others"]) <= 1
+    assert (it["group"] or {}).get("id") == (one["group"] or {}).get("id")
+    if one["others"]:
+        assert it["others"][0]["joke_id"] == one["others"][0]["joke_id"]
+    assert a.get("/api/merge/candidates?jokes=" + ",".join(["joke:x"] * 51))[0] == 400
+    assert a.get("/api/merge/candidates?jokes=bad%20id")[0] == 400
+
+
 def test_merge_keeps_every_line_and_undo_restores(api):
     a, t = api
     dec = t.kb / "decisions.jsonl"

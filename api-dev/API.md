@@ -117,7 +117,13 @@ Every route in the contract, serving creative/'s JSON as-is. Additions the contr
 - Lists: `GET /api/boards` -> `{boards:[{id,title,n,runtime_s,runtime,target_s,updated,source}]}`,
   `GET /api/workingsets` -> `{workingsets:[...]}`.
 - `PATCH /api/boards/{id}` takes any of `title, notes, target_s, joke_ids (reorder/replace), add:{joke_id,at?},
-  remove, move:{from,to}`; all are checked before any is written. `POST .../items {joke_id, after?}`: `after` is a
+  remove, move:{from,to}, delete: true` (the inverse of creating a list; answers `{ok, board: {id, title, deleted}}`);
+  all are checked before any is written.
+- `GET /api/map?cap=400` (1-2000): every bit as a node (the top `cap` by nights, laughs, recency; names only) and the
+  links between them grouped like the per-joke map (`next, tags, same_world, callbacks, versions`; at most 6 per bit,
+  4×nodes overall): `{rev, cap, nodes:[{id, short_name, title, stage, nights, heat, last_seen, degree}], edges:[{a, b,
+  kind, w, why}], counts, groups}`. Cached by `rev` + the merge store (`creative/notebook.all_map`).
+- `POST /api/say` also takes `kind: "command"` and `choice` (docs/UX_2026-10.md "Commands"). `POST .../items {joke_id, after?}`: `after` is a
   joke id on the board (or an index).
 - `POST /api/workingsets/{id}/lock {joke_id, line?, node?, unlock?}`: a line must be verbatim in a taped night or
   written version (the node is found when not given).
@@ -216,7 +222,7 @@ Every row of the contract's "Requested by app" table. Both backends serve them; 
   - Hosted, gsync runs on his PC, so the pod has no gsync files until the worker reports them (not built).
 
 ## Merge (2026-10-26, docs/API_CONTRACT.md "Merge", `merge_api.py`)
-`GET /api/merge/candidates[?joke=]`, `GET /api/merge/history?joke=`, `GET /api/merge/{id}`, `POST /api/merge`, `POST /api/merge/undo`, `POST /api/merge/dismiss`. Shapes are in the contract. Registered from `Handler.creative_route` (needs the creative layer; `--no-creative` turns them off).
+`GET /api/merge/candidates[?joke=]` (`?jokes=a,b,…`, up to 50: `{items: {joke_id: {group, others (the closest one), attached_to}}}` in ONE pass, the inbox's one call), `GET /api/merge/history?joke=`, `GET /api/merge/{id}`, `POST /api/merge`, `POST /api/merge/undo`, `POST /api/merge/dismiss`. Shapes are in the contract. Registered from `Handler.creative_route` (needs the creative layer; `--no-creative` turns them off).
 - A merge is ordinary decision lines (`kb.py` now allows `hidden` on a joke edit), so both backends replay it and `/api/undo` can reverse any one line; `POST /api/merge/undo` reverses all of them, newest first.
 - The merge store is `merges` (`comedy/kb/creative/merges.jsonl` + `merges.json`; on SurrealDB also `creative_event` rows with `store = "merges"`, the same reconcile as the other creative stores).
 - Same-idea groups need the offline judge cache `comedy/kb/creative/merge_judge.json` (`python -m creative merge judge`). Without it there are no groups (never a guess).

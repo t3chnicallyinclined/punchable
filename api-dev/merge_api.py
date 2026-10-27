@@ -50,6 +50,7 @@ STORE = "merges"
 CR.APPLY.setdefault(STORE, MG.store_apply)   # LineStore (SurrealDB mirror) looks the apply function up by name
 JUDGE_FILE = "merge_judge.json"              # creative/merge.py judge cache (offline: python -m creative merge judge)
 MAX_OTHERS = 20
+MAX_BATCH = 50                               # GET /api/merge/candidates?jokes=a,b,… (the inbox's one call)
 ID_RE = re.compile(r"^[A-Za-z0-9:_@.+\-]{1,300}$")
 TAG = "[merge]"                              # reason prefix on every decision line a merge writes
 
@@ -277,6 +278,43 @@ def do_dismiss(cr, kb, body: dict) -> dict:
     return {"ok": True, "id": did}
 
 
+def candidates_batch(c, jids: list[str], judge: dict, st: Store, gs: list) -> dict:
+    """{joke_id: {group, others (the closest one), attached_to}} for several jokes in ONE pass over the candidate
+    pairs (candidates_for walks every pair per joke; the inbox asks for a handful of cards at once)."""
+    want = list(dict.fromkeys(jids))
+    ws = set(want)
+    dismissed = MG.dismissed_pairs(st.items)
+    att = MG.attached(st.items)
+    ix = MG.index(c)
+    best: dict[str, list] = {j: [] for j in want}
+    in_group = {}
+    for g in gs:
+        for m in g["members"]:
+            if m["joke_id"] in ws:
+                in_group[m["joke_id"]] = g
+    for a, b in ix.candidates():
+        for jid, o in ((a, b), (b, a)):
+            if jid not in ws or o not in c.jokes:
+                continue
+            g = in_group.get(jid)
+            if (g and any(m["joke_id"] == o for m in g["members"])) or frozenset((a, b)) in dismissed:
+                continue
+            f = ix.features(a, b)
+            sc = MG.pair_score(f)
+            if sc < 0.2:
+                continue
+            v0 = judge.get(MG.judge_key(c, ix, f))
+            v = MG.verdict(v0) or v0
+            best[jid].append({"joke_id": o, "title": c.title(o), "stage": c.stage(o)[0], "score": sc,
+                              "judge": {k: v[k] for k in ("same", "confidence", "why")} if v else None,
+                              "phrases": f["phrases"][:3]})
+    out = {}
+    for jid in want:
+        rows = sorted(best[jid], key=lambda r: (not (r["judge"] or {}).get("same", False), -r["score"], r["joke_id"]))
+        out[jid] = {"joke_id": jid, "group": in_group.get(jid), "others": rows[:1], "attached_to": att.get(jid)}
+    return out
+
+
 def brief(m: dict | None) -> dict | None:
     if not m:
         return None
@@ -345,6 +383,11 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
         if method == "GET" and path == "/api/merge/candidates":
             c, st = cr.corpus(kb), store(cr, kb)
             jid = arg("joke")
+            many = [x for v in (q.get("jokes") or []) for x in v.split(",") if x]
+            if many:  # the inbox: one request for every card it shows, never one per card
+                if len(many) > MAX_BATCH or not all(ID_RE.match(x) for x in many):
+                    raise HttpError(400, f"jokes must be 1-{MAX_BATCH} joke ids")
+                return _send(h, 200, {"items": candidates_batch(c, many, judgements(cr), st, groups(cr, c, st)["groups"])})
             if jid:
                 if not ID_RE.match(jid):
                     raise HttpError(400, "bad joke id")

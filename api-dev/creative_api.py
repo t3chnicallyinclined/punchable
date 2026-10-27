@@ -718,8 +718,11 @@ GET_ROUTES = [
     # Simple Punchable (docs/SIMPLE.md): Write, the joke map, the set builder
     (re.compile(r"^/api/notebook/related$"), "notebook_related"),
     (re.compile(r"^/api/jokes/(.+)/map$"), "joke_map"),
+    (re.compile(r"^/api/map$"), "map_all"),
     (re.compile(r"^/api/boards/([^/]+)/build$"), "board_build"),
 ]
+MAP_CAP_MAX = 2000
+_map_cache: dict = {}
 POST_ROUTES = [
     (re.compile(r"^/api/boards$"), "board_create"),
     (re.compile(r"^/api/boards/([^/]+)/items$"), "board_item"),
@@ -812,6 +815,33 @@ class Routes:
         if not str(cap).isdigit() or not 1 <= int(cap) <= 20:
             raise HttpError(400, "cap must be 1-20")
         return 200, N.joke_map(c, _joke(c, jid), cap=int(cap))
+
+    def map_all(self):
+        """GET /api/map?cap=400: every bit as a node (the top `cap` by nights, laughs, recency) and the links between
+        them, grouped like the per-joke map (docs/UX_2026-10.md "Bits > Map"). Names only, no bodies. Cached by the
+        knowledge base's rev + the merge store (the same-idea groups are its `versions` links)."""
+        cap = self.arg("cap", "400")
+        if not str(cap).isdigit() or not 1 <= int(cap) <= MAP_CAP_MAX:
+            raise HttpError(400, f"cap must be 1-{MAP_CAP_MAX}")
+        cap = int(cap)
+        c = self.c
+        groups, gkey = [], None
+        try:
+            import merge_api as MGA
+            st = MGA.store(self.cr, self.kb)
+            groups = MGA.groups(self.cr, c, st)["groups"]
+            gkey = st.n_events
+        except Exception:  # noqa: BLE001  no judge cache: no versions links; the map still draws
+            groups = []
+        rev = getattr(self.kb, "rev", None)
+        key = (id(c), rev, cap, gkey)
+        hit = _map_cache.get("v")
+        if hit and hit[0] == key:
+            return 200, hit[1]
+        out = N.all_map(c, cap=cap, same_idea=groups)
+        out["rev"] = rev
+        _map_cache["v"] = (key, out)
+        return 200, out
 
     def board_build(self, bid):
         c, st = self.c, self.st()
@@ -958,8 +988,10 @@ class Routes:
         if "move" in self.b:
             mv = self.b["move"] if isinstance(self.b["move"], dict) else {}
             ops.append(("move", {"from": _int(mv.get("from"), "move.from", 0, 200), "to": _int(mv.get("to"), "move.to", 0, 200)}))
+        if self.b.get("delete") is True:  # the inverse of creating a set list (the "new 7 for friday" Undo)
+            ops.append(("delete", {}))
         if not ops:
-            raise HttpError(400, "nothing to change (title, notes, target_s, joke_ids, add, remove, move)")
+            raise HttpError(400, "nothing to change (title, notes, target_s, joke_ids, add, remove, move, delete)")
         probe = json.loads(json.dumps(store.items))  # all or nothing: every op is checked before any is written
         for op, data in ops:
             try:
@@ -968,6 +1000,8 @@ class Routes:
                 raise HttpError(400, str(e))
         for op, data in ops:
             store.append(op, b["id"], data)
+        if self.b.get("delete") is True:
+            return 200, {"ok": True, "board": {"id": b["id"], "title": b["title"], "deleted": True}}
         return 200, S.board_view(c, store.get(b["id"]))
 
     def board_item(self, bid):

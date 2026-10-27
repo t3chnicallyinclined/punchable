@@ -415,6 +415,101 @@ def joke_map(c: Corpus, jid: str, cap: int = 8) -> dict:
     return {"joke": center, "groups": [{"key": k, "title": t, "items": groups[k]} for k, t in GROUPS]}
 
 
+# ============================================================== all bits (the bird's-eye map)
+ALL_MAP_KINDS = ("next", "tags", "same_world", "callbacks", "versions")
+MAX_EDGES_PER_NODE = 6
+
+
+def all_map(c: Corpus, cap: int = 400, same_idea: list | None = None) -> dict:
+    """Every bit as a node (capped: the top `cap` by nights, then laughs, then recency) and the links between them,
+    grouped like the per-joke map: next (his segues, done back to back), tags (a line of one bit tagging another),
+    same_world (same premise, a shared persona, the same Insights chunk), callbacks, versions (the merge judge's
+    same-idea groups). Names only: no bodies. Cheap enough to cache per corpus revision."""
+    def heat(j):
+        vs = [p["vs_room"] for p in c.perfs.get(j, []) if p.get("vs_room") is not None]
+        return round(sum(vs) / len(vs), 2) if vs else None
+
+    rows = []
+    for j, n in c.jokes.items():
+        nights = len({p["set"] for p in c.perfs.get(j, [])})
+        rows.append((nights, heat(j) or 0.0, (n.get("last_seen") or "")[:10], j))
+    rows.sort(key=lambda r: (-r[0], -r[1], r[2], r[3]))
+    rows.sort(key=lambda r: (-r[0], -r[1], r[3]))
+    rows = sorted(rows, key=lambda r: (-r[0], -r[1]))  # stable: ties keep (last_seen, id) order from above
+    keep = [r[3] for r in rows[:cap]]
+    ks = set(keep)
+    edges: dict[tuple, dict] = {}
+
+    def link(a, b, kind, w, why=None):
+        if a == b or a not in ks or b not in ks:
+            return
+        k = (min(a, b), max(a, b), kind)
+        e = edges.get(k)
+        if e is None or w > e["w"]:
+            edges[k] = {"a": k[0], "b": k[1], "kind": kind, "w": round(float(w), 3), "why": why}
+
+    for e in c.edges:
+        k, src, dst = e.get("kind"), e["src"], e["dst"]
+        conf = float(e.get("confidence") or 0.5)
+        his = c.source_of(e) == "his"
+        if k == "segue":
+            link(src, dst, "next", 1.0 if his else conf, "Your segue" if his else "Could lead in")
+        elif k == "same_premise":
+            link(src, dst, "same_world", 1.0 if his else conf, "Same premise")
+        elif k == "callback_to":
+            link(src, dst, "callbacks", 1.0 if his else conf, "Calls back")
+        elif k == "tag_of" and src.startswith("unit:"):
+            owner = c.unit_joke.get(src)
+            if owner and owner != dst:
+                link(owner, dst, "tags", 1.0 if his else conf, "A line of it tags this")
+    for (a, b), nights in c.back_to_back.items():
+        link(a, b, "next", min(1.0, 0.55 + 0.15 * len(nights)), f"Done back to back on stage, {len(nights)}x")
+    # a shared persona: each bit links to at most 4 others carrying the same persona label (strongest first)
+    by_persona: dict[str, list] = {}
+    for j in keep:
+        for l, (w, _e) in c.labels_of(j, ("persona",), 0.5).items():
+            by_persona.setdefault(l, []).append((float(w), j))
+    for l, members in by_persona.items():
+        members.sort(key=lambda x: (-x[0], x[1]))
+        name = (c.labels.get(l) or {}).get("name") or "persona"
+        for i, (w, j) in enumerate(members[:40]):
+            for w2, o in members[i + 1:i + 5]:
+                link(j, o, "same_world", 0.4 + 0.3 * min(w, w2), f"Same world: {name}")
+    for ch in (c.insights.get("chunks") or {}).get("chunks", []):
+        ms = [m for m in (c.map_joke(x) for x in ch.get("jokes", [])) if m in ks][:12]
+        for i, j in enumerate(ms):
+            for o in ms[i + 1:i + 4]:
+                link(j, o, "same_world", 0.35, f"Same chunk: {ch.get('name')}")
+    for g in same_idea or []:
+        ms = [m["joke_id"] for m in g.get("members", [])]
+        for i, j in enumerate(ms):
+            for o in ms[i + 1:]:
+                link(j, o, "versions", 0.9, "Looks like the same idea")
+    # cap: at most MAX_EDGES_PER_NODE links per bit (strongest kept), then nodes * 4 overall
+    deg: dict[str, int] = {}
+    out_edges = []
+    for e in sorted(edges.values(), key=lambda x: (-x["w"], x["a"], x["b"], x["kind"])):
+        if deg.get(e["a"], 0) >= MAX_EDGES_PER_NODE or deg.get(e["b"], 0) >= MAX_EDGES_PER_NODE:
+            continue
+        deg[e["a"]] = deg.get(e["a"], 0) + 1
+        deg[e["b"]] = deg.get(e["b"], 0) + 1
+        out_edges.append(e)
+        if len(out_edges) >= len(keep) * 4:
+            break
+    nodes = []
+    for nights, h, last, j in rows[:cap]:
+        n = c.jokes[j]
+        nodes.append({"id": j, "short_name": short_name_of(n.get("title"), n.get("short_name")),
+                      "title": short_title(n.get("title")), "stage": c.stage(j)[0], "nights": nights,
+                      "heat": h or None, "last_seen": last or None, "degree": deg.get(j, 0)})
+    by_kind = {k: 0 for k in ALL_MAP_KINDS}
+    for e in out_edges:
+        by_kind[e["kind"]] += 1
+    return {"cap": cap, "nodes": nodes, "edges": out_edges,
+            "counts": {"jokes": len(c.jokes), "nodes": len(nodes), "edges": len(out_edges), "by_kind": by_kind},
+            "groups": [{"key": k, "title": t} for k, t in GROUPS if k in ALL_MAP_KINDS]}
+
+
 # ============================================================== set builder
 def target_band(target_s: int) -> tuple[int, int]:
     t = int(target_s or 0)

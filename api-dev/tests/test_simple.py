@@ -94,6 +94,38 @@ def test_joke_map(api):
     assert a.get(f"/api/jokes/{q(jid)}")[0] == 200
 
 
+def test_all_bits_map_is_capped_names_only_and_cached(api):
+    import time
+    a, _ = api
+    t0 = time.time()
+    s, m = a.get("/api/map?cap=50")
+    assert s == 200, m
+    assert set(m) >= {"rev", "cap", "nodes", "edges", "counts", "groups"}
+    assert 0 < len(m["nodes"]) <= 50 and m["counts"]["nodes"] == len(m["nodes"]) and m["counts"]["jokes"] >= len(m["nodes"])
+    ids = {n["id"] for n in m["nodes"]}
+    for n in m["nodes"]:
+        assert set(n) == {"id", "short_name", "title", "stage", "nights", "heat", "last_seen", "degree"}
+        assert len(n["short_name"]) <= 24 and "\n" not in n["title"]
+    for e in m["edges"]:
+        assert e["a"] in ids and e["b"] in ids and e["kind"] in {g["key"] for g in m["groups"]}
+    assert len(m["edges"]) <= 4 * len(m["nodes"])
+    deg = {}
+    for e in m["edges"]:
+        deg[e["a"]] = deg.get(e["a"], 0) + 1
+        deg[e["b"]] = deg.get(e["b"], 0) + 1
+    assert max(deg.values(), default=0) <= 6
+    # ranked: nights never go up as the list goes down
+    nights = [n["nights"] for n in m["nodes"]]
+    assert nights == sorted(nights, reverse=True)
+    # the second call is served from the cache (same rev)
+    t1 = time.time()
+    s, m2 = a.get("/api/map?cap=50")
+    assert s == 200 and m2["rev"] == m["rev"] and m2["counts"] == m["counts"]
+    assert time.time() - t1 < 2, "cached answers are quick"
+    assert a.get("/api/map?cap=0")[0] == 400 and a.get("/api/map?cap=9999")[0] == 400
+    assert time.time() - t0 < 60
+
+
 def test_board_build_and_working_set(api):
     a, _ = api
     _, page = a.get("/api/jokes?sort=performed&limit=3")
