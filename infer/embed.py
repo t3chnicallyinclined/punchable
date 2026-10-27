@@ -18,6 +18,25 @@ def _h(t):
     return hashlib.sha1(t.encode("utf-8")).hexdigest()
 
 
+_PY: dict = {}
+
+
+def _python_engine():
+    """engine/embed.py over the local bge-small ONNX model, or None (then embed.mjs, the old node path, is used).
+    2026-10-27: the node path's transformers.js install was gone, so new sets failed at infer.sets."""
+    if "e" not in _PY:
+        try:
+            import sys
+            sys.path.insert(0, os.path.dirname(HERE))
+            from engine.config import bge_dir_override
+            from engine.embed import Embedder as E
+            d = bge_dir_override()
+            _PY["e"] = E(d) if d else None
+        except Exception:  # noqa: BLE001
+            _PY["e"] = None
+    return _PY["e"]
+
+
 class Embedder:
     def __init__(self):
         os.makedirs(CACHE, exist_ok=True)
@@ -42,6 +61,13 @@ class Embedder:
     def texts(self, texts):
         missing = [t for t in dict.fromkeys(texts) if _h(t) not in self.mem]
         if missing:
+            py = _python_engine()
+            if py is not None:  # the ONNX model in <PK_CACHE_DIR>/models (tools/kb/fetch_bge.py): no node install needed
+                m = py.embed([t[:2000] for t in missing]).astype(np.float32)
+                for t, v in zip(missing, m):
+                    self.mem[_h(t)] = v
+                np.savez(self.path, **self.mem)
+                return np.stack([self.mem[_h(t)] for t in texts])
             with tempfile.TemporaryDirectory() as td:
                 inp, out = os.path.join(td, "in.json"), os.path.join(td, "out.f32")
                 json.dump([{"id": str(i), "text": t[:2000]} for i, t in enumerate(missing)], open(inp, "w", encoding="utf-8"))
