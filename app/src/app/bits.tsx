@@ -1,21 +1,25 @@
 // Bits (MixBits, docs/UX_2026-10.md): every bit as a list, a status dot (kills · working · fresh · resting) and how
 // long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Notes · Map;
 // "N pairs look like the same idea → Review" when the merge judge found some. One list request, virtualized.
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, PixelRatio, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { ApiError, JokeSummary, get, useApi } from '@/lib/api';
+import { haptics } from '@/lib/haptics';
 import { fmtDur } from '@/lib/laughs';
 import { VoiceMemos } from '@/lib/memos';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
-import { Avatar, Empty, ErrorCard, Icon, Screen, Seg, T, useWide } from '@/lib/ui';
+import { Avatar, Empty, ErrorCard, Icon, Screen, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
 
 type View_ = 'bits' | 'notes' | 'map';
 type Status = 'kills' | 'working' | 'fresh' | 'resting';
 const DOT: Record<Status, string> = { kills: '#30D158', working: C.amber, fresh: '#64D2FF', resting: C.tabOff };
 const WORD: Record<Status, string> = { kills: 'Kills', working: 'Working', fresh: 'Fresh', resting: 'Resting' };
-const ROW_H = 64;
+// a glyph next to the dot, so the status is never colour alone (HIG)
+const GLYPH: Record<Status, string> = { kills: '★', working: '●', fresh: '○', resting: '–' };
+// row height scales with the OS text size (fixed 64 clipped at large text)
+const ROW_H = Math.round(64 * Math.min(1.6, Math.max(1, PixelRatio.getFontScale())));
 
 /** One word from his tapes and his stage: kills (big laughs, more than once) · working (on stage) · fresh (never tried) · resting (retired). */
 export function statusOf(j: JokeSummary): Status {
@@ -37,12 +41,14 @@ const Row = memo(function Row({ j }: { j: JokeSummary }) {
   return (
     <Pressable testID={`bit-${j.id}`} accessibilityRole="button" accessibilityLabel={`${j.short_title || j.title}. ${subOf(j, st)}. Open`} onPress={() => router.push(`/joke/${encodeURIComponent(j.id)}` as any)}
       style={(s: any) => ({ height: ROW_H, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#1F1F22', backgroundColor: s.hovered ? C.card2 : 'transparent' })}>
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DOT[st] }} accessibilityLabel={WORD[st]} />
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Text numberOfLines={1} style={{ fontFamily: F.semi, fontSize: 16, color: C.text }}>{j.short_title || shortNameOf(j.title)}</Text>
-        <Text numberOfLines={1} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{subOf(j, st)}</Text>
+      <View style={{ width: 18, alignItems: 'center' }} accessibilityLabel={WORD[st]}>
+        <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 12, color: DOT[st], fontFamily: F.g7 }}>{GLYPH[st]}</Text>
       </View>
-      <Text style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{j.duration_s != null && j.sets ? fmtDur(j.duration_s) : j.duration_s != null ? `~${fmtDur(j.duration_s)}` : '—'}</Text>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.semi, fontSize: 16, color: C.text }}>{j.short_title || shortNameOf(j.title)}</Text>
+        <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{subOf(j, st)}</Text>
+      </View>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{j.duration_s != null && j.sets ? fmtDur(j.duration_s) : j.duration_s != null ? `~${fmtDur(j.duration_s)}` : '—'}</Text>
     </Pressable>
   );
 });
@@ -52,6 +58,8 @@ export default function Bits() {
   const [view, setView] = useState<View_>('bits');
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
+  const [focused, setFocused] = useState(false);
+  const input = useRef<any>(null);
   useEffect(() => {
     const t = setTimeout(() => setDq(q.trim()), 300);
     return () => clearTimeout(t);
@@ -71,22 +79,27 @@ export default function Bits() {
     return c;
   }, [items]);
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
+  const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
 
   const header = (
     <View style={{ gap: 10, paddingBottom: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, borderRadius: 24, backgroundColor: C.card, paddingHorizontal: 14 }}>
-        <Icon name="search" size={18} color={C.mut2} />
-        <TextInput testID="bits-search" value={q} onChangeText={setQ} placeholder="Search your bits, or ask" placeholderTextColor={C.dim} returnKeyType="search"
-          onSubmitEditing={() => question && askIt()} accessibilityLabel="Search your bits, or ask"
-          style={{ flex: 1, minWidth: 0, height: 48, color: C.text, fontFamily: F.body, fontSize: 16 }} />
-        {!!q && <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQ('')} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.mut2, fontSize: 18 }}>×</Text></Pressable>}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderRadius: 24, backgroundColor: C.card, paddingHorizontal: 14 }}>
+          <Icon name="search" size={18} color={C.mut2} />
+          <TextInput ref={input} testID="bits-search" value={q} onChangeText={setQ} placeholder="Search your bits, or ask" placeholderTextColor={C.dim} returnKeyType="search"
+            onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} clearButtonMode="never"
+            onSubmitEditing={() => question && askIt()} accessibilityLabel="Search your bits, or ask" maxFontSizeMultiplier={1.4}
+            style={{ flex: 1, minWidth: 0, minHeight: 48, color: C.text, fontFamily: F.body, fontSize: 16 }} />
+          {!!q && <Pressable accessibilityRole="button" accessibilityLabel="Clear the search" onPress={() => setQ('')} hitSlop={8} style={{ width: 44, height: 44, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.mut2, fontSize: 18 }}>×</Text></Pressable>}
+        </View>
+        {(focused || !!q) && <TextBtn testID="bits-search-cancel" label="Cancel" onPress={() => { setQ(''); setFocused(false); input.current?.blur?.(); }} />}
       </View>
       {question && (
         <Pressable testID="bits-ask" accessibilityRole="button" onPress={askIt} style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Icon name="chat" size={18} color={C.amber} /><T style={{ flex: 1 }}>Ask your material: “{dq}”</T><T style={{ color: C.amber }}>Ask ›</T>
         </Pressable>
       )}
-      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes'], ['map', 'Map']]} value={view} onChange={(v) => (v === 'map' ? router.push('/shows' as any) : setView(v))} />
+      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes'], ['map', 'Map']]} value={view} onChange={(v) => { haptics.selection(); v === 'map' ? router.push('/map' as any) : setView(v); }} />
       {view === 'bits' && !!pairs && (
         <Pressable testID="merge-banner" accessibilityRole="button" onPress={() => router.push('/merge' as any)}
           style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -99,7 +112,7 @@ export default function Bits() {
 
   if (view === 'notes') {
     return (
-      <Screen title="Bits" testID="bits" right={<Avatar />}>
+      <Screen title="Bits" testID="bits" right={<Avatar />} onRefresh={list.reload}>
         {header}
         <VoiceMemos />
       </Screen>
@@ -110,10 +123,10 @@ export default function Bits() {
       <FlatList
         data={items} keyExtractor={(j) => j.id} renderItem={({ item }) => <Row j={item} />}
         getItemLayout={(_, i) => ({ length: ROW_H, offset: ROW_H * i, index: i })} initialNumToRender={16} windowSize={9} removeClippedSubviews
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
         contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 140, maxWidth: wide ? 1120 : 720, width: '100%', alignSelf: 'center' }}
         ListHeaderComponent={header}
-        ListEmptyComponent={list.loading && !list.data ? <Empty text="Loading your bits…" /> : list.rawError && !list.data ? <ErrorCard error={list.rawError} onRetry={list.reload} /> : <Empty text={dq ? 'Nothing matches.' : 'No bits yet. Say one.'} />}
+        ListEmptyComponent={list.loading && !list.data ? <Skeleton lines={8} height={18} testID="bits-skeleton" /> : list.rawError && !list.data ? <ErrorCard error={list.rawError} onRetry={list.reload} /> : <Empty text={dq ? 'Nothing matches.' : 'No bits yet. Say one.'} />}
         ListFooterComponent={items.length ? (
           <View testID="bits-legend" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, paddingVertical: 14, justifyContent: 'center' }}>
             {(Object.keys(DOT) as Status[]).map((k) => (

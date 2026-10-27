@@ -11,7 +11,7 @@ import { Memo, MemosResp, memoTitle } from './memos';
 import { BitCard, Build, Related, quoteText } from './simple';
 import { isQuestion, positionIn, shortNameOf } from './say';
 import { C, F } from './theme';
-import { Btn, Chip, Chips, Sheet, T } from './ui';
+import { Btn, Chip, Chips, Sheet, SheetHead, T } from './ui';
 
 type Filter = 'fits' | 'kills' | 'never' | 'memos';
 export type Pick = { joke_id: string; title: string; short_name: string };
@@ -95,10 +95,7 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
 
   return (
     <Sheet visible={visible} onClose={onClose} label={mode === 'swap' ? 'Swap for another joke' : 'Add a joke'} testID="add-sheet">
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <T v="h2" style={{ flex: 1 }}>{mode === 'swap' ? 'Swap it for' : 'Add a joke'}{left != null && mode === 'add' ? <Text style={{ color: C.mut2, fontFamily: F.body, fontSize: 15 }}> · {left > 0 ? `${fmtDur(left)} left` : 'full'}</Text> : null}</T>
-        <Btn small v="ghost" label="Done" testID="add-done" onPress={onClose} />
-      </View>
+      <SheetHead title={mode === 'swap' ? 'Swap it for' : `Add a joke${left != null && mode === 'add' ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`} onCancel={onClose} onDone={onClose} testID="add" />
       <TextInput testID="add-search" value={q} onChangeText={setQ} placeholder="something about food to close" placeholderTextColor={C.dim} autoFocus
         style={{ minHeight: 48, borderRadius: 24, paddingHorizontal: 16, backgroundColor: C.card, color: C.text, fontFamily: F.body, fontSize: 16 }} />
       {question && (

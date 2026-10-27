@@ -25,11 +25,11 @@ function Piece({ m, picked, onPick }: { m: Member; picked: boolean; onPick: () =
     <View testID={`piece-${m.joke_id}`} style={{ padding: 14, borderRadius: 16, backgroundColor: C.card, gap: 6, borderWidth: 1, borderColor: picked ? C.amber : C.card }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <T v="small" style={{ flex: 1 }}>{kind}{m.first_date ? ` · ${monthYear(m.first_date)}` : ''}{m.nights ? ` · ${m.nights} set${m.nights === 1 ? '' : 's'}` : ''}</T>
-        <Pressable accessibilityRole="link" onPress={() => router.push(`/joke/${encodeURIComponent(m.joke_id)}` as any)} style={{ minHeight: 32, justifyContent: 'center' }}><T v="small" style={{ color: C.amber }}>Open ›</T></Pressable>
+        <Pressable accessibilityRole="link" accessibilityLabel={`Open ${short(m.title)}`} onPress={() => router.push(`/joke/${encodeURIComponent(m.joke_id)}` as any)} hitSlop={6} style={{ minHeight: 44, justifyContent: 'center' }}><T v="small" style={{ color: C.amber }}>Open ›</T></Pressable>
       </View>
       <Text style={{ fontFamily: F.bold, fontSize: 17, color: C.text }}>{short(m.title)}</Text>
       {d.loading && !j ? <T v="mut">…</T> : <Text numberOfLines={5} style={{ fontFamily: F.body, fontSize: 15, lineHeight: 22, color: C.text2 }}>{text ? `“${text}”` : 'No written words yet.'}</Text>}
-      <Pressable testID={`call-it-${m.joke_id}`} accessibilityRole="radio" accessibilityState={{ checked: picked }} onPress={onPick} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36 }}>
+      <Pressable testID={`call-it-${m.joke_id}`} accessibilityRole="radio" accessibilityState={{ checked: picked }} onPress={onPick} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
         <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: picked ? C.amber : C.borderStrong, backgroundColor: picked ? C.amber : 'transparent' }} />
         <T v="small" style={{ color: picked ? C.text : C.mut2 }}>Call it “{short(m.title)}”</T>
       </Pressable>

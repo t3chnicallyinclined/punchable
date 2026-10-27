@@ -8,7 +8,8 @@ import { post } from './api';
 import { creative } from './creative';
 import { useBoards } from './boards';
 import { C, F } from './theme';
-import { Btn, Icon, Sheet, T, useUI } from './ui';
+import { Btn, Icon, Sheet, SheetHead, T, useUI } from './ui';
+import { fetchWorker } from './worker';
 
 const LENGTHS = [5, 7, 10, 15];
 
@@ -21,7 +22,6 @@ function Row({ title, sub, icon, onPress, testID }: { title: string; sub: string
         <T v="semi">{title}</T>
         <T v="small">{sub}</T>
       </View>
-      <T style={{ color: C.dim, fontSize: 20 }}>›</T>
     </Pressable>
   );
 }
@@ -63,7 +63,10 @@ export function CreateSheet({ visible, onClose, start = 'menu' }: { visible: boo
       setYt('');
       close();
       if (r.status === 'exists' && r.set) { ui.snack('That video is already a set', undefined, { label: 'Open', run: () => router.push(`/set/${encodeURIComponent(r.set!)}` as any) }); }
-      else ui.snack('Queued: your PC fetches the audio, finds the laughs and the bits. Minutes, not seconds.');
+      else {
+        const w = await fetchWorker(0);
+        ui.snack(w && !w.online ? 'Queued. Your PC is off: it fetches the audio and finds the bits when it’s back on.' : 'Queued: your PC fetches the audio, finds the laughs and the bits. Minutes, not seconds.');
+      }
     } catch (e: any) {
       ui.snack(`Couldn't take that link: ${e.message}`);
     } finally {
@@ -75,7 +78,7 @@ export function CreateSheet({ visible, onClose, start = 'menu' }: { visible: boo
     <Sheet visible={visible} onClose={close} label="New" testID="create-sheet">
       {mode === 'menu' ? (
         <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}><T v="h2" style={{ flex: 1 }}>New</T><Btn small v="ghost" label="Cancel" onPress={close} /></View>
+          <SheetHead title="New" onCancel={close} testID="create" />
           <Row testID="create-bit" title="Bit" sub="Write or say a new one" icon="write" onPress={() => { close(); router.push({ pathname: '/say', params: { focus: '1' } } as any); }} />
           <Row testID="create-set" title="Set list" sub="5, 7, 10, 15 or custom" icon="sets" onPress={() => setMode('set')} />
           <Row testID="create-record" title="Record a set" sub="Tape tonight, review after" icon="mic" onPress={() => { close(); ui.withMic(() => router.push('/record' as any)); }} />
@@ -93,7 +96,7 @@ export function CreateSheet({ visible, onClose, start = 'menu' }: { visible: boo
         </View>
       ) : (
         <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}><T v="h2" style={{ flex: 1 }}>New set list</T><Btn small v="ghost" label="Back" onPress={() => setMode('menu')} /></View>
+          <SheetHead title="New set list" onCancel={() => setMode('menu')} cancelLabel="Back" onDone={busy ? undefined : makeSet} doneLabel="Start" testID="create-set" />
           <TextInput testID="create-set-title" value={title} onChangeText={setTitle} placeholder="Name it (Friday · 7)" placeholderTextColor={C.dim}
             style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16 }} />
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

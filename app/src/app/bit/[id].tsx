@@ -12,6 +12,7 @@ import { Sparkline } from '@/lib/metrics';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { playSegment, youtubeSource } from '@/lib/media';
+import { WorkerLine } from '@/lib/worker';
 import { C, F, STAGES, stageInfo, stageWord } from '@/lib/theme';
 import {
   AIBadge, AddBtn, Btn, Card, Chips, Chip, Empty, ErrorCard, FixtureBanner, IconBtn, Icon, List, ListRow, Proven, Screen, Seg, Sheet, T, TextBtn, Yours, s, useUI, useWide,
@@ -492,6 +493,7 @@ function BrainstormTab({ id, title, wsId, locked, conn }: { id: string; title: s
       )}
       {state?.status === 'asking' && <T v="mut">Asking…</T>}
       {state?.msg && <T v="mut" testID="brainstorm-state">{state.msg}</T>}
+      {state?.status === 'queued' && <WorkerLine what="The punch-up" />}
       {state?.pu?.status === 'locked' && <T v="mut">Locked: no drafts on locked lines.</T>}
       {drafts.map(({ d, i }) => (
         <View key={i} testID={`draft-${i}`} style={[s.draft, { gap: 8 }]}>

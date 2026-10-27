@@ -1,8 +1,8 @@
 // Sets (MixSets, docs/UX_2026-10.md): set lists as Sharpie-on-paper cards, each joke's short name in order (the
 // boards list carries `names`, one request), tonight's first; "Performed · N" lists the recorded sets. A set list IS
 // a board (/list/<id>); "New set list" is the create sheet.
-import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { BoardListItem, creative, useCreative } from '@/lib/creative';
 import { fmtDur, fmtShortDate } from '@/lib/laughs';
@@ -10,7 +10,8 @@ import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
-import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, List, ListRow, Screen, Seg, T, useWide } from '@/lib/ui';
+import { haptics } from '@/lib/haptics';
+import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, List, ListRow, Screen, Seg, Skeleton, T, useWide } from '@/lib/ui';
 
 type Seg_ = 'lists' | 'performed';
 const PAPER = '#F2EEE4';
@@ -23,7 +24,7 @@ export function PaperCard({ b, current, onPress, testID }: { b: BoardListItem & 
   const shown = names.slice(0, 6);
   return (
     <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${b.title}, ${b.n} jokes, ${b.runtime}. Open`} onPress={onPress}
-      style={({ pressed }) => ({ width: '100%', borderRadius: 6, backgroundColor: PAPER, padding: 16, paddingBottom: 18, gap: 8, transform: [{ rotate: current ? '-0.6deg' : '0.4deg' }], opacity: pressed ? 0.9 : 1, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } })}>
+      style={({ pressed }) => ({ width: '100%', borderRadius: 6, backgroundColor: PAPER, padding: 16, paddingBottom: 18, gap: 8, ...(Platform.OS === 'web' ? { transform: [{ rotate: current ? '-0.6deg' : '0.4deg' }] } : null), opacity: pressed ? 0.9 : 1, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } })}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
         <Text numberOfLines={1} style={{ flex: 1, fontFamily: F.black, fontSize: 20, letterSpacing: -0.3, color: INK }}>{b.title}</Text>
         <Text style={{ fontFamily: F.bold, fontSize: 14, color: MARKER, fontVariant: ['tabular-nums'] }}>{b.runtime}</Text>
@@ -53,13 +54,17 @@ export default function Sets() {
   const found = all.filter((x) => x.source === 'inferred');
   const curId = cur.current?.id || his[0]?.id || null;
   const ordered = [...his.filter((x) => x.id === curId), ...his.filter((x) => x.id !== curId)];
+  const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
   return (
-    <Screen title="Sets" testID="sets" right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Btn testID="new-setlist" small v="add" label="＋ New" onPress={() => setCreate(true)} /><Avatar /></View>}>
-      <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', `Performed · ${sets.list.length}`]]} value={seg} onChange={setSeg} />
+    <Screen title="Sets" testID="sets" onRefresh={refresh} right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={() => setCreate(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
+      <Avatar /></View>}>
+      <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', `Performed · ${sets.list.length}`]]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
       {seg === 'lists' ? (
         <>
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
           {b.error && !b.data ? <ErrorCard error={b.error} onRetry={b.reload} /> : null}
+          {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
           {b.data && !his.length && <Empty text="No set list yet. ＋ New, or say “new 7 for Friday”."><Btn small v="add" label="New set list" onPress={() => setCreate(true)} /></Empty>}
           <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 18, paddingVertical: 6 }}>
             {ordered.map((x) => (

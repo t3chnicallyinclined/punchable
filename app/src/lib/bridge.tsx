@@ -6,7 +6,8 @@ import { Text, TextInput, View } from 'react-native';
 import { decide, undo } from './api';
 import { Bridge, creative } from './creative';
 import { C, F } from './theme';
-import { Btn, Sheet, T, s, useUI } from './ui';
+import { Btn, Sheet, SheetHead, T, s, useUI } from './ui';
+import { WorkerLine } from './worker';
 
 export type Gap = { from: string; to: string; words: string };
 
@@ -34,12 +35,13 @@ export function BridgeSheet({ gap, boardId, titleOf, onClose }: { gap: Gap | nul
   };
   return (
     <Sheet visible onClose={onClose} label="Bridge" testID="bridge-sheet">
+      <SheetHead title="Bridge" onCancel={onClose} testID="bridge" />
       <T v="eb">Between</T>
       <T v="h2">{titleOf(gap.from)} → {titleOf(gap.to)}</T>
       <T v="mut" style={{ marginVertical: 6 }}>{gap.words}</T>
       {!state && !busy && <Btn testID="bridge-ask" small v="add" label="Get a bridge idea (draft)" onPress={ask} style={{ alignSelf: 'flex-start' }} />}
       {busy && <T v="mut">Asking for a bridge…</T>}
-      {state?.status === 'queued' && <View testID="bridge-queued" style={[s.inner, { gap: 4 }]}><T v="semi">Queued</T><T v="mut">Your home worker writes bridge drafts. It shows up here when it’s done.</T></View>}
+      {state?.status === 'queued' && <View testID="bridge-queued" style={[s.inner, { gap: 4 }]}><T v="semi">Queued</T><T v="mut">Your home worker writes bridge drafts. It shows up here when it’s done.</T><WorkerLine what="The bridge draft" /></View>}
       {state?.status === 'no_grounding' && <T v="mut" testID="bridge-none">Nothing links these two to build a bridge from. Write your own below, or move one.</T>}
       {state?.status === 'provider_error' && <T v="mut">The AI didn’t answer. Write your own below.</T>}
       {state?.status === 'ok' && state.text && (

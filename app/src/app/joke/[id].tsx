@@ -13,7 +13,8 @@ import { JokeMap, MapGroupKey, monthYear, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { SayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
-import { Btn, Empty, ErrorCard, Screen, Sheet, StageWord, T, TextBtn, TopBar, useUI, useWide } from '@/lib/ui';
+import { haptics } from '@/lib/haptics';
+import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Screen, Sheet, SheetHead, Skeleton, StageWord, T, TextBtn, TopBar, useUI, useWide } from '@/lib/ui';
 
 type Version = { key: string; label: string; date: string | null; text: string; doc?: string | null };
 
@@ -42,6 +43,7 @@ export default function BitPage() {
   const [vi, setVi] = useState(0);
   const [rename, setRename] = useState(false);
   const [why, setWhy] = useState<{ title: string; why?: string; g: MapGroupKey } | null>(null);
+  const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
   const J = d.data?.joke;
   const title = (J?.title || '').split(' (')[0] || J?.title || 'Bit';
@@ -60,19 +62,19 @@ export default function BitPage() {
   };
 
   if (d.rawError && !d.data) return <Screen title="Bit" back><ErrorCard error={String(d.rawError)} onRetry={d.reload} /></Screen>;
-  if (!d.data) return <Screen title="Bit" back><Empty text="Opening the bit…" /></Screen>;
+  if (!d.data) return <Screen title="Bit" back><Skeleton lines={6} height={18} testID="bit-skeleton" /></Screen>;
   const v = versions[Math.min(vi, Math.max(0, versions.length - 1))];
   const mapW = Math.min(width - (wide ? 64 : 32), 720);
 
   return (
     <Screen title={title} back testID="bitpage" maxWidth={760}
-      header={<TopBar title="A bit" back right={<TextBtn testID="bit-edit" label="Edit" onPress={() => router.push(`/bit/${encodeURIComponent(id)}` as any)} />} />}
+      header={<TopBar title={shortName} back right={<TextBtn testID="bit-edit" label="Edit" onPress={() => router.push(`/bit/${encodeURIComponent(id)}` as any)} />} />}
       bar={<SayBar onSay={onSay} placeholder={`Ask about ${shortName}, or add a line`} hint={null} testID="bit-say" />}>
       <View style={{ gap: 6 }}>
         <Text testID="bit-title" style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.6, color: C.text }}>{title}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <StageWord stage={J?.stage} ai={!!d.data?.ai?.stage_ai && !d.data?.ai?.stage_confirmed} />
-          <Pressable testID="bit-shortname" accessibilityRole="button" accessibilityLabel={`On set lists: ${shortName}. Rename`} onPress={() => setRename(true)} style={{ minHeight: 32, justifyContent: 'center' }}>
+          <Pressable testID="bit-shortname" accessibilityRole="button" accessibilityLabel={`On set lists: ${shortName}. Rename`} onPress={() => setRename(true)} hitSlop={6} style={{ minHeight: 44, justifyContent: 'center' }}>
             <T v="small">On the list: <Text style={{ color: C.amber }}>{shortName}</Text></T>
           </Pressable>
           {!!d.data?.rooms?.sets && <T v="small">{d.data.rooms.sets} set{d.data.rooms.sets === 1 ? '' : 's'}</T>}
@@ -97,7 +99,11 @@ export default function BitPage() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Btn small testID="bit-punchup" label="Punch up" onPress={() => router.push({ pathname: `/bit/${encodeURIComponent(id)}`, params: { tab: 'brainstorm' } } as any)} />
         <Btn small testID="bit-riff" label="Riff" onPress={() => router.push({ pathname: '/write', params: { idea: v?.text?.slice(0, 300) || title } } as any)} />
-        <Btn small testID="bit-toset" v="add" label="To a set" onPress={() => boards.add(id, title)} onLongPress={() => boards.pick(id, title)} />
+        <Btn small testID="bit-toset" v="add" label="To a set" onPress={() => { haptics.success(); boards.add(id, title); }}
+          onLongPress={() => setMenu([
+            { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => boards.add(id, title), disabled: !boards.current },
+            { label: 'Pick a set list…', onPress: () => boards.pick(id, title) },
+          ])} />
       </View>
       <MergeHint jokeId={id} onMerged={(main) => (main === id ? d.reload() : router.replace(`/joke/${encodeURIComponent(main)}` as any))} />
 
@@ -131,8 +137,10 @@ export default function BitPage() {
         )}
       </Sheet>
       <Sheet visible={rename} onClose={() => setRename(false)} label="Short name" testID="bit-rename-sheet">
+        <SheetHead title="Short name" onCancel={() => setRename(false)} testID="bit-rename" />
         <ShortName value={shortName} title={J?.title || ''} onSave={saveShort} />
       </Sheet>
+      <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} title={title} testID="bit-menu" />
     </Screen>
   );
 }
@@ -141,7 +149,6 @@ function ShortName({ value, title, onSave }: { value: string; title: string; onS
   const [v, setV] = useState(value);
   return (
     <View style={{ gap: 8 }}>
-      <T v="h2">Short name</T>
       <T v="mut">What you’d write on the paper list. Up to 24 letters.</T>
       <TextInput testID="bit-shortname-input" value={v} onChangeText={setV} maxLength={24} autoFocus placeholder={shortNameOf(title)} placeholderTextColor={C.dim}
         style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.bold, fontSize: 18 }} />

@@ -10,7 +10,8 @@ import { TonightScreen, useOutbox } from '@/lib/say';
 import { SayBar } from '@/lib/SayBar';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
-import { Avatar, Icon, Screen, T, useWide } from '@/lib/ui';
+import { noteWorker } from '@/lib/worker';
+import { Avatar, Icon, Screen, Skeleton, T, useWide } from '@/lib/ui';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -35,6 +36,7 @@ export default function Tonight() {
   const d = s.data;
   const now = new Date();
   const b = d?.board || null;
+  React.useEffect(() => { noteWorker(d?.worker); }, [d?.worker?.online, d?.worker?.last_seen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // the conversation screen sends it (and keeps it on this phone when Punchable can't be reached)
   const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, screen: 'tonight' } } as any), []);
@@ -45,12 +47,12 @@ export default function Tonight() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text maxFontSizeMultiplier={1.3} style={{ flex: 1, fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>Tonight</Text>
         <Pressable testID="to-sort" accessibilityRole="button" accessibilityLabel={`${d?.to_sort || 0} to sort. Open the inbox`} onPress={() => router.push('/inbox' as any)}
-          style={{ height: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: C.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          style={{ minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: C.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d?.to_sort ? C.amber : C.borderStrong }} />
-          <Text style={{ fontFamily: F.semi, fontSize: 14, color: C.text }}>{d ? `${d.to_sort} to sort` : '…'}</Text>
+          {d ? <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.text }}>{d.to_sort} to sort</Text> : <View style={{ width: 54, height: 12, borderRadius: 6, backgroundColor: C.surface2 }} accessibilityLabel="Loading" />}
         </Pressable>
-        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={() => setCreate(true)}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={() => setCreate(true)} hitSlop={4}
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="plus" size={20} color={C.amber} sw={2.4} />
         </Pressable>
         <Avatar />
@@ -59,9 +61,10 @@ export default function Tonight() {
   );
 
   return (
-    <Screen title="Tonight" testID="tonight" header={header} bar={<SayBar onSay={onSay} worker={d?.worker} testID="say" />}>
+    <Screen title="Tonight" testID="tonight" header={header} bar={<SayBar onSay={onSay} worker={d?.worker} testID="say" />} onRefresh={s.reload}>
       {!!queued.length && <T v="small" testID="say-queued" style={{ color: C.amber }}>{queued.length} saved on this phone, sending when Punchable is back…</T>}
       {s.rawError && !d && <T v="mut" testID="tonight-error">Can’t reach Punchable: {s.rawError}</T>}
+      {!d && !s.rawError && <Skeleton lines={3} height={20} testID="tonight-skeleton" />}
       <Pressable testID="tonight-set" accessibilityRole="button" accessibilityLabel={b ? `${b.title}, ${b.runtime}. Open the set list` : 'No set list yet. Make one'}
         onPress={() => (b ? router.push(`/list/${encodeURIComponent(b.id)}` as any) : setCreate(true))}
         style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>

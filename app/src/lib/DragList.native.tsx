@@ -5,6 +5,7 @@ import { LayoutChangeEvent, Platform, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming, SharedValue } from 'react-native-reanimated';
 import { C } from './theme';
+import { haptics } from './haptics';
 import { Icon } from './ui';
 
 type Props<T> = {
@@ -26,8 +27,8 @@ function targetIndex(tops: number[], heights: number[], a: number, dy: number) {
   return t;
 }
 
-function Item({ index, active, dy, tops, heights, onLayout, children, handleGesture, onDrop }: {
-  index: number; active: SharedValue<number>; dy: SharedValue<number>; tops: SharedValue<number[]>; heights: SharedValue<number[]>;
+function Item({ index, count, active, dy, tops, heights, onLayout, children, handleGesture, onDrop }: {
+  index: number; count: number; active: SharedValue<number>; dy: SharedValue<number>; tops: SharedValue<number[]>; heights: SharedValue<number[]>;
   onLayout: (i: number, e: LayoutChangeEvent) => void; children: (handle: React.ReactNode) => React.ReactNode; handleGesture: ReturnType<typeof Gesture.Pan>;
   onDrop: (from: number, to: number) => void;
 }) {
@@ -43,8 +44,17 @@ function Item({ index, active, dy, tops, heights, onLayout, children, handleGest
     if (t <= index && index < a) shift = h;
     return { transform: [{ translateY: withTiming(shift, { duration: 120 }) }], zIndex: 0, opacity: 1 };
   });
+  // VoiceOver: the grip offers Move up / Move down as accessibility actions (no drag needed)
   const grip = (extra?: any) => (
-    <View testID={`drag-${index}`} accessibilityLabel="Drag to reorder" {...extra}
+    <View testID={`drag-${index}`} accessibilityLabel="Drag to reorder" accessibilityRole="adjustable" accessibilityHint="Swipe up or down with one finger to move this one" {...extra}
+      accessibilityActions={[
+        ...(index > 0 ? [{ name: 'moveUp', label: 'Move up' }] : []),
+        ...(index < count - 1 ? [{ name: 'moveDown', label: 'Move down' }] : []),
+      ]}
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName === 'moveUp' && index > 0) onDrop(index, index - 1);
+        else if (e.nativeEvent.actionName === 'moveDown' && index < count - 1) onDrop(index, index + 1);
+      }}
       style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', ...(Platform.OS === 'web' ? { cursor: 'grab', touchAction: 'none', userSelect: 'none' } as any : null) }}>
       <Icon name="grip" color={C.mut} sw={3} />
     </View>
@@ -72,13 +82,18 @@ export function DragList<T>({ items, keyOf, render, onReorder, testID }: Props<T
     }
   }, [items.length, tops, heights]);
   const finish = useCallback((a: number, t: number) => {
-    if (a >= 0 && t !== a) onReorder(a, t);
+    if (a >= 0 && t !== a) {
+      haptics.selection();
+      onReorder(a, t);
+    }
   }, [onReorder]);
+  const lift = useCallback(() => haptics.light(), []);
   const gestureFor = (i: number) => Gesture.Pan()
     .activateAfterLongPress(220)
     .onStart(() => {
       active.value = i;
       dy.value = 0;
+      runOnJS(lift)();
     })
     .onUpdate((e) => {
       dy.value = e.translationY;
@@ -94,7 +109,7 @@ export function DragList<T>({ items, keyOf, render, onReorder, testID }: Props<T
   return (
     <View testID={testID}>
       {items.map((it, i) => (
-        <Item key={keyOf(it)} index={i} active={active} dy={dy} tops={tops} heights={heights} onLayout={onLayout} handleGesture={gestureFor(i)} onDrop={finish}>
+        <Item key={keyOf(it)} index={i} count={items.length} active={active} dy={dy} tops={tops} heights={heights} onLayout={onLayout} handleGesture={gestureFor(i)} onDrop={finish}>
           {(handle) => render(it, i, handle)}
         </Item>
       ))}

@@ -1,7 +1,7 @@
 // Voice memos from the iPhone (Notebook › Notes). gsync on his PC pulls them from Google Drive › Punchable ›
 // Voice memos, transcribes them and files each one (GET /api/memos; gsync/memos.py). Here: the progress line,
 // how to send them, and each memo dated, with its words, its audio and where it was filed.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { post, undo, upload, useApi } from './api';
@@ -9,6 +9,7 @@ import { HearIt, Reference } from './hear';
 import { pickRecordings } from './media';
 import { C, fmtDate, fmtMs } from './theme';
 import { Btn, Card, List, ListRow, T, TextBtn, useUI } from './ui';
+import { WorkerLine } from './worker';
 
 export type Memo = {
   id: string; title: string; status: 'listed' | 'downloaded' | 'transcribing' | 'done' | 'failed';
@@ -119,17 +120,14 @@ export function AddRecordings({ onDone }: { onDone?: () => void }) {
 }
 
 export function VoiceMemos() {
-  const { data, reload } = useApi<MemosResp>('/api/memos', { cache: false });
+  // live-first like every other screen: changes arrive over /api/live; the health poll runs only while that
+  // socket is down (useApi `poll`), never a timer of its own
+  const { data, reload } = useApi<MemosResp>('/api/memos', { cache: false, poll: 30000 });
   const [open, setOpen] = useState<string | null>(null);
   const [help, setHelp] = useState(false);
   const [all, setAll] = useState(false);
   const p = data?.progress;
   const busy = !!p && p.waiting > 0;
-  useEffect(() => {
-    if (!busy) return;
-    const t = setInterval(reload, 15000);
-    return () => clearInterval(t);
-  }, [busy, reload]);
   if (!data) return null;
   const items = all ? data.items : data.items.slice(0, 40);
 
@@ -141,6 +139,7 @@ export function VoiceMemos() {
           <>
             <T v="semi" testID="memos-line">{p.line}</T>
             {busy && !p.paused && <T v="small">{p.working ? 'Working through them now. New ones show up here as they finish.' : 'Waiting for your PC to pick them up.'}</T>}
+            {busy && <WorkerLine what={`Transcribing ${p.waiting} memo${p.waiting === 1 ? '' : 's'}`} testID="memos-worker" />}
             {p.failed > 0 && <T v="small">{p.failed} couldn’t be transcribed; they stay in Google Drive.</T>}
           </>
         ) : (
