@@ -1,22 +1,31 @@
 // "Backstage Amber": the design tokens from the approved prototype (App.dc.html <helmet> CSS).
 // Rules for using them (contrast, the draft rule, the laugh ramp, the light variant): docs/DESIGN.md.
+// 2026-10 (docs/UX_2026-10.md): the ground, the cards and the accent follow the approved Mix* artboards
+// (#0B0B0D ground, #1C1C1F cards, amber #FFB340, record red #FF453A). Every screen gets them through these tokens.
 export const C = {
-  bg: '#111214',
-  bgDeep: '#0b0c0e',
-  surface: '#1a1c20',
-  surface2: '#22252a',
+  bg: '#0B0B0D',
+  bgDeep: '#060607',
+  surface: '#161618',
+  surface2: '#1C1C1F',
+  card: '#1C1C1F',
+  card2: '#161618',
+  mut2: '#A1A1A8', // the artboards' secondary text
+  tabOff: '#8E8E93',
+  rec: '#FF453A', // the hold-to-talk button
+  gap: '#FF6B5A', // a gap segment in the set bar
+  gapText: '#FF8A7D',
   border: '#2d3139',
   borderStrong: '#4b5059',
   text: '#f3f4f6',
   text2: '#d1d5db',
   mut: '#9ca3af',
   dim: '#878d97', // was #6b7280 (3.5:1 on surface, fails AA for placeholder text); now ≥ 4.6:1 on bg/surface/surface2
-  amber: '#f5b544',
+  amber: '#FFB340',
   amberDeep: '#7f5700',
   amberSoft: 'rgba(245,181,68,.15)',
   amberPill: 'rgba(245,181,68,.22)',
   amberMid: '#c98f2c', // the middle step where a ramp has only 3 (map pins, heat dot)
-  red: '#ef4444',
+  red: '#FF453A',
   redSoft: '#fca5a5',
   dangerBorder: '#7f1d1d', // error cards, the danger button
   warnBg: '#3b2a0a', // offline banner
@@ -67,6 +76,8 @@ export const F = {
   body: 'Inter_400Regular',
   medium: 'Inter_500Medium',
   semi: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  black: 'Inter_800ExtraBold',
   g5: 'SpaceGrotesk_500Medium',
   g6: 'SpaceGrotesk_600SemiBold',
   g7: 'SpaceGrotesk_700Bold',

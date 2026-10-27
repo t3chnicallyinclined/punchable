@@ -65,12 +65,12 @@ def test_classifier_rules_named():
 
 
 def test_short_name_default_cut():
-    assert short_name_of("Vegan BBQ") == "Vegan BBQ"
+    assert short_name_of("Robot vacuum") == "Robot vacuum"
     assert short_name_of("Haunted dishwasher saga (closer, 2019)") == "Haunted dishwasher"
     assert short_name_of("The dog is the size of a couch") == "The dog is the"
     assert short_name_of("Antidisestablishmentarianism forever") == "Antidisestablishme"
-    assert short_name_of("Vegan BBQ", "  Vegan  ") == "Vegan"      # his own name wins
-    assert short_name_of("Vegan BBQ", "") == "Vegan BBQ"           # an empty one is no name
+    assert short_name_of("Robot vacuum", "  Roomba  ") == "Roomba"      # his own name wins
+    assert short_name_of("Robot vacuum", "") == "Robot vacuum"           # an empty one is no name
     assert len(short_name_of("a" * 40)) <= 18
 
 

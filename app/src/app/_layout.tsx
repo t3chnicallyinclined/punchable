@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureRoot } from '@/lib/GestureRoot';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { leaving, useSession } from '@/lib/auth'; // importing it registers the bearer with api.ts; off on a local API
 import { isPublicPath, loginHref } from '@/lib/session';
@@ -69,7 +69,7 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
+  const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
   const ready = loaded || !!error;
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
@@ -85,7 +85,17 @@ export default function RootLayout() {
             <BoardProvider>
               <PhotosBadge />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-                <Stack.Screen name="index" options={{ ...tab, title: 'Write · Punchable' }} />
+                <Stack.Screen name="index" options={{ ...tab, title: 'Tonight · Punchable' }} />
+                <Stack.Screen name="bits" options={{ ...tab, title: 'Bits · Punchable' }} />
+                <Stack.Screen name="sets" options={{ ...tab, title: 'Sets · Punchable' }} />
+                <Stack.Screen name="say" options={{ title: 'Asking · Punchable' }} />
+                <Stack.Screen name="inbox" options={{ title: 'Inbox · Punchable' }} />
+                <Stack.Screen name="merge" options={{ title: 'Merge · Punchable' }} />
+                <Stack.Screen name="list/[id]" options={{ title: 'Set list · Punchable' }} />
+                <Stack.Screen name="stage/[id]" options={{ animation: 'slide_from_bottom', gestureEnabled: false, title: 'On stage · Punchable' }} />
+                <Stack.Screen name="map/[id]" options={{ title: 'Joke map · Punchable' }} />
+                <Stack.Screen name="builder/[id]" options={{ title: 'Set builder · Punchable' }} />
+                <Stack.Screen name="write" options={{ ...tab, title: 'Write · Punchable' }} />
                 <Stack.Screen name="boards" options={{ ...tab, title: 'Boards · Punchable' }} />
                 <Stack.Screen name="notebook" options={{ ...tab, title: 'Notebook · Punchable' }} />
                 <Stack.Screen name="desk" options={{ ...tab, title: 'Notebook · Punchable' }} />

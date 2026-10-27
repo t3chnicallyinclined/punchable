@@ -281,6 +281,12 @@ const P: Record<string, string> = {
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   play: 'M7 4l13 8-13 8z',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  // the three tabs (Mix* artboards): a spotlight, a grid of bits, a list
+  tonight: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  bits: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  sets: 'M5 6h14M5 12h14M5 18h9',
+  plus: 'M12 5v14M5 12h14',
+  chat: 'M4 5h16v11H9l-5 4V5z',
 };
 export function Icon({ name, size = 22, color = C.text, sw = 2 }: { name: keyof typeof P | string; size?: number; color?: string; sw?: number }) {
   return (
@@ -293,23 +299,25 @@ export function Icon({ name, size = 22, color = C.text, sw = 2 }: { name: keyof 
 // ------------------------------------------------------------------ layout
 export const useWide = () => useWindowDimensions().width >= WIDE;
 
+// The three tabs (docs/UX_2026-10.md): Tonight · Bits · Sets. Ask is on every screen (the input bar), not a tab.
 const ROOTS = [
-  { key: 'write', label: 'Write', path: '/' },
-  { key: 'boards', label: 'Boards', path: '/boards' },
-  { key: 'notebook', label: 'Notebook', path: '/notebook' },
+  { key: 'tonight', label: 'Tonight', path: '/' },
+  { key: 'bits', label: 'Bits', path: '/bits' },
+  { key: 'sets', label: 'Sets', path: '/sets' },
 ];
-// screens one tap down, and the tab they belong under
+// screens one tap down, and the tab they belong under (the old tabs Write / Boards / Notebook stay as routes)
 const PUSHED_ROOT: Record<string, string> = {
-  joke: 'notebook', bit: 'notebook', notes: 'notebook', desk: 'notebook', shows: 'notebook', set: 'notebook', venue: 'notebook', calendar: 'notebook',
-  today: 'notebook', import: 'notebook', record: 'notebook', board: 'boards', workingset: 'boards', setlist: 'boards', myset: 'boards',
-  settings: 'write', profile: 'write', learned: 'write', ask: 'notebook',
+  joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', set: 'bits', venue: 'bits', calendar: 'bits',
+  merge: 'bits', write: 'bits', today: 'tonight', import: 'tonight', record: 'tonight', inbox: 'tonight', say: 'tonight', ask: 'tonight',
+  board: 'sets', builder: 'sets', list: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
+  settings: 'tonight', profile: 'tonight', learned: 'tonight',
 };
 
 function rootOf(pathname: string, last: string) {
-  if (pathname === '/' || pathname === '') return 'write';
+  if (pathname === '/' || pathname === '') return 'tonight';
   const k = pathname.split('/')[1];
   if (ROOTS.some((r) => r.key === k)) return k;
-  return PUSHED_ROOT[k] && last === 'write' && k !== 'settings' && k !== 'profile' ? PUSHED_ROOT[k] : last;
+  return PUSHED_ROOT[k] && last === 'tonight' && k !== 'settings' && k !== 'profile' ? PUSHED_ROOT[k] : last;
 }
 
 export function goRoot(key: string) {
@@ -324,15 +332,13 @@ function BottomNav({ active }: { active: string }) {
     return (
       <Pressable key={r.key} testID={`tab-${r.key}`} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={r.label}
         onPress={() => goRoot(r.key)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 }}>
-        <View style={{ width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? C.amberPill : 'transparent' }}>
-          <Icon name={r.key} color={on ? C.text : C.mut} />
-        </View>
-        <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.g6, fontSize: 12, color: on ? C.text : C.mut }}>{r.label}</Text>
+        <Icon name={r.key} color={on ? C.amber : C.tabOff} size={24} />
+        <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 11, color: on ? C.amber : C.tabOff }}>{r.label}</Text>
       </Pressable>
     );
   };
   return (
-    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 72 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border }}>
+    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 64 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: '#1F1F22' }}>
       {ROOTS.map(tab)}
     </View>
   );
@@ -435,7 +441,7 @@ function TopBar({ title, back, onBack, right, task, left }: { title: string; bac
   return (
     <View style={{ zIndex: 4, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52 + ins.top, paddingTop: ins.top + 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
       {left ? left : back ? (
-        <Pressable testID="back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('write')))}
+        <Pressable testID="back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
           style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 30, lineHeight: 32, color: C.amber }}>‹</Text>
         </Pressable>
@@ -482,10 +488,12 @@ function OfflineStrip() {
  * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
  * `scroll={false}` hands the body to the child (a virtualized list).
  */
-export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef }: {
+export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar }: {
   title: string; children: React.ReactNode; back?: boolean; onBack?: () => void; right?: React.ReactNode; dock?: React.ReactNode;
   task?: boolean; header?: React.ReactNode; testID?: string; deep?: boolean; scrollKey?: string | number | null; scroll?: boolean; maxWidth?: number;
   scrollRef?: React.MutableRefObject<any>;
+  /** The input bar (lib/SayBar): pinned above the tab bar, the tabs stay (unlike `dock`). */
+  bar?: React.ReactNode;
 }) {
   const wide = useWide();
   const sv = useRef<any>(null);
@@ -500,7 +508,7 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
   }, [active, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   const ins = useSafeAreaInsets();
   const showNav = !wide && !task && !dock;
-  const bottomPad = dock ? (wide ? 160 : 200) : showNav ? 112 + ins.bottom : 48;
+  const bottomPad = dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0);
   const mw = maxWidth || (wide ? 1120 : 720);
   return (
     <View testID={testID} style={{ flex: 1, flexDirection: 'row', backgroundColor: deep ? C.bgDeep : C.bg }}>
@@ -513,7 +521,12 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
             <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>{children}</View>
           </ScrollView>
         ) : (
-          <View style={{ flex: 1, paddingBottom: showNav ? 72 + ins.bottom : 0 }}>{children}</View>
+          <View style={{ flex: 1, paddingBottom: (showNav ? 64 + ins.bottom : 0) + (bar ? 112 : 0) }}>{children}</View>
+        )}
+        {bar && (
+          <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom, zIndex: 6, paddingBottom: showNav ? 4 : 12, backgroundColor: deep ? C.bgDeep : C.bg }}>
+            {bar}
+          </View>
         )}
         {dock && (
           <View testID="dock" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: ins.bottom + 12, backgroundColor: deep ? C.bgDeep : C.surface, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
@@ -593,7 +606,7 @@ export const useUI = () => {
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [snack, setSnack] = useState<Snack | null>(null);
   const [sheet, setSheet] = useState<'' | 'cap' | 'mic'>('');
-  const [lastRoot, setLastRoot] = useState('write');
+  const [lastRoot, setLastRoot] = useState('tonight');
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
   const pendingMic = useRef<null | (() => void)>(null);

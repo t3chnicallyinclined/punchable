@@ -5,7 +5,7 @@ import { Job, creative } from './creative';
 
 /** A bit as the app shows it anywhere: short title, his line (verbatim), its date, one stage line in words. */
 export type BitCard = {
-  joke_id: string; title: string; stage?: string | null; quote: string | null; quote_node?: string | null; cut_start?: boolean; cut_end?: boolean;
+  joke_id: string; title: string; short_name?: string; stage?: string | null; quote: string | null; quote_node?: string | null; cut_start?: boolean; cut_end?: boolean;
   date: string | null; stage_line: string | null; proven: boolean; nights: number; duration_s?: number; estimated?: boolean;
   why?: string; mine?: boolean; proven_pair?: boolean; unit_id?: string; rank?: number;
 };

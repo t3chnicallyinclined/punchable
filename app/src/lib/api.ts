@@ -1,6 +1,7 @@
 // Client for the Punchable API (api-dev/API.md + docs/API_CONTRACT.md). The hosted API keeps the same shapes.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { AppState } from 'react-native';
 
 // Web only: ?api=http://127.0.0.1:<port> points this tab at another local API (the tests use a temp-kb API this way).
 function runtimeApi(): string | null {
@@ -170,8 +171,28 @@ function liveConnect() {
   };
   ws.onerror = () => ws.close();
 }
+/** Native: the app is in front (polling and the live socket pause in the background); web: the tab is visible. */
+export function inFront(): boolean {
+  const doc = (globalThis as any).document;
+  if (doc && typeof doc.visibilityState === 'string') return doc.visibilityState !== 'hidden';
+  return AppState.currentState === 'active' || AppState.currentState == null;
+}
+let appStateHooked = false;
+function hookAppState() {
+  if (appStateHooked) return;
+  appStateHooked = true;
+  try {
+    AppState.addEventListener('change', (st) => {
+      if (st === 'active') {
+        liveConnect(); // back in front: reconnect /api/live (it closed, or the OS cut it) and let the pollers catch up
+        liveListeners.forEach((f) => f({ type: 'change', rev: null }));
+      }
+    });
+  } catch {}
+}
 function subscribeLive(f: (m: LiveMsg) => void) {
   liveListeners.add(f);
+  hookAppState();
   liveConnect();
   return () => {
     liveListeners.delete(f);
@@ -234,8 +255,7 @@ export function useApi<T = any>(path: string | null, opts?: { poll?: number; fet
       if (alive) load();
     });
     const tick = async () => {
-      const doc = (globalThis as any).document;
-      if (liveUp || (doc && doc.visibilityState === 'hidden')) return;
+      if (liveUp || !inFront()) return; // the socket carries changes; in the background nothing polls
       try {
         const h = await get<{ rev?: string }>('/api/health');
         setOnline(true);
@@ -284,6 +304,8 @@ export type JokeSummary = {
   ai_hit_sets?: number; stage_ai?: boolean; stage_confidence?: number | null; who?: 'ai' | 'confirmed' | 'edited';
   // Requested by app (docs/API_CONTRACT.md); optional until the API returns them.
   short_title?: string; punch?: string; nights?: number; avg_vs_room?: number | null; avg_laugh_s_per_min?: number | null; last_performed?: string | null;
+  // docs/UX_2026-10.md: the name on a paper set list, and how long it runs (from his tapes, else estimated)
+  short_name?: string; duration_s?: number; duration_estimated?: boolean;
 };
 export const setRow = (b: { perf: string; op: 'rate' | 'match' | 'new' | 'crowd' | 'bit' | 'confirm'; rating?: string; joke?: string; reason?: string }) =>
   post<Written>('/api/set-row', b);
