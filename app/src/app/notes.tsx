@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { upload, useApi } from '@/lib/api';
+import { useApi } from '@/lib/api';
 import { C, F, fmtDate, fmtMs } from '@/lib/theme';
 import { Badge, Btn, Card, Empty, ErrorCard, List, ListRow, Screen, T, s, useUI, useWide } from '@/lib/ui';
-import { Recorder, createRecorder } from '@/lib/media';
+import { useRecorder } from '@/lib/recorder';
+import { enqueueUpload } from '@/lib/uploads';
 
 type Item = { file: string; bytes: number; kind: string; title: string; received_at?: string; duration_s?: number; status: string };
 
@@ -18,14 +19,14 @@ export default function NotesScreen() {
   const [rec, setRec] = useState<'off' | 'on' | 'saving'>('off');
   const [ms, setMs] = useState(0);
   const [level, setLevel] = useState(0);
-  const r = useRef<Recorder | null>(null);
+  const x = useRecorder();
+  const r = useRef(false);
   const tick = useRef<any>(null);
 
   const start = async () => {
     try {
-      const x = createRecorder();
       await x.start();
-      r.current = x;
+      r.current = true;
       setRec('on');
       tick.current = setInterval(() => { setMs(x.elapsedMs()); setLevel(x.level()); }, 200);
     } catch (e: any) {
@@ -33,26 +34,24 @@ export default function NotesScreen() {
     }
   };
   const stop = async () => {
-    const x = r.current;
-    if (!x) return;
+    if (!r.current) return;
     clearInterval(tick.current);
     setRec('saving');
-    const dur = x.elapsedMs();
-    const blob = await x.stop();
     try {
-      const res = await upload(blob, { kind: 'note', filename: `note.${blob.type.includes('mp4') ? 'm4a' : 'webm'}`, title: `Voice note ${new Date().toLocaleString()}`, durationS: dur / 1000 });
-      ui.snack(`Note saved (${fmtMs(dur)}) · queued for processing`);
+      const out = await x.stop();
+      const res = await enqueueUpload(out, { kind: 'note', filename: out.name, title: `Voice note ${new Date().toLocaleString()}`, durationS: out.durationMs / 1000, recordedAt: new Date().toISOString() });
+      ui.snack(res.queued ? `Note saved on this device (${fmtMs(out.durationMs)}) · it goes up when Punchable is back` : `Note saved (${fmtMs(out.durationMs)}) · queued for processing`);
       await reload();
-      setSel(res.file);
+      if (res.file) setSel(res.file);
     } catch (e: any) {
-      ui.snack(`Upload failed: ${e.message}`);
+      ui.snack(`Couldn’t save the note: ${e.message}`);
     } finally {
       setRec('off');
       setMs(0);
-      r.current = null;
+      r.current = false;
     }
   };
-  useEffect(() => () => { clearInterval(tick.current); r.current?.cancel(); }, []);
+  useEffect(() => () => { clearInterval(tick.current); if (r.current) x.cancel(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (params.talk && rec === 'off') start();
   }, [params.talk]);
