@@ -60,3 +60,40 @@ def test_broken_legal_rule_makes_the_legal_test_fail(tmp_path, monkeypatch, brea
         return Sync(cfg, d, pk, dry_run=dry, clock=clock).run()
     with pytest.raises(AssertionError, match="legal doc was exported|leaked"):
         assert_legal_never_ingested(cfg, d, pk, run)
+
+
+def test_own_keywords_only_ids_skip_only_the_generic_title_keywords(monkeypatch):
+    me = [{"emailAddress": "owner@example.com"}]
+    monkeypatch.setattr(rules, "OWN_KW", ["sample matter"])
+    monkeypatch.setattr(rules, "OWN_KW_ONLY_IDS", frozenset({"bit1"}))
+    # a bit whose title trips a generic keyword is checked against your own list only...
+    assert rules.legal_reason({"id": "bit1", "name": "Illegal parking bit", "owners": me}) is None
+    assert rules.legal_reason({"id": "other", "name": "Illegal parking bit", "owners": me}) == "kw:legal"
+    # ...but your own keywords, the denylist, folders, owner and filing names still apply to it
+    assert rules.legal_reason({"id": "bit1", "name": "sample matter notes", "owners": me}) == "kw:sample matter"
+    assert rules.legal_reason({"id": "bit1", "name": "Memorandum of law", "owners": me}).startswith("filing")
+    assert rules.legal_reason({"id": "bit1", "name": "x", "owners": []}) == "owner"
+    monkeypatch.setattr(rules, "LEGAL_IDS", frozenset({"bit1"}))
+    assert rules.legal_reason({"id": "bit1", "name": "Illegal parking bit", "owners": me}) == "denylist"
+
+
+def test_own_keywords_only_ids_need_your_own_keywords(monkeypatch):
+    me = [{"emailAddress": "owner@example.com"}]
+    monkeypatch.setattr(rules, "OWN_KW", [])
+    monkeypatch.setattr(rules, "OWN_KW_ONLY_IDS", frozenset({"bit1"}))
+    assert rules.legal_reason({"id": "bit1", "name": "Legal notes", "owners": me}) == "kw:legal"
+
+
+def test_local_content_markers_add_to_the_text_net(tmp_path, monkeypatch):
+    f = tmp_path / "legal_rules.json"
+    f.write_text(json.dumps({"content_markers": ["Sample County"]}), encoding="utf-8")
+    monkeypatch.setenv("PUNCHABLE_LEGAL_RULES", str(f))
+    import importlib
+    fresh = importlib.reload(rules)
+    try:
+        assert "sample county" in fresh.CONTENT_MARKERS
+        assert fresh.content_is_legal("SAMPLE COUNTY ... Docket No. 7") is True
+        assert fresh.content_is_legal("a bit set in sample county") is False
+    finally:
+        monkeypatch.delenv("PUNCHABLE_LEGAL_RULES")
+        importlib.reload(rules)

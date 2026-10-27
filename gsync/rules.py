@@ -4,8 +4,11 @@ Court and legal documents are never exported. The generic rules below always app
 doc ids, extra title keywords, your Google account) goes in a private JSON file, never in the repo:
     $PUNCHABLE_HOME/legal_rules.json (default ~/.punchable/legal_rules.json), e.g.
     {"owner": "you@example.com", "legal_parents": ["<folder id>"], "legal_folders_extra": [], "keywords": ["..."],
-     "legal_ids": ["<doc id>"], "not_comedy_ids": [], "ingest_max_modified": null}
-The local file can only exclude MORE, never less. Jokes that mention a judge or a courtroom are part of an act and
+     "content_markers": ["..."], "legal_ids": ["<doc id>"], "not_comedy_ids": [], "ingest_max_modified": null,
+     "own_keywords_only_ids": []}
+The local file can only exclude MORE, never less, with one narrow exception: a doc listed in own_keywords_only_ids
+(a bit whose title trips a generic keyword, e.g. "illegal") is checked against YOUR keyword list instead of the
+generic one. The denylist, folders, owner, filing names and the content check still apply to it. Jokes that mention a judge or a courtroom are part of an act and
 are not excluded by content alone.
 """
 from __future__ import annotations
@@ -30,8 +33,11 @@ _LOCAL = _local_rules()
 # ---- title and folder rules -------------------------------------------------------------------------------------
 LEGAL_PARENTS = set(_LOCAL.get("legal_parents", []))
 LEGAL_FOLDERS_EXTRA = set(_LOCAL.get("legal_folders_extra", []))
-KW = ['petition', 'court', 'cross examination', 'exhibit', 'affidavit', 'deposition', 'lawsuit', 'hearing notes',
-      'legal'] + [k.lower() for k in _LOCAL.get("keywords", [])]
+GENERIC_KW = ['petition', 'court', 'cross examination', 'exhibit', 'affidavit', 'deposition', 'lawsuit', 'hearing notes',
+              'legal']
+OWN_KW = [k.lower() for k in _LOCAL.get("keywords", [])]
+KW = GENERIC_KW + [k for k in OWN_KW if k not in GENERIC_KW]
+OWN_KW_ONLY_IDS = frozenset(_LOCAL.get("own_keywords_only_ids", []))  # only honoured when you have your own keywords
 OWNER = _LOCAL.get("owner") or os.environ.get("PUNCHABLE_OWNER_EMAIL") or None  # None: owner check off
 
 FILING_KW = ['summation', 'affirmation', 'affadavit', 'memorandum of law', 'motion to', 'order to show cause', 'otsc',
@@ -41,6 +47,8 @@ FILING_WORDS = re.compile(r'\bosc\b')
 CONTENT_MARKERS = ['supreme court of the state of', 'court of the state of', 'appellate division', 'index no',
                    'docket no', 'file no.', 'petitioner', 'respondent', 'plaintiff', 'defendant',
                    'under penalty of perjury', 'sworn to before me', 'order to show cause', 'affirmation in']
+# Your own markers (court names, your county, ...) from legal_rules.json; each counts toward the two-marker rule.
+CONTENT_MARKERS += [m.lower() for m in _LOCAL.get("content_markers", []) if m.lower() not in CONTENT_MARKERS]
 
 LEGAL_IDS = frozenset(_LOCAL.get("legal_ids", []))          # docs you excluded by hand
 NOT_COMEDY_IDS = frozenset(_LOCAL.get("not_comedy_ids", []))  # docs you judged not comedy
@@ -61,7 +69,7 @@ def legal_reason(meta: dict, ancestors: list[str] | None = None, extra_ids: set 
     if not owners or (OWNER and owners[0] != OWNER):
         return 'owner'
     t = (meta.get('name') or '').lower()
-    hit = [k for k in KW if k in t]
+    hit = [k for k in (OWN_KW if did in OWN_KW_ONLY_IDS and OWN_KW else KW) if k in t]
     if hit:
         return 'kw:' + ','.join(hit)
     hit = [k for k in FILING_KW if k in t]
@@ -95,5 +103,6 @@ def fingerprint() -> str:
     """SHA-256 over the legal constants in a canonical form (so a change is visible in logs)."""
     import hashlib
     canon = json.dumps({'parents': sorted(LEGAL_PARENTS), 'extra': sorted(LEGAL_FOLDERS_EXTRA), 'kw': KW,
-                        'owner': OWNER, 'ids': sorted(LEGAL_IDS)}, sort_keys=True)
+                        'owner': OWNER, 'ids': sorted(LEGAL_IDS), 'markers': CONTENT_MARKERS,
+                        'own_kw_only': sorted(OWN_KW_ONLY_IDS)}, sort_keys=True)
     return hashlib.sha256(canon.encode()).hexdigest()
