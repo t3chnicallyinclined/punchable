@@ -391,9 +391,26 @@ class Creative:
         return out
 
     # ---------------------------------------------------------------- corpus
+    def _vec_sig(self) -> tuple:
+        """The vector folder's files (name, mtime, size): the home worker adds extra_*.json at runtime (vectors for new
+        notes), so the cached Vectors (and every corpus built on it) is rebuilt when they change."""
+        if not self.vec_dir or not self.vec_dir.is_dir():
+            return ()
+        out = []
+        for p in sorted(self.vec_dir.iterdir()):
+            if p.suffix in (".f32", ".json"):
+                try:
+                    st = p.stat()
+                    out.append((p.name, st.st_mtime_ns, st.st_size))
+                except OSError:
+                    pass
+        return tuple(out)
+
     def vectors(self) -> Vectors:
-        if self._vectors is None:
+        sig = self._vec_sig()
+        if self._vectors is None or getattr(self, "_vectors_sig", None) != sig:
             self._vectors = Vectors(self.vec_dir) if self.vec_dir else Vectors()
+            self._vectors_sig = sig
         return self._vectors
 
     def _inputs(self, kb) -> dict:
@@ -424,7 +441,7 @@ class Creative:
         Cached until the backend's rev or an input file changes."""
         view = kb.full_view()
         inp = self._inputs(kb)
-        key = (getattr(kb, "rev", None), len(view.decisions), self._sig(inp))
+        key = (getattr(kb, "rev", None), len(view.decisions), self._sig(inp), self._vec_sig())
         hit = self._corpus.get(kb.backend)
         if hit and hit[0] == key:
             return hit[1]

@@ -178,3 +178,16 @@ def test_not_a_joke_is_a_suggestion_he_answers(api):
     assert s == 200 and k["kept"]
     s, g = a.get("/api/suggestions/not-a-joke")
     assert [x["joke_id"] for x in g["items"]] == [talk]
+
+
+def test_new_vectors_from_the_worker_are_picked_up_without_a_restart(tmp_path):
+    sys.path.insert(0, str(DESK / "api-dev"))
+    import creative_api as CR
+    vec = tmp_path / "vectors"
+    vec.mkdir()
+    cr = CR.Creative(tmp_path / "creative", vec)
+    assert cr.vectors().get("summary:joke:x") is None
+    (vec / "extra_summary.json").write_text(json.dumps({"dim": 384, "rows": {"summary:joke:x": [0.5] * 384}}),
+                                            encoding="utf-8")
+    v = cr.vectors().get("summary:joke:x")
+    assert v is not None and len(v) == 384
