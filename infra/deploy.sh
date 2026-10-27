@@ -10,6 +10,10 @@
 #   rollout api|web [ref]    apply the Deployment pinned to a digest (default: last built)
 #   dbload <bundle.tgz> [--check]   load Punchable's text/JSON data into SurrealDB from a pod (db/push_remote.py)
 #   ingress                  punchable.io Ingress + certificate (after DNS and both rollouts)
+#   backup-secret            Secret punchable-r2-backup from STDIN (ship.sh backup-secret; R2_* lines, never shown)
+#   backup                   ConfigMap from infra/backup/backup.py + NetworkPolicies + the nightly CronJob
+#   backup-now               one backup now (a Job from the CronJob), waits, prints its log
+#   backup-list              the backups in the bucket (a one-off pod with the same image, Secret and policy)
 #   status                   what is live
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
@@ -17,6 +21,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 K="microk8s kubectl"; NS=$PK_NS
 STATE="${STATE_DIR:-$HOME/projects/punchable-hosted}"; mkdir -p "$STATE"
 R="bash infra/render.sh"
+PYIMG=python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530  # = 60-backup.yaml
 CURL=curlimages/curl@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b
 apply() { $R "$1" ${2:-} | $K apply --server-side --field-manager=punchable -f -; }
 STEP="${1:?step}"; shift || true
@@ -124,8 +129,63 @@ case "$STEP" in
     $K -n $NS wait --for=condition=Ready certificate/punchable-tls --timeout=5m
     curl -fsS -o /dev/null -w "https://$PK_DOMAIN/ %{http_code}\n" "https://$PK_DOMAIN/"
     curl -fsS -o /dev/null -w "https://$PK_DOMAIN/api/health %{http_code}\n" "https://$PK_DOMAIN/api/health" ;;
+  backup-secret)
+    # STDIN = R2_ENDPOINT / R2_BUCKET / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY lines (from ship.sh backup-secret): a
+    # token scoped to the backup bucket only. Same path as google-idp: a variable, printf, a pipe; never argv or a file.
+    ENVF="$(cat)"
+    for k in R2_ENDPOINT R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
+      grep -qE "^$k=.+" <<<"$ENVF" || { echo "!! expected $k on stdin"; exit 1; }
+    done
+    printf '%s\n' "$ENVF" | $K -n $NS create secret generic punchable-r2-backup --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF
+    echo "punchable-r2-backup applied (values not shown). Next: infra/ship.sh backup" ;;
+  backup)
+    $K -n $NS get secret punchable-api >/dev/null || { echo "!! run base first"; exit 1; }
+    $K -n $NS get secret punchable-r2-backup >/dev/null || { echo "!! run infra/ship.sh backup-secret first"; exit 1; }
+    $K -n $NS create configmap punchable-backup-script --from-file=backup.py=infra/backup/backup.py \
+      --dry-run=client -o yaml | $K label --local -f - app=punchable-backup app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    apply infra/k8s/10-networkpolicy.yaml
+    apply infra/k8s/60-backup.yaml
+    $K -n $NS get cronjob punchable-backup
+    echo "$(date -u +%FT%TZ) backup cronjob sha=${SHA:-?}" >> "$STATE/deploys.log"
+    echo "nightly backup scheduled. Run one now: infra/ship.sh backup-now" ;;
+  backup-now)
+    $K -n $NS get cronjob punchable-backup >/dev/null || { echo "!! run infra/ship.sh backup first"; exit 1; }
+    J="punchable-backup-now-$(date -u +%Y%m%d%H%M%S)"
+    $K -n $NS create job "$J" --from=cronjob/punchable-backup >/dev/null
+    echo "==> $J (waits up to 30 min)"
+    ok=""
+    for _ in $(seq 1 360); do
+      S="$($K -n $NS get job "$J" -o jsonpath='{.status.succeeded}/{.status.failed}')"
+      [ "${S%%/*}" = 1 ] && { ok=1; break; }
+      [ "${S##*/}" -ge 3 ] 2>/dev/null && break   # backoffLimit 2 = three failed pods
+      $K -n $NS get job "$J" -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' | grep -q True && break
+      sleep 5
+    done
+    $K -n $NS logs -l job-name="$J" --prefix --tail=-1 || true
+    [ -n "$ok" ] || { echo "!! $J did not succeed"; exit 1; }
+    echo "$(date -u +%FT%TZ) backup-now ok $J" >> "$STATE/deploys.log" ;;
+  backup-list)
+    $K -n $NS get secret punchable-r2-backup >/dev/null || { echo "!! run infra/ship.sh backup-secret first"; exit 1; }
+    $K -n $NS get configmap punchable-backup-script >/dev/null || { echo "!! run infra/ship.sh backup first"; exit 1; }
+    $K -n $NS delete pod pk-backup-list --ignore-not-found --wait=true >/dev/null
+    OV='{"spec":{"automountServiceAccountToken":false,"enableServiceLinks":false,
+      "securityContext":{"runAsNonRoot":true,"runAsUser":10001,"runAsGroup":10001,"seccompProfile":{"type":"RuntimeDefault"}},
+      "containers":[{"name":"pk-backup-list","image":"'$PYIMG'","command":["python","-I","/opt/backup/backup.py","list"],
+        "stdin":true,"stdinOnce":true,"tty":false,
+        "env":[{"name":"BACKUP_PREFIX","value":"surreal/"},{"name":"PYTHONDONTWRITEBYTECODE","value":"1"}],
+        "envFrom":[{"secretRef":{"name":"punchable-r2-backup"}}],
+        "resources":{"requests":{"cpu":"50m","memory":"64Mi"},"limits":{"cpu":"500m","memory":"128Mi"}},
+        "securityContext":{"allowPrivilegeEscalation":false,"readOnlyRootFilesystem":true,"capabilities":{"drop":["ALL"]}},
+        "volumeMounts":[{"name":"script","mountPath":"/opt/backup","readOnly":true}]}],
+      "volumes":[{"name":"script","configMap":{"name":"punchable-backup-script"}}]}}'
+    $K -n $NS run pk-backup-list --rm -i --quiet --restart=Never --labels=app=punchable-backup --image="$PYIMG" \
+      --overrides="$OV" </dev/null ;;
   status)
-    $K -n $NS get all,netpol,pvc,secret -o wide
+    $K -n $NS get all,netpol,pvc,secret,cronjob -o wide
     $K -n "$PK_KC_NS" get cm,job,ingress -l app.kubernetes.io/part-of=punchable 2>/dev/null
     $K -n "$PK_KC_NS" get cm keycloak-realm-punchable 2>/dev/null || true
     $K describe node | sed -n '/Allocated resources/,/Events/p' | head -6 ;;

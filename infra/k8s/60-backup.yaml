@@ -1,0 +1,75 @@
+# Nightly SurrealDB backup to R2 (infra/backup/backup.py, infra/README.md "Backups").
+# 04:17 UTC: export punchable/main over HTTP as the DATABASE user `api` (EDITOR; never root: a database user's export is
+# byte-identical to root's, checked 2026-10-26), gzip, check, PUT to R2 under surreal/daily/, a weekly copy on Sundays,
+# keep 14 daily + 8 weekly. Applied by `infra/ship.sh backup` (which first makes the ConfigMap from backup.py).
+#   ConfigMap punchable-backup-script   backup.py (made from the committed file by deploy.sh backup; not here)
+#   Secret punchable-r2-backup          R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY: a token scoped to
+#                                       the backup bucket only (infra/ship.sh backup-secret; never in git)
+# NetworkPolicy punchable-backup (10-networkpolicy.yaml): out to surrealdb:8000 and TCP 443 on the public internet only.
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: punchable-backup, namespace: punchable, labels: { app: punchable-backup } }
+spec:
+  schedule: "17 4 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata: { labels: { app: punchable-backup } }
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      # also cleans up the jobs `infra/ship.sh backup-now` creates (the history limits only count scheduled runs)
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata: { labels: { app: punchable-backup } }
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: backup
+              image: python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530
+              command: ["python", "-I", "/opt/backup/backup.py", "run"]
+              env:
+                - { name: PYTHONDONTWRITEBYTECODE, value: "1" }
+                - { name: SURREAL_URL, value: "http://surrealdb:8000" }
+                - { name: SURREAL_NS, value: punchable }
+                - { name: SURREAL_DB, value: main }
+                - { name: SURREAL_AUTH_LEVEL, value: database }
+                - name: SURREAL_USER
+                  valueFrom: { secretKeyRef: { name: punchable-api, key: SURREAL_API_USER } }
+                - name: SURREAL_PASS
+                  valueFrom: { secretKeyRef: { name: punchable-api, key: SURREAL_API_PASS } }
+                - { name: R2_REGION, value: auto }
+                - { name: BACKUP_PREFIX, value: surreal/ }
+                - { name: BACKUP_KEEP_DAILY, value: "14" }
+                - { name: BACKUP_KEEP_WEEKLY, value: "8" }
+                - { name: BACKUP_WEEKLY, value: auto }
+                - { name: BACKUP_TMP, value: /tmp }
+              envFrom:
+                - secretRef: { name: punchable-r2-backup }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              # Streams in 1 MiB chunks; the dump is ~31 MB of SurrealQL, ~11 MB gzipped (2026-10-26).
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { cpu: 500m, memory: 256Mi }
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+                - { name: script, mountPath: /opt/backup, readOnly: true }
+          volumes:
+            - name: tmp
+              emptyDir: { sizeLimit: 1Gi }
+            - name: script
+              configMap: { name: punchable-backup-script, defaultMode: 0444 }

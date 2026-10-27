@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
 #   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web | rollout api|web
-#                 | dbload [--check] | ingress | status
+#                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
+#   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
+#   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
 #   dbload packs Punchable's text/JSON data HERE (python db/push_remote.pack, no audio), copies the tarball to the server
 #   over the same ssh, and loads it from a pod there (infra/deploy.sh dbload). The tarball is deleted after a load.
 #   infra/ship.sh dns plan|apply|undo     runs HERE (Cloudflare API, token from ~/.punchable/cloudflare.env)
@@ -34,6 +36,18 @@ if [ "$STEP" = google-idp ]; then
   grep -qE '^GOOGLE_CLIENT_ID=.+\.apps\.googleusercontent\.com\s*$' "$F" || { echo "!! GOOGLE_CLIENT_ID missing or not a Google client id in $F"; exit 1; }
   grep -qE '^GOOGLE_CLIENT_SECRET=.+' "$F" || { echo "!! GOOGLE_CLIENT_SECRET missing in $F"; exit 1; }
   grep -E '^GOOGLE_CLIENT_(ID|SECRET)=' "$F" | tr -d '\r' | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh google-idp"
+  exit $?
+fi
+if [ "$STEP" = backup-secret ]; then
+  F="${R2_BACKUP_ENV:-$HOME/.punchable/r2.env}"
+  [ -f "$F" ] || { echo "!! $F not found (R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)"; exit 1; }
+  grep -qE '^R2_ENDPOINT=https://[0-9a-f]{32}\.r2\.cloudflarestorage\.com/?\s*$' "$F" \
+    || { echo "!! R2_ENDPOINT missing or not https://<account id>.r2.cloudflarestorage.com in $F"; exit 1; }
+  grep -qE '^R2_BUCKET=[a-z0-9][a-z0-9-]{1,61}[a-z0-9]\s*$' "$F" || { echo "!! R2_BUCKET missing or not a bucket name in $F"; exit 1; }
+  grep -qE '^R2_ACCESS_KEY_ID=[0-9a-f]{32}\s*$' "$F" || { echo "!! R2_ACCESS_KEY_ID missing or not 32 hex in $F"; exit 1; }
+  grep -qE '^R2_SECRET_ACCESS_KEY=[0-9a-f]{64}\s*$' "$F" || { echo "!! R2_SECRET_ACCESS_KEY missing or not 64 hex in $F"; exit 1; }
+  grep -E '^R2_(ENDPOINT|BUCKET|ACCESS_KEY_ID|SECRET_ACCESS_KEY)=' "$F" | tr -d '\r' \
+    | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh backup-secret"
   exit $?
 fi
 if [ "$STEP" = dbload ]; then

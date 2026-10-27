@@ -86,6 +86,14 @@ Restore was verified into a scratch database: the same counts, the change feeds 
 - Decision lines that the backup lacks are appended by the watcher on start.
 - An export is a snapshot of derived data. The files are the real backup: `python db\load.py` rebuilds everything.
 
+**Hosted.** The hosted database is backed up nightly to R2 by a CronJob (`infra/backup/backup.py`; schedule, retention,
+the deploy steps and the restore drill are in `infra/README.md` "Backups"). It exports over HTTP as the database user
+`api`, not root: a database user's export is byte-identical to root's. `backup.py export <out.gz>` and
+`restore-check <file.gz>` also work against this local server (`SURREAL_URL=http://127.0.0.1:8797`,
+`SURREAL_AUTH_LEVEL=root` with the `secrets.env` login). Restore drill, 2026-10-26: the local database and the hosted
+one, each exported, restored into a scratch server and compared table by table: every count, table definition and
+change feed equal, full-text and KNN answering.
+
 **Compaction.** SurrealKV keeps an append-only log, so the store grows with churn. It reached 1.2 GB after test runs on the real store; tests no longer use it.
 - To shrink it: `db\stop.ps1`, delete `comedy\db\punchable\data`, `db\start.ps1`, `python db\load.py`, then restart the API.
 - This is safe whenever `/api/health` `decision_lines` equals the line count of `decisions.jsonl`.
