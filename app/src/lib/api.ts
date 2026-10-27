@@ -54,7 +54,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 export const get = <T = any>(path: string) => req<T>('GET', path);
 export const post = <T = any>(path: string, body: unknown) => req<T>('POST', path, body);
 export const patch = <T = any>(path: string, body: unknown) => req<T>('PATCH', path, body);
-export const del = <T = any>(path: string) => req<T>('DELETE', path);
+export const del = <T = any>(path: string, body?: unknown) => req<T>('DELETE', path, body);
 
 export type Written = { ok: boolean; indexes: number[]; decisions: any[] };
 

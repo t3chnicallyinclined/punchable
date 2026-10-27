@@ -3,23 +3,26 @@
 // import and record sit one tap down in Notebook › Shows).
 import React, { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Image, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions,
+  AccessibilityInfo, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleProp, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions,
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { C, F, WIDE, stageInfo, stageWord } from './theme';
+import { C, F, WIDE, onSchemeChange, stageInfo, stageWord } from './theme';
 import { AskButton } from './AskButton';
 import { upload, useOnline } from './api';
 import { useSession } from './auth';
+import { haptics } from './haptics';
 import { loginHref } from './session';
 import { isWeb, micExplained, micSupported, pickFile, requestMic, setMicExplained } from './media';
 
 // ------------------------------------------------------------------ text (scales with the OS text size; capped)
 type TV = 'body' | 'mut' | 'eb' | 'h1' | 'h2' | 'num' | 'semi' | 'small' | 'big';
-const tv: Record<TV, TextStyle> = {
-  body: { fontFamily: F.body, fontSize: 16, lineHeight: 23, color: C.text },
-  semi: { fontFamily: F.semi, fontSize: 16, lineHeight: 23, color: C.text },
+// Body text is 16 on the web and 17 on iOS (the HIG default), scaling with the OS text size (capped at 1.6x).
+const BODY = Platform.OS === 'ios' ? 17 : 16;
+const buildTv = (): Record<TV, TextStyle> => ({
+  body: { fontFamily: F.body, fontSize: BODY, lineHeight: BODY + 7, color: C.text },
+  semi: { fontFamily: F.semi, fontSize: BODY, lineHeight: BODY + 7, color: C.text },
   mut: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: C.mut },
   small: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: C.mut },
   eb: { fontFamily: F.g7, fontSize: 12, letterSpacing: 0.96, textTransform: 'uppercase', color: C.mut },
@@ -27,21 +30,61 @@ const tv: Record<TV, TextStyle> = {
   h2: { fontFamily: F.g6, fontSize: 20, lineHeight: 26, color: C.text },
   num: { fontFamily: F.g6, fontVariant: ['tabular-nums'], color: C.text, fontSize: 16 },
   big: { fontFamily: F.g7, fontVariant: ['tabular-nums'], color: C.text, fontSize: 40, lineHeight: 44, letterSpacing: -1 },
-};
+});
+const tv: Record<TV, TextStyle> = buildTv();
 export function T({ v = 'body', style, ...p }: TextProps & { v?: TV }) {
   return <Text maxFontSizeMultiplier={1.6} {...p} style={[tv[v], style]} />;
 }
 
 // ------------------------------------------------------------------ boxes
-export const s = StyleSheet.create({
-  card: { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 12, padding: 16 },
-  inner: { backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, padding: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  sep: { borderTopWidth: 1, borderTopColor: C.border },
-  punch: { borderLeftWidth: 3, borderLeftColor: C.amber, paddingLeft: 12 },
-  rv: { backgroundColor: C.amber, color: C.bg, fontFamily: F.semi, borderRadius: 4, paddingHorizontal: 4 },
-  draft: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.draftBorder, borderRadius: 10, padding: 12, backgroundColor: C.draftBg },
+// Static styles read the tokens once; the scheme change (theme.setScheme) rebuilds them in place and the root
+// remounts, so a light/dark switch reaches these too.
+const buildS = () => ({
+  card: { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 12, padding: 16 } as ViewStyle,
+  inner: { backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, padding: 12 } as ViewStyle,
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 } as ViewStyle,
+  sep: { borderTopWidth: 1, borderTopColor: C.border } as ViewStyle,
+  punch: { borderLeftWidth: 3, borderLeftColor: C.amber, paddingLeft: 12 } as ViewStyle,
+  rv: { backgroundColor: C.amber, color: C.bg, fontFamily: F.semi, borderRadius: 4, paddingHorizontal: 4 } as TextStyle,
+  draft: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.draftBorder, borderRadius: 10, padding: 12, backgroundColor: C.draftBg } as ViewStyle,
 });
+export const s = buildS();
+onSchemeChange(() => {
+  Object.assign(s, buildS());
+  Object.assign(tv, buildTv());
+});
+
+/** Reduce Motion (HIG): fades instead of slides, no spring on the map. Read once; the OS setting rarely changes. */
+let reduceMotion = false;
+try {
+  AccessibilityInfo.isReduceMotionEnabled?.().then((b) => { reduceMotion = !!b; }).catch(() => {});
+} catch {}
+export const prefersReducedMotion = () => reduceMotion;
+export function useReduceMotion() {
+  const [r, setR] = useState(reduceMotion);
+  useEffect(() => {
+    let alive = true;
+    try {
+      AccessibilityInfo.isReduceMotionEnabled?.().then((b) => alive && setR(!!b)).catch(() => {});
+      const sub = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (b: boolean) => { reduceMotion = b; if (alive) setR(b); });
+      return () => { alive = false; sub?.remove?.(); };
+    } catch {
+      return () => { alive = false; };
+    }
+  }, []);
+  return r;
+}
+
+/** A loading placeholder (HIG: skeletons, not spinners mid-screen). */
+export function Skeleton({ lines = 3, height = 14, style, testID }: { lines?: number; height?: number; style?: StyleProp<ViewStyle>; testID?: string }) {
+  return (
+    <View testID={testID} accessibilityLabel="Loading" accessibilityRole={'progressbar' as any} style={[{ gap: 10 }, style]}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <View key={i} style={{ height, borderRadius: height / 2, backgroundColor: C.surface2, width: i === lines - 1 && lines > 1 ? '62%' : '100%' }} />
+      ))}
+    </View>
+  );
+}
 
 export function Card({ style, children, testID }: { style?: StyleProp<ViewStyle>; children?: React.ReactNode; testID?: string }) {
   return <View testID={testID} style={[s.card, style]}>{children}</View>;
@@ -76,8 +119,8 @@ export function AIBadge({ conf, word, testID, style }: { conf?: number | null; w
   return (
     <View testID={testID} accessibilityLabel={`AI${w ? `, ${w}` : ''}`}
       style={[{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 18, paddingHorizontal: 5, borderRadius: 4, borderWidth: 1, borderColor: C.aiBorder, backgroundColor: C.aiBg, alignSelf: 'center' }, style]}>
-      <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g7, fontSize: 10, letterSpacing: 0.6, color: C.blue }}>AI</Text>
-      {!!w && <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g6, fontSize: 10, color: C.blue }}>{w}</Text>}
+      <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g7, fontSize: 11, letterSpacing: 0.6, color: C.blue }}>AI</Text>
+      {!!w && <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g6, fontSize: 11, color: C.blue }}>{w}</Text>}
     </View>
   );
 }
@@ -331,14 +374,14 @@ function BottomNav({ active }: { active: string }) {
     const on = active === r.key;
     return (
       <Pressable key={r.key} testID={`tab-${r.key}`} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={r.label}
-        onPress={() => goRoot(r.key)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 }}>
+        onPress={() => { if (!on) haptics.selection(); goRoot(r.key); }} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 }}>
         <Icon name={r.key} color={on ? C.amber : C.tabOff} size={24} />
         <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 11, color: on ? C.amber : C.tabOff }}>{r.label}</Text>
       </Pressable>
     );
   };
   return (
-    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 64 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: '#1F1F22' }}>
+    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 64 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.hairline }}>
       {ROOTS.map(tab)}
     </View>
   );
@@ -436,14 +479,19 @@ export function Avatar() {
   );
 }
 
-function TopBar({ title, back, onBack, right, task, left }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode }) {
+const ROOT_LABEL: Record<string, string> = { tonight: 'Tonight', bits: 'Bits', sets: 'Sets' };
+function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
   const ins = useSafeAreaInsets();
+  const ui = useUI();
+  // HIG: the back button carries the previous screen's name (the tab he came from unless the screen says otherwise)
+  const label = backLabel ?? (ROOT_LABEL[ui.lastRoot] || 'Back');
   return (
     <View style={{ zIndex: 4, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52 + ins.top, paddingTop: ins.top + 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
       {left ? left : back ? (
-        <Pressable testID="back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 30, lineHeight: 32, color: C.amber }}>‹</Text>
+        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
+          style={{ minWidth: 44, height: 44, maxWidth: 140, borderRadius: 22, flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+          <Icon name="back" size={24} color={C.amber} sw={2.4} />
+          <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 16, color: C.amber, marginLeft: -4 }}>{label}</Text>
         </Pressable>
       ) : <View style={{ width: 44 }} />}
       <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ flex: 1, textAlign: 'center', fontFamily: F.g6, fontSize: 17, color: C.text }}>{title}</Text>
@@ -488,12 +536,18 @@ function OfflineStrip() {
  * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
  * `scroll={false}` hands the body to the child (a virtualized list).
  */
-export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar }: {
+export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle }: {
   title: string; children: React.ReactNode; back?: boolean; onBack?: () => void; right?: React.ReactNode; dock?: React.ReactNode;
   task?: boolean; header?: React.ReactNode; testID?: string; deep?: boolean; scrollKey?: string | number | null; scroll?: boolean; maxWidth?: number;
   scrollRef?: React.MutableRefObject<any>;
   /** The input bar (lib/SayBar): pinned above the tab bar, the tabs stay (unlike `dock`). */
   bar?: React.ReactNode;
+  /** Pull to refresh (HIG: on every list). */
+  onRefresh?: () => Promise<any> | void;
+  /** The back button's label (default: the tab he came from). */
+  backLabel?: string;
+  /** A large title at the top of the content that collapses into the bar as he scrolls. */
+  largeTitle?: boolean;
 }) {
   const wide = useWide();
   const sv = useRef<any>(null);
@@ -510,15 +564,40 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
   const showNav = !wide && !task && !dock;
   const bottomPad = dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0);
   const mw = maxWidth || (wide ? 1120 : 720);
+  // the snackbar sits above whatever is pinned at the bottom (the input bar, the dock, the tabs)
+  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + (showNav ? 64 : 0) + (dock || showNav ? ins.bottom : 0);
+  useEffect(() => {
+    ui.setPinnedHeight(pinned);
+  }, [pinned]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh]);
+  const [collapsed, setCollapsed] = useState(false);
+  const barTitle = largeTitle && !collapsed ? '' : title;
+  const kav = (node: React.ReactNode) => (Platform.OS === 'ios' ? <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>{node}</KeyboardAvoidingView> : <>{node}</>);
   return (
     <View testID={testID} style={{ flex: 1, flexDirection: 'row', backgroundColor: deep ? C.bgDeep : C.bg }}>
       {wide && !task && <Sidebar active={active} />}
+      {kav(
       <View style={{ flex: 1, minWidth: 0 }}>
-        {header || <TopBar title={title} back={back} onBack={onBack} right={right} task={task} />}
+        {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
         <OfflineStrip />
         {scroll ? (
-          <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: wide ? 24 : 12, paddingBottom: bottomPad }}>
-            <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>{children}</View>
+          <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: wide ? 24 : 12, paddingBottom: bottomPad }}
+            scrollEventThrottle={32} onScroll={largeTitle ? (e) => setCollapsed(e.nativeEvent.contentOffset.y > 36) : undefined}
+            refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
+            <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>
+              {largeTitle && <Text maxFontSizeMultiplier={1.3} accessibilityRole="header" style={{ fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>{title}</Text>}
+              {children}
+            </View>
           </ScrollView>
         ) : (
           <View style={{ flex: 1, paddingBottom: (showNav ? 64 + ins.bottom : 0) + (bar ? 112 : 0) }}>{children}</View>
@@ -534,28 +613,95 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
           </View>
         )}
         {showNav && <BottomNav active={active} />}
-      </View>
+      </View>)}
     </View>
   );
+}
+
+/** Pull to refresh for screens that own their list (FlatList): the same control, the same colours. */
+export function useRefresh(onRefresh?: () => Promise<any> | void) {
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh]);
+  return onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined;
 }
 export { TopBar };
 
 // ------------------------------------------------------------------ sheets
+/**
+ * A bottom sheet: a modal with a grabber, dismissed by the scrim, the OS back/escape, a swipe down on the grabber,
+ * or the sheet's own Cancel (leading) / Done (trailing). The body sits above the keyboard (KeyboardAvoidingView),
+ * so a sheet with an autofocused field keeps its buttons reachable (the iPhone blocker in the HIG audit).
+ */
 export function Sheet({ visible, onClose, children, label, testID }: { visible: boolean; onClose: () => void; children: React.ReactNode; label: string; testID?: string }) {
   const ins = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const y0 = useRef<number | null>(null);
+  const reduce = useReduceMotion();
+  const grabberTouch = {
+    onTouchStart: (e: any) => { y0.current = e.nativeEvent?.pageY ?? null; },
+    onTouchEnd: (e: any) => {
+      const y = e.nativeEvent?.pageY;
+      if (y0.current != null && typeof y === 'number' && y - y0.current > 60) onClose();
+      y0.current = null;
+    },
+  };
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable accessibilityLabel="Close" onPress={onClose} style={{ flex: 1, backgroundColor: C.scrim, justifyContent: 'flex-end', alignItems: 'center' }}>
-        <Pressable testID={testID} accessibilityRole={'dialog' as any} aria-modal accessibilityLabel={label} onPress={(e) => e.stopPropagation()}
-          style={{ width: '100%', maxWidth: 640, maxHeight: height * 0.88, backgroundColor: C.surface, borderWidth: 1, borderBottomWidth: 0, borderColor: C.border, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: ins.bottom + 20 }} keyboardShouldPersistTaps="handled">
-            <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: C.borderStrong, alignSelf: 'center', marginTop: 4, marginBottom: 12 }} />
-            {children}
-          </ScrollView>
+    <Modal visible={visible} transparent animationType={reduce ? 'fade' : Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Pressable accessibilityLabel="Close" onPress={onClose} style={{ flex: 1, backgroundColor: C.scrim, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Pressable testID={testID} accessibilityRole={'dialog' as any} aria-modal accessibilityLabel={label} onPress={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 640, maxHeight: height * 0.88, backgroundColor: C.surface, borderWidth: 1, borderBottomWidth: 0, borderColor: C.border, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+            <View {...grabberTouch} accessibilityRole="button" accessibilityLabel="Close the sheet" accessibilityHint="Swipe down or double tap" style={{ alignItems: 'center', minHeight: 28, justifyContent: 'center' }}>
+              <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: C.borderStrong }} />
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: ins.bottom + 20 }} keyboardShouldPersistTaps="handled">
+              {children}
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/** A sheet's title row: Cancel LEADING, the title, Done TRAILING (HIG; Material puts the same two on a dialog). */
+export function SheetHead({ title, onCancel, onDone, doneLabel = 'Done', doneDisabled, cancelLabel = 'Cancel', testID }: {
+  title: string; onCancel: () => void; onDone?: () => void; doneLabel?: string; doneDisabled?: boolean; cancelLabel?: string; testID?: string;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, minHeight: 44 }}>
+      <TextBtn testID={testID ? `${testID}-cancel` : undefined} label={cancelLabel} onPress={onCancel} />
+      <T v="h2" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }} accessibilityRole="header">{title}</T>
+      {onDone ? <TextBtn testID={testID ? `${testID}-done` : undefined} label={doneLabel} onPress={onDone} color={doneDisabled ? C.dim : C.amber} /> : <View style={{ minWidth: 44 }} />}
+    </View>
+  );
+}
+
+export type MenuItem = { label: string; onPress: () => void; destructive?: boolean; testID?: string; disabled?: boolean };
+/** A long-press context menu (HIG: Open · Rename · Move to top/bottom · Remove), as a sheet on every platform. */
+export function MenuSheet({ visible, title, items, onClose, testID }: { visible: boolean; title?: string; items: MenuItem[]; onClose: () => void; testID?: string }) {
+  return (
+    <Sheet visible={visible} onClose={onClose} label={title || 'Actions'} testID={testID}>
+      {!!title && <T v="semi" numberOfLines={2} style={{ textAlign: 'center', marginBottom: 8 }}>{title}</T>}
+      <View style={{ gap: 2 }}>
+        {items.map((it) => (
+          <Pressable key={it.label} testID={it.testID} accessibilityRole="menuitem" accessibilityState={{ disabled: !!it.disabled }} disabled={it.disabled}
+            onPress={() => { onClose(); it.onPress(); }}
+            style={(st: any) => ({ minHeight: 48, borderRadius: 10, paddingHorizontal: 12, justifyContent: 'center', backgroundColor: st.hovered || st.pressed ? C.surface2 : 'transparent', opacity: it.disabled ? 0.45 : 1 })}>
+            <T v="semi" style={{ color: it.destructive ? C.redSoft : C.text }}>{it.label}</T>
+          </Pressable>
+        ))}
+      </View>
+      <Btn label="Cancel" v="ghost" onPress={onClose} style={{ marginTop: 10 }} />
+    </Sheet>
   );
 }
 
@@ -595,6 +741,8 @@ type UIState = {
   setImportCount: (n: number) => void;
   workingSet: WSPin;
   setWorkingSet: (w: WSPin) => void;
+  /** How much of the bottom a bar/dock/tabs covers on the current screen (the snackbar sits above it). */
+  setPinnedHeight: (h: number) => void;
 };
 const Ctx = createContext<UIState | null>(null);
 export const useUI = () => {
@@ -609,6 +757,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [lastRoot, setLastRoot] = useState('tonight');
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
+  const [pinnedHeight, setPinnedHeight] = useState(0);
   const pendingMic = useRef<null | (() => void)>(null);
   const timer = useRef<any>(null);
   const wide = useWide();
@@ -622,8 +771,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const withMic = useCallback((then: () => void) => {
-    if (!isWeb || !micSupported()) {
-      showSnack(isWeb ? 'This browser can’t record audio' : 'Recording on the phone build is coming next');
+    if (!isWeb) return then(); // the phone asks for the microphone itself (expo-audio), with the app.json wording
+    if (!micSupported()) {
+      showSnack('This browser can’t record audio');
       return;
     }
     if (micExplained()) return then();
@@ -651,7 +801,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<UIState>(() => ({
     snack: showSnack, openCapture: () => setSheet('cap'), openRecord: () => setSheet('cap'), quickVoiceNote: voiceNote, withMic, uploadFile,
-    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet,
+    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, setPinnedHeight,
   }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet]);
 
   return (
@@ -660,34 +810,34 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         {children}
         {snack && (
           <View testID="snackbar" accessibilityRole={'status' as any} accessibilityLiveRegion="polite"
-            style={{ position: 'absolute', left: 16, right: 16, bottom: wide ? 24 : 92 + ins.bottom, zIndex: 9, alignItems: 'center' }} pointerEvents="box-none">
-            <View style={{ width: '100%', maxWidth: 560, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 16, paddingRight: 6, borderRadius: 8, backgroundColor: C.text }}>
-              <Text maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 14, color: C.bg, paddingVertical: 8 }}>{snack.msg}</Text>
-              {snack.action && (
-                <Pressable testID={snack.action.testID || 'snack-action'} accessibilityRole="button" onPress={async () => {
-                  const a = snack.action!;
-                  setSnack(null);
-                  await a.run();
-                }} style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 8, justifyContent: 'center' }}>
-                  <Text style={{ fontFamily: F.g7, fontSize: 14, color: C.amberDeep }}>{snack.action.label}</Text>
-                </Pressable>
-              )}
-              {snack.undo && (
+            style={{ position: 'absolute', left: 16, right: 16, bottom: wide ? 24 + (pinnedHeight > 64 ? pinnedHeight - 64 : 0) : Math.max(24, pinnedHeight + 12), zIndex: 9, alignItems: 'center' }} pointerEvents="box-none">
+            <View style={{ width: '100%', maxWidth: 560, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 16, paddingRight: 6, borderRadius: 8, backgroundColor: C.snackBg }}>
+              <Text maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 14, color: C.snackText, paddingVertical: 8 }}>{snack.msg}</Text>
+              {/* Material: one action at most. Undo wins when both are given (it is the inverse of the write). */}
+              {snack.undo ? (
                 <Pressable testID="snack-undo" accessibilityRole="button" onPress={async () => {
                   const u = snack.undo!;
                   setSnack(null);
                   try { await u(); showSnack('Undone'); } catch (e: any) { showSnack(`Couldn't undo: ${e.message}`); }
                 }} style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 8, justifyContent: 'center' }}>
-                  <Text style={{ fontFamily: F.g7, fontSize: 14, color: C.amberDeep }}>Undo</Text>
+                  <Text style={{ fontFamily: F.g7, fontSize: 14, color: C.snackAction }}>Undo</Text>
                 </Pressable>
-              )}
+              ) : snack.action ? (
+                <Pressable testID={snack.action.testID || 'snack-action'} accessibilityRole="button" onPress={async () => {
+                  const a = snack.action!;
+                  setSnack(null);
+                  await a.run();
+                }} style={{ minHeight: 44, minWidth: 44, paddingHorizontal: 8, justifyContent: 'center' }}>
+                  <Text style={{ fontFamily: F.g7, fontSize: 14, color: C.snackAction }}>{snack.action.label}</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         )}
       </View>
 
       <Sheet visible={sheet === 'cap'} onClose={() => setSheet('')} label="Capture" testID="capture-sheet">
-        <T v="h2" style={{ marginBottom: 12 }}>Capture</T>
+        <SheetHead title="Capture" onCancel={() => setSheet('')} testID="capture" />
         <View style={{ gap: 10 }}>
           <Opt testID="cap-import" title="Import from Photos" badge={importCount ? `${importCount} new` : null}
             sub={isWeb ? 'Pick set videos from this computer, or paste a YouTube link' : 'Your recent set videos, grouped by night'}
@@ -701,7 +851,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           <Opt testID="cap-upload" title="Upload a file" sub="An old tape, or a set someone else filmed"
             icon={<Disc bg={C.surface2} border><Icon name="upload" /></Disc>} onPress={uploadFile} />
         </View>
-        <Btn label="Cancel" v="ghost" onPress={() => setSheet('')} style={{ marginTop: 12 }} />
       </Sheet>
 
       <Sheet visible={sheet === 'mic'} onClose={() => { pendingMic.current = null; setSheet(''); }} label="Microphone access" testID="mic-sheet">

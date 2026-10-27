@@ -1,8 +1,8 @@
 import { Stack, router, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { GestureRoot } from '@/lib/GestureRoot';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
@@ -13,7 +13,8 @@ import { SignInBtn, UIProvider, useUI } from '@/lib/ui';
 
 import { WhyProvider } from '@/lib/why';
 import { BoardProvider } from '@/lib/boards';
-import { C, F } from '@/lib/theme';
+import { C, F, resolveScheme, setScheme } from '@/lib/theme';
+import { getPrefs, loadPrefs, onPrefs } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
 import { SET_MIN_S } from '@/lib/importgroup';
 
@@ -68,18 +69,34 @@ function AuthGate() {
   );
 }
 
+/** Appearance: the system scheme, overridden per device from Settings (System / Dark / Light). The tokens are
+ *  swapped in place (theme.setScheme) and the tree remounts under a new key so every static style follows. */
+function useAppearance() {
+  const system = useColorScheme();
+  const [prefsReady, setPrefsReady] = useState(Platform.OS === 'web'); // the phone reads its prefs file first
+  const [pref, setPref] = useState(getPrefs().appearance);
+  useEffect(() => {
+    loadPrefs().then((p) => { setPref(p.appearance); setPrefsReady(true); });
+    return onPrefs((p) => setPref(p.appearance));
+  }, []);
+  const scheme = resolveScheme(pref, system);
+  setScheme(scheme); // during render on purpose: the children read C.* in this same pass
+  return { scheme, prefsReady };
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
-  const ready = loaded || !!error;
+  const { scheme, prefsReady } = useAppearance();
+  const ready = (loaded || !!error) && prefsReady;
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
   if (!ready) return null;
   const tab = { animation: 'none' as const };
   return (
-    <GestureRoot style={{ backgroundColor: C.bg }}>
+    <GestureRoot key={scheme} style={{ backgroundColor: C.bg }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <UIProvider>
           <WhyProvider>
             <BoardProvider>
@@ -119,6 +136,9 @@ export default function RootLayout() {
                 <Stack.Screen name="review" options={{ animation: 'slide_from_bottom', title: 'Step through · Punchable' }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="record" options={{ animation: 'slide_from_bottom', gestureEnabled: false, title: 'Record · Punchable' }} />
+                <Stack.Screen name="map/index" options={{ title: 'Map · Punchable' }} />
+                <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
+                <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />
               </Stack>
               <AuthGate />
             </BoardProvider>

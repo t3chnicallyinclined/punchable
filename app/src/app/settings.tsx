@@ -1,15 +1,41 @@
 // Settings (UX_SPEC 4.13): Connections first (one row per outside source: a plain status and one action), then who
 // sees my material and what I control. Saved through PATCH /api/settings; GET /api/connections is read-only.
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, Switch, TextInput, View } from 'react-native';
+import { Linking, Platform, Pressable, Switch, TextInput, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
 import { ApiError, del as apiDelete, get, patch, useApi } from '@/lib/api';
 import { AUTH_ENABLED, authRequestConfig, completeSignIn, getDiscovery, rememberWay } from '@/lib/auth';
 import { creative } from '@/lib/creative';
+import { haptics } from '@/lib/haptics';
+import { getPrefs, onPrefs, setPrefs, SchemePref } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
 import { C, F } from '@/lib/theme';
-import { Btn, Card, Dot, List, ListRow, Screen, Sheet, T, s, useUI } from '@/lib/ui';
+import { Btn, Card, Dot, List, ListRow, Screen, Seg, Sheet, SheetHead, T, s, useUI } from '@/lib/ui';
+
+const SITE = 'https://punchable.io';
+
+/** Appearance and haptics are THIS device's preferences (lib/prefs), never his material. */
+function DeviceCard() {
+  const [p, setP] = useState(getPrefs());
+  useEffect(() => onPrefs(setP), []);
+  return (
+    <Card testID="device-prefs" style={{ gap: 10 }}>
+      <T v="eb">This device</T>
+      <View style={{ gap: 6 }}>
+        <T v="semi">Appearance</T>
+        <Seg<SchemePref> testID="appearance" items={[['system', 'System'], ['dark', 'Dark'], ['light', 'Light']]} value={p.appearance} onChange={(v) => { haptics.selection(); setPrefs({ appearance: v }); }} />
+        <T v="small">Dark is the default. System follows your phone or browser.</T>
+      </View>
+      {haptics.available && (
+        <View style={[s.row, { minHeight: 56 }]}>
+          <View style={{ flex: 1 }}><T v="semi">Haptics</T><T v="mut">A tap you can feel on reorder, save and remove.</T></View>
+          <Switch testID="toggle-haptics" value={p.haptics} onValueChange={(b) => setPrefs({ haptics: b })} trackColor={{ true: C.amber, false: C.surface2 }} accessibilityLabel="Haptics" />
+        </View>
+      )}
+    </Card>
+  );
+}
 
 type Connections = {
   google_docs: {
@@ -196,6 +222,7 @@ export default function SettingsPage() {
     <Screen title="Settings" back testID="settings">
       <T v="h1">Settings & privacy</T>
       {local && <T v="small" testID="settings-local">Saved on this device. The server doesn’t store settings yet.</T>}
+      <DeviceCard />
       <ConnectionsCard />
       <Card testID="where-material-goes" style={{ gap: 6 }}>
         <T v="eb">Where your material goes</T>
@@ -229,25 +256,30 @@ export default function SettingsPage() {
         <List>
           <ListRow testID="open-learned" title="What I’ve learned about you" sub="The AI’s read of your taste, and how sure it is" onPress={() => router.push('/learned' as any)} />
           <ListRow testID="audit" title="Show what the AI decided" sub="Your notebook, filtered to things the AI set and you haven’t touched" onPress={() => router.push('/notebook?who=ai' as any)} />
+          <ListRow testID="open-privacy" title="Privacy policy" sub="What Punchable stores, where, and your choices" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
+          <ListRow testID="open-terms" title="Terms" sub="The short version: it’s yours" onPress={() => Linking.openURL(`${SITE}/terms`)} />
         </List>
       </Card>
       <Card style={{ gap: 10 }}>
         <Btn testID="export-all" label="Export everything" onPress={exportAll} />
-        <Btn testID="delete-all" label="Delete all my data" v="danger" onPress={() => { setTyped(''); setDel(true); }} />
+        <Btn testID="delete-all" label="Delete my account and data" v="danger" onPress={() => { haptics.warning(); setTyped(''); setDel(true); }} />
+        <T v="small">Deletion is a request: nothing is removed until the owner runs it by hand, and you get told when it’s done.</T>
       </Card>
-      <Sheet visible={del} onClose={() => setDel(false)} label="Delete all my data" testID="delete-sheet">
-        <T v="h2">Delete all your data?</T>
-        <T v="mut" style={{ marginVertical: 8 }}>Your docs’ text, sets, analyses, decisions and boards are deleted from your server. This can’t be undone. Export first if you want a copy.</T>
+      <Sheet visible={del} onClose={() => setDel(false)} label="Delete my account and data" testID="delete-sheet">
+        <SheetHead title="Delete everything?" onCancel={() => setDel(false)} testID="delete" />
+        <T v="mut" style={{ marginVertical: 8 }}>Your account, your docs’ text, sets, analyses, decisions and boards are deleted from the server. This can’t be undone. Export first if you want a copy.</T>
         <T v="small">Type “delete my material” to confirm</T>
-        <TextInput testID="delete-typed" value={typed} onChangeText={setTyped} autoCapitalize="none"
+        <TextInput testID="delete-typed" value={typed} onChangeText={setTyped} autoCapitalize="none" accessibilityLabel="Type delete my material to confirm"
           style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16, marginVertical: 8 }} />
         <Btn testID="delete-confirm" label="Delete everything" v="danger" disabled={typed.trim().toLowerCase() !== 'delete my material'} onPress={async () => {
           setDel(false);
           try {
-            await apiDelete('/api/me');
-            ui.snack('Deleted');
-          } catch {
-            ui.snack('The server can’t delete accounts yet. Nothing was deleted.');
+            const r = await apiDelete<{ status: string; would_delete?: { what: string; count: number | null }[] }>('/api/me', { confirm: 'delete my material' });
+            if (r.status === 'requested') ui.snack('Deletion requested. The owner removes it by hand and tells you when it’s done.');
+            else if (r.status === 'dry_run') ui.snack(`Local copy: nothing is deleted here. A deletion would cover ${r.would_delete?.length || 0} things.`);
+            else ui.snack('Deletion requested.');
+          } catch (e: any) {
+            ui.snack(`Couldn’t request deletion: ${e?.message || 'try again'}. Nothing was deleted.`);
           }
         }} />
       </Sheet>
