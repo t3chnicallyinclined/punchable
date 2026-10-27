@@ -3,6 +3,8 @@
     python db/push_remote.py pack --tar bundle.tgz     # on the comic's PC: build the bundle (infra/ship.sh dbload does it)
     python db/push_remote.py apply --tar -             # in the cluster (the dbload pod): load it, read from stdin
     python db/push_remote.py apply --tar - --check     # what would change, and whether it is safe; writes nothing
+    python db/push_remote.py cutover [--undo]          # in the cluster: the database becomes the source of truth
+                                                       # (meta:state.online_first); every later `apply` is refused
 
 The bundle (bundle/manifest.json + bundle/comedy/...):
   comedy/kb/v1/graph.json, id_map.json        the graph db/load.py chose (graph_choice.json), with its id map
@@ -46,14 +48,17 @@ DESK = HERE.parent
 sys.path.insert(0, str(HERE))
 import sdb  # noqa: E402
 
-SET_FILES = ("analysis.json", "meta.json", "laughs_auto.json", "transcript.json", "clips.json")
-KB0_FILES = ("decisions.jsonl", "inferred.json", "insights.json", "learning.json", "KB_REPORT.md")
-CREATIVE_LOGS = ("storyboards", "workingsets", "venues")
-CREATIVE_FILES = ("geocode_cache.json", "venue_addresses.json", "merge_judge.json")
+import srcpaths as SP  # noqa: E402  (one list of what is data, shared with the API's worker route)
+
+SET_FILES = SP.SET_FILES
+KB0_FILES = SP.KB0_FILES
+CREATIVE_LOGS = SP.CREATIVE_LOGS
+CREATIVE_FILES = SP.CREATIVE_FILES + ("suggest_judge.json",)
+GSYNC_FILES = ("memos.json", "map.json")  # gsync's state the app reads (Notes list, Google Docs status)
 VEC_CACHES = (("vectors_ids.json", "vectors.f32"), ("vectors_v1_ids.json", "vectors_v1.f32"))
 VEC_PART = 400
-TEXT_SUFFIXES = {".json", ".jsonl", ".md"}
-NOT_MIRRORED = {"kb/v0/decisions.jsonl"} | {f"kb/creative/{n}.jsonl" for n in CREATIVE_LOGS}
+TEXT_SUFFIXES = SP.TEXT_SUFFIXES
+NOT_MIRRORED = SP.NOT_MIRRORED
 WORK = Path(os.environ.get("PK_DBLOAD_DIR", Path(tempfile.gettempdir()) / "pk-dbload"))
 
 
@@ -97,6 +102,17 @@ def pack(out_tar: Path, comedy: Path | None = None) -> dict:
         add(f"kb/creative/{n}.jsonl", cdir / f"{n}.jsonl")
     for f in CREATIVE_FILES:
         add(f"kb/creative/{f}", cdir / f)
+    # voice memos (the final load before the online-first cutover): their transcripts and gsync's memo state, so the
+    # Notes list works from the database; never their audio
+    for f in GSYNC_FILES:
+        add(f"kb/gsync/{f}", comedy / "kb" / "gsync" / f)
+    memos = comedy / "corpus" / "memos"
+    for d in sorted(memos.iterdir()) if memos.is_dir() else []:
+        if d.is_dir():
+            for f in SP.MEMO_FILES:
+                add(f"corpus/memos/{d.name}/{f}", d / f)
+    for xp in sorted(L.VECTORS.glob("extra_*.json")) if L.VECTORS.is_dir() else []:
+        files["vectors/" + xp.name] = xp.read_bytes()  # vectors for summary-only ideas (creative/memolink.py)
     # vectors: float32 -> JSON text, exact (%.9g round-trips a float32)
     for ids_name, vec_name in VEC_CACHES:
         ids_p, vec_p = L.VECTORS / ids_name, L.VECTORS / vec_name
@@ -267,6 +283,11 @@ def apply(src, check: bool = False, force: bool = False) -> int:
         if not check:
             L.apply_schema(r, ns, db)
         st = sdb.strip_none(r.last("SELECT * FROM ONLY meta:state;") or {})
+        if st.get("online_first"):
+            log("REFUSED: this database is the source of truth since the online-first cutover "
+                f"({st['online_first'].get('at')}); a bundle from the PC would overwrite what was written online. "
+                "Roll the cutover back first (push_remote.py cutover --undo) only if that is really meant.")
+            return 3
         problems = safety(r, bdir)
         if problems:
             for p in problems:
@@ -308,14 +329,51 @@ def apply(src, check: bool = False, force: bool = False) -> int:
         shutil.rmtree(WORK, ignore_errors=True)
 
 
+def cutover(undo: bool = False, by: str | None = None) -> int:
+    """Mark the database as the source of truth (docs: comedy/docs/punchable/ONLINE_FIRST.md). After this, `apply`
+    refuses. --undo clears it (the rollback path); both are recorded in meta:state.cutover_log."""
+    sdb.check_version(None)
+    r = sdb.Rpc(None, ns=os.environ.get("SURREAL_NS", sdb.NS), db=os.environ.get("SURREAL_DB", sdb.DB))
+    try:
+        L = __import__("load")
+        L.apply_extra_schema(r)
+        st = sdb.strip_none(r.last("SELECT * FROM ONLY meta:state;") or {})
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        bundle = ((st.get("load_info") or {}).get("bundle") or {}).get("sha")
+        if undo:
+            if not st.get("online_first"):
+                print(json.dumps({"status": "not_cut_over"}))
+                return 0
+            r.write("UPDATE meta:state SET online_first = NONE, cutover_log = array::append(cutover_log ?? [], $e) RETURN id;",
+                    {"e": {"undo": True, "at": now, "by": by or "owner", "was": st["online_first"]}})
+            print(json.dumps({"status": "rolled_back", "at": now}))
+            return 0
+        if not bundle:
+            log("REFUSED: no bundle was ever loaded: run the final infra/ship.sh dbload first")
+            return 3
+        mark = {"at": now, "by": by or "owner", "last_bundle": bundle,
+                "decisions": r.last("RETURN count(SELECT id FROM decision);")}
+        r.write("UPDATE meta:state SET online_first = $m, cutover_log = array::append(cutover_log ?? [], $e) RETURN id;",
+                {"m": mark, "e": {"undo": False, **mark}})
+        print(json.dumps({"status": "cut_over", **mark}))
+        return 0
+    finally:
+        r.close()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["pack", "apply"])
-    ap.add_argument("--tar", required=True, help="pack: output .tgz; apply: input .tgz or - for stdin")
+    ap.add_argument("cmd", choices=["pack", "apply", "cutover"])
+    ap.add_argument("--tar", help="pack: output .tgz; apply: input .tgz or - for stdin")
+    ap.add_argument("--undo", action="store_true", help="cutover: roll it back (apply works again)")
     ap.add_argument("--comedy", type=Path, default=None, help="pack: the comedy folder (default the real one)")
     ap.add_argument("--check", action="store_true", help="apply: report only")
     ap.add_argument("--force", action="store_true", help="apply: re-sync even if this bundle is already loaded")
     a = ap.parse_args()
+    if a.cmd == "cutover":
+        return cutover(undo=a.undo)
+    if not a.tar:
+        ap.error("--tar is required for pack and apply")
     if a.cmd == "pack":
         pack(Path(a.tar), a.comedy)
         return 0

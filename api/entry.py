@@ -38,7 +38,8 @@ import sdb  # noqa: E402
 DATA = Path(os.environ.get("PK_DATA", "/tmp/punchable"))
 COMEDY = DATA / "comedy"
 VEC = DATA / "vectors"
-STATE = {"surreal": False, "loaded": False, "error": "starting", "bundle": None, "since": time.time()}
+STATE = {"surreal": False, "loaded": False, "error": "starting", "bundle": None, "since": time.time(), "files_rev": None}
+MANIFEST: dict[str, str] = {}  # srcfile path -> sha256 of this pod's cache copy
 
 
 def log(*a):
@@ -96,7 +97,35 @@ def materialize(r: sdb.Rpc, bundle: dict):
         shutil.rmtree(old, ignore_errors=True)
     shutil.rmtree(tmp, ignore_errors=True)
     (COMEDY / "kb" / "creative").mkdir(parents=True, exist_ok=True)
+    MANIFEST.clear()
+    MANIFEST.update({x["path"]: x["sha256"] for x in rows})
     log(f"materialized {len(rows)} files from bundle {bundle.get('sha', '')[:12]}")
+
+
+def refresh_files(r: sdb.Rpc) -> int:
+    """srcfile rows written at runtime (the home worker's POST /api/worker/files, maybe through another pod) ->
+    this pod's cache, in place, one file at a time. Vector parts are rebuilt into the .f32 caches."""
+    rows = {x["path"]: x["sha256"] for x in r.last("SELECT path, sha256 FROM srcfile;")}
+    changed = [p for p, h in rows.items() if MANIFEST.get(p) != h]
+    gone = [p for p in MANIFEST if p not in rows]
+    vec = False
+    for p in changed:
+        if p.startswith("/") or ".." in Path(p).parts:
+            raise RuntimeError(f"bad srcfile path {p!r}")
+        text = r.last("SELECT VALUE text FROM srcfile WHERE path = $p LIMIT 1;", {"p": p})[0]
+        out = DATA / p if p.startswith("vectors/") else COMEDY / p
+        out.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out.with_name(out.name + ".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, out)
+        MANIFEST[p] = rows[p]
+        vec = vec or p.startswith("vectors/")
+    for p in gone:
+        (DATA / p if p.startswith("vectors/") else COMEDY / p).unlink(missing_ok=True)
+        MANIFEST.pop(p, None)
+    if changed or gone:
+        log(f"refreshed {len(changed)} file(s), removed {len(gone)} (files_rev)" + (" incl. vectors" if vec else ""))
+    return len(changed) + len(gone)
 
 
 def hosted_kb_class():
@@ -156,13 +185,19 @@ def boot(ns: str, db: str):
                                 for f in (COMEDY / "kb" / "creative").glob(f"{n}.json*"):
                                     f.unlink()
                     STATE.update(loaded=True, error=None, bundle=bundle)
+                fr = sdb.strip_none(r.last("SELECT files_rev FROM ONLY meta:state;") or {}).get("files_rev") if bundle else None
+                if kb is not None and fr is not None and fr != STATE["files_rev"]:
+                    with kb.lock:
+                        if refresh_files(r):
+                            kb._sview = None
+                    STATE["files_rev"] = fr
             finally:
                 r.close()
         except Exception as e:  # noqa: BLE001
             STATE.update(surreal=False if "connect" in str(e).lower() or isinstance(e, OSError) else STATE["surreal"],
                          error=f"{type(e).__name__}: {str(e)[:200]}")
             log("boot:", STATE["error"])
-        time.sleep(5 if not STATE["loaded"] else 15)
+        time.sleep(5 if not STATE["loaded"] else float(os.environ.get("PK_BOOT_POLL_S", "15")))
 
 
 def start_kb(ns: str, db: str, bundle: dict):
@@ -180,6 +215,7 @@ def start_kb(ns: str, db: str, bundle: dict):
                                       jobs_mode="worker")
     SV.Handler.primary = "surreal"
     SV.Handler.jobs_on_upload = True
+    SV.Handler.files_mode = "db"  # worker file posts become srcfile rows (api-dev/ingest_api.py)
     t = time.time()
     kb.app().summaries()
     SV.Handler.kbs = {"surreal": kb}

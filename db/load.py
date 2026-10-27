@@ -79,7 +79,9 @@ def validate_graph(graph: Path, kbdir: Path, id_map: Path | None) -> tuple[bool,
 
 
 def resolve_graph(choice: str, kbdir: Path) -> dict:
-    """{graph, version, id_map, reason}."""
+    """{graph, version, id_map, reason}. kb/v1 is the sibling of kbdir (kb/v0) when that has one, else the real
+    data folder's (push_remote.py pack --comedy <another folder> packs that folder's graph, not the real one)."""
+    KB_V1 = Path(kbdir).parent / "v1" if (Path(kbdir).parent / "v1" / "graph.json").is_file() else globals()["KB_V1"]
     if choice not in ("auto", "v0", "v1"):
         g = Path(choice)
         return {"graph": g, "version": "path", "id_map": (KB_V1 / "id_map.json") if g.parent == KB_V1 else None,
@@ -301,6 +303,20 @@ def make_info(r, g, index, *, graph, kbdir, corpus, fixtures, id_map, version, r
 
 
 # ---------------------------------------------------------------- the load
+FOREIGN_INFO = ("bundle",)  # load_info keys another writer owns (push_remote.py: the last bundle loaded)
+
+
+def keep_foreign(r: sdb.Rpc, info: dict):
+    """A load or sync rewrites load_info; keys it does not make (the bundle record that api/entry.py serves by) are
+    carried over. Without this, the hosted API's own sync after a worker post erased load_info.bundle and the pod
+    went back to 'the data is not loaded yet' (found by db/tests/test_online.py, 2026-10-27)."""
+    st = r.last("SELECT load_info FROM ONLY meta:state;")
+    li = (sdb.strip_none(st) or {}).get("load_info") or {} if isinstance(st, dict) else {}
+    for k in FOREIGN_INFO:
+        if k in li and k not in info:
+            info[k] = li[k]
+
+
 def load(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path, fixtures: Path | None,
          id_map: Path | None, vectors: bool = True, embed_missing: bool = True, version: str = "?", reason: str = "") -> dict:
     t0 = time.perf_counter()
@@ -338,13 +354,18 @@ def load(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
                 elif (n.get("text") or "").strip():
                     missing_vec.append(row)
             rows_by.setdefault(tb, []).append(row)
+        vs = None
         if missing_vec and embed_missing:
             from embedder import Embedder
             em = Embedder()
             try:
                 vs = em.embed([x["text"] for x in missing_vec])
+            except (RuntimeError, OSError, ValueError) as e:
+                # vectors are for search and candidates only: load the units without them rather than fail
+                log(f"WARNING: no embedder here ({e}); {len(missing_vec)} units loaded without vectors")
             finally:
                 em.close()
+        if vs is not None:
             extra = json.load(open(EXTRA_VEC, encoding="utf-8")) if EXTRA_VEC.is_file() else {}
             for row, v in zip(missing_vec, vs):
                 row["embedding"] = v
@@ -388,6 +409,7 @@ def load(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
         info = make_info(r, g, index, graph=graph, kbdir=kbdir, corpus=corpus, fixtures=fixtures, id_map=id_map,
                          version=version, reason=reason, bad=bad, n_decisions=len(decs), laughs=nl,
                          embedded=len(missing_vec) if embed_missing else 0, mode="full load")
+        keep_foreign(r, info)
         r.write("UPDATE meta:state SET load_info = $info RETURN id;", {"info": info})
     finally:
         r.query("UPDATE meta:state SET loading = false, gen += 1 RETURN NONE;")
@@ -411,7 +433,8 @@ def db_records(r: sdb.Rpc):
 
 
 def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path, fixtures: Path | None,
-         id_map: Path | None, version: str = "?", reason: str = "", force_full: bool = False) -> dict:
+         id_map: Path | None, version: str = "?", reason: str = "", force_full: bool = False,
+         allow_moved: bool = False) -> dict:
     """Bring the DB up to date with the files by writing only what changed (new pipeline output, a new
     analysis.json, decision lines appended by another writer). Falls back to load() when it can't be incremental.
 
@@ -439,7 +462,9 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
     li = st.get("load_info") or {}
     if force_full or not li.get("graph"):
         return full("forced" if force_full else "never loaded")
-    if li.get("graph") != str(graph) or li.get("kb") != str(kbdir) or li.get("corpus") != str(corpus):
+    if not allow_moved and (li.get("graph") != str(graph) or li.get("kb") != str(kbdir) or li.get("corpus") != str(corpus)):
+        # allow_moved: the hosted API syncs from its own cache copy of the files the dbload pod loaded from another
+        # folder; the record diff below is exact either way (it rewrites whatever differs), so no full reload
         return full("graph, kb or corpus folder changed")
     t0 = time.perf_counter()
     g = json.load(open(graph, encoding="utf-8"))
@@ -519,6 +544,7 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
                          version=li.get("graph_version", version), reason=li.get("graph_reason", reason), bad=bad,
                          n_decisions=len(decs), laughs=nl, embedded=0, mode="sync")
         info["sync_changed"] = changed
+        keep_foreign(r, info)
         r.write("UPDATE meta:state SET load_info = $info RETURN id;", {"info": info})
     finally:
         r.query("UPDATE meta:state SET loading = false, gen += 1 RETURN NONE;")

@@ -44,9 +44,9 @@ from creative.util import mmss, now_iso  # noqa: E402
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
-JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat")
+JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "embed", "memolink")
 # Jobs that download or crunch tapes: only the home worker runs them, never this process (not even --jobs inproc).
-WORKER_ONLY = {"process_set", "import_youtube"}
+WORKER_ONLY = {"process_set", "import_youtube", "embed", "memolink"}
 STALE_CLAIM_S = 15 * 60          # a claimed job with no result after this is handed out again
 MAX_ATTEMPTS = 3
 ID_RE = re.compile(r"^[A-Za-z0-9:_@.+\-]{1,300}$")
@@ -438,8 +438,10 @@ class Creative:
             return c
 
     # ---------------------------------------------------------------- jobs
-    def enqueue(self, st: dict, kind: str, key: str, inp: dict, fresh: bool = False, kb=None) -> tuple[int, dict]:
-        """(200, cached result) or (202, the queued job). Never runs the job here."""
+    def enqueue(self, st: dict, kind: str, key: str, inp: dict, fresh: bool = False, kb=None,
+                by: str = OWNER_ID) -> tuple[int, dict]:
+        """(200, cached result) or (202, the queued job). Never runs the job here. `by`: who asked (his tap, or the
+        import that queued a follow-up job)."""
         jobs = st["jobs"]
         live = [j for j in jobs.items.values() if j.get("key") == key]
         if not fresh:
@@ -451,7 +453,7 @@ class Creative:
         if pend:
             return 202, {"status": "queued", "job": job_brief(pend[0]), "poll": f"/api/jobs/{pend[0]['id']}"}
         jid = f"job:{kind}-{hashlib.sha1((key + now_iso() + str(len(jobs.items))).encode()).hexdigest()[:12]}"
-        jobs.append("enqueue", jid, {"kind": kind, "key": key, "input": inp}, by=OWNER_ID)
+        jobs.append("enqueue", jid, {"kind": kind, "key": key, "input": inp}, by=by)
         if self.jobs_mode == "inproc" and kb is not None and kind not in WORKER_ONLY:
             threading.Thread(target=self._run_inproc, args=(kb, jid), daemon=True).start()
         j = jobs.get(jid)
@@ -1209,11 +1211,25 @@ class Routes:
 
     def w_creative(self):
         name = self.arg("store")
-        if name not in ("storyboards", "workingsets", "venues"):
-            raise HttpError(400, "store must be storyboards | workingsets | venues")
+        if name not in ("storyboards", "workingsets", "venues", "merges", "suggestions"):
+            raise HttpError(400, "store must be storyboards | workingsets | venues | merges | suggestions")
+        if name == "merges":
+            import merge_api  # noqa: F401  registers the store's apply function
+        if name == "suggestions":
+            import suggest_api  # noqa: F401
         dl = self.cr.reconcile(self.kb, name)
         lines = dl if dl is not None else file_lines(self.cr.dir / f"{name}.jsonl")
-        return 200, {"store": name, "total": len(lines), "lines": lines}
+        out = {"store": name, "total": len(lines), "lines": lines}
+        if self.arg("snapshot"):  # the replayed items, for readers without creative/ (gsync's venv has no numpy)
+            if name == "merges":
+                import merge_api as MGA
+                out["items"] = MGA.store(self.cr, self.kb).items
+            elif name == "suggestions":
+                import suggest_api as SGA
+                out["items"] = SGA.store(self.cr, self.kb).items
+            else:
+                out["items"] = self.cr.stores(self.kb)[name].items
+        return 200, out
 
 
 def handle(cr: Creative, h, method: str, path: str, q: dict, body_fn) -> bool:

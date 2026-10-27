@@ -9,3 +9,4 @@
 !creative/*.py
 !infer/__init__.py
 !infer/scriptdiff.py
+!gsync/rules.py

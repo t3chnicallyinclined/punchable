@@ -35,3 +35,10 @@ DEFINE FIELD OVERWRITE audio_unreliable ON set TYPE option<bool | null>;
 -- not re-applied, because DEFINE INDEX ... OVERWRITE rebuilds every index from scratch even when nothing changed.
 DEFINE FIELD OVERWRITE schema_sha ON meta TYPE option<string>;
 DEFINE FIELD OVERWRITE extra_sha  ON meta TYPE option<string>;
+
+-- Online-first (2026-10-27): files_rev moves whenever the API writes a srcfile at runtime (POST /api/worker/files), so
+-- every API pod refreshes its cache; online_first is set once at the cutover (db/push_remote.py cutover) and makes
+-- push_remote.py refuse any later bundle load (the database is the source of truth from then on).
+DEFINE FIELD OVERWRITE files_rev    ON meta TYPE option<int>;
+DEFINE FIELD OVERWRITE online_first ON meta TYPE option<object> FLEXIBLE;
+DEFINE FIELD OVERWRITE cutover_log  ON meta TYPE option<array<object>> FLEXIBLE;

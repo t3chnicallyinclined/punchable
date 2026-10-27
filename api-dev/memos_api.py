@@ -22,7 +22,9 @@ PROC_ALIVE_S = 20 * 60
 
 
 def comedy_dir(kb) -> Path:
-    return Path(kb.tapes).parent
+    """The data folder: the parent of corpus/ (locally the same as tapes/'s parent; hosted, PK_DATA/comedy, where
+    the srcfile rows are cached, while tapes/ is PK_DATA/tapes and empty)."""
+    return Path(kb.corpus).parent
 
 
 def load(comedy: Path) -> dict | None:
@@ -87,10 +89,21 @@ def card(comedy: Path, it: dict, full: bool = False) -> dict:
            if att and att.get("decision") == "attach" else None,
            "long": bool(it.get("long")), "no_speech": bool(it.get("no_speech")),
            "audio": f"/api/memos/{it['id']}/audio" if _inside(comedy, it.get("audio")) else None,
+           # online-first keeps no audio: the reference is where the recording lives (his Drive, or his phone)
+           "reference": reference(it),
            "error": it.get("error") if it.get("status") == "failed" else None}
     if full:
         out["segments"] = segs
     return out
+
+
+def reference(it: dict) -> dict | None:
+    if it.get("drive_id"):
+        return {"kind": "drive", "url": f"https://drive.google.com/file/d/{it['drive_id']}/view",
+                "name": it.get("name")}
+    if it.get("name") or it.get("recorded_at"):
+        return {"kind": "file", "name": it.get("name"), "recorded_at": it.get("recorded_at")}
+    return None
 
 
 def handle(h, kb, path: str, q: dict):

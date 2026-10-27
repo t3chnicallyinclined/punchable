@@ -212,6 +212,30 @@ class SurrealKB:
                 failed_sig = (locals().get("sig"), locals().get("jsig"))
                 sys.stderr.write(f"sync failed: {self.sync_error}\n")
 
+    def sync_now(self, why: str) -> dict:
+        """Re-sync the graph tables from this API's own files now (after the home worker posted pipeline output,
+        api-dev/ingest_api.py). Same code as the watcher (db/load.py sync: writes only what changed). Hosted, the
+        files are this pod's cache of the srcfile rows, in another folder than the dbload pod's: allow_moved."""
+        import load as L
+        li = self._state().get("load_info") or {}
+        graph = Path(getattr(self, "creative_graph", None) or self.graph_path)
+        t = time.perf_counter()
+        with self.lock:
+            r = sdb.Rpc(self.port, None, None)
+            try:
+                info = L.sync(r, ns=self.ns, db=self.db, graph=graph, kbdir=Path(self.kbdir), corpus=Path(self.corpus),
+                              fixtures=self.ai.fixtures, id_map=self.ai.id_map_path,
+                              version=li.get("graph_version", "?"), reason=li.get("graph_reason", ""),
+                              allow_moved=bool(os.environ.get("PK_DATA")))
+            finally:
+                r.close()
+            self._jsig = self._sig(self.decisions_path)
+            self._sview = None
+        out = {"at": time.time(), "why": why, "mode": info.get("mode"), "changed": info.get("sync_changed"),
+               "s": round(time.perf_counter() - t, 2)}
+        self.syncs = (self.syncs + [out])[-20:]
+        return {k: out[k] for k in ("mode", "changed", "s")}
+
     # ---- state ---------------------------------------------------------------
     def _state(self) -> dict:
         r = self.rpc.last("SELECT gen, loading, orphans, load_info FROM meta:state;")

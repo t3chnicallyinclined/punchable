@@ -59,6 +59,22 @@ def bucket(status) -> str:
     return "proposed"
 
 
+# Lines written before imports carried their own actor (2026-10-27) say `by: <owner>` although an importer wrote them.
+# decisions.jsonl is append-only, so they are never rewritten; readers get the corrected actor from actor_of().
+LEGACY_IMPORT_REASONS = (("[gdocs] voice memo", "import:memo"), ("[gdocs]", "import:gsync"))
+
+
+def actor_of(d: dict) -> str | None:
+    """Who made a decision line: `by`, except legacy importer lines stamped with the owner (see above)."""
+    by = d.get("by")
+    if by == OWNER_ID:
+        r = d.get("reason") or ""
+        for prefix, actor in LEGACY_IMPORT_REASONS:
+            if r.startswith(prefix) or r.startswith("undo: " + prefix):
+                return actor if not r.startswith("undo: ") else by  # his undo of an import is his own action
+    return by
+
+
 def public(d: dict) -> dict:
     """A record without the view's private (_underscore) fields."""
     return {k: v for k, v in d.items() if not k.startswith("_")}
@@ -608,17 +624,19 @@ class KB:
         self._view_sig = None
         return len(self.view().decisions) - 1
 
-    def decide(self, req: dict) -> dict:
+    def decide(self, req: dict, by: str = OWNER_ID) -> dict:
+        """`by`: who made it. The comic's own action is OWNER_ID; imports are `import:<source>` and machine judgments
+        `ai:<what>` (the API checks the actor; this only records it)."""
         with self.lock:
             v = self.view()
             d = self._build(v, req)
             d = {"ts": now_iso(), "target": d["target"], "id": d["id"], "action": d["action"],
                  "before": d.get("before"), "after": d.get("after"), "reason": (req.get("reason") or "").strip(),
-                 "by": OWNER_ID, **({"undo_of": d["undo_of"]} if "undo_of" in d else {})}
+                 "by": by, **({"undo_of": d["undo_of"]} if "undo_of" in d else {})}
             idx = self._append(d)
             return {"ok": True, "index": idx, "decision": d}
 
-    def undo(self, index: int | None) -> dict:
+    def undo(self, index: int | None, by: str = OWNER_ID) -> dict:
         with self.lock:
             v = self.view()
             ds = v.decisions
@@ -647,7 +665,7 @@ class KB:
                 inv = {"action": "edit", "before": public(cur) if cur else None,
                        "after": {k: before.get(k) for k in after}}
             reason = "undo" + (f": {d.get('reason')}" if d.get("reason") else "")
-            out = {"ts": now_iso(), "target": t, "id": did, **inv, "reason": reason, "by": OWNER_ID, "undo_of": index}
+            out = {"ts": now_iso(), "target": t, "id": did, **inv, "reason": reason, "by": by, "undo_of": index}
             out = {k: out[k] for k in ("ts", "target", "id", "action", "before", "after", "reason", "by", "undo_of")}
             idx = self._append(out)
             return {"ok": True, "index": idx, "decision": out}

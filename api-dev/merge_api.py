@@ -94,13 +94,28 @@ def judgements(cr) -> dict:
         return _cache["judge"]
 
 
+def recordings(cr) -> set:
+    """Memo "ideas" that are recordings of a performed set (creative/memolink.set_recordings): never grouped."""
+    from creative.memolink import set_recordings
+    p = Path(cr.dir) / "suggest_judge.json"
+    try:
+        sig = (p.stat().st_mtime_ns, p.stat().st_size)
+    except OSError:
+        return set()
+    with _lock:
+        if _cache.get("rec_key") != sig:
+            _cache["rec"], _cache["rec_key"] = set_recordings(cr.dir), sig
+        return _cache["rec"]
+
+
 def groups(cr, c, st: Store) -> dict:
-    """find_groups, cached per corpus + judge file + merges store; attached notes are not grouped."""
+    """find_groups, cached per corpus + judge file + merges store; attached notes and set recordings are not grouped."""
     j = judgements(cr)
-    key = (id(c), _cache.get("judge_key"), st.n_events)
+    rec = recordings(cr)
+    key = (id(c), _cache.get("judge_key"), st.n_events, _cache.get("rec_key"))
     with _lock:
         if _cache.get("groups_key") != key:
-            att = set(MG.attached(st.items))
+            att = set(MG.attached(st.items)) | rec
             _cache["groups"] = MG.find_groups(c, j, MG.dismissed_pairs(st.items), exclude=att)
             _cache["groups_key"] = key
         return _cache["groups"]

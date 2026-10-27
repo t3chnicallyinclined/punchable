@@ -39,6 +39,10 @@ DEFAULT_PORT = 8796
 MAX_BODY = 256 * 1024
 MAX_UPLOAD = 1024 * 1024 * 1024  # 1 GB
 ID_RE = re.compile(r"^[A-Za-z0-9:_@.+\-]{1,300}$")
+# Who made a write (`by` on the decision line). His own actions: OWNER_ID, always (an app token can never claim
+# another actor). Imports: `import:<source>` (gsync, memo, youtube, upload). Machine judgments: `ai:<what>`.
+# Only the home worker (a worker token) or a loopback dev API without auth may name an import or ai actor.
+ACTOR_RE = re.compile(r"^(import|ai):[a-z][a-z0-9_]{1,30}$")
 STAGE_ORDER = ["working", "testing", "to_try", "idea", "retired"]
 RATINGS = ["killed", "worked", "meh", "died"]
 HIT_RATINGS = {"killed", "worked"}
@@ -270,13 +274,13 @@ class AppKB(K.KB):
         return None
 
     # ---- the app's own lines (shapes documented in API.md) ---------------
-    def append_lines(self, lines: list[dict]) -> list[int]:
+    def append_lines(self, lines: list[dict], by: str = OWNER_ID) -> list[int]:
         out = []
         with self.lock:
             for d in lines:
                 rec = {"ts": K.now_iso(), "target": d["target"], "id": d["id"], "action": d["action"],
                        "before": d.get("before"), "after": d.get("after"), "reason": (d.get("reason") or "").strip(),
-                       "by": OWNER_ID}
+                       "by": by}
                 out.append(self._append(rec))
         return out
 
@@ -456,6 +460,8 @@ class AppIndex:
             "room_heat": summ.get("room_heat"),
             "audio_unreliable": s.get("audio_unreliable") if isinstance(s.get("audio_unreliable"), bool) else None,
             "venue_id": venue_id_of(orig_venue or meta.get("venue_guess") or "Unknown"),
+            "source": set_source(meta, d),
+            "reference": set_reference(meta, d),
         }
         self._set_info[sid] = out
         return out
@@ -850,6 +856,35 @@ def venue_id_of(raw: str) -> str:
     return f"venue:{slug(parse_venue(raw)['name'], 40)}"
 
 
+YT_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def set_source(meta: dict, d: str | None) -> str:
+    """youtube | voice_memo | app_upload | tape: where a set's recording came from (corpus/sets/<set>/meta.json)."""
+    if meta.get("source") in ("voice_memo", "app_upload"):
+        return meta["source"]
+    vid = meta.get("id")
+    if vid and d and d.endswith("_" + str(vid)) and YT_ID.match(str(vid)) and meta.get("upload_date"):
+        return "youtube"
+    return "tape"
+
+
+def set_reference(meta: dict, d: str | None) -> dict | None:
+    """Where the recording itself lives, since Punchable keeps no media library (online-first, 2026-10-27): a
+    YouTube video (play = its url with &t=<seconds>s), his Drive file (a voice memo), or the file on his phone (an
+    upload: name and date). None for the old tapes that are only on his PC."""
+    src = set_source(meta, d)
+    if src == "youtube":
+        return {"kind": "youtube", "video_id": meta["id"], "url": f"https://www.youtube.com/watch?v={meta['id']}",
+                "title": meta.get("title")}
+    if meta.get("drive_id"):
+        return {"kind": "drive", "url": f"https://drive.google.com/file/d/{meta['drive_id']}/view",
+                "name": meta.get("original_name")}
+    if src == "app_upload":
+        return {"kind": "file", "name": meta.get("original_name"), "recorded_at": meta.get("recorded_at")}
+    return None
+
+
 def set_card(kb: AppKB, a: AppIndex, s: dict) -> dict:
     perfs = a.set_perfs.get(s["id"], [])
     rateable = [p for p in perfs if p.get("kind") not in AI.NOT_COUNTED and a.joke_of(p["id"])]
@@ -935,6 +970,7 @@ class Handler(BaseHTTPRequestHandler):
     origins: tuple = ()        # browser origins allowed besides loopback (PUBLIC_URL when hosted)
     boot = None                # hosted: callable -> status dict while the data is not loaded yet
     jobs_on_upload = False     # hosted: an upload queues a process_set job for the home worker
+    files_mode = "disk"        # worker file posts (api-dev/ingest_api.py): "db" hosted (srcfile rows), "disk" local
     principal = None
 
     def handle(self):
@@ -1043,6 +1079,21 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def actor(self, b: dict | None = None) -> str:
+        """Who this write is by. An app token (or the local app) is the comic: OWNER_ID. A worker token must name an
+        import or ai actor in the body (`actor`); a loopback dev API without auth (the PC's own importers, before
+        the online-first cutover) may name one too. Anything else is refused."""
+        want = (b or {}).get("actor") if isinstance(b, dict) else None
+        if self.verifier is not None and AUTH.is_worker(getattr(self, "principal", None) or {}):
+            if not isinstance(want, str) or not ACTOR_RE.match(want):
+                raise K.DecisionError("a worker write must name its actor: import:<source> or ai:<what>", 400)
+            return want
+        if want is not None and self.verifier is None:
+            if not isinstance(want, str) or not ACTOR_RE.match(want):
+                raise K.DecisionError("actor must be import:<source> or ai:<what>", 400)
+            return want
+        return OWNER_ID
+
     def booting(self, path: str):
         """Hosted, before the data is loaded: /api/health answers (SurrealDB reachable or not); the rest is 503."""
         st = self.boot() if self.boot else {"ok": False, "error": "not started"}
@@ -1073,8 +1124,10 @@ class Handler(BaseHTTPRequestHandler):
         import merge_api as MG  # /api/merge/* (docs/API_CONTRACT.md "Merge")
         import ask_api as AK  # /api/ask/chats* (docs/API_CONTRACT.md "Ask")
         import mysets_api as MS  # /api/mysets* (docs/API_CONTRACT.md "Your sets")
+        import suggest_api as SG  # /api/suggestions/not-a-joke ("not a joke?" voice memos; hide is his tap)
         limit = 8 * 1024 * 1024 if path.startswith("/api/worker/") else MAX_BODY
-        return (MS.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+        return (SG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+                or MS.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or AK.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or MG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or CR.handle(self.creative, self, method, path, q, lambda: self.body_json(limit)))
@@ -1107,6 +1160,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/live":
             return self.live_socket()
         try:
+            import ingest_api as IG  # /api/worker/* ingest routes (online-first): imports land in the database
+            if IG.handle(self, "GET", path, q):
+                return
             if self.creative_route("GET", path, q):
                 return
             if path.startswith("/api/memos"):  # iPhone voice memos (api-dev/memos_api.py; gsync/memos.py fills it)
@@ -1261,7 +1317,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.export(kb, a)
             if path == "/api/decisions":
                 n = min(int(arg("limit", "30")), 500)
-                ds = [dict(d, index=i, undone=i in v.undone) for i, d in enumerate(v.decisions)][-n:][::-1]
+                ds = [dict(d, index=i, undone=i in v.undone, actor=K.actor_of(d)) for i, d in enumerate(v.decisions)][-n:][::-1]
                 return self.send_json({"decisions": ds, "total": len(v.decisions)})
             return self.err(404, "not found")
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
@@ -1486,13 +1542,16 @@ class Handler(BaseHTTPRequestHandler):
             kb = self.pick(parse_qs(u.query))
             if path == "/api/upload":
                 return self.upload()
+            import ingest_api as IG
+            if IG.handle(self, "POST", path, parse_qs(u.query)):
+                return
             if self.creative_route("POST", path, parse_qs(u.query)):
                 return
             b = self.body_json()
             if path == "/api/decision":
                 if b.get("id") is not None and (not isinstance(b["id"], str) or not ID_RE.match(b["id"])):
                     raise K.DecisionError("bad id")
-                r = kb.decide(b)
+                r = kb.decide(b, by=self.actor(b))
                 return self.send_json({"ok": True, "indexes": [r["index"]], "decisions": [r["decision"]]})
             if path == "/api/review/rate":
                 return self.rate(b)
@@ -1517,9 +1576,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(idxs, list) or not all(i is None or isinstance(i, int) for i in idxs):
                     raise K.DecisionError("indexes must be a list of integers")
                 out = []
+                by = self.actor(b)
                 with kb.lock:
                     for i in sorted(idxs, key=lambda x: -1 if x is None else x, reverse=True):
-                        out.append(kb.undo(i))
+                        out.append(kb.undo(i, by=by))
                 return self.send_json({"ok": True, "indexes": [r["index"] for r in out], "decisions": [r["decision"] for r in out]})
             return self.err(404, "not found")
         except K.DecisionError as e:
@@ -1729,8 +1789,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "indexes": idx, "decisions": [kb.view().decisions[i] for i in idx]})
             raise K.DecisionError("op must be rate|match|new|crowd|bit|banter|confirm")
 
-    def idea(self, b: dict):
+    def idea(self, b: dict, by: str | None = None):
+        """A new idea (a joke node at stage idea). `by` = who: the comic (OWNER_ID) or an import (import:<source>)."""
         kb = self.kb
+        by = by or self.actor(b)
         text = (b.get("text") or "").strip()
         if not text or len(text) > 4000:
             raise K.DecisionError("an idea needs its text (up to 4000 characters)")
@@ -1743,12 +1805,13 @@ class Handler(BaseHTTPRequestHandler):
             frm = b.get("from") if isinstance(b.get("from"), dict) else None
             if frm:
                 d["after"]["from"] = {k: frm.get(k) for k in ("set", "perf", "start_ms", "end_ms", "note") if frm.get(k) is not None}
-            idx = kb.append_lines([{**d, "reason": b.get("reason") or ("saved from review" if frm else "")}])
+            idx = kb.append_lines([{**d, "reason": b.get("reason") or ("saved from review" if frm else "")}], by=by)
             out = {"ok": True, "indexes": idx, "id": d["id"], "decisions": [kb.view().decisions[i] for i in idx]}
         if self.creative is not None:  # a jot that is clearly an existing bit attaches to it (merge_api; undoable)
             import merge_api as MG
-            out["attach"] = MG.after_idea(self.creative, kb, d["id"], text,
-                                          "gdocs" if (b.get("reason") or "").startswith("[gdocs]") else "app")
+            src = by.split(":", 1)[1] if by.startswith("import:") else (
+                "gdocs" if (b.get("reason") or "").startswith("[gdocs]") else "app")
+            out["attach"] = MG.after_idea(self.creative, kb, d["id"], text, src)
         return self.send_json(out)
 
     def save_tonight(self, b: dict):
