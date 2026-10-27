@@ -15,6 +15,7 @@ import { playSegment, stopPlayback, youtubeSource } from '@/lib/media';
 import { C, F } from '@/lib/theme';
 import { AIBadge, AddBtn, Btn, Card, Empty, ErrorCard, FixtureBanner, List, ListRow, Screen, Sheet, T, TextBtn, Yours, s, useUI, useWide } from '@/lib/ui';
 import { WhyLine, useWhy } from '@/lib/why';
+import { SayBar } from '@/lib/SayBar';
 
 const mmss = (ms: number) => fmtDur(ms / 1000);
 
@@ -214,7 +215,12 @@ export default function SetScreen() {
   );
 
   return (
-    <Screen title="Set" back testID="set" scrollRef={scroll}>
+    <Screen title="Set" back testID="set" scrollRef={scroll}
+      bar={<SayBar testID="set-say" placeholder="Why'd it die at 3:40? Ask about this set" hint={null}
+        onSay={(text) => router.push({ pathname: '/say', params: { text, set: id, screen: 'set' } } as any)} />}>
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        <Btn small v="add" testID="fix-tonight" label="Fix it for tonight" onPress={() => router.push('/sets' as any)} />
+      </View>
       <FixtureBanner show={sets.fixture} what="GET /api/venues (per-set laugh stats)" />
       <View style={{ gap: 2 }}>
         {venueLine}
