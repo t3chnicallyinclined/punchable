@@ -16,8 +16,24 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
-# Spellings the catalog pass may use for a persona label -> the label slug. Add your own personas here.
+# Spellings the catalog pass may use for a persona label -> the label slug. Your own personas go in a private file,
+# $PUNCHABLE_HOME/persona_synonyms.json ({"<spelling>": "<label slug>"}); it replaces these examples when present.
 PERSONA_SYN = {"tech guy": "tech-guy", "computer tech": "tech-guy", "it guy": "tech-guy"}
+
+
+def _local_personas() -> dict | None:
+    p = os.path.join(os.environ.get("PUNCHABLE_HOME") or os.path.join(os.path.expanduser("~"), ".punchable"),
+                     "persona_synonyms.json")
+    try:
+        with open(p, encoding="utf-8") as f:
+            d = json.load(f)
+        return {k.lower(): v for k, v in d.items() if not k.startswith("_")}
+    except (OSError, ValueError):
+        return None
+
+
+if _local_personas() is not None:
+    PERSONA_SYN = _local_personas()
 
 
 class Catalog:
