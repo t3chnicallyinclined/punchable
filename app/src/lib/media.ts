@@ -208,6 +208,23 @@ export async function requestMic(): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------- file picking
+export type Picked = { blob: Blob; name: string; lastModified: number | null };
+
+/** Recordings he picks from his phone's Files (Voice Memos saved there) or his computer: one or several. The file
+ * goes up to be transcribed and is deleted from the server once processed; Punchable keeps the words and a reference
+ * (its name and date), not the recording. Web: the browser's picker; iOS/Android: expo-document-picker. */
+export async function pickRecordings(): Promise<Picked[]> {
+  const DP = await import('expo-document-picker');
+  const r: any = await DP.getDocumentAsync({ type: ['audio/*', 'video/*'], multiple: true, copyToCacheDirectory: true });
+  if (!r || r.canceled || !r.assets?.length) return [];
+  const out: Picked[] = [];
+  for (const a of r.assets as any[]) {
+    const blob: Blob = a.file instanceof Blob ? a.file : await (await fetch(a.uri)).blob();
+    out.push({ blob, name: a.name || 'recording', lastModified: a.lastModified ?? a.file?.lastModified ?? null });
+  }
+  return out;
+}
+
 export function pickFile(accept = 'audio/*,video/*'): Promise<File | null> {
   if (!isWeb) {
     // TODO(native): expo-document-picker / the iOS share extension for Voice Memos.

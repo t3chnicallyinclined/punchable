@@ -301,4 +301,7 @@ export type SetCard = {
   // Requested by app
   show_date?: string | null; show_date_source?: string | null; description?: string | null; laugh_s_per_min?: number | null; room_heat?: number | null;
   audio_unreliable?: boolean | null; venue_id?: string | null;
+  // online-first: where the recording lives (Punchable keeps no media): YouTube, his Drive, or his phone
+  source?: 'youtube' | 'voice_memo' | 'app_upload' | 'tape';
+  reference?: { kind: 'youtube' | 'drive' | 'file'; url?: string; name?: string | null; video_id?: string } | null;
 };

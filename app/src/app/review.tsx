@@ -7,10 +7,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Step, decide, get, post, undo, useApi } from '@/lib/api';
 import { C, F, RATING, fmtDate, fmtMs, stageInfo } from '@/lib/theme';
 import { BAR_WORDS, Badge, Btn, Card, ErrorCard, LaughBars, List, ListRow, Screen, Sheet, T, TextBtn, TopBar, s, useUI } from '@/lib/ui';
-import { HearIt } from '@/lib/hear';
+import { HearIt, Reference } from '@/lib/hear';
 import { stopPlayback } from '@/lib/media';
 
-type SetCard = { id: string; title: string; date: string; venue: string; duration_s: number; rated: number; rateable: number; reviewed: boolean; has_audio: boolean };
+type SetCard = { id: string; title: string; date: string; venue: string; duration_s: number; rated: number; rateable: number; reviewed: boolean; has_audio: boolean; reference?: Reference | null };
 type Review = { set: SetCard; steps: Step[]; audio: { opus: string; wav: string } | null };
 
 export default function ReviewScreen() {
@@ -243,7 +243,7 @@ function Run({ setId }: { setId: string }) {
             </T>
           </View>
           <LaughStrip step={cur} />
-          <HearIt testID="hear-it" audio={data.audio?.opus || null} play={cur.play} k={cur.key}
+          <HearIt testID="hear-it" audio={data.audio?.opus || null} play={cur.play} k={cur.key} reference={data.set?.reference}
             sub={`${fmtMs(cur.play.start_ms)}–${fmtMs(cur.play.end_ms)} · the punch and the laugh`} />
           {cur.kind === 'joke' && cur.match && cur.match.bucket === 'proposed' && (
             <View style={[s.row, { flexWrap: 'wrap' }]}>
