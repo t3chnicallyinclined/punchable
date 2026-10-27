@@ -72,7 +72,10 @@ For your own material, put it under `~/punchable-data` (the layout is `kb/`, `co
 Your own private settings go in files the repo ignores:
 - `~/.punchable/gsync_docs.json`: your Drive folder and doc ids for the Google Docs sync (`gsync/config.py`).
 - `~/.punchable/legal_rules.json`: extra folders, docs and title keywords to never open (`gsync/rules.py`).
-- `infra/config.env`: your domain, server and namespaces (copy `infra/config.env.example`).
+- `~/.punchable/infra.env`: your domain, server and namespaces (copy `infra/config.env.example`).
+- `~/.punchable/punchable.env`: your data folder and local settings (`tools/local_env.ps1` loads it).
+
+The full list, and the commit guard that keeps your material out of git: [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Tests
 
