@@ -1,6 +1,7 @@
 """The sync engine: bootstrap (first run) / pull (Changes API) / push (app jokes) / boards. See GSYNC.md."""
 from __future__ import annotations
 
+import os
 import re
 import traceback
 from datetime import datetime, timezone
@@ -11,6 +12,8 @@ from .drive import DriveBase, WriteBlocked
 from .punchable import GDOCS, ApiDown, Punchable
 from .store import Store, now_iso
 from .units import h, mirror_name, mirror_text, norm, split_units
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 
 def _ts(s: str | None) -> datetime | None:
@@ -325,7 +328,7 @@ class Sync:
         if e.get("origin") == "corpus":
             if not self.dry:
                 e["file_live"] = self._mirror(meta, md)
-                self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+                self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                                "kind": "corpus_doc_edit", "jokes": e.get("jokes"),
                                                "modified": meta.get("modifiedTime"), "file": e["file_live"]})
                 e.update(version=meta.get("version"), modified=meta.get("modifiedTime"), doc_hash=dh)
@@ -336,7 +339,7 @@ class Sync:
         if cur is None and jid and self._merged_into(jid):
             # the joke was merged into another one (hidden): his edit is kept, verbatim, and the doc stays synced
             if not self.dry:
-                self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+                self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                                "kind": "merged_member_doc_edit", "joke_id": jid,
                                                "merged_into": self._merged_into(jid), "title": name,
                                                "modified": meta.get("modifiedTime"), "text": plain})
@@ -379,7 +382,7 @@ class Sync:
         plain = norm(self.drive.export(fid, "text/plain"))
         if h(plain) != e.get("doc_hash") and not self.dry:
             # his edit to a doc that holds AI drafts: stored as his edit, never as an idea or a his-words unit
-            self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+            self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                            "kind": "ai_draft_doc_edit", "contains_drafts": True,
                                            "title": meta.get("name"), "modified": meta.get("modifiedTime"), "text": plain})
             self.act("ai_draft_edit", doc=fid)
@@ -416,7 +419,7 @@ class Sync:
         self.m["pending"].pop(fid, None)
         if cut is None:  # the rule is gone: can't tell his words from the notes, so nothing is applied
             if not self.dry:
-                self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+                self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                                "kind": "mixed_doc_edit_unsplit", "contains_drafts": True, "text": md})
                 e.update(version=meta.get("version"), modified=meta.get("modifiedTime"))
             self.act("mixed_unsplit", doc=fid)
@@ -434,7 +437,7 @@ class Sync:
             return
         r = self.pk.edit_joke(jid, {"summary": his}, f"{GDOCS} edited in Google Docs (above the line) ({fid}, "
                                                      f"modified {meta.get('modifiedTime')})")
-        self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+        self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                        "kind": "mixed_doc_edit", "contains_drafts": True, "joke_id": jid,
                                        "modified": meta.get("modifiedTime")})
         e.update(version=meta.get("version"), modified=meta.get("modifiedTime"), doc_hash=h(his), app_hash=h(his),
@@ -460,7 +463,7 @@ class Sync:
             return
         plain = norm(self.drive.export(fid, "text/plain"))
         if h(plain) != e.get("doc_hash") and not self.dry:
-            self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner", "source": "gdocs", "doc_id": fid,
+            self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID, "source": "gdocs", "doc_id": fid,
                                            "kind": "merged_doc_edit", "merge_id": e.get("merge_id"),
                                            "joke_id": e.get("merged_joke"), "title": meta.get("name"),
                                            "modified": meta.get("modifiedTime"), "text": plain})
@@ -579,7 +582,7 @@ class Sync:
                  f"Board last changed: {b.get('updated_at')}"]
         if b.get("target_s"):
             lines.append(f"Target: {int(b['target_s']) // 60}:{int(b['target_s']) % 60:02d} · {len(b.get('joke_ids') or [])} bits")
-        if b.get("notes") and b.get("by") == "owner":
+        if b.get("notes") and b.get("by") == OWNER_ID:
             lines += ["", "Your notes:", b["notes"]]
         for n, jid in enumerate(b.get("joke_ids") or [], 1):
             j = self.pk.joke(jid) or {"title": jid, "summary": "", "lead_text": None}
@@ -594,7 +597,7 @@ class Sync:
     def push_boards(self) -> None:
         parent = self.m.get("folder_id")
         for sb, b in sorted(self.pk.boards().items()):
-            if not (b.get("by") == "owner" or b.get("source") == "his"):
+            if not (b.get("by") == OWNER_ID or b.get("source") == "his"):
                 continue  # untouched AI seed boards are drafts: never written to his Drive
             be = self.m["boards"].get(sb)
             if b.get("deleted"):
@@ -622,7 +625,7 @@ class Sync:
                 if be.get("version") is None or str(meta.get("version")) != str(be.get("version")):
                     prior = norm(self.drive.export(be["doc_id"], "text/plain"))
                     if h(prior) != be.get("doc_hash"):
-                        self.store.log("edits.jsonl", {"ts": now_iso(), "by": "owner" if be.get("version") else "adopted",
+                        self.store.log("edits.jsonl", {"ts": now_iso(), "by": OWNER_ID if be.get("version") else "adopted",
                                                        "source": "gdocs", "doc_id": be["doc_id"], "kind": "board_doc_before_regen",
                                                        "board": sb, "text": prior})
                 try:

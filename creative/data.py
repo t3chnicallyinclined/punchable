@@ -20,9 +20,12 @@ import numpy as np
 
 from .util import mean, median, prefix_words, r2
 
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
 DEFAULT_COMEDY = os.path.expanduser("~/punchable-data")
 DESK = Path(__file__).resolve().parent.parent
-VECTORS_DIR = DESK / "tools" / "kb" / "cache"
+# PK_CACHE_DIR: keep the caches (they hold your text) outside the repo: <PK_CACHE_DIR>/kb, /infer, /audio
+VECTORS_DIR = Path(os.environ["PK_CACHE_DIR"]) / "kb" if os.environ.get("PK_CACHE_DIR") else DESK / "tools" / "kb" / "cache"
 WPM = 157.0  # his taped pace (learn/insights `chunks.his_pace_wpm`)
 RATING_ORDER = {"killed": 3, "worked": 2, "meh": 1, "died": 0}
 LINK_KINDS = ("segue", "same_premise", "callback_to", "tag_of", "same_shape", "variant_of")
@@ -177,7 +180,7 @@ class Corpus:
         self.his_nodes, self.his_stage, self.perf_overrides, self.his_lists = set(), set(), {}, {}
         # replay decisions (last one wins, in file order)
         for d in self.decisions:
-            if d.get("by", "owner") != "owner" or d.get("auto"):
+            if d.get("by", OWNER_ID) != OWNER_ID or d.get("auto"):
                 continue
             tgt, act, after = d.get("target"), d.get("action"), d.get("after") or {}
             if tgt == "edge":
@@ -259,7 +262,7 @@ class Corpus:
     @staticmethod
     def source_of(e: dict) -> str:
         """his = the comic confirmed/edited/added it; inferred = accepted by the AI; proposed = a suggestion."""
-        if e.get("_his") or e.get("by") == "owner":
+        if e.get("_his") or e.get("by") == OWNER_ID:
             return "his"
         if e.get("status") in ("inferred", "confirmed", "confirmed_auto"):
             return "inferred"

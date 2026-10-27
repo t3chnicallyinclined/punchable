@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import os
 import argparse
 import json
 import re
@@ -30,6 +31,9 @@ from .config import Config
 from .kbstore import KB, REJECTED
 from .providers import Router
 from .verify import find_verbatim, normalize_ids, strip_unverified_inline_quotes
+
+COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
+COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)
 
 MAX_SOURCES = 32
 PER_JOKE = 3
@@ -54,7 +58,7 @@ S_ANSWER = _obj({
                                                   "note": {"type": "string"}})},
     "not_found": {"type": "string"}})
 
-SYS = ("You answer questions about stand-up comic the comic's own material (his written joke docs, recorded sets and "
+SYS = ("You answer questions about stand-up comic " + COMIC + "'s own material (his written joke docs, recorded sets and "
        "voice notes). Use ONLY the numbered SOURCES given. Never use outside knowledge and never invent material. "
        "Quotes must be copied character for character from the source they cite.")
 

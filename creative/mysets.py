@@ -19,12 +19,15 @@ Words only: no ratios, no rates, no jargon in any `words` / `label_words` / `sta
 """
 from __future__ import annotations
 
+import os
 from . import notebook as N
 from . import story as S
 from . import workingset as W
 from .data import Corpus, venue_short
 from .store import Store
 from .util import median, mmss, sha8, slug
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 DEAD_ROOM = 2.0         # a set whose whole room laughed under this (laugh-s/min) barely laughed: its nights don't count
 KILL_VR, GOOD_VR, SOME_VR = 1.2, 0.8, 0.5   # vs the room's own laugh rate on that night
@@ -432,7 +435,7 @@ def trim(c: Corpus, ws: dict, target_s: int) -> dict:
 
 # ============================================================== writes (his actions, into the working-set store)
 def create(c: Corpus, store: Store, title: str, target_s: int, joke_ids=(), note: str | None = None,
-           storyboard_id: str | None = None, by: str = "owner", ts: str | None = None, id_: str | None = None) -> dict:
+           storyboard_id: str | None = None, by: str = OWNER_ID, ts: str | None = None, id_: str | None = None) -> dict:
     bits = []
     for j in joke_ids:
         d, basis = c.duration(j)
@@ -479,7 +482,7 @@ def summary(c: Corpus, ws: dict) -> dict:
             "n": len(ids), "runtime_s": total, "runtime": mmss(total), "estimated_n": est, "status": st,
             "status_words": words, "health": h["word"], "tough_n": h["tough_n"], "version": ver["v"],
             "storyboard_id": ws.get("storyboard_id"), "updated": ws["updated_at"], "source": ws.get("source"),
-            "made_by": "you" if ws.get("by") == "owner" else "Punchable"}
+            "made_by": "you" if ws.get("by") == OWNER_ID else "Punchable"}
 
 
 def view(c: Corpus, ws: dict, sets: list[dict] | None = None, with_actions: bool = True) -> dict:
@@ -513,12 +516,12 @@ def view(c: Corpus, ws: dict, sets: list[dict] | None = None, with_actions: bool
         "set": {"id": ws["id"], "title": ws["title"], "target_s": hi, "target_lo_s": lo,
                 "length_words": length_words(ver["target_s"]), "version": ver["v"], "storyboard_id": ws.get("storyboard_id"),
                 "created_at": ws.get("created_at"), "updated_at": ws.get("updated_at"),
-                "made_by": "you" if ws.get("by") == "owner" else "Punchable"},
+                "made_by": "you" if ws.get("by") == OWNER_ID else "Punchable"},
         "runtime_s": total, "runtime": mmss(total), "estimated_n": est, "status": st, "status_words": words,
         "health": h["word"], "tough_n": h["tough_n"],
         "bits": bits, "tough": spots["set"], "next": nxt,
         "tapes": tapes_summary(c, sets, ws),
         "versions": [{"v": v["v"], "created_at": v["created_at"], "note": v["note"], "n": len(v["bits"]),
-                      "target_s": v["target_s"], "by": "you" if v.get("by") == "owner" else "Punchable",
+                      "target_s": v["target_s"], "by": "you" if v.get("by") == OWNER_ID else "Punchable",
                       "titles": [N.short_title(b["title"]) for b in v["bits"]]} for v in reversed(ws["versions"])],
     }

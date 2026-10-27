@@ -8,12 +8,16 @@
 """
 from __future__ import annotations
 
+import os
 import html
 import re
 import urllib.request
 
 from .data import Corpus
 from .notebook import related, tokens
+
+COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
+COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)
 
 DRAFT_LABEL = "DRAFT · AI · not your words yet"
 FACTS_SCHEMA = {"type": "object", "properties": {"facts": {"type": "array", "items": {
@@ -100,7 +104,7 @@ def riff_ideas(c: Corpus, idea: str, lines: list[str] | None = None, complete=No
     if not grounds and not lines:
         return dict(base, status="no_grounding", ideas=[], grounded_in=[],
                     why="Nothing in your notebook or your riff to build on yet. Write a line first.")
-    msg = (f"the comic's idea: \"{idea}\"\n"
+    msg = (f"{COMIC_FIRST}'s idea: \"{idea}\"\n"
            + ("His riff so far (his words):\n" + "\n".join(f"- {x}" for x in lines) + "\n" if lines else "")
            + ("Related bits from his own notebook (verbatim):\n" + "\n".join(f"{g['id']} {g['title']}: \"{g['quote']}\"" for g in grounds) + "\n"
               if grounds else "")

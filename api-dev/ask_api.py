@@ -17,6 +17,7 @@ also a creative_event row, like merges). His questions are his; answers are stor
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 import time
@@ -32,6 +33,8 @@ import creative_api as CR  # noqa: E402
 from creative import askchat as AC  # noqa: E402
 from creative.store import Store  # noqa: E402
 from creative.util import now_iso, sha8  # noqa: E402
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 STORE = "chats"
 MAX_Q = 1000
@@ -180,12 +183,12 @@ def ask(cr, kb, st: Store, chat_id: str, question: str) -> dict:
     turn = f"t{len(ch['turns']) + 1}"
     ids = AC.retrieve(c, question, hist)
     if not ids:
-        st.append("ask", chat_id, {"turn": turn, "q": question, "job": None, "sources": []}, by="owner")
+        st.append("ask", chat_id, {"turn": turn, "q": question, "job": None, "sources": []}, by=OWNER_ID)
         st.append("answer", chat_id, {"turn": turn, "result": AC.refusal()}, by="ai:ask")
         return st.get(chat_id)
     msgs = AC.prompt(c, question, hist, ids)
     _, q = cr.enqueue(cr.stores(kb), "ask_chat", f"ask_chat|{chat_id}|{turn}", {"messages": msgs}, kb=kb)
-    st.append("ask", chat_id, {"turn": turn, "q": question, "job": q["job"]["id"], "sources": ids}, by="owner")
+    st.append("ask", chat_id, {"turn": turn, "q": question, "job": q["job"]["id"], "sources": ids}, by=OWNER_ID)
     return st.get(chat_id)
 
 
@@ -228,7 +231,7 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
                 question = _question(body)
                 cid = "chat:" + sha8({"q": question, "at": now_iso(), "n": len(st.items)})
                 title = question if len(question) <= 60 else question[:59].rstrip() + "…"
-                st.append("new", cid, {"title": title}, by="owner")
+                st.append("new", cid, {"title": title}, by=OWNER_ID)
                 ch = ask(cr, kb, st, cid, question)
                 return _send(h, 201, chat_view(ch, cr))
             ch = st.get(cid)
@@ -244,7 +247,7 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
                 if not d:
                     raise HttpError(400, "nothing to change (title, deleted)")
                 try:
-                    st.append("patch", cid, d, by="owner")
+                    st.append("patch", cid, d, by=OWNER_ID)
                 except ValueError as e:
                     raise HttpError(400, str(e))
                 return _send(h, 200, chat_view(st.get(cid), cr))

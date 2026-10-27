@@ -20,6 +20,7 @@ never deleted.
 """
 from __future__ import annotations
 
+import os
 import argparse
 import hashlib
 import json
@@ -37,6 +38,9 @@ from .config import Config
 from .kbstore import KB, edge_id, now_iso
 from .providers import Router, sha
 from .verify import check_quotes, find_verbatim
+
+COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
+COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)
 
 PROMPT_VERSION = "inbox-v1"
 LLM_TASKS = ["split", "match_judge", "propose_joke", "label", "link_judge"]
@@ -98,12 +102,12 @@ S_LINK = _obj({"links": {"type": "array", "items": _obj({
     "confidence": {"type": "number"}, "reason": {"type": "string"},
     "new_quote": {"type": "string"}, "old_quote": {"type": "string"}})}})
 
-SYS_VOICE = ("You work on stand-up comic the comic's own material. Be literal and exact. "
+SYS_VOICE = ("You work on stand-up comic " + COMIC + "'s own material. Be literal and exact. "
              "Every quote you give must be copied character for character from the text it names; never paraphrase a quote. "
              "Reasons are one plain sentence a comic would understand.")
 
 
-def fewshot_block(pos, neg, label="the comic confirmed"):
+def fewshot_block(pos, neg, label=COMIC_FIRST + " confirmed"):
     if not pos and not neg:
         return "", None
     lines = []
@@ -112,9 +116,9 @@ def fewshot_block(pos, neg, label="the comic confirmed"):
                      + (f" | evidence: \"{r['evidence'][0]}\"" if r["evidence"] else "")
                      + (f" | his reason: {r['reason']}" if r.get("reason") else ""))
     for r in neg:
-        lines.append(f"- the comic RULED OUT: {r['src_title']} --{r['kind']}--> {r['dst_title']}"
+        lines.append(f"- {COMIC_FIRST} RULED OUT: {r['src_title']} --{r['kind']}--> {r['dst_title']}"
                      + (f" | evidence: \"{r['evidence'][0]}\"" if r["evidence"] else ""))
-    block = "Examples of the comic's own decisions (follow his judgment):\n" + "\n".join(lines)
+    block = "Examples of " + COMIC_FIRST + "'s own decisions (follow his judgment):\n" + "\n".join(lines)
     return block, sha(block)
 
 

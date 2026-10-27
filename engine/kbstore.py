@@ -16,6 +16,8 @@ from pathlib import Path
 
 from .config import Config
 
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
 CONFIRMED = {"confirmed", "edited"}
 REJECTED = {"rejected", "ruled_out", "superseded"}
 AUTO_STATUSES = {"confirmed_auto", "auto_confirmed", "auto"}
@@ -112,11 +114,11 @@ class KB:
     def examples(self, kinds: set[str], dst_prefix: str | None = None, n_pos=8, n_neg=3):
         """the comic's own confirmed (and ruled-out) edges, for few-shot prompts.
 
-        Only decisions by 'owner' count, the edge must still be in that state after
+        Only decisions by OWNER_ID count, the edge must still be in that state after
         replay, and anything auto-confirmed is never used."""
         pos, neg, seen = [], [], set()
         for d in reversed(self.decisions):
-            if d.get("target") != "edge" or d.get("by") != "owner" or d.get("auto"):
+            if d.get("target") != "edge" or d.get("by") != OWNER_ID or d.get("auto"):
                 continue
             eid = d.get("id")
             if eid in seen:

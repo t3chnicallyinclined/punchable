@@ -18,6 +18,7 @@ Copy rule (docs/SIMPLE.md): chips and refusals are plain words; no ratios, ids o
 """
 from __future__ import annotations
 
+import os
 import math
 import re
 from collections import Counter
@@ -25,6 +26,9 @@ from collections import Counter
 from .data import RATING_ORDER, Corpus, venue_short
 from .notebook import RATING_WORD, _texts, month_year, short_title, stage_words, tokens
 from .util import mmss
+
+COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
+COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)
 
 REFUSAL = "I couldn't find that in your notebook."
 TASK = "ask_chat"
@@ -282,7 +286,7 @@ def header(s: dict) -> str:
     return f"{kind} · \"{s['title']}\" · {s.get('date') or 'undated'}{st}"
 
 
-SYSTEM = ("You answer stand-up comic the comic's questions about his OWN material: his written bits, his ideas, "
+SYSTEM = ("You answer stand-up comic " + COMIC + "'s questions about his OWN material: his written bits, his ideas, "
           "his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). "
           "Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you "
           "what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never "

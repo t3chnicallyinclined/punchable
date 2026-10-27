@@ -42,6 +42,8 @@ from creative.data import Corpus, Vectors, set_key_from_dir  # noqa: E402
 from creative.store import Store  # noqa: E402
 from creative.util import mmss, now_iso  # noqa: E402
 
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
 JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat")
 # Jobs that download or crunch tapes: only the home worker runs them, never this process (not even --jobs inproc).
 WORKER_ONLY = {"process_set", "import_youtube"}
@@ -289,7 +291,7 @@ class LineStore(Store):
     def events(self) -> list[dict]:
         return [json.loads(x) for x in self._lines]
 
-    def append(self, op: str, id_: str, data: dict, by: str = "owner", ts: str | None = None) -> dict:
+    def append(self, op: str, id_: str, data: dict, by: str = OWNER_ID, ts: str | None = None) -> dict:
         ev = {"ts": ts or now_iso(), "op": op, "id": id_, "by": by, "data": data}
         probe = json.loads(json.dumps(self.items))  # validate on a copy: a bad op never reaches the log
         self._apply(probe, ev)
@@ -449,7 +451,7 @@ class Creative:
         if pend:
             return 202, {"status": "queued", "job": job_brief(pend[0]), "poll": f"/api/jobs/{pend[0]['id']}"}
         jid = f"job:{kind}-{hashlib.sha1((key + now_iso() + str(len(jobs.items))).encode()).hexdigest()[:12]}"
-        jobs.append("enqueue", jid, {"kind": kind, "key": key, "input": inp}, by="owner")
+        jobs.append("enqueue", jid, {"kind": kind, "key": key, "input": inp}, by=OWNER_ID)
         if self.jobs_mode == "inproc" and kb is not None and kind not in WORKER_ONLY:
             threading.Thread(target=self._run_inproc, args=(kb, jid), daemon=True).start()
         j = jobs.get(jid)
@@ -909,7 +911,7 @@ class Routes:
         probe = json.loads(json.dumps(store.items))  # all or nothing: every op is checked before any is written
         for op, data in ops:
             try:
-                S._apply(probe, {"ts": now_iso(), "op": op, "id": b["id"], "by": "owner", "data": data})
+                S._apply(probe, {"ts": now_iso(), "op": op, "id": b["id"], "by": OWNER_ID, "data": data})
             except (ValueError, KeyError) as e:
                 raise HttpError(400, str(e))
         for op, data in ops:
@@ -1010,7 +1012,7 @@ class Routes:
         probe = json.loads(json.dumps(store.items))
         for op, data in ops:
             try:
-                venue_apply(probe, {"ts": now_iso(), "op": op, "id": vid, "by": "owner", "data": data})
+                venue_apply(probe, {"ts": now_iso(), "op": op, "id": vid, "by": OWNER_ID, "data": data})
             except ValueError as e:
                 raise HttpError(400, str(e))
         for op, data in ops:

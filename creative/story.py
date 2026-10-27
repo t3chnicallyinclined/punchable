@@ -6,6 +6,7 @@ Store: comedy/kb/creative/storyboards.jsonl (append-only events) + storyboards.j
 """
 from __future__ import annotations
 
+import os
 import math
 import re
 from collections import defaultdict
@@ -13,6 +14,11 @@ from collections import defaultdict
 from .data import Corpus, creative_dir, venue_short
 from .store import Store
 from .util import mean, mmss, r2, sha8, slug, suffix_words, prefix_words
+
+COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
+COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 ROOMS_MIN = 2
 CLOSER_STRONG = 1.2   # mean vs_room for a strong closer
@@ -29,7 +35,7 @@ def _apply(items: dict, ev: dict) -> None:
             raise ValueError(f"storyboard {i} exists")
         items[i] = {"id": i, "title": d.get("title") or "Untitled", "joke_ids": list(d.get("joke_ids") or []),
                     "target_s": int(d.get("target_s") or 900), "notes": d.get("notes") or "",
-                    "source": "his" if ev.get("by") == "owner" else "inferred", "by": ev.get("by"),
+                    "source": "his" if ev.get("by") == OWNER_ID else "inferred", "by": ev.get("by"),
                     "seed": d.get("seed"), "created_at": ev["ts"], "updated_at": ev["ts"], "deleted": False}
         return
     b = items.get(i)
@@ -61,7 +67,7 @@ def _apply(items: dict, ev: dict) -> None:
         b["deleted"] = True
     else:
         raise ValueError(f"unknown op {op}")
-    if ev.get("by") == "owner":
+    if ev.get("by") == OWNER_ID:
         b["source"] = "his"
     b["updated_at"] = ev["ts"]
 
@@ -70,30 +76,30 @@ def board_store(directory=None) -> Store:
     return Store(directory or creative_dir(), "storyboards", _apply)
 
 
-def create(store: Store, title: str, joke_ids=(), target_s: int = 900, notes: str = "", by: str = "owner",
+def create(store: Store, title: str, joke_ids=(), target_s: int = 900, notes: str = "", by: str = OWNER_ID,
            ts: str | None = None, id_: str | None = None, seed: dict | None = None) -> dict:
     id_ = id_ or f"sb:{slug(title, 32)}-{sha8([title, ts or '', len(store.items)])}"
     return store.append("create", id_, {"title": title, "joke_ids": list(joke_ids), "target_s": target_s,
                                         "notes": notes, "seed": seed}, by=by, ts=ts)
 
 
-def update(store, id_, by="owner", ts=None, **fields):
+def update(store, id_, by=OWNER_ID, ts=None, **fields):
     return store.append("update", id_, {k: v for k, v in fields.items() if v is not None}, by=by, ts=ts)
 
 
-def add(store, id_, joke_id, at=None, by="owner", ts=None):
+def add(store, id_, joke_id, at=None, by=OWNER_ID, ts=None):
     return store.append("add", id_, {"joke_id": joke_id, "at": at}, by=by, ts=ts)
 
 
-def remove(store, id_, joke_id, by="owner", ts=None):
+def remove(store, id_, joke_id, by=OWNER_ID, ts=None):
     return store.append("remove", id_, {"joke_id": joke_id}, by=by, ts=ts)
 
 
-def move(store, id_, frm, to, by="owner", ts=None):
+def move(store, id_, frm, to, by=OWNER_ID, ts=None):
     return store.append("move", id_, {"from": frm, "to": to}, by=by, ts=ts)
 
 
-def set_jokes(store, id_, joke_ids, by="owner", ts=None):
+def set_jokes(store, id_, joke_ids, by=OWNER_ID, ts=None):
     return store.append("set_jokes", id_, {"joke_ids": list(joke_ids)}, by=by, ts=ts)
 
 
@@ -451,7 +457,7 @@ def bridge_draft(c: Corpus, a: str, b: str, complete=None) -> dict:
                 examples.append(f"- '{ev[0]['quote']}' -> '{ev[1]['quote']}'")
         if len(examples) >= 3:
             break
-    msg = (f"Write ONE short spoken bridge line (max 30 words) that the comic could say between two of his bits.\n"
+    msg = (f"Write ONE short spoken bridge line (max 30 words) that {COMIC_FIRST} could say between two of his bits.\n"
            f"End of '{c.title(a)}': \"{_edge_text(c, a, True)}\"\n"
            f"Start of '{c.title(b)}': \"{_edge_text(c, b, False)}\"\n"
            f"Ground it ONLY in these links between the two bits (cite their ids in `uses`):\n"

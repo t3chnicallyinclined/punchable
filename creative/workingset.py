@@ -8,6 +8,7 @@ notes and no punch-ups; a locked line is never offered to the model and never ta
 """
 from __future__ import annotations
 
+import os
 import math
 
 from . import story
@@ -15,6 +16,8 @@ from .data import Corpus, creative_dir, venue_short
 from .store import Store
 from .textdiff import phrases, present, toks
 from .util import cv, mean, mmss, r2, sha8, slug, trend
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 PUNCH_SCHEMA = {"type": "object", "properties": {"drafts": {"type": "array", "items": {
     "type": "object", "properties": {"line_no": {"type": "integer"}, "alt": {"type": "string"},
@@ -33,7 +36,7 @@ def _apply(items: dict, ev: dict) -> None:
         if i in items:
             raise ValueError(f"working set {i} exists")
         items[i] = {"id": i, "title": d["title"], "storyboard_id": d.get("storyboard_id"), "by": ev.get("by"),
-                    "source": "his" if ev.get("by") == "owner" else "inferred",
+                    "source": "his" if ev.get("by") == OWNER_ID else "inferred",
                     "created_at": ev["ts"], "updated_at": ev["ts"], "current": 1, "locks": {}, "deleted": False,
                     "versions": [{"v": 1, "created_at": ev["ts"], "note": d.get("note") or "v1: promoted from the storyboard",
                                   "target_s": int(d["target_s"]), "bits": list(d["bits"]), "by": ev.get("by")}]}
@@ -99,7 +102,7 @@ def current(ws: dict) -> dict:
     return ws["versions"][-1]
 
 
-def promote(c: Corpus, store: Store, board: dict, target_s: int | None = None, by: str = "owner",
+def promote(c: Corpus, store: Store, board: dict, target_s: int | None = None, by: str = OWNER_ID,
             ts: str | None = None, id_: str | None = None, bit_targets: dict | None = None) -> dict:
     bits = []
     for j in board["joke_ids"]:
@@ -112,30 +115,30 @@ def promote(c: Corpus, store: Store, board: dict, target_s: int | None = None, b
                                          "note": f"v1: promoted from storyboard '{board['title']}'"}, by=by, ts=ts)
 
 
-def new_version(store, ws_id, note, bits=None, target_s=None, by="owner", ts=None):
+def new_version(store, ws_id, note, bits=None, target_s=None, by=OWNER_ID, ts=None):
     return store.append("new_version", ws_id, {"note": note, "bits": bits, "target_s": target_s}, by=by, ts=ts)
 
 
-def lock_bit(store, ws_id, joke_id, by="owner", ts=None):
+def lock_bit(store, ws_id, joke_id, by=OWNER_ID, ts=None):
     return store.append("lock_bit", ws_id, {"joke_id": joke_id}, by=by, ts=ts)
 
 
-def unlock_bit(store, ws_id, joke_id, by="owner", ts=None):
+def unlock_bit(store, ws_id, joke_id, by=OWNER_ID, ts=None):
     return store.append("unlock_bit", ws_id, {"joke_id": joke_id}, by=by, ts=ts)
 
 
-def lock_line(c: Corpus, store, ws_id, joke_id, text, node, by="owner", ts=None):
+def lock_line(c: Corpus, store, ws_id, joke_id, text, node, by=OWNER_ID, ts=None):
     """Lock one line. It must be verbatim in the cited node (a set segment or a unit)."""
     if not c.verify({"node": node, "quote": text}):
         raise ValueError(f"line is not verbatim in {node}")
     return store.append("lock_line", ws_id, {"joke_id": joke_id, "text": text, "node": node}, by=by, ts=ts)
 
 
-def unlock_line(store, ws_id, joke_id, text, by="owner", ts=None):
+def unlock_line(store, ws_id, joke_id, text, by=OWNER_ID, ts=None):
     return store.append("unlock_line", ws_id, {"joke_id": joke_id, "text": text}, by=by, ts=ts)
 
 
-def add_try(store, ws_id, joke_id, text, by="owner", ts=None) -> tuple[dict, str]:
+def add_try(store, ws_id, joke_id, text, by=OWNER_ID, ts=None) -> tuple[dict, str]:
     """His own try-tonight note. Returns (working set, note id)."""
     from .util import now_iso
     ts = ts or now_iso()
@@ -143,7 +146,7 @@ def add_try(store, ws_id, joke_id, text, by="owner", ts=None) -> tuple[dict, str
     return store.append("try_add", ws_id, {"note_id": nid, "joke_id": joke_id, "text": text}, by=by, ts=ts), nid
 
 
-def tick_try(store, ws_id, note_id, done, by="owner", ts=None):
+def tick_try(store, ws_id, note_id, done, by=OWNER_ID, ts=None):
     return store.append("try_done", ws_id, {"note_id": note_id, "done": bool(done)}, by=by, ts=ts)
 
 

@@ -26,6 +26,7 @@ Drive.
 """
 from __future__ import annotations
 
+import os
 import json
 import re
 import sys
@@ -42,6 +43,8 @@ import kb as K  # noqa: E402
 from creative import merge as MG  # noqa: E402
 from creative.store import Store  # noqa: E402
 from creative.util import now_iso, sha8  # noqa: E402
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 STORE = "merges"
 CR.APPLY.setdefault(STORE, MG.store_apply)   # LineStore (SurrealDB mirror) looks the apply function up by name
@@ -209,7 +212,7 @@ def do_merge(cr, kb, body: dict) -> dict:
             raise
         rec = st.append("merge", mid, {"main": main, "others": others, "indexes": idx, "snapshot": snapshot,
                                        "group": body.get("group"), "reasons": body.get("reasons") or [],
-                                       "reason": reason}, by="owner")
+                                       "reason": reason}, by=OWNER_ID)
     return {"ok": True, "merge_id": mid, "merge": brief(rec), "indexes": idx,
             "drive": {"state": "queued", "note": "gsync on your PC writes the merged Google Doc and moves the old docs "
                                                  "into 'Merged (archive)' on its next pass"}}
@@ -227,7 +230,7 @@ def do_undo(cr, kb, body: dict) -> dict:
         if m["kind"] == "attach":
             if m["status"] != "attached":
                 raise HttpError(409, f"that note is already {m['status']}")
-            rec = st.append("detach", mid, {}, by="owner")
+            rec = st.append("detach", mid, {}, by=OWNER_ID)
             return {"ok": True, "merge_id": mid, "merge": brief(rec), "indexes": []}
         if m["kind"] != "merge" or m["status"] != "merged":
             raise HttpError(409, f"that merge is {m.get('status')}")
@@ -238,7 +241,7 @@ def do_undo(cr, kb, body: dict) -> dict:
             except K.DecisionError as e:
                 if e.status not in (409,):  # already undone by hand: fine, anything else is not
                     raise
-        rec = st.append("undo", mid, {"indexes": done}, by="owner")
+        rec = st.append("undo", mid, {"indexes": done}, by=OWNER_ID)
     return {"ok": True, "merge_id": mid, "merge": brief(rec), "indexes": done,
             "drive": {"state": "undo_queued", "note": "gsync moves the old docs back and releases the merged doc on its "
                                                       "next pass"}}
@@ -255,7 +258,7 @@ def do_dismiss(cr, kb, body: dict) -> dict:
         st = store(cr, kb)
         if did in st.items:
             return {"ok": True, "id": did, "already": True}
-        st.append("dismiss", did, {"jokes": js, "reason": (body.get("reason") or "").strip()[:500]}, by="owner")
+        st.append("dismiss", did, {"jokes": js, "reason": (body.get("reason") or "").strip()[:500]}, by=OWNER_ID)
     return {"ok": True, "id": did}
 
 

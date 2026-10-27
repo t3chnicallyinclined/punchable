@@ -32,6 +32,8 @@ sys.path.insert(0, str(HERE))
 import ai_overlay as AI  # noqa: E402  (inferred.json + analysis.json over graph.json)
 import auth as AUTH  # noqa: E402  (Keycloak bearer tokens when PK_AUTH=1)
 
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
 COMEDY = Path(os.path.expanduser(os.environ.get("COMEDY_DIR", "~/punchable-data")))  # your data folder
 DEFAULT_PORT = 8796
 MAX_BODY = 256 * 1024
@@ -274,7 +276,7 @@ class AppKB(K.KB):
             for d in lines:
                 rec = {"ts": K.now_iso(), "target": d["target"], "id": d["id"], "action": d["action"],
                        "before": d.get("before"), "after": d.get("after"), "reason": (d.get("reason") or "").strip(),
-                       "by": "owner"}
+                       "by": OWNER_ID}
                 out.append(self._append(rec))
         return out
 
@@ -1932,7 +1934,8 @@ def main():
                     help="bind address; anything but loopback needs PK_AUTH=1 (Keycloak tokens)")
     ap.add_argument("--creative-dir", type=Path, default=Path(os.environ.get("PUNCHABLE_CREATIVE_DIR") or COMEDY / "kb" / "creative"),
                     help="storyboards / working sets / venue pins / jobs (append-only jsonl + snapshot)")
-    ap.add_argument("--vectors", type=Path, default=HERE.parent / "tools" / "kb" / "cache",
+    ap.add_argument("--vectors", type=Path, default=Path(os.environ["PK_CACHE_DIR"]) / "kb" if os.environ.get("PK_CACHE_DIR")
+                    else HERE.parent / "tools" / "kb" / "cache",
                     help="bge-small vector cache creative/ reads (read-only)")
     ap.add_argument("--jobs", choices=["worker", "inproc"], default=os.environ.get("PK_JOBS", "worker"),
                     help="drafts and ask: queue for the home worker (default), or run in a thread here (local dev)")

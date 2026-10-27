@@ -5,16 +5,19 @@
 <dir>/<name>.json   snapshot = every event replayed: {"version": 1, "updated_at", "events", "items": {id: obj}}
 
 The snapshot is derived: delete it and `Store.rebuild()` replays the log. Writes are atomic
-(tmp + rename). `by` is "owner" for his own actions and "ai:<what>" for generated items, so
+(tmp + rename). `by` is OWNER_ID for his own actions and "ai:<what>" for generated items, so
 training data stays clean (KB_SCHEMA "AI-first display rule").
 """
 from __future__ import annotations
 
+import os
 import json
 from pathlib import Path
 from typing import Callable
 
 from .util import now_iso, write_json
+
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 
 class Store:
@@ -47,7 +50,7 @@ class Store:
             self._apply(self.items, ev)
             self.n_events += 1
 
-    def append(self, op: str, id_: str, data: dict, by: str = "owner", ts: str | None = None) -> dict:
+    def append(self, op: str, id_: str, data: dict, by: str = OWNER_ID, ts: str | None = None) -> dict:
         ev = {"ts": ts or now_iso(), "op": op, "id": id_, "by": by, "data": data}
         probe = json.loads(json.dumps(self.items))  # validate on a copy: a bad op never reaches the log
         self._apply(probe, ev)

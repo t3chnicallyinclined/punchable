@@ -16,6 +16,8 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
 EDGE_KINDS = ["part_of", "variant_of", "performed_as", "tag_of", "same_shape", "callback_to",
               "same_premise", "has_label", "segue", "custom"]
 STAGES = ["idea", "to_try", "testing", "working", "retired"]
@@ -612,7 +614,7 @@ class KB:
             d = self._build(v, req)
             d = {"ts": now_iso(), "target": d["target"], "id": d["id"], "action": d["action"],
                  "before": d.get("before"), "after": d.get("after"), "reason": (req.get("reason") or "").strip(),
-                 "by": "owner", **({"undo_of": d["undo_of"]} if "undo_of" in d else {})}
+                 "by": OWNER_ID, **({"undo_of": d["undo_of"]} if "undo_of" in d else {})}
             idx = self._append(d)
             return {"ok": True, "index": idx, "decision": d}
 
@@ -645,7 +647,7 @@ class KB:
                 inv = {"action": "edit", "before": public(cur) if cur else None,
                        "after": {k: before.get(k) for k in after}}
             reason = "undo" + (f": {d.get('reason')}" if d.get("reason") else "")
-            out = {"ts": now_iso(), "target": t, "id": did, **inv, "reason": reason, "by": "owner", "undo_of": index}
+            out = {"ts": now_iso(), "target": t, "id": did, **inv, "reason": reason, "by": OWNER_ID, "undo_of": index}
             out = {k: out[k] for k in ("ts", "target", "id", "action", "before", "after", "reason", "by", "undo_of")}
             idx = self._append(out)
             return {"ok": True, "index": idx, "decision": out}
@@ -701,7 +703,7 @@ class KB:
                     ex = v.edges[eid]
                     raise DecisionError(f"that connection already exists ({bucket(ex.get('status'))}); confirm or edit it instead", 409)
                 rec = {"src": src, "dst": dst, **{k: x for k, x in kf.items() if x is not None}, "status": "confirmed",
-                       "confidence": 1.0, "reason": req["reason"].strip(), "evidence": [], "source": "owner"}
+                       "confidence": 1.0, "reason": req["reason"].strip(), "evidence": [], "source": OWNER_ID}
                 return {"target": "edge", "id": eid, "action": "add", "before": None, "after": rec}
             eid = req.get("id")
             e = v.edges.get(eid)
