@@ -45,6 +45,10 @@ class SurrealError(RuntimeError):
     pass
 
 
+class ConnectionLost(SurrealError):
+    """The socket to SurrealDB dropped (e.g. the database restarted). The next call on the same Rpc reconnects."""
+
+
 def secrets() -> dict:
     out = {}
     if SECRETS.is_file():
@@ -165,15 +169,20 @@ class Rpc:
                  timeout: float = 300):
         self.url = rpc_url(port_)
         self.port = port_
-        self.ws = websocket.create_connection(self.url, timeout=timeout, subprotocols=["cbor"])
+        self.timeout = timeout
         self.n = 0
         self.lock = threading.RLock()
         self.notifications: list = []
         self.on_notify = None  # callback(msg) for live notifications, if set
+        self._open(ns, db, signin)
+
+    def _open(self, ns, db, signin):
+        self.ws = websocket.create_connection(self.url, timeout=self.timeout, subprotocols=["cbor"])
+        self._args = (ns, db, signin)
         self.ns, self.db = ns, db
         self.db_user = None
         if signin:
-            du = db_user() if port_ is None else None
+            du = db_user() if self.port is None else None
             if du:
                 # A database-level user (EDITOR on one ns/db). It signs in to that database and stays in it, so an
                 # Rpc(ns=None, db=None) still lands there.
@@ -192,15 +201,39 @@ class Rpc:
 
     def use(self, ns: str, db: str):
         self.ns, self.db = ns, db
+        self._args = (ns, db, self._args[2])
         self.call("use", [ns, db])
 
+    def _recv(self) -> bytes:
+        try:
+            b = self.ws.recv()
+        except websocket.WebSocketTimeoutException:
+            raise
+        except (websocket.WebSocketConnectionClosedException, ConnectionError, OSError) as e:
+            raise ConnectionLost(str(e) or type(e).__name__) from e
+        if not b:  # websocket-client returns '' once the server has closed the socket
+            raise ConnectionLost("server closed the connection")
+        return b
+
     def call(self, method: str, params: list):
+        """One request. A dropped socket (e.g. SurrealDB restarted) raises ConnectionLost for THIS call (it is not
+        replayed: a write may or may not have landed) and the next call reconnects and signs in again."""
         with self.lock:
+            if self.ws is None:
+                self._open(*self._args)
             self.n += 1
             my = self.n
-            self.ws.send_binary(enc({"id": my, "method": method, "params": params}))
+            try:
+                self.ws.send_binary(enc({"id": my, "method": method, "params": params}))
+            except (websocket.WebSocketConnectionClosedException, ConnectionError, OSError) as e:
+                self._drop()
+                raise ConnectionLost(str(e) or type(e).__name__) from e
             while True:
-                msg = dec(self.ws.recv())
+                try:
+                    msg = dec(self._recv())
+                except ConnectionLost:
+                    self._drop()
+                    raise
                 if msg.get("id") is None:  # live notification
                     self._notify(msg)
                     continue
@@ -261,17 +294,23 @@ class Rpc:
             self.ws.settimeout(timeout)
             try:
                 while True:
-                    msg = dec(self.ws.recv())
+                    msg = dec(self._recv())
                     if msg.get("id") is None:
                         return msg
             except websocket.WebSocketTimeoutException:
                 return None
             finally:
-                self.ws.settimeout(300)
+                if self.ws is not None:
+                    self.ws.settimeout(self.timeout)
+
+    def _drop(self):
+        self.close()
+        self.ws = None
 
     def close(self):
         try:
-            self.ws.close()
+            if self.ws is not None:
+                self.ws.close()
         except Exception:  # noqa: BLE001
             pass
 
