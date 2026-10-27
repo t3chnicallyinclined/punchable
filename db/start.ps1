@@ -7,7 +7,9 @@
 $ErrorActionPreference = 'Stop'
 $secrets = Join-Path $env:USERPROFILE '.punchable\secrets.env'
 $exe = if ($env:PUNCH_SURREAL) { $env:PUNCH_SURREAL } else { Join-Path $env:USERPROFILE '.punchable\bin\surreal.exe' }
-$root = (Join-Path $HOME 'punchable-data\db\punchable')
+. (Join-Path $PSScriptRoot '..\tools\local_env.ps1')   # COMEDY_DIR etc. from ~/.punchable/punchable.env
+if ($env:PUNCH_COMEDY) { $PkComedy = $env:PUNCH_COMEDY }
+$root = (Join-Path $PkComedy 'db\punchable')
 $data = Join-Path $root 'data'
 $logs = Join-Path $root 'logs'
 $pidFile = Join-Path $root 'surreal.pid'

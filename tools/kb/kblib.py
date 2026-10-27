@@ -7,7 +7,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMEDY = os.environ.get("COMEDY_DIR", os.path.expanduser("~/punchable-data"))
 CORPUS = os.path.join(COMEDY, "corpus")
-CACHE = os.path.join(HERE, "cache")
+CACHE = os.path.join(os.environ["PK_CACHE_DIR"], "kb") if os.environ.get("PK_CACHE_DIR") else os.path.join(HERE, "cache")
 OUT_DIR = os.path.join(COMEDY, "kb", "v0")
 
 

@@ -40,7 +40,7 @@ from tools.audio import vad as VAD  # noqa: E402
 COMEDY = Path(os.environ.get("COMEDY_DIR", os.path.expanduser("~/punchable-data")))
 SETS = COMEDY / "corpus" / "sets"
 RAW = COMEDY / "tapes" / "raw"
-CACHE = ROOT / "tools" / "audio" / "cache"
+CACHE = Path(os.environ["PK_CACHE_DIR"]) / "audio" if os.environ.get("PK_CACHE_DIR") else ROOT / "tools" / "audio" / "cache"
 GLOBAL_PY = os.environ.get("WHISPER_PY", r"C:\Python313\python.exe")
 
 # Bump a version when a stage's code changes what it writes.

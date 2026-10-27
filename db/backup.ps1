@@ -11,7 +11,9 @@ foreach ($line in Get-Content (Join-Path $env:USERPROFILE '.punchable\secrets.en
     if ($line -match '^\s*([A-Z_]+)\s*=\s*(.*)\s*$') { $cfg[$Matches[1]] = $Matches[2] }
 }
 $port = if ($cfg['SURREAL_PORT']) { $cfg['SURREAL_PORT'] } else { '8797' }
-$dir = (Join-Path $HOME 'punchable-data\db\punchable\backups')
+. (Join-Path $PSScriptRoot '..\tools\local_env.ps1')   # COMEDY_DIR etc. from ~/.punchable/punchable.env
+if ($env:PUNCH_COMEDY) { $PkComedy = $env:PUNCH_COMEDY }
+$dir = (Join-Path $PkComedy 'db\punchable\backups')
 New-Item -ItemType Directory -Force $dir | Out-Null
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
 $out = Join-Path $dir "punchable-$Namespace-$Database-$stamp.surql"

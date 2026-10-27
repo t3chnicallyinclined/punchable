@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -39,7 +40,7 @@ KB_V0 = COMEDY / "kb" / "v0"
 KB_V1 = COMEDY / "kb" / "v1"
 CORPUS = COMEDY / "corpus"
 FIXTURES = DESK / "api-dev" / "fixtures"
-VECTORS = DESK / "tools" / "kb" / "cache"
+VECTORS = Path(os.environ["PK_CACHE_DIR"]) / "kb" if os.environ.get("PK_CACHE_DIR") else DESK / "tools" / "kb" / "cache"
 CHOICE = sdb.DATA_ROOT / "graph_choice.json"   # what the last real load used; the API's files backend follows it
 EXTRA_VEC = sdb.DATA_ROOT / "cache" / "unit_vectors_extra.json"
 BATCH = 400

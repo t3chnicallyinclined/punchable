@@ -10,9 +10,11 @@ KB_V0 = os.path.join(COMEDY, "kb", "v0")
 GRAPH = os.path.join(KB_V0, "graph.json")
 INFERRED = os.path.join(KB_V0, "inferred.json")
 V1_BATCHES = os.path.join(COMEDY, "kb", "v1", "batches")
-JUDGE = os.path.join(HERE, "judge")
-CACHE = os.path.join(HERE, "cache")
-KB_VECTORS = os.path.join(DESK, "tools", "kb", "cache")  # read-only reuse
+# Judgments on your own sets are your material: kept in the data folder (PK_INFER_JUDGE_DIR to move them).
+JUDGE = os.environ.get("PK_INFER_JUDGE_DIR") or os.path.join(COMEDY, "kb", "infer_judge")
+_CACHE_ROOT = os.environ.get("PK_CACHE_DIR")  # caches outside the repo: <PK_CACHE_DIR>/infer and /kb
+CACHE = os.path.join(_CACHE_ROOT, "infer") if _CACHE_ROOT else os.path.join(HERE, "cache")
+KB_VECTORS = os.path.join(_CACHE_ROOT, "kb") if _CACHE_ROOT else os.path.join(DESK, "tools", "kb", "cache")  # read-only reuse
 SPIKE = os.path.join(DESK, "spikes", "01-vector-graph")  # transformers.js install (read-only)
 
 

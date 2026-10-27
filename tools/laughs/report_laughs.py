@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 
-CORPUS = Path(r"~/punchable-data\corpus\sets")
+CORPUS = Path(os.path.expanduser(os.environ.get("COMEDY_DIR", "~/punchable-data"))) / "corpus" / "sets"
 MATCH_TOL_S = 2.0
 
 

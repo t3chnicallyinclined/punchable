@@ -1,7 +1,9 @@
 # Stop Punchable's local SurrealDB (the process started by db\start.ps1). Data stays on disk.
 #   powershell -ExecutionPolicy Bypass -File db\stop.ps1
 $ErrorActionPreference = 'Stop'
-$root = (Join-Path $HOME 'punchable-data\db\punchable')
+. (Join-Path $PSScriptRoot '..\tools\local_env.ps1')   # COMEDY_DIR etc. from ~/.punchable/punchable.env
+if ($env:PUNCH_COMEDY) { $PkComedy = $env:PUNCH_COMEDY }
+$root = (Join-Path $PkComedy 'db\punchable')
 $pidFile = Join-Path $root 'surreal.pid'
 $secrets = Join-Path $env:USERPROFILE '.punchable\secrets.env'
 $port = 8797

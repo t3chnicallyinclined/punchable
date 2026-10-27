@@ -34,7 +34,8 @@ import numpy as np
 from .paths import DESK, INFERRED, SETS, set_dirs
 from .transcript import Transcript
 
-AUDIO_CACHE = os.path.join(DESK, "tools", "audio", "cache")
+AUDIO_CACHE = (os.path.join(os.environ["PK_CACHE_DIR"], "audio") if os.environ.get("PK_CACHE_DIR")
+               else os.path.join(DESK, "tools", "audio", "cache"))
 MIN_S, MAX_S, TARGET_S = 15.0, 60.0, 35.0
 PAD_START_MS = 300            # lead-in before the first word
 TAIL_MS = 600                 # after the laugh ends

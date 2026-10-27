@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
 import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,8 +24,9 @@ import kb as K  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 STATIC = HERE / "static"
-DEFAULT_KB = Path(r"~/punchable-data\kb\v0")
-DEFAULT_CORPUS = Path(r"~/punchable-data\corpus")
+_COMEDY = Path(os.path.expanduser(os.environ.get("COMEDY_DIR", "~/punchable-data")))
+DEFAULT_KB = _COMEDY / "kb" / "v0"
+DEFAULT_CORPUS = _COMEDY / "corpus"
 DEFAULT_PORT = 8795
 MAX_BODY = 256 * 1024
 NODE_ID_RE = re.compile(r"^[A-Za-z0-9:_@.+\-]{1,300}$")

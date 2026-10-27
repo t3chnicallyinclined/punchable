@@ -38,6 +38,10 @@ keycloak_*_token.json
 legal_rules.json
 gsync_docs.json
 venues.json
+persona_synonyms.json
+guard_terms.json
+punchable.env
+infra.env
 
 # ---- build output and caches ---------------------------------------------------------------------
 node_modules/

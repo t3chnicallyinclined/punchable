@@ -34,8 +34,9 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-CORPUS = Path(r"~/punchable-data\corpus\sets")
-TAPES = Path(r"~/punchable-data\tapes\raw")
+_COMEDY = Path(os.path.expanduser(os.environ.get("COMEDY_DIR", "~/punchable-data")))
+CORPUS = _COMEDY / "corpus" / "sets"
+TAPES = _COMEDY / "tapes" / "raw"
 PANNS_DIR = Path.home() / "panns_data"
 CKPT = PANNS_DIR / "Cnn14_DecisionLevelMax.pth"
 CKPT_NAME = "Cnn14_DecisionLevelMax_mAP=0.385"

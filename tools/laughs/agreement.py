@@ -27,7 +27,8 @@ import numpy as np
 
 COMEDY = Path(os.environ.get("COMEDY_DIR", os.path.expanduser("~/punchable-data")))
 SETS = COMEDY / "corpus" / "sets"
-OUT = Path(__file__).resolve().parents[1] / "audio" / "cache" / "agreement.json"
+OUT = (Path(os.environ["PK_CACHE_DIR"]) / "audio" if os.environ.get("PK_CACHE_DIR")
+       else Path(__file__).resolve().parents[1] / "audio" / "cache") / "agreement.json"
 COLLAR_S = 0.5
 BIN_S = 0.1
 
