@@ -881,7 +881,7 @@ def set_reference(meta: dict, d: str | None) -> dict | None:
     if meta.get("drive_id"):
         return {"kind": "drive", "url": f"https://drive.google.com/file/d/{meta['drive_id']}/view",
                 "name": meta.get("original_name")}
-    if src == "app_upload":
+    if src in ("app_upload", "voice_memo"):  # a memo dropped in from the phone: its file name and recording date
         return {"kind": "file", "name": meta.get("original_name"), "recorded_at": meta.get("recorded_at")}
     return None
 
