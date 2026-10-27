@@ -27,8 +27,8 @@ from creative.notebook import short_name_of  # noqa: E402
 EXAMPLES = [
     ("what do i have about millennials that works", "question"),
     ("oh and what if the vegan brings the grill", "bit"),
-    ("build me a tight 5", "question"),
-    ("new 7 for friday", "question"),
+    ("build me a tight 5", "command"),
+    ("new 7 for friday", "command"),
     ("How do I get from Vegan to Millennials?", "question"),
     ("What's my strongest closer right now", "question"),
     ("anything I wrote about billionaires I never tried", "question"),
@@ -56,6 +56,50 @@ EXAMPLES = [
 @pytest.mark.parametrize("text,kind", EXAMPLES)
 def test_classifier(text, kind):
     assert SY.classify(text)[0] == kind, (text, SY.classify(text))
+
+
+# Commands (docs/UX_2026-10.md "Commands"): a set list of a length, or a bit onto tonight's list. Negatives last:
+# a question about the new set, a bit that merely contains the words, a number out of range.
+COMMANDS = [
+    ("new 7 for friday", "new_set", {"minutes": 7, "title": "Friday · 7"}),
+    ("new 5", "new_set", {"minutes": 5}),
+    ("make a 10 for the club", "new_set", {"minutes": 10, "title": "Club · 10"}),
+    ("build me a tight 5", "new_set", {"minutes": 5}),
+    ("a new seven for saturday night", "new_set", {"minutes": 7, "title": "Saturday night · 7"}),
+    ("start a 15 at the cellar", "new_set", {"minutes": 15, "title": "Cellar · 15"}),
+    ("New 20 min set for the showcase.", "new_set", {"minutes": 20, "title": "Showcase · 20"}),
+    ("give me a quick 3", "new_set", {"minutes": 3}),
+    ("add kale trophy to tonight", "add_to_tonight", {"query": "kale trophy", "words": ["kale", "trophy"]}),
+    ("put the kale bit in tonight's set", "add_to_tonight", {"words": ["kale"]}),
+    ("stick the dentist one into the set", "add_to_tonight", {"words": ["dentist"]}),
+    ("throw robot vacuum on tonight’s list", "add_to_tonight", {"words": ["robot", "vacuum"]}),
+    ("add it to tonight", "add_to_tonight", {"words": []}),
+    ("Add the airport guy to my set for tonight", "add_to_tonight", {"words": ["airport", "guy"]}),
+    # negatives: questions, bits, out-of-range
+    ("what's new for friday", None, "question"),
+    ("new 7 for friday?", None, "question"),
+    ("is tonight's set too long", None, "question"),
+    ("I need a new 7 for friday", None, "bit"),
+    ("tonight's set is my therapy", None, "bit"),
+    ("the new 7 killed", None, "bit"),
+    ("new car smell is just chemicals", None, "bit"),
+    ("add in the kale bit somewhere", None, "bit"),
+    ("add my dad to the list of people who hate me", None, "bit"),
+    ("new 0 for friday", None, "question"),
+    ("new 500 for friday", None, "question"),
+]
+
+
+@pytest.mark.parametrize("text,op,want", COMMANDS)
+def test_commands(text, op, want):
+    kind, rule = SY.classify(text)
+    cmd = SY.parse_command(text)
+    if op is None:
+        assert cmd is None and kind == want, (text, kind, rule, cmd)
+        return
+    assert kind == "command" and rule == "command_" + op and cmd and cmd["op"] == op, (text, kind, rule, cmd)
+    for k, v in want.items():
+        assert cmd[k] == v, (text, k, cmd)
 
 
 def test_classifier_rules_named():
@@ -136,6 +180,76 @@ def test_override_is_his_own_line(api):
     # and the other way: a bit he says is a question
     st, r2 = a.post("/api/say", {"text": "the vacuum robot bit, the long version", "kind": "question"})
     assert st == 201 and r2["kind"] == "question" and r2["overridden"] and r2["guess"] == "bit"
+
+
+def test_command_new_set_is_his_board_with_undo(api):
+    a, t = api
+    st, r = a.post("/api/say", {"text": "new 7 for friday"})
+    assert st == 200 and r["kind"] == "command" and r["guess"] == "command" and r["rule"] == "command_new_set", r
+    cmd = r["command"]
+    assert cmd["done"] is True and cmd["minutes"] == 7 and cmd["board"]["title"] == "Friday · 7"
+    bid = cmd["board"]["id"]
+    # the guess is the app's; the board is his
+    ev = [e for e in events(t, "intents") if e["id"] == r["intent"]]
+    assert [e["op"] for e in ev] == ["classify", "acted"] and ev[0]["by"] == "ai:intent" and ev[0]["data"]["command"]["op"] == "new_set"
+    assert ev[1]["by"] == "owner" and ev[1]["data"]["ref"] == bid
+    _, bl = a.get("/api/boards")
+    b = next(x for x in bl["boards"] if x["id"] == bid)
+    assert b["source"] == "his" and b["target_s"] == 420 and b["n"] == 0
+    # Undo = the inverse op the response names (a delete, also his)
+    assert cmd["undo"]["PATCH"] == f"/api/boards/{bid}" and cmd["undo"]["body"] == {"delete": True}
+    st, u = a.post(cmd["undo"]["PATCH"], cmd["undo"]["body"], method="PATCH")
+    assert st == 200 and u["board"]["deleted"] is True
+    _, bl = a.get("/api/boards")
+    assert not any(x["id"] == bid for x in bl["boards"])
+    assert a.get(f"/api/boards/{quote(bid, safe=':')}")[0] == 404
+
+
+def test_command_add_asks_when_unsure_and_adds_on_his_pick(api):
+    a, t = api
+    _, page = a.get("/api/jokes?sort=performed&limit=2")
+    j0, j1 = page["items"][0], page["items"][1]
+    # a word no bit has: the app asks, nothing is written
+    st, r = a.post("/api/say", {"text": "add qwxzy flooglehorn to tonight"})
+    assert st == 200 and r["kind"] == "command" and r["command"]["op"] == "add_to_tonight"
+    assert r["command"]["done"] is False and r["command"]["ask"] == "none"
+    ev = [e for e in events(t, "intents") if e["id"] == r["intent"]]
+    assert [e["op"] for e in ev] == ["classify"]
+    # his pick (choice) is the write; tonight's board is the one he touched last
+    st, b = a.post("/api/boards", {"title": "Tonight test", "joke_ids": [j0["id"]], "target_s": 300})
+    bid = b["board"]["id"]
+    st, r = a.post("/api/say", {"text": "add qwxzy flooglehorn to tonight", "choice": j1["id"]})
+    assert st == 200 and r["command"]["done"] is True and r["command"]["board"]["id"] == bid and r["command"]["joke"]["joke_id"] == j1["id"]
+    assert r["command"]["position"] == 1 and r["command"]["undo"]["body"] == {"remove": {"joke_id": j1["id"]}}
+    ev = [e for e in events(t, "intents") if e["id"] == r["intent"]]
+    assert ev[-1]["op"] == "acted" and ev[-1]["by"] == "owner" and ev[-1]["data"]["joke"] == j1["id"]
+    _, v = a.get(f"/api/boards/{quote(bid, safe=':')}")
+    assert v["board"]["joke_ids"] == [j0["id"], j1["id"]]
+    # the same bit again: already there, nothing written twice
+    st, r = a.post("/api/say", {"text": "add it to tonight", "choice": j1["id"]})
+    assert st == 200 and r["command"]["already"] is True
+    _, v = a.get(f"/api/boards/{quote(bid, safe=':')}")
+    assert v["board"]["joke_ids"] == [j0["id"], j1["id"]]
+    # a query that half-matches two bits: the app asks, nothing is written (his pick is the write)
+    import re as _re
+    def word(t):
+        return next((w for w in _re.findall(r"[a-z]{4,}", t.lower()) if w not in ("the", "with", "that", "this", "from")), None)
+    w0, w1 = word(j0["title"]), word(j1["title"])
+    if w0 and w1 and w0 != w1:
+        _, v0 = a.get(f"/api/boards/{quote(bid, safe=':')}")
+        st, r = a.post("/api/say", {"text": f"add {w0} {w1} to tonight"})
+        assert st == 200 and r["command"]["op"] == "add_to_tonight", r
+        if len(r["command"]["candidates"]) >= 2 and not r["command"]["candidates"][0].get("sure"):
+            assert r["command"]["done"] is False and r["command"]["ask"] == "which"
+            _, v1 = a.get(f"/api/boards/{quote(bid, safe=':')}")
+            assert v1["board"]["joke_ids"] == v0["board"]["joke_ids"], "an unsure add wrote to the board"
+    # an unmistakable name: added at once (the screen shows Undo)
+    name = j0["short_name"] if j0.get("short_name") else j0["title"].split(" (")[0]
+    st, r = a.post("/api/say", {"text": f"add {name} to tonight"})
+    assert st == 200 and r["command"]["op"] == "add_to_tonight"
+    assert r["command"]["candidates"] and r["command"]["candidates"][0]["joke_id"] == j0["id"], r["command"]["candidates"]
+    assert a.post("/api/say", {"text": "add it to tonight", "choice": "joke:nope-not-a-bit"})[0] == 400
+    assert a.post("/api/say", {"text": "the vacuum robot bit", "kind": "command"})[0] == 400
 
 
 def test_guards(api):
