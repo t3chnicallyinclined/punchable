@@ -275,6 +275,8 @@ class Scanner:
         self.author_ok_files = set(cfg.get("author_ok_files", []))
         self.author_ok = re.compile(cfg["author_ok_pattern"], re.I) if cfg.get("author_ok_pattern") else None
         self.term_ok = [re.compile(p) for p in cfg.get("term_ok_patterns", [])]
+        # exact public identifiers that look like secrets (e.g. an EAS project id): listed one by one, never a wildcard
+        self.secret_ok = [re.compile(p) for p in cfg.get("secret_ok_patterns", [])]
 
     def path_hits(self, path: str):
         p = path.replace("\\", "/")
@@ -309,6 +311,8 @@ class Scanner:
                     s = m.group(0)
                     ctx = txt[max(0, m.start() - 60):m.end() + 20]
                     if FAKE.search(s) or FAKE.search(txt[m.start():m.end() + 30]):
+                        continue
+                    if any(o.fullmatch(s) for o in self.secret_ok):
                         continue
                     if name.startswith("(?i)(secret"):
                         val = re.split(r"[:=]\s*[\"']?", s, maxsplit=1)[-1]
@@ -416,7 +420,7 @@ def report(hits, label: str) -> int:
     if len(hits) > 60:
         print(f"  ... and {len(hits) - 60} more", file=sys.stderr)
     print("Remove or genericize those lines (git restore --staged / edit), then commit again. A real false positive:\n"
-          "add a narrow pattern to term_ok_patterns or generic_phrases in your private guard_terms.json.", file=sys.stderr)
+          "add a narrow pattern to term_ok_patterns, secret_ok_patterns (an exact public id) or generic_phrases in your private guard_terms.json.", file=sys.stderr)
     return 1
 
 
