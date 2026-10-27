@@ -46,6 +46,8 @@ spec:
             - { name: PORT, value: "8080" }
             - { name: PK_AUTH, value: "1" }
             - { name: PK_DATA, value: /tmp/punchable }
+            # the actor id written on your own edits (`by`); must match the id in your data (PK_OWNER_ID in config)
+            - { name: PK_OWNER_ID, value: "__PK_OWNER_ID__" }
             - { name: PUBLIC_URL, value: "https://__PK_DOMAIN__" }
             - { name: OIDC_ISSUER, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__" }
             - { name: OIDC_AUDIENCE, value: pk-api }

@@ -5,8 +5,10 @@ DNS, and images built on the server into the MicroK8s registry (`localhost:32000
 Punchable on your own computer; see the top-level README for that.
 
 ## Setup
-1. `cp infra/config.env.example infra/config.env` and fill it in (domain, auth host, namespaces, server IP, ssh target).
-2. `infra/ship.sh <step>` sends the committed tree to the server over ssh and runs `infra/deploy.sh <step>` there.
+1. `cp infra/config.env.example ~/.punchable/infra.env` and fill it in (domain, auth host, namespaces, server IP, ssh
+   target). `infra/config.env` (gitignored) also works; `PK_INFRA_ENV=<file>` picks another one.
+2. `infra/ship.sh <step>` sends the committed tree and that config file to the server over ssh and runs
+   `infra/deploy.sh <step>` there.
 
 | Step | What it does |
 |---|---|

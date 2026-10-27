@@ -18,13 +18,16 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CFG = {}
-for line in (HERE.parent / "config.env").read_text().splitlines():
+_CFG_FILE = Path(os.environ.get("PK_INFRA_ENV") or (HERE.parent / "config.env" if (HERE.parent / "config.env").exists()
+                 else Path.home() / ".punchable" / "infra.env"))
+for line in _CFG_FILE.read_text().splitlines():
     if "=" in line and not line.lstrip().startswith("#"):
-        k, v = line.split("=", 1); CFG[k.strip()] = v.strip()
+        k, v = line.split("=", 1); CFG[k.strip()] = v.strip().strip("\"'")
 DOMAIN, ORIGIN = CFG["PK_DOMAIN"], CFG["PK_ORIGIN_IP"]
 AUTH = CFG["PK_AUTH_HOST"]
 assert AUTH.endswith("." + DOMAIN), "auth host must be inside the zone"
-TAG = "punchable-infra (punchable/infra/dns/cf_dns.py)"
+# The comment that marks records this tool made (undo deletes only those). PK_DNS_TAG keeps an older tag working.
+TAG = CFG.get("PK_DNS_TAG") or "punchable-infra (punchable/infra/dns/cf_dns.py)"
 WANT = [("A", DOMAIN, ORIGIN), ("A", AUTH, ORIGIN)]
 SECRETS = Path.home() / ".punchable"
 LEDGER = SECRETS / "dns-created.json"

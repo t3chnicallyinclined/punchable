@@ -5,18 +5,27 @@
 #   dbload packs Punchable's text/JSON data HERE (python db/push_remote.pack, no audio), copies the tarball to the server
 #   over the same ssh, and loads it from a pod there (infra/deploy.sh dbload). The tarball is deleted after a load.
 #   infra/ship.sh dns plan|apply|undo     runs HERE (Cloudflare API, token from ~/.punchable/cloudflare.env)
-# Ships `git archive HEAD` (only committed work). Set PK_SSH_HOST (user@host) and PK_SSH_KEY in infra/config.env.
+# Ships `git archive HEAD` (only committed work) plus your config file as infra/config.env. The config is
+# $PK_INFRA_ENV, else infra/config.env, else ~/.punchable/infra.env (keep it there: it is never in git).
+# Set PK_SSH_HOST (user@host) and PK_SSH_KEY in it.
 set -euo pipefail
-. "$(dirname "$0")/config.env"
+CFG="${PK_INFRA_ENV:-}"
+if [ -z "$CFG" ]; then
+  if [ -f "$(dirname "$0")/config.env" ]; then CFG="$(dirname "$0")/config.env"; else CFG="$HOME/.punchable/infra.env"; fi
+fi
+[ -f "$CFG" ] || { echo "!! no infra config: copy infra/config.env.example to ~/.punchable/infra.env and fill it in"; exit 1; }
+. "$CFG"
 STEP="${1:?usage: infra/ship.sh <step> [arg]}"; ARG="${2:-}"
-HOST="${PK_SSH_HOST:?set PK_SSH_HOST (user@host) in infra/config.env}"
+HOST="${PK_SSH_HOST:?set PK_SSH_HOST (user@host) in $CFG}"
 KEY="${PK_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 cd "$(git rev-parse --show-toplevel)"
-if [ "$STEP" = dns ]; then exec python -P infra/dns/cf_dns.py "${ARG:-plan}"; fi
+if [ "$STEP" = dns ]; then PK_INFRA_ENV="$CFG" exec python -P infra/dns/cf_dns.py "${ARG:-plan}"; fi
 SHA="$(git rev-parse HEAD)"
 git diff --quiet HEAD -- infra || echo "!! infra/ has uncommitted changes: they are NOT shipped"
 DIR="projects/punchable-hosted/src-${SHA:0:12}"
 git archive --format=tar HEAD | ssh -i "$KEY" "$HOST" "mkdir -p ~/$DIR && tar -x -C ~/$DIR"
+# the config is not in git: send it next to the tree (deploy.sh, render.sh and keycloak/*.sh source infra/config.env)
+tr -d '\r' < "$CFG" | ssh -i "$KEY" "$HOST" "umask 077 && cat > ~/$DIR/infra/config.env"
 if [ "$STEP" = google-idp ]; then
   # "Sign in with Google": the OAuth client id + secret from ~/.punchable/google-oauth.env go over ssh STDIN into the
   # k8s Secret the Keycloak namespace/punchable-google-idp (deploy.sh google-idp). Never in argv, git, logs or the screen.
