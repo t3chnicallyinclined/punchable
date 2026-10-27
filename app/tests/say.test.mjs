@@ -9,8 +9,8 @@ const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fail
 const examples = [
   ["what do i have about millennials that works", "question"],
   ["oh and what if the vegan brings the grill", "bit"],
-  ["build me a tight 5", "question"],
-  ["new 7 for friday", "question"],
+  ["build me a tight 5", "command"],
+  ["new 7 for friday", "command"],
   ["How do I get from one bit to the next?", "question"],
   ["anything I wrote about billionaires I never tried", "question"],
   ["my strongest opener", "question"],

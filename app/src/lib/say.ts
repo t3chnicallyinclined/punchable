@@ -12,8 +12,18 @@ import type { Chat, Worker } from './ask';
 
 import type { SayKind } from './sayRules';
 export type { SayKind };
+/** A command's outcome (say_api.run_command): done (with Undo = the inverse board op), or a question back
+ *  (`ask`: which bit, or none matched) with the candidates for his one tap (`choice`). */
+export type CommandResult = {
+  op: 'new_set' | 'add_to_tonight'; done: boolean; minutes?: number; title?: string; query?: string; words?: string[];
+  board?: { id: string; title: string; target_s?: number; n?: number } | null; created?: boolean; already?: boolean; position?: number;
+  joke?: { joke_id: string; title: string; short_name: string; score?: number | null };
+  candidates?: { joke_id: string; title: string; short_name: string; score: number; nights?: number; sure?: boolean }[];
+  ask?: 'which' | 'none'; undo?: { PATCH: string; body: any };
+};
 export type SayResult = {
   kind: SayKind; intent: string; guess: SayKind; rule: string; overridden: boolean; text: string; worker: Worker;
+  command?: CommandResult;
   chat?: Chat;
   idea?: { ok: boolean; id: string; indexes: number[]; attach?: { decision: 'attach' | 'ambiguous' | 'new'; id?: string; into?: string; title?: string } };
   saved_to?: { joke_id: string; title: string | null } | null;
@@ -33,12 +43,12 @@ export type TonightScreen = {
 };
 
 export const say = {
-  send: (text: string, opts?: { kind?: SayKind; context?: SayContext }) =>
-    post<SayResult>('/api/say', { text, ...(opts?.kind ? { kind: opts.kind } : {}), ...(opts?.context ? { context: opts.context } : {}) }),
+  send: (text: string, opts?: { kind?: SayKind; context?: SayContext; choice?: string }) =>
+    post<SayResult>('/api/say', { text, ...(opts?.kind ? { kind: opts.kind } : {}), ...(opts?.context ? { context: opts.context } : {}), ...(opts?.choice ? { choice: opts.choice } : {}) }),
   tonight: () => get<TonightScreen>('/api/tonight/screen'),
 };
 
-export { guessKind, isQuestion, positionIn, shortNameOf } from './sayRules';
+export { guessKind, isQuestion, parseCommand, positionIn, shortNameOf } from './sayRules';
 
 // ---------------------------------------------------------------- the outbox (per-device; flushed when the API is back)
 const OUTBOX = 'pk.say.outbox.v1';
@@ -108,7 +118,7 @@ export function useOutbox() {
 }
 
 /** Say it: the API's answer, or (no network) a queued bit. An ApiError (4xx/5xx) is thrown: that is a real refusal. */
-export async function sayOrQueue(text: string, opts?: { kind?: SayKind; context?: SayContext }): Promise<{ queued: Queued } | { result: SayResult }> {
+export async function sayOrQueue(text: string, opts?: { kind?: SayKind; context?: SayContext; choice?: string }): Promise<{ queued: Queued } | { result: SayResult }> {
   try {
     return { result: await say.send(text, opts) };
   } catch (e) {
