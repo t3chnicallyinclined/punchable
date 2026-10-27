@@ -206,6 +206,15 @@ def main():
         s, _ = a.call("POST", "/api/worker/ideas", {"actor": "import:memo",
                                                     "text": "the petitioner and the respondent, index no 5, sworn to before me"})
         check(s == 422, "court text is refused")
+        s, c1 = a.call("POST", "/api/worker/claim", {"kinds": ["embed", "memolink"], "worker": "t"})
+        s2, c2 = a.call("POST", "/api/worker/claim", {"kinds": ["embed", "memolink"], "worker": "t"})
+        got = sorted(x["job"]["kind"] for x in (c1, c2) if isinstance(x, dict) and x.get("job"))
+        check(got == ["embed", "memolink"], f"an imported memo idea queued vector + linking jobs for the worker ({got})")
+        s, r3 = a.call("POST", "/api/ideas", {"text": "a jot he typed on his phone about parallel parking"})
+        s4, c4 = a.call("POST", "/api/worker/claim", {"kinds": ["embed"], "worker": "t"})
+        check(r3["decisions"][0]["by"] == os.environ.get("PK_OWNER_ID", "owner") and s4 == 200
+              and (c4 or {}).get("job", {}).get("kind") == "embed",
+              f"his own typed idea is by him, and the hosted API queues its vector job ({s4})")
         n = rr.last("RETURN count(SELECT id FROM decision WHERE by = 'import:memo');")
         check(n == 1, f"the database holds exactly that one import:memo line ({n})")
 

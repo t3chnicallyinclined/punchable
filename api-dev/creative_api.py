@@ -476,6 +476,16 @@ class Creative:
         j = jobs.get(jid)
         return 202, {"status": "queued", "job": job_brief(j), "poll": f"/api/jobs/{jid}"}
 
+    def enqueue_followup(self, st: dict, kind: str, by: str) -> dict | None:
+        """A follow-up job (embed, memolink) after new material: one QUEUED job per kind at a time. A job that is
+        already running may have read the data before this change, so a new one is queued behind it."""
+        jobs = st["jobs"]
+        if any(j["kind"] == kind and j["status"] == "queued" for j in jobs.items.values()):
+            return None
+        jid = f"job:{kind}-{hashlib.sha1((kind + now_iso() + str(len(jobs.items))).encode()).hexdigest()[:12]}"
+        jobs.append("enqueue", jid, {"kind": kind, "key": f"{kind}|{len(jobs.items)}", "input": {}}, by=by)
+        return jobs.get(jid)
+
     def _run_inproc(self, kb, jid: str):
         """Local dev only (PK_JOBS=inproc): the home worker's executor in a background thread of this API."""
         from worker import execute

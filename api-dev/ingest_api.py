@@ -347,9 +347,9 @@ def enqueue_followups(h, kb, actor: str):
     try:
         with cr.lock:
             st = cr.stores(kb)
-            cr.enqueue(st, "embed", "embed", {}, fresh=True, by=actor)
+            cr.enqueue_followup(st, "embed", actor)
             if actor in ("import:memo", "import:upload"):
-                cr.enqueue(st, "memolink", "memolink", {}, fresh=True, by=actor)
+                cr.enqueue_followup(st, "memolink", actor)
     except Exception as e:  # noqa: BLE001  the idea is saved either way
         sys.stderr.write(f"followup jobs not queued: {type(e).__name__}: {e}\n")
 

@@ -1812,6 +1812,14 @@ class Handler(BaseHTTPRequestHandler):
             src = by.split(":", 1)[1] if by.startswith("import:") else (
                 "gdocs" if (b.get("reason") or "").startswith("[gdocs]") else "app")
             out["attach"] = MG.after_idea(self.creative, kb, d["id"], text, src)
+            if self.jobs_on_upload and by == OWNER_ID:
+                # hosted: no model in this process, so his typed idea gets its vector from the home worker (job
+                # `embed`, one pending at a time); imports queue theirs in ingest_api.enqueue_followups
+                try:
+                    with self.creative.lock:
+                        self.creative.enqueue_followup(self.creative.stores(kb), "embed", OWNER_ID)
+                except Exception as e:  # noqa: BLE001  the idea is saved either way
+                    self.log_message("embed job not queued: %r", e)
         return self.send_json(out)
 
     def save_tonight(self, b: dict):
