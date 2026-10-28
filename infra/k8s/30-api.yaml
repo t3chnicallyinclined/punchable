@@ -98,8 +98,9 @@ spec:
             - { name: legal, mountPath: /etc/punchable/legal, readOnly: true }
       volumes:
         - name: tmp
-          # also stages uploads from the app until the home worker has processed them (then deleted: no media
-          # library), so 2 Gi bounds what can wait at once
+          # also stages uploads from the app until a transcriber has processed them (then deleted: no media
+          # library), so 2 Gi bounds what can wait at once. Since 2026-10-27 no worker transcribes: an upload
+          # waits here as `waiting_for: "transcriber"` (transcription moves to the phone).
           emptyDir: { sizeLimit: 2Gi }
         - name: legal
           secret: { secretName: punchable-legal-rules, optional: true, defaultMode: 0440 }

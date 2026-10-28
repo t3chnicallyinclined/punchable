@@ -27,6 +27,10 @@ Private settings in `~/.punchable/` (all optional; each one only adds to the pub
 | `infra.env` | `infra/ship.sh`, `infra/dns/cf_dns.py` | your domain, server, ssh target and namespaces (copy `infra/config.env.example`) |
 | `guard_terms.json` | `tools/guard/check.py` | private words the commit guard must block (names, hosts, other projects) and its allowlists |
 
+The worker runs on the server (`worker/README.md`, `infra/README.md` "The hosted worker"); the PC worker and its
+`install_task.ps1` are development-only. `engine/config.toml` is the development config (claude_code / ollama);
+`engine/config.hosted.toml` (`ENGINE_CONFIG`) is what the server runs (the Anthropic API only).
+
 `PK_OWNER_ID` is the actor id written on your own edits (`by` in `decisions.jsonl` and the stores). Keep it equal to
 the id already in your data, and set the same value in `infra.env` so the hosted API writes it too. `PK_COMIC_NAME`
 (and `PK_COMIC_FIRST`) is how the AI prompts refer to you; the default is "the comic".

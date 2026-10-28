@@ -1,4 +1,5 @@
-# Register (or remove) the Punchable home worker as a per-user scheduled task that starts at logon.
+# DEVELOPMENT ONLY (since 2026-10-27 the worker runs on the server: infra/k8s/35-worker.yaml, worker/README.md).
+# Register (or remove) the PC worker as a per-user scheduled task that starts at logon.
 #   powershell -ExecutionPolicy Bypass -File worker\install_task.ps1 [-Remove]
 param([switch]$Remove)
 $ErrorActionPreference = "Stop"

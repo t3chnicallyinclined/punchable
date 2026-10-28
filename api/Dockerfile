@@ -1,8 +1,8 @@
 # Punchable API (hosted on the server). Build context = repo root:
 #   infra/ship.sh build api   ->   docker build -f api/Dockerfile .   (from `git archive HEAD` on the server)
 # Slim Python, wheels only (no compilers anywhere), non-root uid 10001, read-only root filesystem: the only writes
-# go to /tmp (an emptyDir in infra/k8s/30-api.yaml). No ollama, no claude: drafts and ask are queued for the home
-# worker. The same image runs the dbload pod (python db/push_remote.py apply).
+# go to /tmp (an emptyDir in infra/k8s/30-api.yaml). No ollama, no claude: drafts and ask are queued for the hosted
+# worker (infra/worker/Dockerfile). The same image runs the dbload pod (python db/push_remote.py apply).
 # Base pinned by digest (python:3.13-slim-bookworm, 2026-10-22).
 FROM python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530 AS deps
 COPY api/requirements.txt /tmp/requirements.txt

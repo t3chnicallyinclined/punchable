@@ -1,4 +1,6 @@
-# Punchable engine configuration. Paths may use {comedy} and {engine}.
+# Punchable engine configuration for DEVELOPMENT on a PC (claude_code on the comic's subscription, else ollama).
+# The server runs engine/config.hosted.toml (ENGINE_CONFIG): the Anthropic API only, per task. Paths may use
+# {comedy} and {engine}.
 # Every path can be overridden on the CLI (--root makes a whole temp copy point elsewhere).
 
 [paths]
