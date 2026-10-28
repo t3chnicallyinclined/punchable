@@ -16,6 +16,8 @@ export default function TonightStack() {
       <Stack.Screen name="inbox" options={{ title: t('Inbox') }} />
       <Stack.Screen name="say" options={{ title: t('Asking') }} />
       <Stack.Screen name="settings" options={{ title: t('Settings') }} />
+      {/* his voice profile: a form sheet on the phone (HIG/sheets: the grabber, swipe down to dismiss, full height for the editor); a page on the web */}
+      <Stack.Screen name="voice" options={{ title: t('Voice profile'), ...(Platform.OS === 'web' ? {} : { presentation: 'formSheet', sheetAllowedDetents: [1.0], sheetGrabberVisible: true, sheetExpandsWhenScrolledToEdge: true }) }} />
       <Stack.Screen name="profile" options={{ title: t('You') }} />
       <Stack.Screen name="today" options={{ title: t('After a show') }} />
       <Stack.Screen name="import" options={{ animation: 'slide_from_bottom', title: t('Import sets') }} />

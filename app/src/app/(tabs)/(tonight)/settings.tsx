@@ -258,6 +258,7 @@ export default function SettingsPage() {
       </Card>
       <Card style={{ gap: 4 }}>
         <List>
+          <ListRow testID="open-voice" title="Voice profile" sub="What the AI reads before it drafts in your voice. Yours to edit." onPress={() => router.push('/voice' as any)} />
           <ListRow testID="open-learned" title="What I’ve learned about you" sub="The AI’s read of your taste, and how sure it is" onPress={() => router.push('/learned' as any)} />
           <ListRow testID="audit" title="Show what the AI decided" sub="Your notebook, filtered to things the AI set and you haven’t touched" onPress={() => router.push('/notebook?who=ai' as any)} />
           <ListRow testID="open-privacy" title="Privacy policy" sub="What Punchable stores, where, and your choices" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
