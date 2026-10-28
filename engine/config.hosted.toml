@@ -8,6 +8,9 @@
 #   sonnet 5.5  conversation and grounding: ask_chat, bridge drafts, fact checks, clip ranking
 #   haiku  5.5  classification: merge judge, voice-memo triage
 # `effort` is per task (low|medium|high|xhigh|max); `thinking` is adaptive on Opus/Sonnet and omitted on Haiku.
+# `fallbacks = ["default"]` on a task: a refusal (or an answer cut by max_tokens) is retried once on the default task's
+# model (Sonnet) before it reaches the comic as plain words ("Claude declined this one: ..."); never silent.
+# The voice profile (creative/voice.py) is fetched from the API per job, never a file here (no `voice_file` path).
 # The daily cap is PK_AI_DAILY_USD (default 2.00, engine/budget.py): over it, jobs stay queued with the reason shown.
 
 [paths]
@@ -52,12 +55,14 @@ providers = ["anthropic"]
 models = { anthropic = "claude-opus-5-5" }
 effort = "high"
 offline = true
+fallbacks = ["default"]      # a refusal or a cut answer on Opus: one more try on the default task's model (Sonnet)
 
 [tasks.creative_punchup]     # working-set punch-up drafts
 providers = ["anthropic"]
 models = { anthropic = "claude-opus-5-5" }
 effort = "high"
 offline = true
+fallbacks = ["default"]
 
 # text-only set analysis (engine/inbox.py over a transcript; the audio parts stay on the phone)
 [tasks.split]

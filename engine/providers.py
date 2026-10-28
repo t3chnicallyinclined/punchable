@@ -48,6 +48,35 @@ class RateLimited(ProviderError):
     pass
 
 
+class Refusal(ProviderError):
+    """The model declined (stop_reason "refusal"). The message IS the plain words the comic sees; `category` and
+    `explanation` are the API's stop_details. Never silent: the router tries the task's `fallbacks` models once each,
+    then raises this (not a generic "failed on all providers") so the words survive to the screen."""
+
+    def __init__(self, category: str | None = None, explanation: str | None = None):
+        self.category, self.explanation = category, explanation
+        why = (explanation or "").strip().rstrip(".")
+        tail = f": {why}" if why else (f" ({category})" if category else "")
+        super().__init__(f"Claude declined this one{tail}. Try rewording.")
+
+    @property
+    def plain(self) -> str:
+        return str(self)
+
+
+class CutShort(ProviderError):
+    """stop_reason "max_tokens": the answer was cut off. Plain words, same handling as a refusal."""
+
+    def __init__(self, max_tokens: int):
+        self.max_tokens = max_tokens
+        super().__init__(f"Claude ran out of room on this one (max_tokens {max_tokens}): the answer was cut short. "
+                         "Try a shorter idea.")
+
+    @property
+    def plain(self) -> str:
+        return str(self)
+
+
 class NoProvider(ProviderError):
     pass
 
@@ -202,9 +231,14 @@ class AnthropicBackend(Backend):
     """Claude through the official SDK (the hosted worker's only provider, engine/config.hosted.toml).
 
     - streams every request (`messages.stream` + `get_final_message()`): long drafts never hit the HTTP timeout;
-    - the system messages become text blocks with `cache_control` on the last one, so the stable instruction /
-      voice-profile prefix is served from the prompt cache on the next call (the volatile material is in the user
-      turn, after the breakpoint);
+    - the system messages become text blocks with `cache_control` on the FIRST one (the voice profile + craft rules,
+      creative/voice.py: stable across every task, long enough to cache) and on the last one (the task's own line),
+      so the prefix is served from the prompt cache on the next call; the volatile material is in the user turn,
+      after the breakpoints. The prefix must reach the model's minimum (512 tokens on Opus 5.5 / Sonnet 5.5) or the
+      cache silently never hits: a system block on its own does not; the profile block does;
+    - a refusal (stop_reason "refusal") raises Refusal, a cut answer (max_tokens) CutShort: plain words the comic can
+      read; the router retries each once on the task's `fallbacks` models (config: `fallbacks = ["default"]`, i.e.
+      the default task's model, Sonnet on the hosted config) before giving up, and never swallows them;
     - `thinking: {type: "adaptive"}` on Opus and Sonnet; Haiku is sent without the parameter (it thinks adaptively by
       default), and a task may set `thinking = "none"` to omit it anywhere;
     - `effort` per task (`[tasks.x] effort = "low"|"medium"|"high"|"xhigh"|"max"`) -> output_config.effort;
@@ -243,6 +277,9 @@ class AnthropicBackend(Backend):
               "messages": msgs}
         if sys_blocks:
             if self.pcfg.get("cache", True):
+                # the first block is the stable prefix shared by every task (the voice profile); the last is the
+                # task's own line: two breakpoints (of the four allowed), so a different task still reuses the first
+                sys_blocks[0]["cache_control"] = {"type": "ephemeral"}
                 sys_blocks[-1]["cache_control"] = {"type": "ephemeral"}
             kw["system"] = sys_blocks
         if self.thinks(model, task_cfg, self.pcfg):
@@ -279,9 +316,10 @@ class AnthropicBackend(Backend):
             extra["usd"] = round(budget.charge(model, u, task=task_cfg.get("_task", "?")), 6)
         if getattr(r, "stop_reason", None) == "refusal":
             det = getattr(r, "stop_details", None)
-            raise ProviderError("refusal" + (f" ({det.category})" if det is not None and getattr(det, "category", None) else ""))
+            raise Refusal(getattr(det, "category", None) if det is not None else None,
+                          getattr(det, "explanation", None) if det is not None else None)
         if getattr(r, "stop_reason", None) == "max_tokens":
-            raise ProviderError(f"max_tokens ({kw['max_tokens']}) cut the answer short")
+            raise CutShort(int(kw["max_tokens"]))
         text = "".join(b.text for b in r.content if getattr(b, "type", None) == "text")
         return text, u.input_tokens, u.output_tokens, extra
 
@@ -392,7 +430,6 @@ class Router:
 
     def complete(self, task: str, messages: list[dict], schema: dict | None = None, *, run_id: str | None = None,
                  fewshot_sha: str | None = None, request_path: bool = False) -> Completion:
-        from .budget import BudgetExceeded
         tcfg = self.cfg.task(task)
         tcfg["_task"] = task  # backends that account spend per task read it (AnthropicBackend)
         prompt_sha = sha({"messages": messages, "schema": schema})
@@ -402,46 +439,71 @@ class Router:
         attempts, last = [], None
         for name, model in chain:
             b = self.backends[name]
-            msgs = list(messages)
-            for attempt in range(2):  # one retry on unparseable / invalid JSON
-                t0 = time.perf_counter()
-                call_id = uuid.uuid4().hex[:12]
-                extra = None
-                try:
-                    got = b.call(model, msgs, schema, tcfg)
-                    text, tin, tout = got[0], got[1], got[2]
-                    extra = got[3] if len(got) > 3 else None  # {"usd", "cache_read", "cache_write"}: the SDK's usage
-                except BudgetExceeded as e:  # the day's cap: no other provider is tried, the caller keeps the job
-                    ms = int((time.perf_counter() - t0) * 1000)
-                    self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
-                              f"BudgetExceeded: {str(e)[:200]}")
-                    raise
-                except Exception as e:  # provider down, rate limited, refusal ... -> next provider
-                    ms = int((time.perf_counter() - t0) * 1000)
-                    self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
-                              f"{type(e).__name__}: {str(e)[:200]}")
-                    attempts.append((name, type(e).__name__))
-                    last = e
-                    break
-                ms = int((time.perf_counter() - t0) * 1000)
-                data, err = None, None
-                if schema:
-                    try:
-                        data = parse_json(text)
-                        validate(data, schema)
-                    except Exception as e:
-                        err = f"invalid JSON: {str(e)[:200]}"
-                self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, tin, tout, ms, err is None, err,
-                          extra)
-                if err is None:
-                    return Completion(text=text, data=data, task=task, provider=name, model=model, tokens_in=tin,
-                                      tokens_out=tout, ms=ms, call_id=call_id, prompt_sha=prompt_sha, attempts=attempts)
-                attempts.append((name, "invalid_json"))
-                last = ProviderError(err)
-                msgs = list(messages) + [{"role": "assistant", "content": text[:4000]},
-                                         {"role": "user", "content": f"That was not valid: {err}. "
-                                                                     + schema_instructions(schema)}]
+            for m in self.models_for(tcfg, name, model):
+                got = self._attempt(b, name, m, task, messages, schema, tcfg, run_id, fewshot_sha, prompt_sha, attempts)
+                if isinstance(got, Completion):
+                    return got
+                last = got
+                if not isinstance(got, (Refusal, CutShort)):
+                    break  # provider down, rate limited, bad JSON twice: the next provider, not the next model
+        if isinstance(last, (Refusal, CutShort)):
+            raise last  # the plain words survive to the caller (and to the screen)
         raise ProviderError(f"task {task!r} failed on all providers: {attempts}; last: {last}")
+
+    def models_for(self, tcfg: dict, provider: str, model: str) -> list[str]:
+        """The model, then the task's `fallbacks` (task names whose model on this provider is tried once each after a
+        refusal or a cut answer; `["default"]` = the default task's model). Duplicates and the model itself skipped."""
+        out = [model]
+        for t in tcfg.get("fallbacks") or []:
+            fm = (self.cfg.task(str(t)).get("models") or {}).get(provider)
+            if fm and fm not in out:
+                out.append(fm)
+        return out
+
+    def _attempt(self, b: Backend, name: str, model: str, task: str, messages: list[dict], schema, tcfg: dict,
+                 run_id, fewshot_sha, prompt_sha, attempts: list):
+        """One model on one provider, with one retry on unparseable / invalid JSON. Returns the Completion, or the
+        exception that ended it (BudgetExceeded is raised: the caller keeps the job queued)."""
+        from .budget import BudgetExceeded
+        msgs = list(messages)
+        last = None
+        for attempt in range(2):
+            t0 = time.perf_counter()
+            call_id = uuid.uuid4().hex[:12]
+            extra = None
+            try:
+                got = b.call(model, msgs, schema, tcfg)
+                text, tin, tout = got[0], got[1], got[2]
+                extra = got[3] if len(got) > 3 else None  # {"usd", "cache_read", "cache_write"}: the SDK's usage
+            except BudgetExceeded as e:  # the day's cap: no other provider is tried, the caller keeps the job
+                ms = int((time.perf_counter() - t0) * 1000)
+                self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
+                          f"BudgetExceeded: {str(e)[:200]}")
+                raise
+            except Exception as e:  # provider down, rate limited, a refusal, a cut answer
+                ms = int((time.perf_counter() - t0) * 1000)
+                self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
+                          f"{type(e).__name__}: {str(e)[:200]}")
+                attempts.append((name, type(e).__name__))
+                return e
+            ms = int((time.perf_counter() - t0) * 1000)
+            data, err = None, None
+            if schema:
+                try:
+                    data = parse_json(text)
+                    validate(data, schema)
+                except Exception as e:
+                    err = f"invalid JSON: {str(e)[:200]}"
+            self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, tin, tout, ms, err is None, err, extra)
+            if err is None:
+                return Completion(text=text, data=data, task=task, provider=name, model=model, tokens_in=tin,
+                                  tokens_out=tout, ms=ms, call_id=call_id, prompt_sha=prompt_sha, attempts=attempts)
+            attempts.append((name, "invalid_json"))
+            last = ProviderError(err)
+            msgs = list(messages) + [{"role": "assistant", "content": text[:4000]},
+                                     {"role": "user", "content": f"That was not valid: {err}. "
+                                                                 + schema_instructions(schema)}]
+        return last
 
     def _log(self, call_id, run_id, task, provider, model, prompt_sha, fewshot_sha, tin, tout, ms, ok, error,
              extra: dict | None = None):

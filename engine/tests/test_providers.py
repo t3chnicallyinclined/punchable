@@ -1,6 +1,8 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from engine.config import Config
 from engine.providers import AnthropicBackend, ClaudeCodeBackend, Router
 from engine.tests.conftest import MockBackend
@@ -228,7 +230,76 @@ def test_anthropic_refusal_and_cut_answers_fail_loudly(env):
         AnthropicBackend.client_factory = None
         AnthropicBackend.budget = None
     errs = [json.loads(l).get("error", "") for l in cfg.runs_log.read_text().splitlines()]
-    assert any("refusal" in e for e in errs) and any("max_tokens" in e for e in errs)
+    assert any(e.startswith("Refusal: Claude declined this one") for e in errs)
+    assert any(e.startswith("CutShort: ") and "max_tokens" in e for e in errs)
+
+
+def refusing_client(seen: list, refuse_models: set, explanation: str | None = "the request names a real person"):
+    """A fake client that refuses on some models and answers on the others (the fallback path)."""
+    ok = fake_client(seen, text='{"ok": true}')
+    det = SimpleNamespace(type="refusal", category="general_harms", explanation=explanation)
+    refused = SimpleNamespace(stop_reason="refusal", stop_details=det,
+                              usage=SimpleNamespace(input_tokens=5, output_tokens=1, cache_creation_input_tokens=0,
+                                                    cache_read_input_tokens=0), content=[])
+
+    class M:
+        def stream(self, **kw):
+            if kw["model"] in refuse_models:
+                seen.append(kw)
+                return FakeStream(refused)
+            return ok.messages.stream(**kw)
+
+        def create(self, **kw):
+            raise AssertionError("streams only")
+    return SimpleNamespace(messages=M())
+
+
+def test_refusal_on_opus_is_retried_once_on_the_default_model_then_plain_words(env):
+    """engine/config.hosted.toml: creative_riff has fallbacks = ["default"] (Sonnet). Opus refuses -> one Sonnet call;
+    both refuse -> Refusal with the words the comic reads, never "failed on all providers"."""
+    from engine.budget import Budget
+    from engine.providers import Refusal
+    cfg = hosted_cfg(env)
+    AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")
+    try:
+        seen = []
+        AnthropicBackend.client_factory = staticmethod(lambda: refusing_client(seen, {"claude-opus-5-5"}))
+        c = Router(cfg).complete("creative_riff", [{"role": "user", "content": "x"}])
+        assert [k["model"] for k in seen] == ["claude-opus-5-5", "claude-sonnet-5-5"]
+        assert c.model == "claude-sonnet-5-5" and c.attempts == [("anthropic", "Refusal")]
+        seen2 = []
+        AnthropicBackend.client_factory = staticmethod(lambda: refusing_client(seen2, {"claude-opus-5-5", "claude-sonnet-5-5"}))
+        with pytest.raises(Refusal) as e:
+            Router(cfg).complete("creative_riff", [{"role": "user", "content": "x"}])
+        assert [k["model"] for k in seen2] == ["claude-opus-5-5", "claude-sonnet-5-5"]
+        assert str(e.value) == "Claude declined this one: the request names a real person. Try rewording."
+        assert e.value.plain == str(e.value) and e.value.category == "general_harms"
+        assert "failed on all providers" not in str(e.value)
+        # a Sonnet task's fallback is its own model: no second call, the refusal is immediate and plain
+        seen3 = []
+        AnthropicBackend.client_factory = staticmethod(lambda: refusing_client(seen3, {"claude-sonnet-5-5"}, None))
+        with pytest.raises(Refusal) as e:
+            Router(cfg).complete("ask_chat", [{"role": "user", "content": "x"}])
+        assert [k["model"] for k in seen3] == ["claude-sonnet-5-5"]
+        assert str(e.value) == "Claude declined this one (general_harms). Try rewording."
+    finally:
+        AnthropicBackend.client_factory = None
+        AnthropicBackend.budget = None
+    assert Router(cfg).models_for(cfg.task("creative_riff"), "anthropic", "claude-opus-5-5") == ["claude-opus-5-5", "claude-sonnet-5-5"]
+    assert Router(cfg).models_for(cfg.task("merge_judge"), "anthropic", "claude-haiku-5-5") == ["claude-haiku-5-5"]
+
+
+def test_cache_breakpoints_land_on_the_first_and_last_system_blocks(env):
+    """The voice profile is the FIRST system block (shared by every task); the task line is the last. Both carry the
+    breakpoint, so a riff after a punch-up still reads the profile from the cache. One block: one breakpoint."""
+    b = AnthropicBackend("anthropic", {"cache": True}, anth_cfg(env))
+    kw = b.build_request("claude-opus-5-5", [{"role": "system", "content": "profile"}, {"role": "system", "content": "task"},
+                                             {"role": "user", "content": "u"}], None, {})
+    assert kw["system"] == [{"type": "text", "text": "profile", "cache_control": {"type": "ephemeral"}},
+                            {"type": "text", "text": "task", "cache_control": {"type": "ephemeral"}}]
+    kw = b.build_request("claude-opus-5-5", [{"role": "system", "content": "only"}, {"role": "user", "content": "u"}], None, {})
+    assert kw["system"] == [{"type": "text", "text": "only", "cache_control": {"type": "ephemeral"}}]
+    assert "cache_control" not in json.dumps(kw["messages"])  # the material is after the breakpoints
 
 
 def cc_cfg(env, enabled=True, offline=True):
