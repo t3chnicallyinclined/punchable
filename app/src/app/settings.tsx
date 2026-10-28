@@ -43,7 +43,8 @@ type Connections = {
     last_sync: string | null; last_ok: string | null; docs_linked: number; joke_docs: number; boards: number; conflicts: number; errors_last_run: number;
   };
   youtube: { sets: number };
-  ai: { provider: string; worker: { online: boolean; last_seen: string | null; name: string | null } };
+  ai: { provider: string; worker: { online: boolean; last_seen: string | null; name: string | null; where?: string; hosted?: boolean; model?: string | null; paused?: string | null } };
+  transcriber?: { where: string; waiting: number; note: string | null };
   audio_storage: { status: string; provider: string };
 };
 
@@ -70,10 +71,10 @@ function googleLine(g: Connections['google_docs'] | undefined): [string, Tone] {
   switch (g.status) {
     case 'connected': return [`Connected · synced ${ago(g.last_sync)}${docs}${conf}`, 'ok'];
     case 'not_synced_yet': return ['Set up · first sync hasn’t run yet', 'off'];
-    case 'stale': return [`Last synced ${ago(g.last_sync)}. Sync runs on your PC: is it on?${docs}`, 'warn'];
+    case 'stale': return [`Last synced ${ago(g.last_sync)}. Sync has not run in a day.${docs}`, 'warn'];
     case 'error': return [`Last sync ${ago(g.last_sync)} had ${g.errors_last_run} problem${g.errors_last_run === 1 ? '' : 's'}${g.last_ok ? ` · last good sync ${ago(g.last_ok)}` : ''}`, 'warn'];
     case 'api_down': return [`Your PC’s sync couldn’t reach Punchable ${ago(g.last_sync)}${g.last_ok ? ` · last good sync ${ago(g.last_ok)}` : ''}`, 'warn'];
-    case 'not_reported': return ['Syncs from your PC. This server hasn’t heard from it yet.', 'off'];
+    case 'not_reported': return ['This server hasn’t heard from a sync yet.', 'off'];
     default: return ['Not connected', 'off'];
   }
 }
@@ -121,7 +122,9 @@ function ConnectionsCard() {
   const d = c.data;
   const [gLine, gTone] = c.error && !d ? ['Can’t reach Punchable to check', 'warn' as Tone] : googleLine(d?.google_docs);
   const w = d?.ai.worker;
-  const aiLine = !d ? 'Checking…' : w?.online ? `Online · checked in ${ago(w.last_seen)}` : w?.last_seen ? `Offline · last seen ${ago(w.last_seen)}. Drafts wait until it’s back.` : 'Offline · not seen since Punchable started. Drafts wait until it’s on.';
+  const aiLine = !d ? 'Checking…' : w?.online && w.paused ? `Paused · ${w.paused}` : w?.online ? `Online · checked in ${ago(w.last_seen)}` : w?.last_seen ? `Offline · last seen ${ago(w.last_seen)}. Drafts wait until it’s back.` : 'Offline · not seen since Punchable started. Drafts wait until it’s on.';
+  const aiWhere = w?.model ? `${w.model}` : w?.hosted || w?.where === 'the server' ? 'The writer, on the server' : 'The writer';
+  const tr = d?.transcriber;
   const photosLine = Photos.supportsLibrary ? 'Recent set videos from your Photos. Only the audio is uploaded.' : 'On the phone app it reads recent set videos from Photos. Here: pick video files.';
   return (
     <Card testID="connections" style={{ gap: 0 }}>
@@ -136,9 +139,10 @@ function ConnectionsCard() {
           action={<Btn small testID="src-youtube-import" label="Import a link" onPress={() => router.push('/import' as any)} />} />
         <ConnRow testID="src-photos" name="Phone videos" line={photosLine} tone="off"
           action={<Btn small testID="src-photos-import" label="Import videos" onPress={() => router.push('/import' as any)} />} />
-        <ConnRow testID="src-ai" name="AI for drafts" line={`Your Claude, on your PC · ${aiLine}`} tone={!d ? 'off' : w?.online ? 'ok' : 'warn'}
+        <ConnRow testID="src-ai" name="AI for drafts" line={`${aiWhere} · ${aiLine}`} tone={!d ? 'off' : w?.online && !w.paused ? 'ok' : 'warn'}
           action={<Btn small testID="src-ai-check" label="Check again" onPress={() => c.reload()} />} />
-        <ConnRow testID="src-audio" name="Audio storage" line="Cloudflare R2 · not set up yet. Set audio stays on your PC for now." tone="off" />
+        <ConnRow testID="src-transcriber" name="Transcription" line={tr ? (tr.waiting ? `On your phone (coming) · ${tr.waiting} file${tr.waiting === 1 ? '' : 's'} waiting for a transcript` : 'On your phone (coming) · nothing waiting') : 'On your phone (coming)'} tone={tr?.waiting ? 'warn' : 'off'} />
+        <ConnRow testID="src-audio" name="Audio storage" line="Cloudflare R2 · not set up yet. No recording is kept on the server." tone="off" />
       </List>
     </Card>
   );

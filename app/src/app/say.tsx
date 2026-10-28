@@ -50,7 +50,7 @@ function QuestionEntry({ e, onNotQuestion }: { e: Entry; onNotQuestion: () => vo
           <View style={{ gap: 8 }}>
             {turn.status === 'thinking' && (
               c.worker && !c.worker.online
-                ? <View testID="say-offline" style={{ padding: 12, borderRadius: 14, backgroundColor: C.warnBg, gap: 2 }}><T style={{ color: C.amber, fontFamily: F.semi }}>Your PC is off</T><T v="mut">The question is saved. It gets answered when your PC is back on.</T></View>
+                ? <View testID="say-offline" style={{ padding: 12, borderRadius: 14, backgroundColor: C.warnBg, gap: 2 }}><T style={{ color: C.amber, fontFamily: F.semi }}>The writer is offline</T><T v="mut">The question is saved. It gets answered when the writer is back, usually under a minute.</T></View>
                 : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><ActivityIndicator color={C.amber} /><T v="mut">Reading your material…</T></View>
             )}
             {turn.status !== 'thinking' && <TurnViewNoQ t={turn} worker={c.worker} />}

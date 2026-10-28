@@ -84,8 +84,8 @@ export default function Import() {
   };
   const youtube = async () => {
     try {
-      await post('/api/import/youtube', { url: yt.trim() });
-      ui.snack('Queued: the server will fetch the audio');
+      const r = await post<{ waiting_for?: string | null; note?: string | null }>('/api/import/youtube', { url: yt.trim() });
+      ui.snack(r?.waiting_for === 'transcriber' ? `Queued. ${r.note || 'Transcription happens on your phone for now; this link is waiting.'}` : 'Queued: the server will fetch the audio');
       setYt('');
     } catch (e: any) {
       ui.snack(e instanceof ApiError && e.status === 404 ? 'YouTube import isn’t on the server yet (requested). Download the video and pick the file instead.' : `Couldn't queue it: ${e.message}`);

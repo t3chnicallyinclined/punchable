@@ -17,7 +17,8 @@ export type AskTurn = {
   id: string; q: string; status: 'thinking' | 'done' | 'failed'; asked_at: string; done_at?: string | null;
   answer?: string; found?: boolean; chips?: AskChip[]; dropped_n?: number; model?: string | null; error?: string;
 };
-export type Worker = { online: boolean; last_seen: string | null; where: string };
+/** The AI worker (the server since 2026-10-27): online = a heartbeat in the last 2 minutes; `paused` = over the day's AI budget, with the reason. */
+export type Worker = { online: boolean; last_seen: string | null; where: string; name?: string | null; hosted?: boolean; model?: string | null; paused?: string | null; online_window_s?: number };
 export type Chat = { id: string; title: string; created_at: string; updated_at: string; turns: AskTurn[]; worker: Worker };
 export type ChatListItem = { id: string; title: string; updated_at: string; questions: number; last_q: string | null; thinking: boolean };
 
@@ -133,8 +134,8 @@ function Thinking({ worker, testID }: { worker?: Worker; testID?: string }) {
   if (worker && !worker.online) {
     return (
       <View testID="ask-offline" style={[s.inner, { gap: 4, borderColor: C.addBorder, backgroundColor: C.warnBg }]}>
-        <T style={{ color: C.amber, fontFamily: F.semi }}>Your home PC is offline</T>
-        <T v="mut">Your question is saved. It gets answered as soon as your PC is back on.</T>
+        <T style={{ color: C.amber, fontFamily: F.semi }}>{worker.paused ? 'AI paused for today' : 'The writer is offline'}</T>
+        <T v="mut">{worker.paused ? `Your question is saved. ${worker.paused}.` : 'Your question is saved. It gets answered when the writer is back, usually under a minute.'}</T>
       </View>
     );
   }

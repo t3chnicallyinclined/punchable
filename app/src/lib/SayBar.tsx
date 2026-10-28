@@ -25,7 +25,7 @@ function MicGlyph({ size = 22, color = '#fff' }: { size?: number; color?: string
 
 /**
  * The bar. `onSay(text)` gets the typed or spoken words; the screen decides what to do (usually lib/say.sayOrQueue
- * and a hop to /say). `worker` (when the screen has it) shows the honest line when his PC is off.
+ * and a hop to /say). `worker` (when the screen has it) shows the honest line when the writer is offline or paused.
  */
 export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, testID = 'say', autoFocus, busy, pad = true }: {
   onSay: (text: string, how: 'typed' | 'spoken') => void; placeholder?: string; hint?: string | null; worker?: Worker | null;
@@ -40,7 +40,7 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
   const noted = useCallback((r: { status: string; queued?: boolean; error?: string }) => {
     if (r.status === 'error') return ui.snack(r.error || 'Could not save the voice note');
     if (r.queued) return ui.snack('No connection: the voice note is kept on this phone and goes up when Punchable is back');
-    ui.snack('Voice note sent · your PC transcribes it and it lands in the inbox');
+    ui.snack('Voice note sent · it waits for a transcript (on your phone for now), then lands in the inbox');
   }, [ui]);
   const talk = useHoldToTalk(heard, setInterim, noted);
   const send = () => {
@@ -49,7 +49,7 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
     setText('');
     onSay(t, 'typed');
   };
-  const line = worker && !worker.online ? 'Your PC is off: questions wait and get answered when it’s back. Bits save now.'
+  const line = worker && worker.online && worker.paused ? `AI paused for today: ${worker.paused}. Bits save now.` : worker && !worker.online ? 'The writer is offline: questions wait and get answered when it’s back. Bits save now.'
     : hint === undefined ? 'Say a bit or ask a question. It knows which.' : hint;
   const listening = talk.on && talk.mode === 'listen';
   const recording = talk.on && talk.mode === 'record';

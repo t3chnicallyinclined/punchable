@@ -262,7 +262,7 @@ function BitSheet({ b, wsId, onClose, onLock }: { b: WSBitRow | null; wsId: stri
           <T v="eb">Punch-up drafts</T>
           {!pu && <Btn testID="punchup" small v="add" label="Give me drafts" disabled={b.locked} onPress={async () => { try { setPu(await creative.punchup(wsId, b.joke_id)); } catch (e: any) { setPu({ status: 'provider_error', msg: e.message }); } }} />}
           {b.locked && <T v="small">Locked: no drafts on this bit.</T>}
-          {pu?.status === 'queued' && <T v="mut" testID="punchup-queued">Queued for your home worker. Drafts appear when they’re ready.</T>}
+          {pu?.status === 'queued' && <T v="mut" testID="punchup-queued">Queued for the writer. Drafts appear when they’re ready.</T>}
           {pu?.status === 'locked' && <T v="mut">Locked: no drafts.</T>}
           {(pu?.drafts || []).map((d: any, i: number) => (
             <View key={i} style={[s.draft, { gap: 6 }]}>

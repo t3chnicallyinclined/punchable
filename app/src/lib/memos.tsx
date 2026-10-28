@@ -113,7 +113,7 @@ export function AddRecordings({ onDone }: { onDone?: () => void }) {
       }
     }
     setN(null);
-    ui.snack(`${ok} of ${got.length} uploaded · your PC transcribes them; the recordings are not kept`);
+    ui.snack(`${ok} of ${got.length} uploaded · transcription happens on your phone for now; they wait. The recordings are not kept`);
     onDone?.();
   };
   return <TextBtn testID="memos-add-files" label={n ? `Uploading ${n}…` : 'Add voice memos from a file'} onPress={go} />;
@@ -138,12 +138,12 @@ export function VoiceMemos() {
         {data.available && p && p.total > 0 ? (
           <>
             <T v="semi" testID="memos-line">{p.line}</T>
-            {busy && !p.paused && <T v="small">{p.working ? 'Working through them now. New ones show up here as they finish.' : 'Waiting for your PC to pick them up.'}</T>}
+            {busy && !p.paused && <T v="small">{p.working ? 'Working through them now. New ones show up here as they finish.' : 'Waiting for a transcript: transcription happens on your phone for now.'}</T>}
             {busy && <WorkerLine what={`Transcribing ${p.waiting} memo${p.waiting === 1 ? '' : 's'}`} testID="memos-worker" />}
             {p.failed > 0 && <T v="small">{p.failed} couldn’t be transcribed; they stay in Google Drive.</T>}
           </>
         ) : (
-          <T v="mut">{data.available ? 'Send them to Google Drive › Punchable › Voice memos. Each one becomes a dated note here, or lands in the bit it belongs to.' : 'Voice memos are transcribed on your PC; open Punchable there to see them.'}</T>
+          <T v="mut">{data.available ? 'Send them to Google Drive › Punchable › Voice memos. Each one becomes a dated note here, or lands in the bit it belongs to.' : 'Voice memos are transcribed on your phone for now; the ones it has filed show here.'}</T>
         )}
         <AddRecordings onDone={reload} />
         <TextBtn testID="memos-howto" label={help ? 'Hide the steps' : 'How to send them from your iPhone'} onPress={() => setHelp(!help)} />

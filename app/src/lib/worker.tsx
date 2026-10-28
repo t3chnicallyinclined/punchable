@@ -1,6 +1,7 @@
-// The home worker's status, shared: one small request (GET /api/ask/chats carries `worker`), kept for 60 s, so
-// every screen that queues a job (ask, riff, punch-up, bridge, imports, memos) can show the same honest line:
-// "Your PC is off: this waits until it's back." Nothing here polls; a screen asks when it shows a queued state.
+// The AI worker's status (the server's worker since 2026-10-27), shared: one small request (GET /api/ask/chats
+// carries `worker`), kept for 60 s, so every screen that queues a job (ask, riff, punch-up, bridge, imports, memos)
+// can show the same honest line: "The writer is offline: queued, usually under a minute once it's back", or the
+// budget pause with its reason. Nothing here polls; a screen asks when it shows a queued state.
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { get } from './api';
@@ -43,15 +44,29 @@ export function useWorker(active = true): Worker | null {
   return w;
 }
 
-/** The line under anything queued for the home PC. Renders nothing while the PC is online or unknown. */
-export function WorkerLine({ what = 'This', testID, worker }: { what?: string; testID?: string; worker?: Worker | null }) {
+/**
+ * The line under anything queued for the AI worker. Renders nothing while the worker is online and working, or
+ * unknown. `waitingFor: 'transcriber'` is a different wait: no worker transcribes any more (the PC is retired),
+ * the phone will; that line shows whatever the worker's state.
+ */
+export function WorkerLine({ what = 'This', testID, worker, waitingFor, note }: { what?: string; testID?: string; worker?: Worker | null; waitingFor?: string | null; note?: string | null }) {
   const live = useWorker(!worker);
   const w = worker ?? live;
-  if (!w || w.online) return null;
+  if (waitingFor === 'transcriber') {
+    return (
+      <View testID={testID || 'waiting-transcriber'} accessibilityRole={'status' as any} style={{ padding: 10, borderRadius: 12, backgroundColor: C.warnBg, gap: 2 }}>
+        <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.amber }}>Waiting for a transcript</Text>
+        <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut }}>{note || 'Transcription happens on your phone for now; this file is waiting.'}</Text>
+      </View>
+    );
+  }
+  if (!w) return null;
+  if (w.online && !w.paused) return null;
+  const paused = w.online && !!w.paused;
   return (
-    <View testID={testID || 'worker-offline'} accessibilityRole={'status' as any} style={{ padding: 10, borderRadius: 12, backgroundColor: C.warnBg, gap: 2 }}>
-      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.amber }}>Your PC is off</Text>
-      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut }}>{what} waits and gets done when it’s back on.{w.last_seen ? '' : ' It hasn’t checked in since Punchable started.'}</Text>
+    <View testID={testID || (paused ? 'worker-paused' : 'worker-offline')} accessibilityRole={'status' as any} style={{ padding: 10, borderRadius: 12, backgroundColor: C.warnBg, gap: 2 }}>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.amber }}>{paused ? 'AI paused for today' : 'The writer is offline'}</Text>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut }}>{paused ? `${what} stays queued: ${w.paused}.` : `${what} is queued; usually under a minute once it’s back.${w.last_seen ? '' : ' It hasn’t checked in since Punchable started.'}`}</Text>
     </View>
   );
 }

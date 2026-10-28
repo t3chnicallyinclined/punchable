@@ -160,7 +160,7 @@ export default function JokeMapScreen() {
         <View style={{ gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
           {ideas.state === 'asking' && <T v="mut">Asking…</T>}
           {ideas.state === 'error' && <T v="mut">The AI didn’t answer.</T>}
-          {ideas.state === 'done' && ideas.r?.status === 'queued' && <T v="mut" testID="map-ideas-queued">Your home worker drafts these. They show up here when it’s done.</T>}
+          {ideas.state === 'done' && ideas.r?.status === 'queued' && <T v="mut" testID="map-ideas-queued">The writer drafts these. They show up here when it’s done.</T>}
           {ideas.state === 'done' && ideas.r?.status === 'no_tape' && <T v="mut">Ideas come from how it plays on stage. This one isn’t on tape yet.</T>}
           {ideas.state === 'done' && ideas.r?.status === 'locked' && <T v="mut">You locked this bit. No drafts.</T>}
           {ideas.state === 'done' && (ideas.r?.drafts || []).map((d: any, i: number) => (

@@ -164,7 +164,7 @@ export default function Inbox() {
           </List>
         </View>
       )}
-      {memos.data && !memos.data.available && <T v="small">Voice memos are transcribed on your PC; the ones it filed show here once it reports them.</T>}
+      {memos.data && !memos.data.available && <T v="small">Voice memos are transcribed on your phone for now; the ones it filed show here once they are reported.</T>}
       <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} testID="inbox-menu" title="This one" />
     </Screen>
   );

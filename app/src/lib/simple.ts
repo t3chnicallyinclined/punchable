@@ -37,7 +37,7 @@ export const simple = {
 };
 
 /**
- * A slow draft (facts, riff, punch-up, ask): 200 = the cached result; 202 = queued for his home worker. Polls the
+ * A slow draft (facts, riff, punch-up, ask): 200 = the cached result; 202 = queued for the writer on the server. Polls the
  * job a few times; still queued after that = {status: 'queued'} (the screen says so and keeps working).
  */
 export async function draft<T extends { status?: string }>(call: () => Promise<any>, onQueued?: () => void, tries = 8, every = 2500): Promise<T> {

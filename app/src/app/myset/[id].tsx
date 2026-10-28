@@ -292,7 +292,7 @@ function TagSheet({ open, onClose, onAdd, has }: { open: Open; onClose: () => vo
   );
 }
 
-/** A weak transition: an optional AI bridge draft (cached, or queued for the home worker), and his own line. */
+/** A weak transition: an optional AI bridge draft (cached, or queued for the writer on the server), and his own line. */
 function BridgeSheet({ open, setId, titleOf, onClose }: { open: Open; setId: string; titleOf: (j: string) => string; onClose: () => void }) {
   const ui = useUI();
   const [state, setState] = useState<Bridge | null>(null);
@@ -323,7 +323,7 @@ function BridgeSheet({ open, setId, titleOf, onClose }: { open: Open; setId: str
       <T v="mut" style={{ marginVertical: 6 }}>{open!.spot.words}</T>
       {!state && !busy && <Btn testID="set-bridge-ask" small v="add" label="Get a bridge idea (draft)" onPress={ask} style={{ alignSelf: 'flex-start' }} />}
       {busy && <T v="mut">Asking for a bridge…</T>}
-      {state?.status === 'queued' && <View testID="set-bridge-queued" style={[s.inner, { gap: 4 }]}><T v="semi">Queued</T><T v="mut">Your home worker writes bridge drafts. Come back to it in a minute.</T></View>}
+      {state?.status === 'queued' && <View testID="set-bridge-queued" style={[s.inner, { gap: 4 }]}><T v="semi">Queued</T><T v="mut">The writer drafts bridges. Come back to it in a minute.</T></View>}
       {state?.status === 'no_grounding' && <T v="mut">Nothing links these two to build a bridge from. Write your own, or move one.</T>}
       {state?.status === 'provider_error' && <T v="mut">The AI didn’t answer. Write your own below.</T>}
       {state?.status === 'ok' && state.text && (

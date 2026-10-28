@@ -240,7 +240,7 @@ export default function Write() {
         <View style={s.row}><T v="eb" style={{ flex: 1 }}>From your material</T><AIBadge /></View>
         {ask.state === 'asking' && <T v="mut">Looking through your material…</T>}
         {ask.state === 'error' && <T v="mut">The AI didn’t answer. Your own bits are below.</T>}
-        {ask.state === 'done' && ask.a?.status === 'queued' && <><T v="mut" testID="write-answer-queued">Your home worker is on it. The answer shows up here when it’s done.</T><WorkerLine what="The answer" /></>}
+        {ask.state === 'done' && ask.a?.status === 'queued' && <><T v="mut" testID="write-answer-queued">The writer is on it. The answer shows up here when it’s done.</T><WorkerLine what="The answer" /></>}
         {ask.state === 'done' && ask.a?.status !== 'queued' && (ask.a?.not_found || !ask.a?.answer ? <T>Not in your material.</T> : <T>{ask.a.answer}</T>)}
         {ask.state === 'done' && (ask.a?.sources || []).slice(0, 3).map((src, i) => (
           <View key={i} style={s.punch}><T style={{ fontSize: 15 }}>“{src.quote}”</T><T v="small">{src.title || ''}{src.date ? ` · ${monthYear(src.date)}` : ''}</T></View>
@@ -255,7 +255,7 @@ export default function Write() {
       {facts && <View style={s.row}><T v="eb" style={{ flex: 1 }}>Facts</T><AIBadge /></View>}
       {facts?.state === 'asking' && <T v="mut">Checking…</T>}
       {facts?.state === 'error' && <T v="mut">The fact check didn’t run ({facts.error}).</T>}
-      {facts?.state === 'done' && facts.r?.status === 'queued' && <><T v="mut" testID="write-facts-queued">Your home worker checks facts against their sources. They show up here when it’s done.</T><WorkerLine what="The fact check" /></>}
+      {facts?.state === 'done' && facts.r?.status === 'queued' && <><T v="mut" testID="write-facts-queued">The writer checks facts against their sources. They show up here when it’s done.</T><WorkerLine what="The fact check" /></>}
       {facts?.state === 'done' && (facts.r?.status === 'none' || facts.r?.status === 'provider_error') && <T v="mut">No fact it could back with a source.</T>}
       {facts?.state === 'done' && (facts.r?.facts || []).map((f, i) => (
         <View key={i} testID={`fact-${i}`} style={[s.inner, { gap: 4 }]}>
@@ -298,7 +298,7 @@ export default function Write() {
             <View style={{ gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
               {riff?.state === 'asking' && <T v="mut">Asking…</T>}
               {riff?.state === 'error' && <T v="mut">The AI didn’t answer ({riff.error}).</T>}
-              {riff?.state === 'done' && riff.r?.status === 'queued' && <><T v="mut" testID="write-ai-queued">Your home worker drafts these. They show up here when it’s done.</T><WorkerLine what="The riff" /></>}
+              {riff?.state === 'done' && riff.r?.status === 'queued' && <><T v="mut" testID="write-ai-queued">The writer drafts these. They show up here when it’s done.</T><WorkerLine what="The riff" /></>}
               {riff?.state === 'done' && riff.r?.status === 'no_grounding' && <T v="mut">Write a line first. The AI builds on your words.</T>}
               {riff?.state === 'done' && (riff.r?.ideas || []).filter((d) => !usedDrafts.has(d.text)).map((d, i) => (
                 <View key={i} testID={`ai-idea-${i}`} style={{ gap: 6, borderTopWidth: i ? 1 : 0, borderTopColor: C.draftBorder, paddingTop: i ? 8 : 0 }}>

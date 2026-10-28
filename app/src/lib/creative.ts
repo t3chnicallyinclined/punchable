@@ -84,10 +84,10 @@ export type WSBitRow = WSBit & {
 };
 export type WSView = { working_set: WorkingSet; version: WorkingSet['versions'][number]; status: WSStatus; perfected: Perfected; try_tonight: TryNote[]; bits: WSBitRow[]; __fixture?: boolean };
 export type WSListItem = { id: string; title: string; version: number; target_s: number; n: number; storyboard_id: string | null; updated: string; source?: Source };
-export type Job<T = any> = { id: string; kind: string; status: 'queued' | 'claimed' | 'done' | 'failed' | string; created_at?: string; done_at?: string | null; error?: string | null; result?: T | null };
+export type Job<T = any> = { id: string; kind: string; status: 'queued' | 'claimed' | 'done' | 'failed' | string; created_at?: string; done_at?: string | null; error?: string | null; result?: T | null; waiting_for?: 'transcriber' | string | null; note?: string | null };
 export type AskAnswer = { question?: string; answer?: string; status?: string; sources?: { node: string; quote: string; title?: string; date?: string; set?: string; start_ms?: number | null; joke_id?: string }[]; jokes?: { id: string; title: string }[]; provider?: string; model?: string; not_found?: boolean };
 /** A slow draft: 200 with the cached result, or 202 {status:"queued", job, poll}. */
-export type Queued<T> = (T & { cached?: boolean; job?: Job }) | { status: 'queued'; job: Job; poll: string; __status?: number };
+export type Queued<T> = (T & { cached?: boolean; job?: Job }) | { status: 'queued'; job: Job; poll: string; waiting_for?: 'transcriber' | string | null; note?: string | null; __status?: number };
 export type BitHistory = {
   joke_id: string; title: string; n_nights: number; nights: { date: string; set: string; venue: string; time_s: number; laugh_s: number; laugh_s_per_min: number; vs_room: number | null; ai_rating: string | null }[];
   best_night: any; trend: string | null; cv_laugh_s_per_min: number | null; stability: number; low_n: boolean;

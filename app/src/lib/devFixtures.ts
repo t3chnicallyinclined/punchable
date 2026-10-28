@@ -185,7 +185,7 @@ const bridgeAsked = new Map<string, number>();
 export async function bridge(from: string, to: string): Promise<Bridge> {
   const f = await file<Bridge>('bridge_draft.json');
   if (f.from === from && f.to === to) return clone(f);
-  // other pairs: the home worker hasn't drafted it; the real route answers 202 and the draft arrives later
+  // other pairs: the writer hasn't drafted it; the real route answers 202 and the draft arrives later
   const k = `${from}>${to}`;
   if (!bridgeAsked.has(k)) bridgeAsked.set(k, Date.now());
   return { from, to, draft: true, label: 'DRAFT · AI · not your words yet', status: 'queued', job: `job:dev-${k.length}`, __status: 202 };

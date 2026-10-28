@@ -464,7 +464,7 @@ function BrainstormTab({ id, title, wsId, locked, conn }: { id: string; title: s
     setState({ status: 'asking' });
     try {
       const r: any = await creative.punchup(wsId, id, fresh);
-      if (r.status === 'queued') setState({ status: 'queued', msg: 'Queued for your home worker. Drafts appear here when they’re ready.' });
+      if (r.status === 'queued') setState({ status: 'queued', msg: 'Queued for the writer. Drafts appear here when they’re ready.' });
       else setState({ status: r.status || 'ok', pu: r });
     } catch (e: any) {
       setState({ status: 'error', msg: `The AI provider didn’t answer (${e.message}).` });
@@ -488,7 +488,7 @@ function BrainstormTab({ id, title, wsId, locked, conn }: { id: string; title: s
       {!state && (
         <View style={{ gap: 6 }}>
           <Btn testID="give-ideas" label="Give me 3 ideas" v="add" onPress={() => give()} disabled={locked} />
-          <T v="small">{locked ? 'This bit is locked: no drafts on locked lines.' : 'Uses Claude Opus 5.5 on your home worker · sees the text of this bit only.'}</T>
+          <T v="small">{locked ? 'This bit is locked: no drafts on locked lines.' : 'Uses Claude Opus 5.5 on the server · sees the text of this bit only.'}</T>
         </View>
       )}
       {state?.status === 'asking' && <T v="mut">Asking…</T>}
