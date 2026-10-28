@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 
 DIM = 384
+MAX_CHARS = 2000
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 MODEL_NAME = "bge-small-en-v1.5"
 
@@ -37,13 +38,22 @@ class Embedder:
             tok.enable_truncation(512)
             tok.enable_padding()
             self._tok = tok
-            self._sess = ort.InferenceSession(str(self.bge_dir / "onnx" / "model.onnx"),
+            # No CPU memory arena: with it, onnxruntime keeps the peak of the largest batch (8 texts x 512 tokens of
+            # attention scores) for the life of the process. Measured 2026-10-28 on the hosted API: 824 MiB anonymous
+            # memory against a 1 GiB limit during the first sweep. Without it each batch's buffers go back to the OS.
+            so = ort.SessionOptions()
+            so.enable_cpu_mem_arena = False
+            so.intra_op_num_threads = max(1, min(4, os.cpu_count() or 1))
+            self._sess = ort.InferenceSession(str(self.bge_dir / "onnx" / "model.onnx"), so,
                                               providers=["CPUExecutionProvider"])
 
     def embed(self, texts: list[str], batch: int = 8) -> np.ndarray:
         if not texts:
             return np.zeros((0, DIM), np.float32)
         self._load()
+        # 512 tokens is about 2,000 characters of English: anything past that is cut by the tokenizer anyway, so cap
+        # here and the padding (and the attention buffers) of a batch stay bounded by the texts that matter
+        texts = [(t or " ")[:MAX_CHARS] for t in texts]
         order = sorted(range(len(texts)), key=lambda i: len(texts[i]))
         out = np.zeros((len(texts), DIM), np.float32)
         for s in range(0, len(order), batch):

@@ -44,7 +44,7 @@ from kb import bucket  # noqa: E402
 
 DIM = 384
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
-BATCH = 32
+BATCH = 16
 MAX_LIMIT = 50
 SNIPPET = 240
 
