@@ -17,7 +17,9 @@ Punchable on your own computer; see the top-level README for that.
 | `google-idp` | "Sign in with Google": the OAuth client id/secret from `~/.punchable/google-oauth.env`, over ssh stdin, into a Secret |
 | `keycloak` | the realm ConfigMap and its own import job (other realms are not touched) |
 | `keycloak-ingress` | the `auth.<domain>` Ingress and certificate |
-| `build api\|web` / `rollout api\|web` | build the images on the server, then roll out pinned to the digest |
+| `build api\|web\|worker` / `rollout api\|web\|worker` | build the images on the server, then roll out pinned to the digest |
+| `ai-secret` | the `ANTHROPIC_API_KEY=` line of `~/.punchable/secrets.env`, over ssh stdin, into the Secret `punchable-anthropic` (the hosted worker's key) |
+| `worker-secret` | the `PK_WORKER_SECRET=` line of the same file (the `pk-worker` client secret), over ssh stdin, into the Secret `punchable-worker` |
 | `dbload [--check]` | pack your text/JSON data here (`db/push_remote.py`), load it into SurrealDB from a pod. Refused after the online-first cutover |
 | `legal-rules` | your private `~/.punchable/legal_rules.json`, over ssh stdin, into the Secret the API's ingest routes read |
 | `ingress` | the `<domain>` Ingress and certificate |
@@ -29,19 +31,76 @@ Punchable on your own computer; see the top-level README for that.
 `~/.punchable/cloudflare.env`) and only touches the records it created.
 
 ## Online-first
-The database on the server is the source of truth once you cut over; your PC becomes a compute worker that posts
-results through `/api/worker/*` (`api-dev/ingest_api.py`, `worker/online.py`). The order (one last `dbload`, then
-`db/push_remote.py cutover` in the dbload pod's image, then `PK_ONLINE_FIRST=1` for the worker and gsync) and the
-rollback are in your private notes. `legal-rules` must run before the first worker post, so court material is
-refused on the server too. Uploads from the app wait in the API pod's `/tmp` (2 Gi) until the worker has processed
-them, then they are deleted; no recording is kept on the server.
+The database on the server is the source of truth once you cut over; a worker posts results through `/api/worker/*`
+(`api-dev/ingest_api.py`, `worker/online.py`). The order (one last `dbload`, then `db/push_remote.py cutover` in the
+dbload pod's image) and the rollback are in your private notes. `legal-rules` must run before the first worker post,
+so court material is refused on the server too. Uploads from the app wait in the API pod's `/tmp` (2 Gi); no
+recording is kept on the server.
+
+## The hosted worker (since 2026-10-27)
+
+Every AI job runs on the server: `k8s/35-worker.yaml` (Deployment `punchable-worker`, image `infra/worker/Dockerfile`,
+`python -m worker --hosted`) runs the same worker code the PC ran, online-first, against the in-cluster API Service
+(`http://punchable-api`) with the `pk-worker` client credentials, and calls the Anthropic API per
+`engine/config.hosted.toml` (Opus 5.5 for the writing, Sonnet 5.5 for conversation and grounding, Haiku 5.5 for
+classification; adaptive thinking, streamed, the system prefix cached). It has no GPU and no audio pipeline: it never
+claims `process_set` or `import_youtube`; those jobs stay queued as `waiting_for: "transcriber"` and the app says
+"transcription happens on your phone for now; this file is waiting". A set transcribed on the phone comes in through
+`POST /api/sets/transcript` and runs the text-only analysis (`set_text`). The PC worker is retired: `worker/README.md`
+keeps it as the development mode only.
+
+**Cost guard.** `PK_AI_DAILY_USD` (default `2.00`, set in `35-worker.yaml`) caps what the worker spends per UTC day,
+counted from the SDK's usage numbers per job kind (`engine/budget.py`; the ledger is in the pod's `/tmp`, so a pod
+restart starts the day's count again). Over the cap the worker keeps polling but takes no job; the reason shows in
+Settings > Connections and under anything queued. Raise it with a new value in the manifest and `rollout worker`.
+
+**Network.** `k8s/10-networkpolicy.yaml` `punchable-worker`: nothing in; out to the API pods on 8080 and to the public
+internet on 443 (api.anthropic.com and the auth host for its token; Calico here has no name-based rule, so the rule
+is "public, never a private range", as for the API and the backup). The API's ingress rule admits the worker's pods.
+The worker never reaches SurrealDB.
+
+**Liveness.** The worker touches `/tmp/pk-worker/heartbeat` on every poll and around every job; the probe restarts the
+pod when the file is older than 20 minutes three checks in a row (a job is at most ~15 minutes, the API's stale-claim
+window).
+
+Deploy, in this order (the orchestrator runs these; the first two read `~/.punchable/secrets.env` and never show
+the values):
+
+```bash
+infra/ship.sh worker-secret   # PK_WORKER_SECRET=  -> Secret punchable-worker   (the pk-worker client secret)
+infra/ship.sh ai-secret       # ANTHROPIC_API_KEY= -> Secret punchable-anthropic
+infra/ship.sh build api       # the API routes changed (waiting_for, claims, /api/sets/transcript)
+infra/ship.sh rollout api
+infra/ship.sh build worker    # downloads and checks the bge-small model at build (PK_WITH_BGE=0 to skip)
+infra/ship.sh rollout worker  # applies the NetworkPolicies, then the Deployment pinned to the digest
+infra/ship.sh build web && infra/ship.sh rollout web   # the app's copy ("the writer", the transcriber line)
+```
+
+Verify:
+
+```bash
+infra/ship.sh status                                   # punchable-worker 1/1, no restarts
+microk8s kubectl -n punchable logs deploy/punchable-worker --tail=20
+#   "hosted: Anthropic API · claude-opus-5-5, ... ; budget $2.00/day (spent $0.00); bge yes"
+#   "worker up: http://punchable-api (auth), kinds [...]"   -- never process_set / import_youtube
+curl -fsS -H "Authorization: Bearer $TOKEN" https://<domain>/api/connections | python -m json.tool
+#   ai.worker: online true, where "the server", name "punchable-worker-...", model "Anthropic API · ..."
+```
+Then ask a question or a riff in the app: it answers from the server within a minute, and the worker's log shows the
+job with its spend (`runs.jsonl` records `usd`, `cache_read`). The worker pod's own log never prints a key.
+
+Rollback: `infra/ship.sh rollout worker <previous digest>` (from `~/projects/punchable-hosted/images.log`) or scale it
+away (`microk8s kubectl -n punchable scale deploy/punchable-worker --replicas=0`): jobs then stay queued with the
+"writer is offline" line, nothing is lost. The PC worker (`python -m worker --online`) still runs against the same API
+if ever needed; it is not the plan.
 
 ## Files
 | Path | What |
 |---|---|
 | `config.env.example` | the only place the hostnames, namespaces and IP are set |
 | `render.sh` | fills `__PK_*__` placeholders in a manifest from `config.env`; refuses to output a leftover placeholder |
-| `k8s/` | namespace, default-deny NetworkPolicies, SurrealDB StatefulSet, API and web Deployments, Ingress |
+| `k8s/` | namespace, default-deny NetworkPolicies, SurrealDB StatefulSet, API, worker and web Deployments, Ingress |
+| `worker/` | the hosted worker's image (`Dockerfile`, wheels only, the bge model baked in) |
 | `keycloak/` | the `punchable` realm (Google login, PKCE, short tokens), its import job, the login theme, realm tests |
 | `web/` | nginx image for the exported web app |
 | `dns/cf_dns.py` | Cloudflare A records for the domain and the auth host |

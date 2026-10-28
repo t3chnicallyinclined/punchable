@@ -6,8 +6,10 @@
 #   google-idp               Secret the Keycloak namespace/punchable-google-idp from STDIN (ship.sh google-idp; before keycloak)
 #   keycloak                 realm ConfigMap + its own import job (no Keycloak restart, other realms untouched)
 #   keycloak-ingress         auth.<domain> Ingress + certificate (after DNS)
-#   build api|web            docker build, push to localhost:32000, record the digest (no rollout)
-#   rollout api|web [ref]    apply the Deployment pinned to a digest (default: last built)
+#   build api|web|worker     docker build, push to localhost:32000, record the digest (no rollout)
+#   rollout api|web|worker [ref]   apply the Deployment pinned to a digest (default: last built)
+#   ai-secret                Secret punchable-anthropic from STDIN (ship.sh ai-secret; ANTHROPIC_API_KEY=, never shown)
+#   worker-secret            Secret punchable-worker from STDIN (ship.sh worker-secret; PK_WORKER_SECRET=, never shown)
 #   dbload <bundle.tgz> [--check]   load Punchable's text/JSON data into SurrealDB from a pod (db/push_remote.py)
 #   ingress                  punchable.io Ingress + certificate (after DNS and both rollouts)
 #   backup-secret            Secret punchable-r2-backup from STDIN (ship.sh backup-secret; R2_* lines, never shown)
@@ -68,13 +70,16 @@ case "$STEP" in
   keycloak) bash infra/keycloak/apply.sh ;;
   keycloak-ingress) bash infra/keycloak/apply.sh ingress ;;
   build)
-    WHAT="${1:?build api|web}"; SHA="${SHA:?SHA}"; TAG="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:12}"
+    WHAT="${1:?build api|web|worker}"; SHA="${SHA:?SHA}"; TAG="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:12}"
     REPO="localhost:32000/punchable-$WHAT"
     case "$WHAT" in
       web) DF=infra/web/Dockerfile; ARGS=(--build-arg "PK_DOMAIN=$PK_DOMAIN" --build-arg "PK_AUTH_HOST=$PK_AUTH_HOST" --build-arg "PK_APPLE_TEAM_ID=${PK_APPLE_TEAM_ID:-TEAMID}") ;;
       api) DF="${API_DOCKERFILE:-api/Dockerfile}"; ARGS=()
            [ -f "$DF" ] || { echo "!! $DF not in this commit: the API image cannot be built yet"; exit 1; } ;;
-      *) echo "build api|web"; exit 1 ;;
+      # the hosted worker: engine + Anthropic SDK + the bge model (downloaded at build, checked by hash). PK_WITH_BGE=0
+      # builds without the model (the worker then leaves embed/memolink/ask queued and says so).
+      worker) DF=infra/worker/Dockerfile; ARGS=(--build-arg "PK_WITH_BGE=${PK_WITH_BGE:-1}") ;;
+      *) echo "build api|web|worker"; exit 1 ;;
     esac
     nice -n 10 docker build -f "$DF" "${ARGS[@]}" -t "$REPO:$TAG" .
     docker push "$REPO:$TAG"
@@ -83,10 +88,15 @@ case "$STEP" in
     echo "$(date -u +%FT%TZ) $WHAT $REF sha=$SHA" >> "$STATE/images.log"
     echo "built $REF (not rolled out)" ;;
   rollout)
-    WHAT="${1:?rollout api|web}"; REF="${2:-$(grep " $WHAT " "$STATE/images.log" | tail -1 | awk '{print $3}')}"
+    WHAT="${1:?rollout api|web|worker}"; REF="${2:-$(grep " $WHAT " "$STATE/images.log" | tail -1 | awk '{print $3}')}"
     [[ "$REF" =~ ^localhost:32000/punchable-$WHAT@sha256:[0-9a-f]{64}$ ]] || { echo "!! no pinned digest for $WHAT"; exit 1; }
-    F=infra/k8s/30-api.yaml; [ "$WHAT" = web ] && F=infra/k8s/40-web.yaml
+    F=infra/k8s/30-api.yaml; [ "$WHAT" = web ] && F=infra/k8s/40-web.yaml; [ "$WHAT" = worker ] && F=infra/k8s/35-worker.yaml
     [ "$WHAT" = api ] && { $K -n $NS get secret punchable-api >/dev/null || { echo "!! run base first"; exit 1; }; }
+    if [ "$WHAT" = worker ]; then
+      $K -n $NS get secret punchable-anthropic >/dev/null || { echo "!! run infra/ship.sh ai-secret first"; exit 1; }
+      $K -n $NS get secret punchable-worker >/dev/null || { echo "!! run infra/ship.sh worker-secret first"; exit 1; }
+      apply infra/k8s/10-networkpolicy.yaml   # the worker's egress and its ingress to the API
+    fi
     apply "$F" "$REF"
     $K -n $NS rollout status deploy/punchable-$WHAT --timeout=5m
     echo "$(date -u +%FT%TZ) rollout $WHAT $REF" >> "$STATE/deploys.log"
@@ -162,6 +172,29 @@ case "$STEP" in
       | $K apply --server-side --field-manager=punchable -f - >/dev/null
     unset RULES
     echo "punchable-legal-rules applied (not shown). The API reads it on its next start (infra/ship.sh rollout api)." ;;
+  ai-secret)
+    # STDIN = the ANTHROPIC_API_KEY=... line (from ship.sh ai-secret). Same path as backup-secret: a variable, printf,
+    # a pipe into the Secret punchable-anthropic; never argv, ps, a file on the host, or the output. The hosted worker
+    # (35-worker.yaml) reads it as an environment variable; the API never sees it.
+    ENVF="$(cat)"
+    grep -qE '^ANTHROPIC_API_KEY=sk-ant-[A-Za-z0-9_-]{20,}\s*$' <<<"$ENVF" || { echo "!! expected one ANTHROPIC_API_KEY=sk-ant-... line on stdin"; exit 1; }
+    [ "$(grep -c . <<<"$ENVF")" = 1 ] || { echo "!! exactly one line on stdin"; exit 1; }
+    printf '%s\n' "$ENVF" | $K -n $NS create secret generic punchable-anthropic --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF
+    echo "punchable-anthropic applied (value not shown). The worker reads it at start: infra/ship.sh rollout worker" ;;
+  worker-secret)
+    # STDIN = the PK_WORKER_SECRET=... line (from ship.sh worker-secret): the pk-worker client secret (Keycloak admin
+    # console > Clients > pk-worker > Credentials). Same path: never argv, ps, a file on the host, or the output.
+    ENVF="$(cat)"
+    grep -qE '^PK_WORKER_SECRET=\S{16,}\s*$' <<<"$ENVF" || { echo "!! expected one PK_WORKER_SECRET=... line on stdin"; exit 1; }
+    [ "$(grep -c . <<<"$ENVF")" = 1 ] || { echo "!! exactly one line on stdin"; exit 1; }
+    printf '%s\n' "$ENVF" | $K -n $NS create secret generic punchable-worker --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF
+    echo "punchable-worker applied (value not shown). Next: infra/ship.sh ai-secret, build worker, rollout worker" ;;
   backup-secret)
     # STDIN = R2_ENDPOINT / R2_BUCKET / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY lines (from ship.sh backup-secret): a
     # token scoped to the backup bucket only. Same path as google-idp: a variable, printf, a pipe; never argv or a file.

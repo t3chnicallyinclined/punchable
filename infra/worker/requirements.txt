@@ -1,0 +1,9 @@
+# Hosted worker (infra/worker/Dockerfile). Wheels only; the same versions the tests run on (Python 3.13).
+# The Anthropic SDK (engine/providers.py AnthropicBackend) and what the engine needs for the text-only kinds and the
+# embedding kinds (bge-small over onnxruntime + tokenizers). No whisper, no torch, no yt-dlp: nothing here hears audio.
+anthropic==0.104.1
+jsonschema==4.26.0
+numpy==2.2.6
+onnxruntime==1.27.0
+tokenizers==0.22.1
+httpx==0.28.1

@@ -1,0 +1,13 @@
+# BuildKit reads <Dockerfile>.dockerignore: send only what infra/worker/Dockerfile copies (never app/node_modules,
+# never data, never a .env).
+*
+!infra/worker/requirements.txt
+!worker/*.py
+!engine/*.py
+!engine/*.toml
+!creative/*.py
+!db/*.py
+!gsync/*.py
+!tools/explorer/kb.py
+!tools/kb/fetch_bge.py
+!infer/*.py

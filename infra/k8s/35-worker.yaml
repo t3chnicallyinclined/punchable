@@ -1,0 +1,80 @@
+# Punchable hosted worker: infra/worker/Dockerfile (python -m worker --hosted over the in-cluster API). Rolled out only
+# when told (infra/ship.sh rollout worker). __IMAGE_REF__ is a digest (localhost:32000/punchable-worker@sha256:...)
+# filled by infra/ship.sh rollout worker.
+# Since 2026-10-27 this is where every AI job runs (owner: "all phone / frontier models"; the PC is retired): the
+# Anthropic API per engine/config.hosted.toml, key from Secret punchable-anthropic (infra/ship.sh ai-secret),
+# worker credentials from Secret punchable-worker (infra/ship.sh worker-secret: the pk-worker client secret).
+# Outbound only: nothing listens. It talks to the API Service (punchable-api, port 80 -> 8080), to Keycloak on the
+# public auth host for its token, and to api.anthropic.com on 443 (10-networkpolicy.yaml punchable-worker).
+# It never claims a kind that needs audio (process_set, import_youtube): transcription happens on the phone.
+# Liveness = the worker's own heartbeat file (touched every poll and around every job; a job is at most ~15 min,
+# STALE_CLAIM_S): older than 20 minutes three times in a row -> restart. Recreate strategy: never two workers at once.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-worker, namespace: punchable }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  progressDeadlineSeconds: 600
+  selector: { matchLabels: { app: punchable-worker } }
+  template:
+    metadata: { labels: { app: punchable-worker } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: worker
+          image: __IMAGE_REF__
+          env:
+            # the API inside the cluster (Service punchable-api, port 80 -> the pod's 8080); never the public hostname
+            - { name: PK_API, value: "http://punchable-api" }
+            # the token comes from the public issuer so `iss` matches what the API checks (OIDC_ISSUER in 30-api.yaml)
+            - { name: PK_TOKEN_URL, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__/protocol/openid-connect/token" }
+            - { name: PK_WORKER_CLIENT_ID, value: pk-worker }
+            - { name: PK_HOSTED, value: "1" }
+            - { name: PK_ONLINE_FIRST, value: "1" }
+            - { name: ENGINE_CONFIG, value: /app/engine/config.hosted.toml }
+            - { name: PK_WORKSPACE, value: /tmp/pk-worker }
+            - { name: PK_CACHE_DIR, value: /tmp/pk-worker/cache }
+            - { name: PK_HEARTBEAT_FILE, value: /tmp/pk-worker/heartbeat }
+            - { name: PK_AI_SPEND_FILE, value: /tmp/pk-worker/ai_spend.json }
+            # the cost guard (engine/budget.py): USD per UTC day across every job kind; over it, jobs stay queued
+            # with the reason shown in the app. Owner's call; 2.00 is the default.
+            - { name: PK_AI_DAILY_USD, value: "2.00" }
+            # the comic's actor id on the ideas the worker posts is set by the API; this is the worker's own name
+            - name: PK_WORKER_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+          envFrom:
+            # PK_WORKER_SECRET: the pk-worker client secret (infra/ship.sh worker-secret). Required.
+            - secretRef: { name: punchable-worker }
+            # ANTHROPIC_API_KEY (infra/ship.sh ai-secret). Required: without it no task has a provider.
+            - secretRef: { name: punchable-anthropic }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          # Burstable on purpose: evicted before the box's Guaranteed databases. No GPU, no whisper: the engine, the
+          # SDK and the bge-small model (onnxruntime) over a workspace of text files.
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "test -n \"$(find /tmp/pk-worker/heartbeat -mmin -20 2>/dev/null)\""]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          # the disposable workspace (rebuilt from the API on every job), the heartbeat and the day's spend ledger
+          emptyDir: { sizeLimit: 2Gi }

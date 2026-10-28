@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
-#   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web | rollout api|web
+#   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker
 #                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
-#                 | legal-rules | cutover [--undo]
+#                 | legal-rules | cutover [--undo] | ai-secret | worker-secret
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
+#   ai-secret sends the ANTHROPIC_API_KEY= line of ~/.punchable/secrets.env over ssh STDIN into the Secret
+#   punchable-anthropic (deploy.sh ai-secret): the hosted worker's key. worker-secret does the same with the
+#   PK_WORKER_SECRET= line (the pk-worker client secret) into the Secret punchable-worker. Same rule: never in argv,
+#   git, logs or the screen.
 #   legal-rules sends ~/.punchable/legal_rules.json (gsync/rules.py's private list) over ssh STDIN into the Secret
 #   punchable-legal-rules, which the API's ingest routes apply to everything the home worker posts.
 #   dbload packs Punchable's text/JSON data HERE (python db/push_remote.pack, no audio), copies the tarball to the server
@@ -46,6 +50,16 @@ if [ "$STEP" = legal-rules ]; then
   [ -f "$F" ] || { echo "!! $F not found"; exit 1; }
   python -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$F" || { echo "!! $F is not JSON"; exit 1; }
   ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh legal-rules" < "$F"
+  exit $?
+fi
+if [ "$STEP" = ai-secret ] || [ "$STEP" = worker-secret ]; then
+  # The key / the worker's client secret live in ~/.punchable/secrets.env (never committed). Only the one matching
+  # line goes over ssh STDIN into deploy.sh, which pipes it into the Secret: never in argv, git, logs or the screen.
+  F="${PUNCHABLE_SECRETS_ENV:-$HOME/.punchable/secrets.env}"
+  [ -f "$F" ] || { echo "!! $F not found"; exit 1; }
+  if [ "$STEP" = ai-secret ]; then VAR=ANTHROPIC_API_KEY; else VAR=PK_WORKER_SECRET; fi
+  [ "$(grep -cE "^$VAR=." "$F")" = 1 ] || { echo "!! expected exactly one $VAR= line in $F"; exit 1; }
+  grep -E "^$VAR=" "$F" | tr -d '\r' | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh $STEP"
   exit $?
 fi
 if [ "$STEP" = backup-secret ]; then

@@ -85,8 +85,9 @@ spec:
       ports:
         - { protocol: TCP, port: 443 }
 ---
-# API: in from the ingress controller (host IP). Out to SurrealDB, Keycloak (JWKS) and the public internet on 443
-# (R2, model providers) -- never the cluster's private ranges.
+# API: in from the ingress controller (host IP) and from the hosted worker (its claims, results and file posts go
+# through the API, never to SurrealDB). Out to SurrealDB, Keycloak (JWKS) and the public internet on 443 (R2, model
+# providers) -- never the cluster's private ranges.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: punchable-api, namespace: punchable }
@@ -96,6 +97,7 @@ spec:
   ingress:
     - from:
         - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+        - podSelector: { matchLabels: { app: punchable-worker } }
       ports:
         - { protocol: TCP, port: 8080 }
   egress:
@@ -106,6 +108,34 @@ spec:
     - to:
         - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: __PK_KC_NS__ } }
           podSelector: { matchLabels: { app: keycloak } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+              - 100.64.0.0/10
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+# Hosted worker (35-worker.yaml): nothing in (it listens on nothing). Out to the API pods on 8080 (claims, results,
+# file posts: its only path to the data) and the public internet on 443: api.anthropic.com and the auth host for
+# its token. Calico here has no name-based rule, so 443 is "public, never a private range", the same shape as the
+# API and backup policies; the worker code itself talks to exactly those two hosts.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-worker, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-worker } }
+  policyTypes: ["Ingress", "Egress"]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: punchable-api } }
       ports:
         - { protocol: TCP, port: 8080 }
     - to:
