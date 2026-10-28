@@ -168,15 +168,20 @@ python -m pytest api-dev/tests/test_metrics.py -q
    digest in `70-bugsink.yaml` after the first pull (`docker pull bugsink/bugsink:2.6.2` then
    `docker inspect --format '{{index .RepoDigests 0}}' bugsink/bugsink:2.6.2`; `docker pull` is safe on the box,
    `docker run` is not).
-4. **Owner, in the UI** at `https://bugs.<domain>`: sign in, create a project **`punchable`** (platform: React
-   Native / JavaScript) and a second project **`punchable-api`** (Python). Each project page shows its **DSN**
-   (`https://<key>@bugs.<domain>/<id>`). A DSN is a public value by design (it only lets a client *submit* events).
-5. **API**: put the `punchable-api` DSN in `~/.punchable/secrets.env` as `SENTRY_DSN=https://...`, then
-   `infra/ship.sh sentry-secret` and `infra/ship.sh rollout api`. The API log says `crash reporting on: punchable-api@...`.
-   Without the Secret the API runs exactly as before.
-6. **App**: put the `punchable` DSN into `app/eas.json` as `EXPO_PUBLIC_SENTRY_DSN` for the `production` and
-   `preview` profiles (it is empty there now; empty = reporting off, the app runs fine). Commit it; it is not a secret.
-   For a local development build, export `EXPO_PUBLIC_SENTRY_DSN=...` before `npx expo start`; unset = off.
+4. **Projects** (done 2026-10-28 from the Bugsink pod with `bugsink-manage shell`, no UI step needed): team
+   `Punchable`, projects **`punchable-api`** (id 1) and **`punchable-app`** (id 2), the superuser a member of both.
+   Each project page at `https://bugs.<domain>` shows its **DSN** (`https://<key>@bugs.<domain>/<id>`). A DSN only
+   lets a client *submit* events; it is still kept out of the public repo so nobody can spam the store.
+5. **API**: the `punchable-api` DSN is the `SENTRY_DSN=` line of `~/.punchable/secrets.env`; `infra/ship.sh sentry-secret`
+   writes the Secret. A changed Secret needs a NEW pod: `rollout api` re-applies the same digest and changes nothing, so
+   `kubectl rollout restart deploy/punchable-api -n punchable` (done by hand 2026-10-28). The API log then says
+   `crash reporting on: punchable-api@...`; a `capture_message` from the pod showed up as issue 1 within seconds.
+6. **App**: the `punchable-app` DSN is the `APP_SENTRY_DSN=` line of `~/.punchable/secrets.env` and an **EAS environment
+   variable** `EXPO_PUBLIC_SENTRY_DSN` (scope project, visibility sensitive) in the `production`, `preview` and
+   `development` environments (`eas env:list --environment production`). Each build profile in `app/eas.json` names
+   its `environment`, which is how the variable reaches the build; nothing is written into the repo. Unset = off.
+   For a local dev client, export `EXPO_PUBLIC_SENTRY_DSN=...` before `npx expo start`; the dev server is left without
+   it on purpose so dev-build noise stays out of the store.
 7. **Source maps** (so a TestFlight stack trace shows file and line instead of minified offsets). In the Bugsink UI,
    create an **auth token** (Settings / API tokens). Store it as an EAS secret, never in the repo:
 

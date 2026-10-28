@@ -1,7 +1,8 @@
 // Crash and error reporting: @sentry/react-native pointed at the self-hosted Bugsink (infra/k8s/70-bugsink.yaml;
 // infra/OBSERVABILITY.md "Crash reports"). No SaaS account anywhere.
 //
-//   EXPO_PUBLIC_SENTRY_DSN   the project's DSN from the Bugsink UI, set per build profile in app/eas.json. Empty or
+//   EXPO_PUBLIC_SENTRY_DSN   the app project's DSN, an EAS environment variable (sensitive; `eas env:list`) pulled in by the
+//                            `environment` of each build profile in app/eas.json, never written into the repo. Empty or
 //                            unset = reporting OFF: the app runs exactly as before, nothing is captured, nothing is sent.
 //   EXPO_PUBLIC_ENV          production | preview (eas.json); a development build is always `dev`.
 //
