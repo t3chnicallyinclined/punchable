@@ -18,8 +18,20 @@ import { getPrefs, loadPrefs, onPrefs } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
 import { SET_MIN_S } from '@/lib/importgroup';
 import { installCrashReporter, setCrashContext } from '@/lib/crashReport';
+import { CrashScreen } from '@/lib/CrashScreen';
+import type { ErrorBoundaryProps } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * A throw anywhere in the tree ends on a readable screen instead of in RCTFatal. expo-router wraps the root route in
+ * its Try boundary when the layout exports ErrorBoundary (expo-router/build/useScreens.js, fromImport); nested routes
+ * render inside this layout's Stack, so their render errors propagate here too (React: the nearest boundary above).
+ * No providers or fonts are assumed: the layout itself may be what failed. The record is written for the next launch.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <CrashScreen error={error} retry={retry} />;
+}
 // A fatal JS error in a release build ends the process (RN: RCTExceptionsManager.reportFatal -> RCTFatal). This writes
 // the error to the phone first, so the next launch shows it on /login under "Last crash" (lib/crashReport.ts).
 installCrashReporter();
