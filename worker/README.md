@@ -32,6 +32,12 @@ all phone / frontier models"). The PC is retired. Transcription of audio recorde
   meta, analysis}.json` with every audio-derived field absent and `audio.status: "unavailable"`, and each funny unit
   posted as an idea (`ai:set_text`). Laughs, room heat and timing arrive only when a recording goes through the full
   pipeline;
+- **the voice profile** (`creative/voice.py`): fetched from the API before every job (`GET /api/worker/profile/voice`,
+  replaced only when `updated_at` moved) and put first in every riff, punch-up, bridge and Ask prompt with the craft
+  rules in the same block, where `engine/providers.py` sets the cache breakpoint; the log says its length, sha and
+  `updated_at`, never its text. No profile on the server: the log says so and the drafts run without it;
+- **refusals** are never silent: a model refusal is one more try on the task's fallback model (`fallbacks` in
+  `engine/config.hosted.toml`), then the plain words "Claude declined this one: ..." in the job's `why`;
 - **the cost guard** (`engine/budget.py`): `PK_AI_DAILY_USD` (default 2.00) per UTC day, counted from the SDK's
   usage numbers per job kind (`runs.jsonl` records `usd`, `cache_read`, `cache_write`). Over the cap the worker keeps
   polling but takes no job; its claim carries the reason, which the app shows ("AI paused for today: ...") and the

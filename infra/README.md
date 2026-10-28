@@ -69,6 +69,27 @@ counted from the SDK's usage numbers per job kind (`engine/budget.py`; the ledge
 restart starts the day's count again). Over the cap the worker keeps polling but takes no job; the reason shows in
 Settings > Connections and under anything queued. Raise it with a new value in the manifest and `rollout worker`.
 
+**The voice profile (2026-10-28).** What every writing prompt (riff, punch-up, bridge, Ask) starts with is his voice
+profile, as **data in the database** (`api-dev/profile_api.py`: `GET/PUT /api/profile/voice`; the worker's copy at
+`GET /api/worker/profile/voice`, fetched per job and cached by `updated_at`, `creative/voice.py`). It is never a file in
+the repo or in an image, and never logged. He edits it in Settings > Voice profile (Undo restores the previous
+version); the orchestrator loads it the first time from the private file on the desk:
+
+```
+python tools/profile/put_voice.py --file <private path> --dry-run     # reads, checks the legal rules, sends nothing
+python tools/profile/put_voice.py --file <private path>               # pk-worker credentials from ~/.punchable/secrets.env,
+                                                                      # PUT /api/worker/profile/voice as import:profile
+```
+
+(`--as owner` with the app's token in `$PK_OWNER_TOKEN` writes it as the owner instead.) Then the next job's worker
+log says `voice profile: loaded (N chars, sha ..., updated ...)` and Settings > Voice profile shows "Saved ... loaded
+from your desk". The prompts name him from `PK_COMIC_NAME` / `PK_COMIC_FIRST` in `~/.punchable/infra.env`
+(`render.sh` fills `__PK_COMIC_NAME__` / `__PK_COMIC_FIRST__` in `30-api.yaml` and `35-worker.yaml`; unset = "the
+comic", and the prompts read "a stand-up comic's", "his idea"). Both manifests must be rolled out for this
+(`infra/ship.sh rollout api`, `infra/ship.sh rollout worker`). To judge the prompt change on his own bits, on the desk:
+`python tools/prompts/eval_riff.py --bits <five joke ids> --profile <private path>` writes BEFORE/AFTER riffs to
+`$COMEDY_DIR/docs/punchable/evals/` (private; the local engine config, never the hosted API).
+
 **Network.** `k8s/10-networkpolicy.yaml` `punchable-worker`: nothing in; out to the API pods on 8080 and to the public
 internet on 443 (api.anthropic.com and the auth host for its token; Calico here has no name-based rule, so the rule
 is "public, never a private range", as for the API and the backup). The API's ingress rule admits the worker's pods.
