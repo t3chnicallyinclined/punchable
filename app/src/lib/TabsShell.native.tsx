@@ -23,11 +23,7 @@ export function TabsShell() {
   const toSort = ui.toSort > 0 ? String(ui.toSort) : '';
   return (
     <NativeTabs tintColor={C.amber} minimizeBehavior="onScrollDown" backBehavior="history">
-      {ACCESSORY && !!ui.bar && (
-        <NativeTabs.BottomAccessory>
-          <AccessoryBar />
-        </NativeTabs.BottomAccessory>
-      )}
+      {/* Owner decision 2026-10-28: no input bar in the tab bar (it also made the bar taller on Tonight than on the other tabs). */}
       <NativeTabs.Trigger name="(tonight)" testID="tab-tonight">
         <NativeTabs.Trigger.Label>Tonight</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="moon.stars.fill" />
