@@ -1,0 +1,139 @@
+# Punchable engine configuration for the HOSTED worker (infra/k8s/35-worker.yaml sets ENGINE_CONFIG to this file).
+# One provider: the Anthropic API, key from the environment (Secret punchable-anthropic). No ollama, no claude_code,
+# no GPU: the kinds that need audio (process_set, import_youtube) are never claimed by this worker (worker/__main__.py
+# TRANSCRIBER_KINDS). engine/config.toml stays the local-development config (claude_code on the comic's subscription).
+#
+# Model per task (owner decision 2026-10-27, "all phone / frontier models"):
+#   opus   5.5  the writing: riff, punch-up, and the text-only set analysis (split, match, propose, label, link)
+#   sonnet 5.5  conversation and grounding: ask_chat, bridge drafts, fact checks, clip ranking
+#   haiku  5.5  classification: merge judge, voice-memo triage
+# `effort` is per task (low|medium|high|xhigh|max); `thinking` is adaptive on Opus/Sonnet and omitted on Haiku.
+# The daily cap is PK_AI_DAILY_USD (default 2.00, engine/budget.py): over it, jobs stay queued with the reason shown.
+
+[paths]
+comedy_dir    = "~/punchable-data"   # the worker sets COMEDY_DIR to its workspace (worker/online.py)
+kb_dir        = "{comedy}/kb/v0"
+corpus_dir    = "{comedy}/corpus"
+out_corpus_dir = "{comedy}/corpus"
+inbox_dir     = "{comedy}/tapes/inbox"
+processed_dir = "{comedy}/tapes/processed"
+vocab_file    = "{comedy}/voice/JOKE_SCIENCE.md"
+tools_dir     = "{engine}/../tools"
+vectors_dir   = "{engine}/../tools/kb/cache"
+bge_dir       = "/opt/punchable/models/bge-small-en-v1.5"   # baked into the worker image (infra/worker/Dockerfile)
+laughs_python = "/nonexistent"        # no audio pipeline here
+secrets_env   = "/nonexistent"        # the key comes from the environment only (never a file in the image)
+
+[inbox]
+set_min_seconds = 240
+match_candidates = 5
+match_min_confidence = 0.5
+link_candidates = 3
+audio_ext = [".mp3", ".m4a", ".wav", ".opus", ".ogg", ".aac", ".flac", ".webm", ".mp4", ".mov", ".mkv", ".m4v"]
+
+# ---- providers --------------------------------------------------------------
+[providers.anthropic]
+kind = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+max_tokens = 16000
+thinking = "adaptive"
+stream = true
+cache = true
+
+# ---- routing per task -------------------------------------------------------
+[tasks.default]
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "medium"
+
+# the writing: Opus
+[tasks.creative_riff]        # Write's folded "Ideas from the AI"
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+
+[tasks.creative_punchup]     # working-set punch-up drafts
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+
+# text-only set analysis (engine/inbox.py over a transcript; the audio parts stay on the phone)
+[tasks.split]
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+
+[tasks.match_judge]
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "medium"
+offline = true
+
+[tasks.propose_joke]
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+
+[tasks.label]
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "medium"
+offline = true
+
+[tasks.link_judge]
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "medium"
+offline = true
+
+# conversation and grounding: Sonnet
+[tasks.ask_chat]             # Ask: one turn with his notebook (the API retrieves and gates)
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "medium"
+offline = true
+
+[tasks.creative_bridge]      # storyboard bridge drafts
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "medium"
+offline = true
+
+[tasks.creative_facts]       # Write's "Check this"
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "medium"
+offline = true
+
+[tasks.ask_plan]
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "low"
+
+[tasks.ask_answer]
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "medium"
+
+[tasks.clips_rank]
+providers = ["anthropic"]
+models = { anthropic = "claude-sonnet-5-5" }
+effort = "low"
+offline = true
+
+# classification: Haiku
+[tasks.merge_judge]          # same-idea pairs (creative/merge.py, memolink)
+providers = ["anthropic"]
+models = { anthropic = "claude-haiku-5-5" }
+effort = "low"
+offline = true
+
+[tasks.memo_triage]          # each voice memo: material / set / conversation / note
+providers = ["anthropic"]
+models = { anthropic = "claude-haiku-5-5" }
+effort = "low"
+offline = true

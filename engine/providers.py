@@ -10,8 +10,10 @@ Routing is per task in config.toml ([tasks.<name>].providers, first available
 wins, falling through on errors). Backends:
   openai_compatible  Ollama (default), LM Studio, vLLM, any custom endpoint
   anthropic          Claude via the official SDK; only when ANTHROPIC_API_KEY is in
-                     the environment or in paths.secrets_env. Structured output via
-                     output_config.format, adaptive thinking.
+                     the environment or in paths.secrets_env. Streamed, structured
+                     output via output_config.format, adaptive thinking, the system
+                     prefix cached, a daily USD cap (engine/budget.py). The hosted
+                     worker's only provider (engine/config.hosted.toml, ENGINE_CONFIG).
   claude_code        the official Claude Code CLI in headless mode (`claude -p
                      --output-format json`) on the comic's own PC. Off by default,
                      opt-in per task, offline/batch tasks only, concurrency 1-2,
@@ -193,9 +195,25 @@ class OpenAICompatBackend(Backend):
         return text, (u.prompt_tokens if u else 0), (u.completion_tokens if u else 0)
 
 
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+
+
 class AnthropicBackend(Backend):
+    """Claude through the official SDK (the hosted worker's only provider, engine/config.hosted.toml).
+
+    - streams every request (`messages.stream` + `get_final_message()`): long drafts never hit the HTTP timeout;
+    - the system messages become text blocks with `cache_control` on the last one, so the stable instruction /
+      voice-profile prefix is served from the prompt cache on the next call (the volatile material is in the user
+      turn, after the breakpoint);
+    - `thinking: {type: "adaptive"}` on Opus and Sonnet; Haiku is sent without the parameter (it thinks adaptively by
+      default), and a task may set `thinking = "none"` to omit it anywhere;
+    - `effort` per task (`[tasks.x] effort = "low"|"medium"|"high"|"xhigh"|"max"`) -> output_config.effort;
+    - the daily cost guard (engine/budget.py): refused before the call when today's cap is spent, charged after it
+      from the SDK's usage numbers, per task.
+    """
     kind = "anthropic"
     client_factory = None  # tests inject a fake client here
+    budget = None          # tests inject a Budget; else engine.budget.default_budget() (PK_AI_DAILY_USD)
 
     def _key(self):
         return read_secret(self.cfg, self.pcfg.get("api_key_env", "ANTHROPIC_API_KEY"))
@@ -203,31 +221,69 @@ class AnthropicBackend(Backend):
     def available(self, task_cfg, request_path):
         return bool(self._key())
 
-    def build_request(self, model, messages, schema):
-        system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
+    def _budget(self):
+        if self.budget is not None:
+            return self.budget
+        if self.pcfg.get("budget", True) is False:
+            return None
+        from .budget import default_budget
+        return default_budget()
+
+    @staticmethod
+    def thinks(model: str, task_cfg: dict | None, pcfg: dict) -> bool:
+        if (task_cfg or {}).get("thinking", pcfg.get("thinking", "adaptive")) != "adaptive":
+            return False
+        return not model.lower().startswith("claude-haiku")
+
+    def build_request(self, model, messages, schema, task_cfg: dict | None = None):
+        task_cfg = task_cfg or {}
+        sys_blocks = [{"type": "text", "text": m["content"]} for m in messages if m["role"] == "system" and m["content"]]
         msgs = [{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"]
-        kw = {"model": model, "max_tokens": int(self.pcfg.get("max_tokens", 16000)), "messages": msgs}
-        if system:
-            kw["system"] = system
-        if self.pcfg.get("thinking", "adaptive") == "adaptive":
+        kw = {"model": model, "max_tokens": int(task_cfg.get("max_tokens") or self.pcfg.get("max_tokens", 16000)),
+              "messages": msgs}
+        if sys_blocks:
+            if self.pcfg.get("cache", True):
+                sys_blocks[-1]["cache_control"] = {"type": "ephemeral"}
+            kw["system"] = sys_blocks
+        if self.thinks(model, task_cfg, self.pcfg):
             kw["thinking"] = {"type": "adaptive"}
+        effort = task_cfg.get("effort")
+        if effort:
+            if effort not in EFFORTS:
+                raise ProviderError(f"effort must be one of {EFFORTS}, not {effort!r}")
+            kw["output_config"] = {"effort": effort}
         if schema:
             from anthropic.lib._parse._transform import transform_schema
-            kw["output_config"] = {"format": {"type": "json_schema", "schema": transform_schema(schema)}}
+            kw.setdefault("output_config", {})["format"] = {"type": "json_schema", "schema": transform_schema(schema)}
         return kw
 
     def call(self, model, messages, schema, task_cfg):
         import anthropic
+        budget = self._budget()
+        if budget is not None:
+            budget.check()  # BudgetExceeded: the worker keeps the job queued and says why
         client = self.client_factory() if self.client_factory else anthropic.Anthropic(api_key=self._key())
-        kw = self.build_request(model, messages, schema)
+        kw = self.build_request(model, messages, schema, task_cfg)
         try:
-            r = client.messages.create(**kw)
+            if self.pcfg.get("stream", True):
+                with client.messages.stream(**kw) as stream:
+                    r = stream.get_final_message()
+            else:
+                r = client.messages.create(**kw)
         except anthropic.RateLimitError as e:
             raise RateLimited(str(e)) from e
+        u = r.usage
+        extra = {"cache_read": int(getattr(u, "cache_read_input_tokens", 0) or 0),
+                 "cache_write": int(getattr(u, "cache_creation_input_tokens", 0) or 0)}
+        if budget is not None:
+            extra["usd"] = round(budget.charge(model, u, task=task_cfg.get("_task", "?")), 6)
         if getattr(r, "stop_reason", None) == "refusal":
-            raise ProviderError("refusal")
+            det = getattr(r, "stop_details", None)
+            raise ProviderError("refusal" + (f" ({det.category})" if det is not None and getattr(det, "category", None) else ""))
+        if getattr(r, "stop_reason", None) == "max_tokens":
+            raise ProviderError(f"max_tokens ({kw['max_tokens']}) cut the answer short")
         text = "".join(b.text for b in r.content if getattr(b, "type", None) == "text")
-        return text, r.usage.input_tokens, r.usage.output_tokens
+        return text, u.input_tokens, u.output_tokens, extra
 
 
 class ClaudeCodeBackend(Backend):
@@ -336,7 +392,9 @@ class Router:
 
     def complete(self, task: str, messages: list[dict], schema: dict | None = None, *, run_id: str | None = None,
                  fewshot_sha: str | None = None, request_path: bool = False) -> Completion:
+        from .budget import BudgetExceeded
         tcfg = self.cfg.task(task)
+        tcfg["_task"] = task  # backends that account spend per task read it (AnthropicBackend)
         prompt_sha = sha({"messages": messages, "schema": schema})
         chain = self.resolve(task, request_path)
         if not chain:
@@ -348,8 +406,16 @@ class Router:
             for attempt in range(2):  # one retry on unparseable / invalid JSON
                 t0 = time.perf_counter()
                 call_id = uuid.uuid4().hex[:12]
+                extra = None
                 try:
-                    text, tin, tout = b.call(model, msgs, schema, tcfg)
+                    got = b.call(model, msgs, schema, tcfg)
+                    text, tin, tout = got[0], got[1], got[2]
+                    extra = got[3] if len(got) > 3 else None  # {"usd", "cache_read", "cache_write"}: the SDK's usage
+                except BudgetExceeded as e:  # the day's cap: no other provider is tried, the caller keeps the job
+                    ms = int((time.perf_counter() - t0) * 1000)
+                    self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
+                              f"BudgetExceeded: {str(e)[:200]}")
+                    raise
                 except Exception as e:  # provider down, rate limited, refusal ... -> next provider
                     ms = int((time.perf_counter() - t0) * 1000)
                     self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, 0, 0, ms, False,
@@ -365,7 +431,8 @@ class Router:
                         validate(data, schema)
                     except Exception as e:
                         err = f"invalid JSON: {str(e)[:200]}"
-                self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, tin, tout, ms, err is None, err)
+                self._log(call_id, run_id, task, name, model, prompt_sha, fewshot_sha, tin, tout, ms, err is None, err,
+                          extra)
                 if err is None:
                     return Completion(text=text, data=data, task=task, provider=name, model=model, tokens_in=tin,
                                       tokens_out=tout, ms=ms, call_id=call_id, prompt_sha=prompt_sha, attempts=attempts)
@@ -376,10 +443,13 @@ class Router:
                                                                      + schema_instructions(schema)}]
         raise ProviderError(f"task {task!r} failed on all providers: {attempts}; last: {last}")
 
-    def _log(self, call_id, run_id, task, provider, model, prompt_sha, fewshot_sha, tin, tout, ms, ok, error):
+    def _log(self, call_id, run_id, task, provider, model, prompt_sha, fewshot_sha, tin, tout, ms, ok, error,
+             extra: dict | None = None):
         rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "call_id": call_id, "run_id": run_id,
                "task": task, "provider": provider, "model": model, "prompt_sha": prompt_sha,
                "fewshot_sha": fewshot_sha, "tokens_in": tin, "tokens_out": tout, "ms": ms, "ok": ok}
+        if extra:
+            rec.update({k: v for k, v in extra.items() if k in ("usd", "cache_read", "cache_write")})
         if error:
             rec["error"] = error
         with self._lock:

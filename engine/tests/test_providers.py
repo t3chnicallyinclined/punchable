@@ -56,30 +56,179 @@ def test_anthropic_only_with_key(env, monkeypatch):
     assert Router(anth_cfg(env)).resolve("label")[0][0] == "anthropic"
 
 
-def test_anthropic_request_shape_and_key_not_logged(env):
-    cfg = anth_cfg(env, "ANTHROPIC_API_KEY=sk-secret-123\n")
-    seen = {}
+class FakeStream:
+    """What client.messages.stream(**kw) returns: a context manager whose get_final_message() is the response."""
+
+    def __init__(self, resp):
+        self.resp = resp
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get_final_message(self):
+        return self.resp
+
+
+def fake_client(seen: list, text='{"search_queries": ["dad"]}', usage=None, stop="end_turn"):
+    usage = usage or dict(input_tokens=11, output_tokens=7, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+    resp = SimpleNamespace(stop_reason=stop, stop_details=None, usage=SimpleNamespace(**usage),
+                           content=[SimpleNamespace(type="thinking", thinking="..."), SimpleNamespace(type="text", text=text)])
 
     class FakeMessages:
-        def create(self, **kw):
-            seen.update(kw)
-            return SimpleNamespace(stop_reason="end_turn", usage=SimpleNamespace(input_tokens=11, output_tokens=7),
-                                   content=[SimpleNamespace(type="thinking", thinking="..."),
-                                            SimpleNamespace(type="text", text='{"search_queries": ["dad"]}')])
+        def stream(self, **kw):
+            seen.append(kw)
+            return FakeStream(resp)
 
-    AnthropicBackend.client_factory = staticmethod(lambda: SimpleNamespace(messages=FakeMessages()))
+        def create(self, **kw):
+            raise AssertionError("the hosted provider streams; create() must not be used")
+
+    return SimpleNamespace(messages=FakeMessages())
+
+
+def test_anthropic_streams_caches_the_system_prefix_and_never_logs_the_key(env):
+    from engine.budget import Budget
+    cfg = anth_cfg(env, "ANTHROPIC_API_KEY=sk-secret-123\n")
+    seen = []
+    AnthropicBackend.client_factory = staticmethod(lambda: fake_client(seen))
+    AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")
     try:
         c = Router(cfg).complete("label", [{"role": "system", "content": "sys"}, {"role": "user", "content": "u"}],
                                  SCHEMA)
     finally:
         AnthropicBackend.client_factory = None
+        AnthropicBackend.budget = None
     assert c.provider == "anthropic" and c.data == {"search_queries": ["dad"]}
     assert c.tokens_in == 11 and c.tokens_out == 7
-    assert seen["model"] == "claude-opus-5-5" and seen["thinking"] == {"type": "adaptive"}
-    assert seen["system"] == "sys" and seen["messages"] == [{"role": "user", "content": "u"}]
-    assert seen["output_config"]["format"]["type"] == "json_schema"
-    assert "search_queries" in json.dumps(seen["output_config"]["format"]["schema"])
-    assert "sk-secret-123" not in cfg.runs_log.read_text()
+    kw = seen[0]
+    assert kw["model"] == "claude-opus-5-5" and kw["thinking"] == {"type": "adaptive"}
+    # the stable instruction prefix is a cached block; the material (user turn) comes after the breakpoint
+    assert kw["system"] == [{"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}]
+    assert kw["messages"] == [{"role": "user", "content": "u"}]
+    assert kw["output_config"]["format"]["type"] == "json_schema"
+    assert "search_queries" in json.dumps(kw["output_config"]["format"]["schema"])
+    log = cfg.runs_log.read_text()
+    assert "sk-secret-123" not in log
+    rec = json.loads(log.splitlines()[-1])
+    assert rec["ok"] and rec["usd"] > 0 and rec["cache_read"] == 0  # spend is on the record, per call
+
+
+def hosted_cfg(env, secrets="ANTHROPIC_API_KEY=sk-hosted\n"):
+    """engine/config.hosted.toml itself (the file the server worker runs), with the key in the temp secrets file."""
+    from engine.config import ENGINE_DIR
+    (env["tmp"] / "secrets.env").write_text(secrets, encoding="utf-8")
+    return Config(ENGINE_DIR / "config.hosted.toml",
+                  overrides={"paths": {"kb_dir": (env["root"] / "kb").as_posix(),
+                                       "secrets_env": (env["tmp"] / "secrets.env").as_posix()}})
+
+
+OPUS = ("creative_riff", "creative_punchup", "split", "match_judge", "propose_joke", "label", "link_judge")
+SONNET = ("ask_chat", "creative_bridge", "creative_facts", "clips_rank", "ask_plan", "ask_answer")
+HAIKU = ("merge_judge", "memo_triage")
+
+
+def test_hosted_config_routes_every_task_to_the_api_with_the_decided_model(env):
+    r = Router(hosted_cfg(env))
+    for t in OPUS + SONNET + HAIKU:
+        chain = r.resolve(t)
+        assert chain and [p for p, _ in chain] == ["anthropic"], t  # never claude_code, never ollama
+    assert {r.resolve(t)[0][1] for t in OPUS} == {"claude-opus-5-5"}
+    assert {r.resolve(t)[0][1] for t in SONNET} == {"claude-sonnet-5-5"}
+    assert {r.resolve(t)[0][1] for t in HAIKU} == {"claude-haiku-5-5"}
+    assert "claude_code" not in r.backends and "ollama" not in r.backends
+    assert all(r.cfg.task(t).get("offline") for t in OPUS + HAIKU + ("ask_chat", "creative_bridge", "creative_facts"))
+
+
+def test_hosted_requests_thinking_effort_and_model_per_task(env):
+    from engine.budget import Budget
+    cfg = hosted_cfg(env)
+    seen = []
+    AnthropicBackend.client_factory = staticmethod(lambda: fake_client(seen, text='{"ok": true}'))
+    AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")
+    try:
+        r = Router(cfg)
+        for t in ("creative_riff", "ask_chat", "merge_judge"):
+            r.complete(t, [{"role": "system", "content": "voice profile"}, {"role": "user", "content": "x"}])
+    finally:
+        AnthropicBackend.client_factory = None
+        AnthropicBackend.budget = None
+    riff, ask, judge = seen
+    assert riff["model"] == "claude-opus-5-5" and riff["thinking"] == {"type": "adaptive"}
+    assert riff["output_config"] == {"effort": "high"}
+    assert ask["model"] == "claude-sonnet-5-5" and ask["thinking"] == {"type": "adaptive"}
+    assert ask["output_config"] == {"effort": "medium"}
+    assert judge["model"] == "claude-haiku-5-5" and "thinking" not in judge  # Haiku: the parameter is omitted
+    assert judge["output_config"] == {"effort": "low"}
+    for kw in seen:  # every call caches the same stable prefix
+        assert kw["system"][-1]["cache_control"] == {"type": "ephemeral"}
+    spend = json.loads((env["tmp"] / "spend.json").read_text())
+    day = next(iter(spend.values()))
+    assert day["calls"] == 3 and set(day["tasks"]) == {"creative_riff", "ask_chat", "merge_judge"}
+    assert day["tasks"]["creative_riff"] > day["tasks"]["merge_judge"]  # Opus costs more than Haiku per token
+
+
+def test_budget_guard_keeps_the_cap_and_goes_red_when_broken(env):
+    """The guard is consulted BEFORE the call and charged AFTER it. Over the cap -> BudgetExceeded, no request made,
+    and the Router does not slide to another provider. Breaking the guard (a cap that is never reached) is red."""
+    from engine.budget import Budget, BudgetExceeded, usage_usd
+    cfg = anth_cfg(env, "ANTHROPIC_API_KEY=sk-x\n")
+    big = dict(input_tokens=1_000_000, output_tokens=0, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+    assert usage_usd("claude-opus-5-5", big) == 4.0 and usage_usd("claude-haiku-5-5", big) == 0.1
+    seen = []
+    AnthropicBackend.client_factory = staticmethod(lambda: fake_client(seen, usage=big))
+    AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")
+    try:
+        r = Router(cfg)
+        r.complete("label", [{"role": "user", "content": "1"}], SCHEMA)   # $4.00 of $5.00
+        r.complete("label", [{"role": "user", "content": "2"}], SCHEMA)   # $8.00: allowed (the cap is checked before)
+        assert len(seen) == 2 and AnthropicBackend.budget.status()["over"] is True
+        try:
+            r.complete("label", [{"role": "user", "content": "3"}], SCHEMA)
+        except BudgetExceeded as e:
+            assert "over today's AI budget" in str(e) and "$8.00 of $5.00" in str(e)
+        else:
+            raise AssertionError("the third call must be refused")
+        assert len(seen) == 2  # no request went out; the mock provider was NOT tried instead
+        # broken guard: a cap of 0 means "no spend allowed", not "unlimited"
+        AnthropicBackend.budget = Budget(0.0, env["tmp"] / "spend0.json")
+        try:
+            r.complete("label", [{"role": "user", "content": "4"}], SCHEMA)
+        except BudgetExceeded:
+            pass
+        else:
+            raise AssertionError("a zero cap must refuse")
+        assert len(seen) == 2
+    finally:
+        AnthropicBackend.client_factory = None
+        AnthropicBackend.budget = None
+
+
+def test_budget_default_and_env(env, monkeypatch):
+    from engine.budget import Budget
+    monkeypatch.delenv("PK_AI_DAILY_USD", raising=False)
+    assert Budget(path=env["tmp"] / "s.json").daily_usd == 2.0
+    monkeypatch.setenv("PK_AI_DAILY_USD", "0.75")
+    b = Budget(path=env["tmp"] / "s.json")
+    assert b.daily_usd == 0.75 and b.remaining() == 0.75 and b.status()["over"] is False
+
+
+def test_anthropic_refusal_and_cut_answers_fail_loudly(env):
+    from engine.budget import Budget
+    cfg = anth_cfg(env, "ANTHROPIC_API_KEY=sk-x\n")
+    seen = []
+    AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")
+    try:
+        for stop in ("refusal", "max_tokens"):
+            AnthropicBackend.client_factory = staticmethod(lambda stop=stop: fake_client(seen, stop=stop))
+            c = Router(cfg).complete("label", [{"role": "user", "content": "q"}], SCHEMA)
+            assert c.provider == "mock"  # fell through to the next provider, nothing invented
+    finally:
+        AnthropicBackend.client_factory = None
+        AnthropicBackend.budget = None
+    errs = [json.loads(l).get("error", "") for l in cfg.runs_log.read_text().splitlines()]
+    assert any("refusal" in e for e in errs) and any("max_tokens" in e for e in errs)
 
 
 def cc_cfg(env, enabled=True, offline=True):
