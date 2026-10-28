@@ -9,8 +9,16 @@
                                             same legal check, the same 422.
 
 Store `profile` (creative/store.py: comedy/kb/creative/profile.jsonl + snapshot; on SurrealDB also creative_event
-rows, reconciled like every creative store). One op, `put {kind, text}`, on the document `profile:voice`. The document
-keeps its previous version (`previous`), so a save is undone by saving the previous text again (the app's Undo).
+rows, reconciled like every creative store). Two ops on the document `profile:voice`:
+    put {kind, text}            his text (Settings, or the loader). The document keeps its previous version
+                                (`previous`), so a save is undone by saving the previous text again (the app's Undo).
+                                A put never touches `learned`.
+    learn {kept[], dropped[]}   the learned section (creative/learned.py): appended by the API itself when he keeps
+                                one of the app's drafts (learn_kept: POST /api/ideas with a riff draft's text, or the
+                                Brainstorm decision with a punch-up draft's text), never by a PUT. Capped and merged
+                                by creative.learned.merge; never touches `text` or `previous`.
+Both GETs return `learned` ({kept, dropped, updated_at}: the lines, with the bit id and the date); the worker's GET
+also returns `laugh_lines` (computed from the corpus each time: creative.learned.laugh_lines, [] without a laugh map).
 The text is never a file in the repo or in an image, and never logged: the worker (creative/voice.py) logs its length,
 a short sha and `updated_at`. Provenance: `by` is the owner id for his own saves, `import:profile` for the loader.
 """
@@ -29,6 +37,7 @@ if str(DESK / "tools" / "explorer") not in sys.path:
 
 import creative_api as CR  # noqa: E402
 import kb as K  # noqa: E402
+from creative import learned as L  # noqa: E402
 from creative.store import Store  # noqa: E402
 
 STORE = "profile"
@@ -39,18 +48,29 @@ LEGAL_MSG = "That reads like court material; Punchable won't keep it as your voi
 
 
 def profile_apply(items: dict, ev: dict) -> None:
-    """Ops: put {kind, text}. The previous version rides along for Undo."""
+    """Ops: put {kind, text} (the previous version rides along for Undo; `learned` is kept as it was) and
+    learn {kept[], dropped[]} (merged into `learned` by creative.learned.merge; `text` and `previous` as they were)."""
     op, i, d = ev["op"], ev["id"], ev.get("data") or {}
-    if op != "put":
-        raise ValueError(f"unknown op {op}")
     if i != VOICE_ID:
         raise ValueError(f"profiles live on {VOICE_ID}")
-    if not isinstance(d.get("text"), str):
-        raise ValueError("text must be a string")
     cur = items.get(i)
-    items[i] = {"id": i, "kind": str(d.get("kind") or "voice"), "text": d["text"], "updated_at": ev["ts"],
-                "by": ev.get("by"),
-                "previous": ({"text": cur["text"], "updated_at": cur["updated_at"], "by": cur.get("by")} if cur else None)}
+    if op == "put":
+        if not isinstance(d.get("text"), str):
+            raise ValueError("text must be a string")
+        items[i] = {"id": i, "kind": str(d.get("kind") or "voice"), "text": d["text"], "updated_at": ev["ts"],
+                    "by": ev.get("by"),
+                    "previous": ({"text": cur["text"], "updated_at": cur["updated_at"], "by": cur.get("by")}
+                                 if cur and cur.get("text") is not None else None),
+                    "learned": (cur or {}).get("learned") or L.empty()}
+    elif op == "learn":
+        if not isinstance(d.get("kept", []), list) or not isinstance(d.get("dropped", []), list):
+            raise ValueError("kept and dropped must be lists")
+        if not (d.get("kept") or d.get("dropped")):
+            raise ValueError("a learn event names at least one line")
+        base = cur or {"id": i, "kind": "voice", "text": None, "updated_at": None, "by": None, "previous": None}
+        items[i] = {**base, "learned": L.merge(base.get("learned"), d.get("kept"), d.get("dropped"), ts=ev["ts"])}
+    else:
+        raise ValueError(f"unknown op {op}")
 
 
 CR.APPLY.setdefault(STORE, profile_apply)   # LineStore (the SurrealDB mirror) looks the apply function up by name
@@ -71,15 +91,50 @@ def store(cr, kb) -> Store:
     return CR.LineStore(cr.dir, STORE, dl, writer)
 
 
-def view(doc: dict | None, worker: bool = False) -> dict:
-    if not doc:
+def view(doc: dict | None, worker: bool = False, laughs: list | None = None) -> dict:
+    if not doc or doc.get("text") is None:
         out = {"kind": "voice", "text": None, "updated_at": None, "by": None, "chars": 0}
     else:
         out = {"kind": doc["kind"], "text": doc["text"], "updated_at": doc["updated_at"], "by": doc.get("by"),
                "chars": len(doc["text"])}
-    if not worker:
+    out["learned"] = (doc or {}).get("learned") or L.empty()
+    if worker:
+        out["laugh_lines"] = laughs or []
+    else:
         out["previous"] = (doc or {}).get("previous")
     return out
+
+
+def laugh_lines(cr, kb) -> list[dict]:
+    """creative.learned.laugh_lines over this backend's corpus; [] when the corpus cannot be built here (a test
+    handler without a knowledge base) or has no laugh map. Never fails a GET."""
+    try:
+        return L.laugh_lines(cr.corpus(kb))
+    except Exception:  # noqa: BLE001  no corpus on this handler: the worker drafts without laugh lines
+        return []
+
+
+def learn_kept(cr, kb, text: str, bit: str | None, by: str) -> dict | None:
+    """He kept one of the app's drafts: `text` is a line he just saved as his own (POST /api/ideas, or the Brainstorm
+    unit with source "draft"). If it is the text of a finished riff or punch-up job's draft (creative.learned.drafted
+    over the job store), one `learn` event: that line kept, the job's other drafts passed over. His own typed line is
+    not a draft: nothing is written, None. Never raises: the caller's write is already done."""
+    try:
+        with cr.lock:
+            jobs = cr.stores(kb)["jobs"].items
+            kind, others = L.drafted(jobs, text)
+            if kind is None:
+                return None
+            st = store(cr, kb)
+            # a sibling he kept earlier (two keeps from one riff) is not passed over: only lines he never took are
+            already = {L._norm(e["text"]) for e in ((st.get(VOICE_ID) or {}).get("learned") or {}).get("kept") or []}
+            others = [t for t in others if L._norm(t) not in already]
+            doc = st.append("learn", VOICE_ID, {"kept": [{"text": text, "bit": bit}],
+                                                "dropped": [{"text": t, "bit": bit} for t in others],
+                                                "from": kind}, by=by)
+        return L.counts(doc.get("learned"))
+    except Exception:  # noqa: BLE001  the learned section is a nicety: his save stands either way
+        return None
 
 
 def clean_text(body: dict) -> str:
@@ -106,10 +161,11 @@ def load_into_voice(cr, kb) -> bool:
     """The API's own copy into creative.voice (local dev, PK_JOBS=inproc: the executor runs in this process)."""
     from creative import voice
     doc = store(cr, kb).get(VOICE_ID)
+    voice.set_learned((doc or {}).get("learned"), laugh_lines(cr, kb))
     if doc and doc.get("text"):
         voice.set_profile(doc["text"], doc["updated_at"], doc.get("by"), source="store")
         return True
-    voice.clear()
+    voice.set_profile(None)
     return False
 
 
@@ -121,7 +177,7 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
     kb = h.kb
     try:
         if method == "GET":
-            h.send_json(view(store(cr, kb).get(VOICE_ID), worker=worker))
+            h.send_json(view(store(cr, kb).get(VOICE_ID), worker=worker, laughs=laugh_lines(cr, kb) if worker else None))
             return True
         if method != "PUT":
             raise CR.HttpError(405, "GET or PUT")

@@ -30,5 +30,15 @@ check(/^Saved Oct 2[78], 2026 · 12 words · by you$/.test(s), `saved by him: "$
 check(V.statusLine({ ...doc, by: "import:profile" }).endsWith("· loaded from your desk"), "loaded by the desk tool: says so");
 check(V.savedWords(doc) === "Saved · 12 words", "the snackbar words");
 
+// the learned section (read-only; the server fills it from his keeps)
+check(V.learnedWords(null) === "Nothing yet. It learns when you take one of its drafts as yours." && V.learnedWords({ kept: [], dropped: [], updated_at: null }) === V.learnedWords(undefined), "nothing learned: the honest line");
+const learned = { kept: [{ text: "The parrot audits the vet.", bit: "joke:p", date: "2026-10-28" }], dropped: [{ text: "Parrot, IRS, same bird.", bit: "joke:p", date: "2026-10-28" }, { text: "A parrot that files its own taxes.", bit: null, date: null }], updated_at: "2026-10-28T11:00:00+00:00" };
+const lw = V.learnedWords(learned);
+check(/^1 line kept · 2 passed over · last Oct 2[78], 2026$/.test(lw), `counts and the last day: "${lw}"`);
+check(V.learnedWords({ ...learned, kept: [...learned.kept, learned.kept[0]], updated_at: null }) === "2 lines kept · 2 passed over", "plural, no date when the server has none");
+const rows = V.learnedRows(learned.dropped);
+check(rows.length === 2 && rows[0].text === "Parrot, IRS, same bird." && /^Oct 2[78], 2026$/.test(rows[0].when) && rows[1].when === "", "rows keep the server's order, a missing date shows nothing");
+check(V.learnedRows(null).length === 0 && V.learnedRows(learned.dropped, 1).length === 1, "no lines, or a cap");
+
 if (fails.length) { console.log(`\n${fails.length} failed`); process.exit(1); }
 console.log("\nall passed");

@@ -7,6 +7,7 @@ NEW_ROUTES rows); here: the worker's view, the worker's actor rule, and the 422 
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -83,7 +84,8 @@ def test_store_keeps_the_previous_version_and_refuses_other_ops(tmp_path):
 
 def test_owner_puts_reads_and_undoes_by_the_previous_version(cr):
     assert call(cr, "GET", "/api/profile/voice") == (200, {"kind": "voice", "text": None, "updated_at": None, "by": None,
-                                                           "chars": 0, "previous": None})
+                                                           "chars": 0, "learned": {"kept": [], "dropped": [], "updated_at": None},
+                                                           "previous": None})
     s, v1 = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
     assert s == 200 and v1["text"] == PROFILE_V1 and v1["by"] == "owner" and v1["previous"] is None and v1["chars"] == len(PROFILE_V1)
     s, v2 = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V2.rstrip("\n")})  # the trailing newline is normalised
@@ -103,7 +105,8 @@ def test_owner_puts_reads_and_undoes_by_the_previous_version(cr):
 def test_worker_reads_its_copy_without_history_and_must_name_an_import_actor(cr):
     call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
     s, w = call(cr, "GET", "/api/worker/profile/voice", worker=True)
-    assert s == 200 and w == {"kind": "voice", "text": PROFILE_V1, "updated_at": w["updated_at"], "by": "owner", "chars": len(PROFILE_V1)}
+    assert s == 200 and w == {"kind": "voice", "text": PROFILE_V1, "updated_at": w["updated_at"], "by": "owner", "chars": len(PROFILE_V1),
+                              "learned": {"kept": [], "dropped": [], "updated_at": None}, "laugh_lines": []}
     assert "previous" not in w
     # the loader: a worker write names import:<what>; without it, 400 and nothing changes
     s, _ = call(cr, "PUT", "/api/worker/profile/voice", {"text": PROFILE_V2}, worker=True)
@@ -132,6 +135,84 @@ def test_the_api_loads_its_own_copy_for_an_in_process_job(cr):
     call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
     assert PF.load_into_voice(cr, SimpleNamespace(backend="files")) is True
     assert voice.profile()["text"] == PROFILE_V1.strip() and voice.profile()["source"] == "store"
+
+
+# ---------------------------------------------------------------- the learned section
+KB = SimpleNamespace(backend="files")
+RIFF_IDEAS = [{"text": "A parrot that files its own taxes."}, {"text": "The parrot audits the vet."}, {"text": "Parrot, IRS, same bird."}]
+
+
+def finished_riff(cr, kb=KB, ideas=RIFF_IDEAS, key="riff|abc"):
+    """A finished riff job in the API's job store, as the worker leaves it (creative_api.job_apply)."""
+    st = cr.stores(kb)["jobs"]
+    st.append("enqueue", f"job:{key}", {"kind": "riff", "key": key, "input": {"idea": "parrots", "lines": []}})
+    st.append("claim", f"job:{key}", {"worker": "w"})
+    st.append("done", f"job:{key}", {"result": {"status": "ok", "ideas": ideas}})
+
+
+def test_store_learn_op_merges_and_a_put_keeps_the_learned_section(tmp_path):
+    """The loader and Settings both PUT: a put replaces his text and never the learned section (merge, not replace).
+    Red-proof: with `learned` dropped from profile_apply's put, the third assert fails."""
+    st = Store(tmp_path, "profile", PF.profile_apply)
+    # learn before any text: the document exists with text None and the learned lines
+    a = st.append("learn", PF.VOICE_ID, {"kept": [{"text": "Kept one.", "bit": "joke:k"}], "dropped": ["Passed one."]},
+                  by="owner", ts="2026-10-28T10:00:00+00:00")
+    assert a["text"] is None and a["previous"] is None
+    assert a["learned"] == {"kept": [{"text": "Kept one.", "bit": "joke:k", "date": "2026-10-28"}],
+                            "dropped": [{"text": "Passed one.", "bit": None, "date": "2026-10-28"}], "updated_at": "2026-10-28T10:00:00+00:00"}
+    b = st.append("put", PF.VOICE_ID, {"kind": "voice", "text": PROFILE_V1}, by="import:profile", ts="2026-10-29T10:00:00+00:00")
+    assert b["text"] == PROFILE_V1 and b["learned"] == a["learned"], "a put keeps what was learned"
+    assert b["previous"] is None, "a document with no text yet has no previous version to undo to"
+    c = st.append("learn", PF.VOICE_ID, {"kept": ["Kept two."]}, by="owner", ts="2026-10-30T10:00:00+00:00")
+    assert c["text"] == PROFILE_V1 and c["updated_at"] == "2026-10-29T10:00:00+00:00", "a learn never touches his text or its date"
+    assert [e["text"] for e in c["learned"]["kept"]] == ["Kept two.", "Kept one."]
+    d = st.append("put", PF.VOICE_ID, {"kind": "voice", "text": PROFILE_V2}, by="owner", ts="2026-10-31T10:00:00+00:00")
+    assert d["previous"]["text"] == PROFILE_V1 and d["learned"] == c["learned"]
+    for data in ({"kept": "x"}, {"kept": [], "dropped": []}, {}):
+        with pytest.raises(ValueError):
+            st.append("learn", PF.VOICE_ID, data)
+    assert Store(tmp_path, "profile", PF.profile_apply).get(PF.VOICE_ID) == d, "a replay derives the same document"
+
+
+def test_both_gets_return_the_learned_section_and_the_worker_gets_laugh_lines(cr):
+    assert call(cr, "GET", "/api/profile/voice")[1]["learned"] == {"kept": [], "dropped": [], "updated_at": None}
+    s, w = call(cr, "GET", "/api/worker/profile/voice", worker=True)
+    assert s == 200 and w["learned"] == {"kept": [], "dropped": [], "updated_at": None} and w["laugh_lines"] == []
+    PF.store(cr, KB).append("learn", PF.VOICE_ID, {"kept": ["Kept one."]}, by="owner")
+    call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
+    own = call(cr, "GET", "/api/profile/voice")[1]
+    assert own["text"] == PROFILE_V1 and [e["text"] for e in own["learned"]["kept"]] == ["Kept one."]
+    w = call(cr, "GET", "/api/worker/profile/voice", worker=True)[1]
+    assert w["learned"] == own["learned"] and "previous" not in w and w["laugh_lines"] == [], "no corpus here: no laugh lines, no error"
+    # the in-process load carries the learned section into creative.voice
+    assert PF.load_into_voice(cr, KB) is True
+    assert voice.status()["learned"] == {"kept": 1, "dropped": 0, "updated_at": own["learned"]["updated_at"], "laughs": 0}
+    assert "Kept one." in voice.learned_block("creative_riff")
+
+
+def test_learn_kept_records_a_kept_draft_and_its_siblings_and_ignores_his_own_line(cr):
+    finished_riff(cr)
+    # his own typed line: not a draft, nothing written
+    assert PF.learn_kept(cr, KB, "My own line about parrots.", "joke:x", "owner") is None
+    assert call(cr, "GET", "/api/profile/voice")[1]["learned"]["kept"] == []
+    # one of the riff's drafts, saved as his (POST /api/ideas): kept, the other two passed over
+    out = PF.learn_kept(cr, KB, "The parrot audits the vet.", "joke:new", "owner")
+    assert out == {"kept": 1, "dropped": 2, "updated_at": out["updated_at"]}
+    l = call(cr, "GET", "/api/profile/voice")[1]["learned"]
+    assert [e["text"] for e in l["kept"]] == ["The parrot audits the vet."] and l["kept"][0]["bit"] == "joke:new"
+    assert [e["text"] for e in l["dropped"]] == ["A parrot that files its own taxes.", "Parrot, IRS, same bird."]
+    # later he keeps one of the passed-over lines: it moves to kept, the first keep stays
+    PF.learn_kept(cr, KB, "Parrot, IRS, same bird.", "joke:new2", "owner")
+    l = call(cr, "GET", "/api/profile/voice")[1]["learned"]
+    assert [e["text"] for e in l["kept"]] == ["Parrot, IRS, same bird.", "The parrot audits the vet."]
+    assert [e["text"] for e in l["dropped"]] == ["A parrot that files its own taxes."]
+    # the event log says which job kind it came from and never fails the caller
+    ev = [json.loads(x) for x in (cr.dir / "profile.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["op"] for e in ev] == ["learn", "learn"] and ev[0]["data"]["from"] == "riff" and ev[0]["by"] == "owner"
+    # the store down: None, no raise (his save already stands)
+    def down(kb):
+        raise RuntimeError("store down")
+    assert PF.learn_kept(SimpleNamespace(lock=cr.lock, stores=down, dir=cr.dir), KB, "The parrot audits the vet.", None, "owner") is None
 
 
 # ---------------------------------------------------------------- the legal rules on the request path

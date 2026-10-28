@@ -1611,8 +1611,17 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/decision":
                 if b.get("id") is not None and (not isinstance(b["id"], str) or not ID_RE.match(b["id"])):
                     raise K.DecisionError("bad id")
-                r = kb.decide(b, by=self.actor(b))
-                return self.send_json({"ok": True, "indexes": [r["index"]], "decisions": [r["decision"]]})
+                by = self.actor(b)
+                r = kb.decide(b, by=by)
+                out = {"ok": True, "indexes": [r["index"]], "decisions": [r["decision"]]}
+                after = b.get("after") if isinstance(b.get("after"), dict) else {}
+                if (self.creative is not None and by == OWNER_ID and b.get("target") == "node" and b.get("action") == "add"
+                        and after.get("type") == "unit" and after.get("source") == "draft" and isinstance(after.get("text"), str)):
+                    # Brainstorm's "Use as mine": a punch-up draft kept as his version of the bit (the variant_of edge
+                    # follows in the app's next call; the unit's own id is the bit reference until then)
+                    import profile_api as PF
+                    out["learned"] = PF.learn_kept(self.creative, kb, after["text"], after.get("id") or r["decision"].get("id"), by)
+                return self.send_json(out)
             if path == "/api/review/rate":
                 return self.rate(b)
             if path == "/api/set-row":
@@ -1899,6 +1908,13 @@ class Handler(BaseHTTPRequestHandler):
             src = by.split(":", 1)[1] if by.startswith("import:") else (
                 "gdocs" if (b.get("reason") or "").startswith("[gdocs]") else "app")
             out["attach"] = MG.after_idea(self.creative, kb, d["id"], text, src)
+            if by == OWNER_ID:
+                # the text of a riff draft he took as his own ("Use as mine"): the voice profile's learned section
+                # (profile_api.learn_kept) remembers it, and the drafts he passed over beside it; his own typed
+                # line is no draft and writes nothing there
+                import profile_api as PF
+                into = (out["attach"] or {}).get("into") if isinstance(out.get("attach"), dict) else None
+                out["learned"] = PF.learn_kept(self.creative, kb, text, into or d["id"], by)
             if self.jobs_on_upload and by == OWNER_ID:
                 # hosted: no model in this process, so his typed idea gets its vector from the home worker (job
                 # `embed`, one pending at a time); imports queue theirs in ingest_api.enqueue_followups

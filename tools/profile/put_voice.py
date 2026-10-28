@@ -16,6 +16,10 @@ Two ways in, both existing credentials:
                          PUT /api/profile/voice: `by` is the owner. The Settings screen does the same thing by hand.
 Before anything is sent, the text is checked locally with the legal rules every ingest applies (gsync/rules.py
 content_is_legal); a hit stops here. The API checks again (422). --dry-run reads and checks, sends nothing.
+
+The document's learned section (`learned`: the lines he kept and passed over, api-dev/profile_api.py op `learn`,
+creative/learned.py) is NOT touched by this tool: a PUT replaces his text and keeps `learned` as it was (the store's
+`put` merges, it does not replace the document). The counts are printed after the store answers.
 """
 from __future__ import annotations
 
@@ -103,6 +107,8 @@ def main(argv=None) -> int:
     out = put_as_owner(a.api or "https://punchable.io", text) if a.who == "owner" else put_as_worker(a.api, text, a.no_auth)
     print(f"stored: by {out.get('by')}, updated_at {out.get('updated_at')}, {out.get('chars'):,} chars"
           + (" (replaced the previous version)" if out.get("previous") else ""))
+    lrn = out.get("learned") if isinstance(out.get("learned"), dict) else {}
+    print(f"learned section kept as it was: {len(lrn.get('kept') or [])} lines kept, {len(lrn.get('dropped') or [])} passed over")
     print("the hosted worker reads it on its next job (its log: 'voice profile: loaded (...)'); Settings > Voice profile shows it")
     return 0
 
