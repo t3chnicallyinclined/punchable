@@ -37,7 +37,7 @@ maxDeltaTimeSeconds: 43200
 # Identity plan: access 300 s, refresh rotation on (a used refresh token is dead; reuse => invalid_grant).
 accessTokenLifespan: 300
 revokeRefreshToken: true
-refreshTokenMaxReuse: 0
+refreshTokenMaxReuse: 1   # one reuse within rotation: the phone can reload between a refresh and the SecureStore write (2026-10-28 sign-outs)
 # A phone app stays signed in: 14 days idle, 30 days max.
 ssoSessionIdleTimeout: 1209600
 ssoSessionMaxLifespan: 2592000
