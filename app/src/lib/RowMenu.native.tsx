@@ -6,10 +6,10 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { Link } from 'expo-router';
-import type { RowMenuProps } from './RowMenu';
+import type { RowMenuProps } from './RowMenuBase';
 
-export type { RowMenuProps } from './RowMenu';
-export { rowActions } from './RowMenu';
+export type { RowMenuProps } from './RowMenuBase';
+export { rowActions } from './RowMenuBase';
 
 export function RowMenu({ href, items, children }: RowMenuProps) {
   if (Platform.OS !== 'ios') return children;

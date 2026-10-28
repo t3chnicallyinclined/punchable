@@ -8,9 +8,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { haptics } from './haptics';
 import { C, F } from './theme';
-import type { SwipeAction, SwipeRowProps } from './SwipeRow';
+import type { SwipeAction, SwipeRowProps } from './SwipeRowBase';
 
-export type { SwipeAction, SwipeRowProps } from './SwipeRow';
+export type { SwipeAction, SwipeRowProps } from './SwipeRowBase';
 const W = 96;         // one action's width
 const FULL = 180;     // past this a full swipe runs the main action on release
 

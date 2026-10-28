@@ -5,11 +5,11 @@ import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { C } from './theme';
-import { ZoomButtons, clampScale } from './PanZoom';
-import type { PanZoomProps, View_ } from './PanZoom';
+import { ZoomButtons, clampScale } from './PanZoomBase';
+import type { PanZoomProps, View_ } from './PanZoomBase';
 
-export { clampScale, zoomAt, ZoomButtons } from './PanZoom';
-export type { PanZoomProps, View_ } from './PanZoom';
+export { clampScale, zoomAt, ZoomButtons } from './PanZoomBase';
+export type { PanZoomProps, View_ } from './PanZoomBase';
 
 export function PanZoom({ view, onView, width, height, children, minScale = 0.25, maxScale = 3, testID }: PanZoomProps) {
   const x = useSharedValue(view.x);

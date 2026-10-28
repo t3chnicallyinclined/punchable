@@ -7,9 +7,9 @@ import { Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import type { SFSymbol } from 'sf-symbols-typescript';
 import { C } from './theme';
-import { Icon as SvgIcon, type IconName, type IconProps } from './Icon';
+import { Icon as SvgIcon, type IconName, type IconProps } from './IconSvg';
 
-export { P, type IconName, type IconProps } from './Icon';
+export { P, type IconName, type IconProps } from './IconSvg';
 
 const SF: Record<IconName, SFSymbol> = {
   today: 'house', write: 'pencil', notebook: 'book', back: 'chevron.left', desk: 'doc.text', shows: 'mappin.and.ellipse',

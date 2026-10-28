@@ -5,9 +5,9 @@
 // cache into the document directory (safe from the OS) before it is handed to the upload queue.
 import { useMemo, useRef } from 'react';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
-import type { Rec, Recording } from './recorder';
+import type { Rec, Recording } from './recorderBase';
 
-export type { Rec, Recording } from './recorder';
+export type { Rec, Recording } from './recorderBase';
 
 let modeSet = false;
 async function prepareSession() {
