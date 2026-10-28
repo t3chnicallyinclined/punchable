@@ -78,6 +78,13 @@ kube_cronjob_status_last_successful_time{namespace="punchable"}        # Punchab
 certmanager_certificate_expiration_timestamp_seconds{namespace="punchable"}   # PunchableCertificateExpiringSoon (cert-manager scraped?)
 ```
 
+**Verified 2026-10-28 10:50 UTC: BOTH are empty.** The live Prometheus has no kube-state-metrics at all
+(`count(kube_cronjob_info)` = nothing) and does not scrape cert-manager (`{__name__=~"certmanager_.*"}` = nothing); its
+only targets are the punchable api/worker jobs and another app's. So PunchableBackupMissed and PunchableCertificateExpiringSoon
+cannot fire today. Fix (shared observability namespace, owner's go): deploy kube-state-metrics there and add scrape jobs
+for it and for cert-manager's `:9402/metrics` through `infra/observability/apply_prometheus.py`. Until then the backup is
+checked by hand (`infra/ship.sh backup-list`) and the certificate by `kubectl get certificate -n punchable`.
+
 If either returns nothing, that alert is decoration until the exporter is scraped; say so in the runbook rather
 than leaving it looking green.
 
