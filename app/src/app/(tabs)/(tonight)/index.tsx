@@ -7,7 +7,7 @@ import { Stack, router } from 'expo-router';
 import { useApi } from '@/lib/api';
 import { fmtDur } from '@/lib/laughs';
 import { TonightScreen, useOutbox } from '@/lib/say';
-import { SayBar } from '@/lib/SayBar';
+import { useSayBar } from '@/lib/SayBar';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
 import { tonightTitleRow } from '@/lib/layoutRules';
@@ -44,6 +44,7 @@ export default function Tonight() {
 
   // the conversation screen sends it (and keeps it on this phone when Punchable can't be reached)
   const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, screen: 'tonight' } } as any), []);
+  const bar = useSayBar({ onSay, worker: d?.worker, testID: 'say' });
 
   // HIG large-title shape (docs/design/HIG.md §0): row 1 is the bar (the date, "+", the face); row 2 is the title with
   // the "N to sort" pill, which stacks under the title at text sizes >= 1.3x. No Ask button: the input bar IS Ask.
@@ -73,7 +74,7 @@ export default function Tonight() {
   );
 
   return (
-    <Screen title="Tonight" testID="tonight" header={native ? undefined : header} largeTitle={native} bar={<SayBar onSay={onSay} worker={d?.worker} testID="say" />} onRefresh={s.reload}>
+    <Screen title="Tonight" testID="tonight" header={native ? undefined : header} largeTitle={native} bar={bar} onRefresh={s.reload}>
       {native && (
         // HIG/toolbars: "+" and the face in the bar; the title stays short so there is room for them
         <Stack.Toolbar placement="right">

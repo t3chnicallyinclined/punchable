@@ -11,7 +11,7 @@ import { MergeHint } from '@/lib/MergeHint';
 import { GROUP_COLOR, Radial } from '@/lib/jokemap';
 import { JokeMap, MapGroupKey, monthYear, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
-import { SayBar } from '@/lib/SayBar';
+import { useSayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { actionSheet } from '@/lib/actionSheet';
@@ -52,6 +52,7 @@ export default function BitPage() {
   const shortName = shortNameOf(J?.title || '', J?.short_name);
   const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, joke: id, screen: 'bit' } } as any), [id]);
   const native = Platform.OS !== 'web';
+  const bar = useSayBar({ onSay, placeholder: `Ask about ${shortName}, or add a line`, hint: null, testID: 'bit-say' });
   const edit = () => router.push(`/bit/${encodeURIComponent(id)}` as any);
   const retire = async () => {
     try {
@@ -82,7 +83,7 @@ export default function BitPage() {
   return (
     <Screen title={shortName} back testID="bitpage" maxWidth={760}
       right={native ? undefined : <TextBtn testID="bit-edit" label="Edit" onPress={edit} />}
-      bar={<SayBar onSay={onSay} placeholder={`Ask about ${shortName}, or add a line`} hint={null} testID="bit-say" />}>
+      bar={bar}>
       {native && (
         // HIG/toolbars: "Edit" as text (not well represented by a symbol); the rest in a menu, Retire last and destructive
         <Stack.Toolbar placement="right">

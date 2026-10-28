@@ -11,7 +11,7 @@ import { AskChip, TurnView, ask, useChat } from '@/lib/ask';
 import { useBoards } from '@/lib/boards';
 import { haptics } from '@/lib/haptics';
 import { CommandResult, Queued, SayContext, SayKind, SayResult, flushOutbox, sayOrQueue, useOutbox } from '@/lib/say';
-import { SayBar } from '@/lib/SayBar';
+import { useSayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
 import { noteWorker } from '@/lib/worker';
 import { Btn, T, useUI } from '@/lib/ui';
@@ -211,9 +211,10 @@ export default function Say() {
     send(e.text, e.how, 'bit', e.key);
   };
   const worker = [...entries].reverse().find((e) => e.result?.worker)?.result?.worker || null;
+  const bar = useSayBar({ onSay: (t, how) => send(t, how), worker, testID: 'say', autoFocus: p.focus === '1' || !p.text, hint: null });
 
   return (
-    <Screen title="Asking" back testID="say" scrollRef={sv} maxWidth={760} bar={<SayBar onSay={(t, how) => send(t, how)} worker={worker} testID="say" autoFocus={p.focus === '1' || !p.text} hint={null} />}>
+    <Screen title="Asking" back testID="say" scrollRef={sv} maxWidth={760} bar={bar}>
       {!entries.length && <T v="mut" testID="say-empty">Say a bit, ask a question, or give an order (“new 7 for Friday”, “add the kale bit to tonight”). It knows which.</T>}
       <View testID="say-thread" style={{ gap: 18 }}>
         {entries.map((e) => (

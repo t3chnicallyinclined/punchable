@@ -14,6 +14,7 @@ import { upload } from './api';
 import { useSession } from './auth';
 import { loginHref } from './session';
 import { isWeb, micExplained, micSupported, pickFile, requestMic, setMicExplained } from './media';
+import type { Worker } from './ask';
 
 // ------------------------------------------------------------------ text (scales with the OS text size; capped)
 type TV = 'body' | 'mut' | 'eb' | 'h1' | 'h2' | 'num' | 'semi' | 'small' | 'big';
@@ -475,6 +476,11 @@ const Disc = ({ bg, children, border }: { bg: string; children?: React.ReactNode
 
 // ------------------------------------------------------------------ app-wide UI state
 export type SnackAction = { label: string; run: () => Promise<void> | void; testID?: string };
+/** The input bar a screen wants (lib/SayBar useSayBar). On iOS 26 the tab bar's bottom accessory draws it. */
+export type BarConfig = {
+  onSay: (text: string, how: 'typed' | 'spoken') => void; placeholder?: string; hint?: string | null; worker?: Worker | null;
+  testID?: string; autoFocus?: boolean; busy?: boolean;
+};
 type Snack = { id: number; msg: string; undo?: () => Promise<void> | void; action?: SnackAction };
 type WSPin = { id: string; title: string; sub: string; target_s?: number } | null;
 type UIState = {
@@ -493,6 +499,9 @@ type UIState = {
   /** Tonight's "N to sort" count: the Tonight tab's badge on the phone (only when > 0, HIG/tab-bars). */
   toSort: number;
   setToSort: (n: number) => void;
+  /** The input bar of the screen in front (null: none), for the tab bar's bottom accessory on iOS 26. */
+  bar: BarConfig | null;
+  setBar: (b: BarConfig | null) => void;
   /** How much of the bottom a bar/dock/tabs covers on the current screen (the snackbar sits above it). */
   setPinnedHeight: (h: number) => void;
 };
@@ -510,6 +519,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
   const [toSort, setToSort] = useState(0);
+  const [bar, setBar] = useState<BarConfig | null>(null);
   const [pinnedHeight, setPinnedHeight] = useState(0);
   const pendingMic = useRef<null | (() => void)>(null);
   const timer = useRef<any>(null);
@@ -554,8 +564,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<UIState>(() => ({
     snack: showSnack, openCapture: () => setSheet('cap'), openRecord: () => setSheet('cap'), quickVoiceNote: voiceNote, withMic, uploadFile,
-    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, toSort, setToSort, setPinnedHeight,
-  }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet, toSort]);
+    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, toSort, setToSort, bar, setBar, setPinnedHeight,
+  }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet, toSort, bar]);
 
   return (
     <Ctx.Provider value={value}>
