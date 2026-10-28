@@ -80,9 +80,116 @@ def run(job: dict, inbox: Path | None = None, file: Path | None = None, complete
     if kind == "ask_chat":
         from creative import askchat as AC
         return AC.run_job(inp, complete=complete)
+    if kind == "set_text":
+        return analyze_transcript(inp, complete=complete)
     if kind in ("embed", "memolink"):
         raise ValueError(f"{kind} runs in online-first mode only (python -m worker --online)")
     raise ValueError(f"unknown job kind {kind}")
+
+
+# ---------------------------------------------------------------- a set transcribed on the phone (no audio here)
+TRANSCRIPT_MAX_CHARS = 400_000
+WORDS_PER_S = 2.5   # for synthetic timestamps when the phone sent none: monotone, never trusted as timing
+
+
+def phone_transcript(inp: dict) -> dict:
+    """The job's segments -> the engine's transcript shape. Timestamps are `device` when every segment has start
+    and end, else `synthetic` (word-count based, monotone) so the split step can run; meta.json says which."""
+    segs = inp.get("segments")
+    if not isinstance(segs, list) or not segs:
+        raise ValueError("set_text needs segments: [{text, start?, end?}]")
+    out, t, chars = [], 0.0, 0
+    timed = all(isinstance(s, dict) and isinstance(s.get("start"), (int, float)) and isinstance(s.get("end"), (int, float))
+                and not isinstance(s.get("start"), bool) and s["end"] >= s["start"] for s in segs)
+    for s in segs:
+        if not isinstance(s, dict) or not isinstance(s.get("text"), str) or not s["text"].strip():
+            continue
+        text = s["text"].strip()
+        chars += len(text)
+        if chars > TRANSCRIPT_MAX_CHARS:
+            raise ValueError("transcript too long")
+        if timed:
+            a, b = float(s["start"]), float(s["end"])
+        else:
+            a = t
+            b = t + max(0.5, len(text.split()) / WORDS_PER_S)
+            t = b
+        out.append({"start": a, "end": b, "text": text, "words": []})
+    if not out:
+        raise ValueError("set_text: every segment is empty")
+    return {"model": "phone:" + str(inp.get("engine") or "speech")[:40], "segments": out,
+            "timestamps": "device" if timed else "synthetic"}
+
+
+def analyze_transcript(inp: dict, complete=None, make_inbox=None) -> dict:
+    """The text-only part of set analysis for a set transcribed on the phone (job kind `set_text`,
+    POST /api/sets/transcript). Runs the engine's split step (the Claude call: transcript -> bits) over the
+    transcript and writes corpus/sets/<set_dir>/{transcript,meta,analysis}.json. Every audio-derived field (laughs,
+    laugh seconds, room heat, dead air, clips) is ABSENT and `audio.status` is "unavailable" until a recording with
+    timing is processed; synthetic timestamps are marked as such. Nothing here hears audio."""
+    import hashlib
+    from datetime import datetime
+    from engine.config import Config
+    from engine.inbox import Inbox
+    tx = phone_transcript(inp)
+    sha = hashlib.sha256(json.dumps(tx["segments"], ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    date = (inp.get("recorded_at") or "")[:10]
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        date = datetime.now().strftime("%Y-%m-%d")
+    set_dir = f"{date.replace('-', '')}_ph{sha[:9]}"
+    title = (inp.get("title") or f"Set {date} (phone)")[:200]
+    cfg = Config()
+    if make_inbox is not None:
+        ib = make_inbox(cfg)
+    else:
+        from engine.providers import Router
+        router = Router(cfg, log_path=cfg.runs_log)
+        if complete is not None:  # a caller-supplied completion (tests, the creative wrapper): one call shape
+            class _R:
+                def complete(self, task, messages, schema=None, **kw):
+                    return complete(task, messages, schema)
+            router = _R()
+        # only split() is called: no audio stage, no embedder, no transcriber may run here
+        ib = Inbox(cfg, router=router, embedder=_NoEmbedder(), transcriber=_never, laughs=_never,
+                   normalizer=_never, prober=_never, log=lambda s: None)
+    run_id = f"settext-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{sha[:8]}"
+    units = ib.split(tx, {"laughs": []}, True, run_id, set_dir)
+    dur = float(inp.get("duration_s") or tx["segments"][-1]["end"] or 0)
+    rows = []
+    for u in units:
+        rows.append({"id": u["id"], "name": u.get("name"), "kind": u.get("kind"), "text": u["text"],
+                     "funny": bool(u.get("funny", True)), "start_ms": u.get("start_ms"), "end_ms": u.get("end_ms"),
+                     # audio-derived fields: not here, and not pretended
+                     "laugh_s": None, "laugh_s_per_min": None, "pct_laughing": None, "vs_room": None,
+                     "time_to_first_laugh_s": None, "dead_air_max_s": None})
+    audio = {"status": "unavailable", "why": "transcribed on the phone; laughs, room heat and timing need the recording",
+             "timestamps": tx["timestamps"]}
+    meta = {"id": f"ph{sha[:9]}", "title": title, "source": "phone_transcript", "recorded_at": inp.get("recorded_at"),
+            "show_date": date, "show_date_source": "the phone (when it was recorded)" if inp.get("recorded_at") else "today",
+            "show_venue": inp.get("venue"), "duration_s": dur or None, "transcript_sha256": sha, "audio": audio,
+            "received_at": inp.get("received_at")}
+    analysis = {"set": set_dir, "source": "set_text", "run_id": run_id, "audio": audio, "rows": rows,
+                "summary": {"material_s": None, "laugh_s_total": None, "laugh_s_per_min": None, "pct_laughing": None,
+                            "laughs_merged": None, "laughs_per_min_merged": None, "applause_s": None,
+                            "longest_laugh_s": None, "longest_laugh_joke": None, "dead_air_max_s": None,
+                            "dead_air_max_at_ms": None, "room_heat": None, "room_heat_basis": "unavailable: no audio",
+                            "units": len(rows), "funny_units": sum(1 for r in rows if r["funny"])}}
+    out_dir = cfg.p("out_corpus_dir") / "sets" / set_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for name, doc in (("transcript.json", tx), ("meta.json", {k: v for k, v in meta.items() if v is not None}),
+                      ("analysis.json", analysis)):
+        (out_dir / name).write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"status": "analyzed_text", "kind": "set", "set_dir": set_dir, "units": len(rows),
+            "funny_units": analysis["summary"]["funny_units"], "audio": audio, "run_id": run_id}
+
+
+class _NoEmbedder:
+    def embed(self, *a, **k):
+        raise RuntimeError("set_text runs the split step only; nothing is embedded here")
+
+
+def _never(*a, **k):
+    raise RuntimeError("set_text has no audio: this stage must not run")
 
 
 LAUGHS_PY = os.environ.get("PK_LAUGHS_PY", str(Path.home() / ".venvs" / "laughs" / "Scripts" / "python.exe"))

@@ -38,7 +38,7 @@ VEC_CACHES = {"vectors.f32": "vectors_ids.json", "vectors_v1.f32": "vectors_v1_i
 POST_CHUNK = 12 * 1024 * 1024
 LOCAL_OWNED = ("kb/gsync/",)  # gsync's own state: written on this PC, pushed by gsync; downloaded only when missing
 ACTOR = {"import_youtube": "import:youtube", "process_set": "import:upload", "embed": "ai:embed",
-         "memolink": "ai:memolink"}
+         "memolink": "ai:memolink", "set_text": "ai:set_text"}
 
 
 def log(*a):
@@ -288,6 +288,8 @@ def run_job(cl, ws: Workspace, job: dict, file: Path | None = None, execute=None
             res = embed_job(ws)
         elif kind == "memolink":
             res = memolink_job(cl, ws, job)
+        elif kind == "set_text":
+            res = set_text_job(cl, ws, job, execute)
         else:
             res = execute.run(job, file=file)
         pushed = ws.push(before, actor)
@@ -340,6 +342,37 @@ def memolink_job(cl, ws: Workspace, job: dict) -> dict:
         out["attached"] = done
     out["same_idea_groups"] = len(ML.suggestions(c, cdir, mj, st.items))
     return out
+
+
+SET_TEXT_IDEA_MAX = 4000
+
+
+def set_text_job(cl, ws: Workspace, job: dict, execute, complete=None) -> dict:
+    """A set transcribed on the phone (POST /api/sets/transcript -> job set_text): the text-only analysis
+    (worker/execute.analyze_transcript: the split step, files with audio fields unavailable), then every funny unit
+    posted as an idea (actor ai:set_text, undoable through the usual attach decision) so a bit from a phone-
+    transcribed night is never silently lost. The graph is not a worker-postable file, so nothing else is merged
+    until a recording with timing goes through the full pipeline."""
+    inp = job.get("input") or {}
+    res = execute.analyze_transcript(inp, complete=complete)
+    adir = ws.comedy / "corpus" / "sets" / res["set_dir"]
+    text = (adir / "transcript.json").read_text(encoding="utf-8")
+    if ws.legal(text):
+        shutil.rmtree(adir, ignore_errors=True)
+        return {"status": "skipped_legal"}
+    rows = json.loads((adir / "analysis.json").read_text(encoding="utf-8"))["rows"]
+    ideas = []
+    date = (inp.get("recorded_at") or "")[:10] or "unknown"
+    title = (inp.get("title") or "a set")[:120]
+    for r in rows:
+        if not r.get("funny") or not r.get("text") or len(r["text"]) > SET_TEXT_IDEA_MAX:
+            continue
+        got = cl.call("POST", "/api/worker/ideas", {
+            "text": r["text"], "title": (r.get("name") or "")[:80], "actor": "ai:set_text",
+            "from": {"set": res["set_dir"], "unit": r["id"]},
+            "reason": f"[set_text] bit from '{title}' ({date}), transcribed on the phone; no audio"})
+        ideas.append({"unit": r["id"], "joke_id": got.get("id"), "attach": (got.get("attach") or {}).get("decision")})
+    return {**res, "ideas": ideas}
 
 
 def process_upload(cl, ws: Workspace, job: dict, file: Path | None) -> dict:

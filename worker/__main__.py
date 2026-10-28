@@ -1,10 +1,14 @@
-"""Punchable home worker: an outbound-only loop on the comic's PC.
+"""Punchable worker: an outbound-only loop that runs the queued AI jobs.
 
-    python -m worker                      # forever: pull phone decisions + creative edits, run queued jobs
-    python -m worker --once               # one pass, then exit (a scheduled task can run this every few minutes)
+    python -m worker --hosted             # the server (infra/k8s/35-worker.yaml): online-first, the Anthropic API
+                                          # (engine/config.hosted.toml), never the kinds that need audio
+    python -m worker                      # development on a PC: pull phone decisions + creative edits, run jobs
+    python -m worker --once               # one pass, then exit
     python -m worker --api http://127.0.0.1:8796 --no-auth     # against the local dev API (loopback, auth off)
 
-It only ever makes HTTPS requests out (Keycloak for a token, punchable.io for jobs); nothing listens.
+Hosted is the default deployment since 2026-10-27 (owner: "all phone / frontier models"); the PC mode stays for
+development. It only ever makes HTTP requests out (Keycloak for a token, the API for jobs); nothing listens: the
+liveness probe reads the heartbeat file this loop touches (PK_HEARTBEAT_FILE).
 - Token: Keycloak client credentials as `pk-worker` (confidential, realm role `worker`). The secret is read from
   %USERPROFILE%\\.punchable\\secrets.env (PK_WORKER_SECRET=...). It is never printed, logged or written elsewhere.
 - Decisions made on the phone are appended to comedy/kb/v0/decisions.jsonl: append-only, fsync, deduplicated by the
@@ -237,14 +241,59 @@ def replays(name: str, lines: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------- jobs
-def run_one(cl: Client, kinds: list[str] | None, ws=None) -> bool:
+def worker_name() -> str:
+    return (os.environ.get("PK_WORKER_NAME") or os.environ.get("COMPUTERNAME") or "home")[:40]
+
+
+def model_line() -> str | None:
+    """What the app shows under "AI for drafts": the hosted provider and its models, from the engine config."""
+    try:
+        from engine.config import Config
+        cfg = Config()
+        models = {}
+        for t in ("creative_riff", "ask_chat", "merge_judge"):
+            for name, m in (cfg.task(t).get("models") or {}).items():
+                if name in cfg.providers and cfg.providers[name].get("kind") == "anthropic":
+                    models[m] = 1
+        if models:
+            return "Anthropic API · " + ", ".join(models)
+        prov = next(iter(cfg.task("default").get("providers") or []), None)
+        return prov
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def claim_body(kinds: list[str] | None, hosted: bool, paused: str | None = None) -> dict:
+    """What /api/worker/claim gets: the kinds this process runs (never a transcriber kind when hosted), who it is,
+    which models it writes with, and -- when the day's AI budget is spent -- why it is not taking a job right now
+    (the API then hands out nothing and shows the reason; the jobs stay queued)."""
+    if hosted:
+        kinds = [k for k in (kinds or []) if k not in TRANSCRIBER_KINDS]
+    body = {"kinds": kinds, "worker": worker_name(), "hosted": hosted}
+    m = model_line()
+    if m:
+        body["model"] = m
+    if paused:
+        body["paused"] = paused[:300]
+    return body
+
+
+def run_one(cl: Client, kinds: list[str] | None, ws=None, hosted: bool = False, budget=None) -> bool:
     """Claim one job and run it. `ws` (worker/online.Workspace): online-first mode, the job runs on a workspace
-    mirrored from the API, its results are posted back and its media deleted."""
+    mirrored from the API, its results are posted back and its media deleted. `budget` (engine/budget.Budget):
+    over the day's cap the claim carries the reason and asks for nothing (the heartbeat still lands)."""
     from worker import execute
-    r = cl.call("POST", "/api/worker/claim", {"kinds": kinds, "worker": os.environ.get("COMPUTERNAME", "home")[:40]})
-    if not r:
+    paused = None
+    if budget is not None and budget.remaining() <= 0:
+        paused = budget.reason()
+    r = cl.call("POST", "/api/worker/claim", claim_body(kinds, hosted, paused))
+    if paused or not r:
         return False
     job = r["job"]
+    if hosted and job["kind"] in TRANSCRIBER_KINDS:  # the API must never hand these out to a hosted worker
+        cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result",
+                {"ok": False, "retry": True, "error": "this worker has no audio pipeline: transcription happens on the phone"})
+        raise RuntimeError(f"claimed a {job['kind']} job while hosted; handed back")
     log(f"job {job['id']} ({job['kind']})")
     file = None
     try:
@@ -270,19 +319,58 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None) -> bool:
         log(f"job {job['id']} done ({res.get('status') if isinstance(res, dict) else 'ok'})")
     except Exception as e:  # noqa: BLE001
         log(f"job {job['id']} failed: {type(e).__name__}: {e}")
+        # the day's AI budget ran out mid-job: back to the queue with the reason (a retry, not a failure)
+        budget_hit = type(e).__name__ == "BudgetExceeded"
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result",
-                {"ok": False, "error": f"{type(e).__name__}: {e}"[:1500], "retry": isinstance(e, (OSError, TimeoutError))})
+                {"ok": False, "error": (str(e) if budget_hit else f"{type(e).__name__}: {e}")[:1500],
+                 "retry": budget_hit or isinstance(e, (OSError, TimeoutError))})
     return True
 
 
 BASE_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat")
 ONLINE_KINDS = ("embed", "memolink")
+# Kinds that need audio (whisper, the laugh detector, yt-dlp): the GPU PC ran them. Transcription happens on the phone
+# now; a hosted worker never asks for them and the API keeps them queued as `waiting_for: "transcriber"`.
+TRANSCRIBER_KINDS = ("process_set", "import_youtube")
+# The hosted worker (the server, the Anthropic API, no audio): model kinds, the text-only set analysis, and the
+# embedding kinds when the bge model is in the image (engine.config.bge_dir_override / the config's bge_dir).
+HOSTED_KINDS = ("bridge", "punchup", "facts", "riff", "ask_chat", "set_text")
+HOSTED_EMBED_KINDS = ("embed", "memolink", "ask")
 
 
-def default_kinds(online: bool) -> list[str]:
+def hosted_kinds(has_bge: bool | None = None) -> list[str]:
+    if has_bge is None:
+        has_bge = _has_bge()
+    return list(HOSTED_KINDS) + (list(HOSTED_EMBED_KINDS) if has_bge else [])
+
+
+def _has_bge() -> bool:
+    try:
+        from engine.config import Config, bge_dir_override
+        d = bge_dir_override() or Config().p("bge_dir")
+        return (d / "onnx" / "model.onnx").is_file() and (d / "tokenizer.json").is_file()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def default_kinds(online: bool, hosted: bool = False) -> list[str]:
     """The job kinds to ask for. embed and memolink run only online-first; asking a hosted API that predates them
-    for them is refused (400) on every poll, so the local mode never asks (found 2026-10-27 on the live worker)."""
+    for them is refused (400) on every poll, so the local mode never asks (found 2026-10-27 on the live worker).
+    Hosted: never a transcriber kind, whatever else is configured."""
+    if hosted:
+        return [k for k in hosted_kinds() if k not in TRANSCRIBER_KINDS]
     return list(BASE_KINDS) + (list(ONLINE_KINDS) if online else [])
+
+
+def heartbeat(path: Path | None):
+    """Touch the liveness file (the Deployment's probe checks its age). Nothing else is written there."""
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    except OSError as e:
+        log(f"heartbeat: {e}")
 
 
 def main(argv=None):
@@ -297,11 +385,17 @@ def main(argv=None):
     ap.add_argument("--online", action="store_true", default=os.environ.get("PK_ONLINE_FIRST") == "1",
                     help="online-first: run jobs on a workspace mirrored from the API (worker/online.py), post the "
                          "results, keep nothing; no pulls into the data folder (also PK_ONLINE_FIRST=1)")
+    ap.add_argument("--hosted", action="store_true", default=os.environ.get("PK_HOSTED") == "1",
+                    help="the server worker (also PK_HOSTED=1): online-first, the Anthropic API per engine/"
+                         "config.hosted.toml (ENGINE_CONFIG), never the kinds that need audio, the daily budget "
+                         "PK_AI_DAILY_USD, a heartbeat file for the liveness probe (PK_HEARTBEAT_FILE)")
     ap.add_argument("--idle", type=float, default=15.0, help="seconds between polls when there is nothing to do")
     ap.add_argument("--no-pull", action="store_true", help="do not pull decisions / creative edits")
     a = ap.parse_args(argv)
     if a.no_auth and not urllib.parse.urlparse(a.api).hostname in ("127.0.0.1", "localhost"):
         raise SystemExit("--no-auth is only for the loopback dev API")
+    if a.hosted:
+        a.online = True
     cl = Client(a.api, auth=not a.no_auth, token_url=a.token_url, client_id=s.get("PK_WORKER_CLIENT_ID", "pk-worker"),
                 secret=s.get("PK_WORKER_SECRET"))
     ws = None
@@ -311,9 +405,20 @@ def main(argv=None):
         ws.activate()  # before creative/ is imported: its caches and data folder are the workspace's
         a.no_pull = True  # nothing is pulled into a data folder: the database is the truth
         log(f"online-first: workspace {ws.root}")
+    budget, hb = None, None
+    if a.hosted:
+        from engine.budget import Budget
+        os.environ.setdefault("PK_AI_SPEND_FILE", str(ws.root / "ai_spend.json"))
+        budget = Budget()
+        hb = Path(os.environ.get("PK_HEARTBEAT_FILE") or ws.root / "heartbeat")
+        heartbeat(hb)
+        log(f"hosted: {model_line() or 'no model'}; budget ${budget.daily_usd:.2f}/day (spent ${budget.spent_today():.2f}); "
+            f"bge {'yes' if _has_bge() else 'no (embed/memolink/ask not claimed)'}")
     from creative.data import comedy_dir, creative_dir
     decisions = comedy_dir() / "kb" / "v0" / "decisions.jsonl"
-    kinds = [k for k in a.kinds.split(",") if k] if a.kinds else default_kinds(a.online)
+    kinds = [k for k in a.kinds.split(",") if k] if a.kinds else default_kinds(a.online, a.hosted)
+    if a.hosted:
+        kinds = [k for k in kinds if k not in TRANSCRIBER_KINDS]
     log(f"worker up: {a.api} ({'auth' if not a.no_auth else 'no auth'}), kinds {kinds}")
     backoff, last_pull = 5, 0.0
     while True:
@@ -324,7 +429,9 @@ def main(argv=None):
                 if n or any(c.values()):
                     log(f"pulled {n} decision line(s), creative {c}")
                 last_pull = time.time()
-            busy = run_one(cl, kinds, ws)
+            heartbeat(hb)
+            busy = run_one(cl, kinds, ws, hosted=a.hosted, budget=budget)
+            heartbeat(hb)
             backoff = 5
             if a.once and not busy:
                 return 0
