@@ -116,14 +116,14 @@ export default function Write() {
 
   const pickBoard = (jokeId: string, title: string) => boards.pick(jokeId, title);
 
-  const saveLine = async (text: string) => {
+  const saveLine = async (text: string, draft = false) => {
     const t = text.trim();
     if (!t) return;
     const key = `${Date.now()}-${lines.length}`;
     setLines((xs) => [...xs, { key, text: t, state: 'saving' }]);
     setLine('');
     try {
-      const w = await simple.saveIdea(t, idea.trim() || t);
+      const w = await simple.saveIdea(t, idea.trim() || t, draft);
       const att = w.attach?.decision === 'attach' && w.attach.into ? w.attach : null;
       // filed as a note of an existing bit (the merge module): ＋ sends that bit to a board
       setLines((xs) => xs.map((x) => (x.key === key ? { ...x, id: att ? att.into : w.id, indexes: w.indexes, state: 'saved', into: att?.title } : x)));
@@ -306,8 +306,8 @@ export default function Write() {
                   <View style={{ alignSelf: 'flex-start', paddingHorizontal: 6, minHeight: 20, borderRadius: 4, backgroundColor: C.addBg, justifyContent: 'center' }}><Text style={{ fontFamily: F.g7, fontSize: 11, color: C.amber }}>Draft</Text></View>
                   <Text maxFontSizeMultiplier={1.5} style={{ fontFamily: F.body, fontSize: 16, lineHeight: 23, color: C.amber }}>{d.text}</Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Btn testID={`ai-idea-${i}-use`} small label="Use as mine" onPress={() => { setUsedDrafts((x) => new Set(x).add(d.text)); saveLine(d.text); }} />
-                    <Btn small v="ghost" label="Dismiss" onPress={() => setUsedDrafts((x) => new Set(x).add(d.text))} />
+                    <Btn testID={`ai-idea-${i}-use`} small label="Use as mine" onPress={() => { setUsedDrafts((x) => new Set(x).add(d.text)); saveLine(d.text, true); }} />
+                    <Btn testID={`ai-idea-${i}-dismiss`} small v="ghost" label="Dismiss" onPress={() => { setUsedDrafts((x) => new Set(x).add(d.text)); simple.dismissDraft(d.text); }} />
                   </View>
                 </View>
               ))}

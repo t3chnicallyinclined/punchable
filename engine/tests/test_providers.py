@@ -300,6 +300,12 @@ def test_cache_breakpoints_land_on_the_first_and_last_system_blocks(env):
     kw = b.build_request("claude-opus-5-5", [{"role": "system", "content": "only"}, {"role": "user", "content": "u"}], None, {})
     assert kw["system"] == [{"type": "text", "text": "only", "cache_control": {"type": "ephemeral"}}]
     assert "cache_control" not in json.dumps(kw["messages"])  # the material is after the breakpoints
+    # three blocks: profile, the learned section (creative/learned.py), the task line: three breakpoints (of four),
+    # so a riff after a punch-up reads [profile] and [profile + learned] from the cache and pays only for its own line
+    kw = b.build_request("claude-opus-5-5", [{"role": "system", "content": "profile"}, {"role": "system", "content": "learned"},
+                                             {"role": "system", "content": "task"}, {"role": "user", "content": "u"}], None, {})
+    assert [x["text"] for x in kw["system"]] == ["profile", "learned", "task"]
+    assert all(x["cache_control"] == {"type": "ephemeral"} for x in kw["system"])
 
 
 def cc_cfg(env, enabled=True, offline=True):

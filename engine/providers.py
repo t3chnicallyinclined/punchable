@@ -232,10 +232,12 @@ class AnthropicBackend(Backend):
 
     - streams every request (`messages.stream` + `get_final_message()`): long drafts never hit the HTTP timeout;
     - the system messages become text blocks with `cache_control` on the FIRST one (the voice profile + craft rules,
-      creative/voice.py: stable across every task, long enough to cache) and on the last one (the task's own line),
-      so the prefix is served from the prompt cache on the next call; the volatile material is in the user turn,
-      after the breakpoints. The prefix must reach the model's minimum (512 tokens on Opus 5.5 / Sonnet 5.5) or the
-      cache silently never hits: a system block on its own does not; the profile block does;
+      creative/voice.py: stable across every task, long enough to cache), on the last one (the task's own line) and,
+      when there are three, on the middle one (the learned section, creative/learned.py: the lines he kept, cached
+      as the prefix behind the profile), so the prefix is served from the prompt cache on the next call; the volatile
+      material is in the user turn, after the breakpoints. The prefix must reach the model's minimum (512 tokens on
+      Opus 5.5 / Sonnet 5.5) or the cache silently never hits: a system block on its own does not; the profile block
+      does;
     - a refusal (stop_reason "refusal") raises Refusal, a cut answer (max_tokens) CutShort: plain words the comic can
       read; the router retries each once on the task's `fallbacks` models (config: `fallbacks = ["default"]`, i.e.
       the default task's model, Sonnet on the hosted config) before giving up, and never swallows them;
@@ -278,9 +280,13 @@ class AnthropicBackend(Backend):
         if sys_blocks:
             if self.pcfg.get("cache", True):
                 # the first block is the stable prefix shared by every task (the voice profile); the last is the
-                # task's own line: two breakpoints (of the four allowed), so a different task still reuses the first
+                # task's own line: two breakpoints (of the four allowed), so a different task still reuses the first.
+                # With three blocks the middle one is the learned section (creative/learned.py: changes when he keeps
+                # a line): its own breakpoint, so riff and punch-up share the [profile + learned] prefix too
                 sys_blocks[0]["cache_control"] = {"type": "ephemeral"}
                 sys_blocks[-1]["cache_control"] = {"type": "ephemeral"}
+                if len(sys_blocks) >= 3:
+                    sys_blocks[1]["cache_control"] = {"type": "ephemeral"}
             kw["system"] = sys_blocks
         if self.thinks(model, task_cfg, self.pcfg):
             kw["thinking"] = {"type": "adaptive"}

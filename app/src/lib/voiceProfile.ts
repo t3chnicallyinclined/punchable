@@ -3,8 +3,13 @@
 // and the status line. The text itself is his; nothing here sends it anywhere.
 
 export type VoiceVersion = { text: string; updated_at: string | null; by: string | null };
+/** One line the app learned from him (creative/learned.py): the words, the bit it went to, the day. */
+export type LearnedLine = { text: string; bit: string | null; date: string | null };
+/** The learned section of the document: maintained by the server from his keeps, never typed, never editable here. */
+export type Learned = { kept: LearnedLine[]; dropped: LearnedLine[]; updated_at: string | null };
 export type VoiceDoc = {
   kind: 'voice'; text: string | null; updated_at: string | null; by: string | null; chars: number; previous: VoiceVersion | null;
+  learned?: Learned | null;
 };
 export const MAX_CHARS = 60000; // api-dev/profile_api.py MAX_CHARS
 
@@ -59,4 +64,19 @@ export function statusLine(doc: VoiceDoc | null | undefined): string {
 /** The snackbar after a save; the Undo on it restores `undoVersion(doc)` when there is one. */
 export function savedWords(doc: VoiceDoc): string {
   return `Saved · ${wordCount(doc.text).toLocaleString('en-US')} words`;
+}
+
+/** The "What it has learned" line: counts, or the honest empty line. The server fills this from his keeps
+ *  ("Use as mine" on a riff or punch-up draft, api-dev/profile_api.py learn_kept); nothing here is typed. */
+export function learnedWords(l: Learned | null | undefined): string {
+  const k = l?.kept?.length || 0;
+  const d = l?.dropped?.length || 0;
+  if (!k && !d) return 'Nothing yet. It learns when you take one of its drafts as yours.';
+  const when = dateWords(l?.updated_at);
+  return `${k} line${k === 1 ? '' : 's'} kept · ${d} passed over${when ? ` · last ${when}` : ''}`;
+}
+
+/** The learned lines as shown, newest first (the server already orders them), each with its month. */
+export function learnedRows(lines: LearnedLine[] | null | undefined, cap = 25): { text: string; when: string }[] {
+  return (lines || []).slice(0, cap).map((x) => ({ text: x.text, when: dateWords(x.date) }));
 }

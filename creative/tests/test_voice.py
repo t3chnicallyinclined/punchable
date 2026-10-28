@@ -29,7 +29,8 @@ def test_no_profile_means_the_prompt_is_what_it_was():
     assert voice.system_block("creative_riff") is None and not voice.loaded()
     assert voice.messages("creative_riff", "task line", {"role": "user", "content": "u"}) == [
         {"role": "system", "content": "task line"}, {"role": "user", "content": "u"}]
-    assert voice.status() == {"loaded": False, "chars": 0, "sha": None, "updated_at": None, "by": None, "source": None}
+    assert voice.status() == {"loaded": False, "chars": 0, "sha": None, "updated_at": None, "by": None, "source": None,
+                              "learned": {"kept": 0, "dropped": 0, "updated_at": None, "laughs": 0}}
 
 
 def test_profile_is_the_first_block_stable_across_tasks_and_over_the_cache_minimum():
@@ -54,6 +55,61 @@ def test_profile_is_the_first_block_stable_across_tasks_and_over_the_cache_minim
     # a short profile alone would not reach the minimum: cacheable() says so (the worker logs it, nothing breaks)
     voice.set_profile("He is dry.", "t", "owner")
     assert voice.loaded() and not voice.cacheable("creative_riff")
+
+
+def test_learned_block_is_the_second_block_behind_the_profile_and_never_in_ask():
+    """creative/learned.py's block rides second: the profile block stays byte-identical (its cache entry survives a
+    keep), the learned block changes with his keeps, the task line stays last; Ask never gets it."""
+    voice.set_profile(FAKE_PROFILE, "2026-10-28T10:00:00+00:00", "owner")
+    before = voice.messages("creative_riff", "riff task", {"role": "user", "content": "idea"})
+    voice.set_learned({"kept": [{"text": "Kept parrot line.", "bit": "joke:p", "date": "2026-10-28"}],
+                       "dropped": [{"text": "Passed parrot line.", "bit": "joke:p", "date": "2026-10-28"}],
+                       "updated_at": "2026-10-28T11:00:00+00:00"},
+                      [{"text": "The dishwasher line.", "laugh_s": 4.4}])
+    riff = voice.messages("creative_riff", "riff task", {"role": "user", "content": "idea"})
+    punch = voice.messages("creative_punchup", "punch task", {"role": "user", "content": "lines"})
+    assert [x["role"] for x in riff] == ["system", "system", "system", "user"]
+    assert riff[0]["content"] == before[0]["content"], "the profile block is untouched by what was learned"
+    assert riff[1]["content"] == punch[1]["content"], "one learned block, byte-identical across the writing tasks"
+    assert "Lines he kept recently:\n- \"Kept parrot line.\"" in riff[1]["content"]
+    assert "Lines he passed over:\n- \"Passed parrot line.\"" in riff[1]["content"]
+    assert "The dishwasher line." in riff[1]["content"] and riff[2]["content"] == "riff task"
+    ask = voice.messages("ask_chat", "ask task", {"role": "user", "content": "q"})
+    assert [x["role"] for x in ask] == ["system", "system", "user"] and "Kept parrot" not in "".join(m["content"] for m in ask)
+    # the cache truth: on its own the learned block is far under the minimum; behind the profile it is the prefix
+    assert voice.est_tokens(riff[1]["content"]) < voice.MIN_CACHE_TOKENS
+    assert voice.cacheable_learned("creative_riff") == "prefix" and voice.cacheable_learned("ask_chat") == "none"
+    voice.set_profile("He is dry.", "t", "owner")
+    assert voice.cacheable_learned("creative_riff") == "alone_too_short"
+    # status reports counts, never a line
+    s = voice.status()
+    assert s["learned"] == {"kept": 1, "dropped": 1, "updated_at": "2026-10-28T11:00:00+00:00", "laughs": 1}
+    assert "parrot" not in json.dumps(s)
+    # nothing learned: the prompt is exactly what it was
+    voice.set_learned(None, [])
+    voice.set_profile(FAKE_PROFILE, "2026-10-28T10:00:00+00:00", "owner")
+    assert voice.messages("creative_riff", "riff task", {"role": "user", "content": "idea"}) == before
+    assert voice.cacheable_learned("creative_riff") == "none" and voice.learned() is None
+
+
+def test_fetch_takes_the_learned_section_and_the_laugh_lines_from_the_same_get():
+    lines = []
+    log = lambda *a: lines.append(" ".join(str(x) for x in a))  # noqa: E731
+    doc = {"kind": "voice", "text": FAKE_PROFILE, "updated_at": "2026-10-28T10:00:00+00:00", "by": "owner",
+           "learned": {"kept": [{"text": "Kept parrot line.", "bit": "joke:p", "date": "2026-10-28"}], "dropped": [],
+                       "updated_at": "2026-10-28T11:00:00+00:00"},
+           "laugh_lines": [{"text": "The dishwasher line.", "bit": "joke:b", "date": "2024-03-01", "laugh_s": 3.0}]}
+    r = voice.fetch(FakeClient(doc), log)
+    assert r["learned"] == {"kept": 1, "dropped": 0, "updated_at": "2026-10-28T11:00:00+00:00", "laughs": 1}
+    assert voice.learned_block("creative_riff") and "Kept parrot line." in voice.learned_block("creative_riff")
+    assert any(l.startswith("voice profile: learned section (1 kept, 0 passed over, 1 laugh lines") and "prefix" in l for l in lines)
+    assert "parrot" not in "\n".join(lines) and "dishwasher" not in "\n".join(lines)
+    # the text removed on the server: the learned section stays (it is the app's, not his)
+    voice.fetch(FakeClient({"kind": "voice", "text": None, "learned": doc["learned"], "laugh_lines": []}), log)
+    assert not voice.loaded() and voice.learned_block("creative_riff") and voice.cacheable_learned("creative_riff") == "alone_too_short"
+    # an older API without the fields: nothing learned, no error
+    voice.fetch(FakeClient({"kind": "voice", "text": FAKE_PROFILE, "updated_at": "t"}), log)
+    assert voice.learned() is None and voice.learned_block("creative_riff") is None
 
 
 def test_craft_rules_name_the_rules_the_audit_asked_for_and_none_of_his_moves():

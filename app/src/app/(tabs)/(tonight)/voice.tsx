@@ -10,7 +10,7 @@ import { haptics } from '@/lib/haptics';
 import { C, F } from '@/lib/theme';
 import { Btn, Card, Skeleton, T, s, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
-import { MAX_CHARS, VoiceDoc, canSave, normalize, savedWords, statusLine, undoVersion, wordCount } from '@/lib/voiceProfile';
+import { MAX_CHARS, VoiceDoc, canSave, learnedRows, learnedWords, normalize, savedWords, statusLine, undoVersion, wordCount } from '@/lib/voiceProfile';
 
 export default function VoiceProfilePage() {
   const ui = useUI();
@@ -69,6 +69,27 @@ export default function VoiceProfilePage() {
           <Btn small testID="voice-revert" label="Revert" disabled={saving || normalize(draft) === normalize(saved)} onPress={() => setDraft(normalize(saved))} accessibilityLabel="Revert to the saved text" />
           <Btn small testID="voice-save" label={saving ? 'Saving…' : 'Save'} v="primary" disabled={saving || !gate.ok} onPress={() => save(normalize(draft), true)} accessibilityLabel={gate.ok ? 'Save the voice profile' : `Save: ${gate.why}`} />
         </View>
+      </Card>
+      <Card testID="voice-learned" style={{ gap: 8 }}>
+        <T v="eb">What it has learned</T>
+        <T v="mut">Filled in by Punchable, not typed: the drafts you took as yours (“Use as mine”) and the ones you left beside them. The AI reads this after your profile. Nothing here changes your text.</T>
+        <T v="small" testID="voice-learned-status">{learnedWords(api.data?.learned)}</T>
+        {learnedRows(api.data?.learned?.kept).length > 0 && (
+          <View style={{ gap: 4 }}>
+            <T v="small" style={{ color: C.amber }}>Kept</T>
+            {learnedRows(api.data?.learned?.kept).map((r, i) => (
+              <T key={`k${i}`} testID={`voice-kept-${i}`}>{r.text}{r.when ? <T v="small">{`  ${r.when}`}</T> : null}</T>
+            ))}
+          </View>
+        )}
+        {learnedRows(api.data?.learned?.dropped).length > 0 && (
+          <View style={{ gap: 4 }}>
+            <T v="small" style={{ color: C.dim }}>Passed over</T>
+            {learnedRows(api.data?.learned?.dropped).map((r, i) => (
+              <T key={`d${i}`} v="mut" testID={`voice-dropped-${i}`}>{r.text}{r.when ? <T v="small">{`  ${r.when}`}</T> : null}</T>
+            ))}
+          </View>
+        )}
       </Card>
       <Card style={{ gap: 6 }}>
         <T v="small">A save keeps the version before it: Undo in the bar restores it. Court or legal text is refused and never kept. The AI never quotes this; it only reads it.</T>
