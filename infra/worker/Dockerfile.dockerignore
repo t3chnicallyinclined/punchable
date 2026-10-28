@@ -11,3 +11,5 @@
 !tools/explorer/kb.py
 !tools/kb/fetch_bge.py
 !infer/*.py
+!api-dev/crash.py
+!api-dev/scrub.py

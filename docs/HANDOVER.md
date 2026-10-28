@@ -1,4 +1,4 @@
-# Punchable: start here (handover, 2026-10-28)
+# Punchable: start here (handover, 2026-10-28, updated after the worker crash-report wiring)
 
 Read this first in a new session. It says what is live, what learns, what is open, and the traps that cost time
 today. It is public-safe: no secrets, no server names, no material. Private operating state (deploy log with image
@@ -20,7 +20,7 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 | iPhone | TestFlight **0.1.0 (9)**, built from `e4c5057`, auto-submitted. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7, 8, 9 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
-| Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). **Worker not wired yet.** |
+| Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). Worker wired 2026-10-28 (`worker/crashreport.py`, the same Secret, release `punchable-worker@…`, tags kind/retry; a budget pause is never reported) and **waits for its first `build worker` + `rollout worker`**. |
 | Metrics | Prometheus scrape of API + worker, Grafana dashboard, 13 alert rules. **Two alerts can never fire** (backup missed, certificate expiring): the cluster has no kube-state-metrics and cert-manager is not scraped. Fix needs the owner's go (shared namespace). |
 | DNS | `infra/dns/cf_dns.py plan` / `apply` with a token scoped to this one zone (DNS Write + Zone Read). Records: apex, auth, bugs. |
 
@@ -100,12 +100,17 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.
 2. **"go ksm"**: deploy kube-state-metrics and a cert-manager scrape in the shared observability namespace so the two
    dead alerts work (config reload, no app downtime).
-3. Worker crash reporting: `SENTRY_DSN` into `infra/k8s/35-worker.yaml` from the same Secret as the API.
+3. Roll out the worker crash reporting (code is on main): `bash infra/ship.sh build worker && bash infra/ship.sh rollout worker`,
+   then the worker log should say `crash reporting on: punchable-worker@…`; prove it with the worker command under
+   "Verifying a crash lands" in `infra/OBSERVABILITY.md`.
 4. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
 5. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
 6. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
-7. Remove `holdToTalk.native.ts` (jots are typed now).
-8. Move the Google Docs sync off the PC (last PC dependency).
-9. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
-10. Pin the Bugsink image by digest.
-11. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
+7. Move the Google Docs sync off the PC (last PC dependency). Its tests (`gsync/tests/test_auth.py`) need the
+   google-auth library, which this PC's Python no longer has: four of them fail locally for that reason alone.
+8. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
+9. Pin the Bugsink image by digest.
+10. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
+
+Done 2026-10-28 (this list's former items 3 and 7): worker crash reporting wired; `holdToTalk.native.ts` removed (the
+phone's input button now only focuses the field, jots are typed).

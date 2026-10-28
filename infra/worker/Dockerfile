@@ -1,8 +1,8 @@
 # Punchable hosted worker (the server's writer). Build context = repo root:
 #   infra/ship.sh build worker   ->   docker build -f infra/worker/Dockerfile .   (from `git archive HEAD` on the server)
 # A separate image from api/Dockerfile on purpose: the API image deliberately holds no engine, no model and no
-# worker code (it serves and queues); this one holds the engine (engine/, creative/, worker/), the Anthropic SDK and
-# the bge-small ONNX model for the embedding kinds. No whisper, no laugh detector, no yt-dlp, no ffmpeg: the kinds
+# worker code (it serves and queues); this one holds the engine (engine/, creative/, worker/), the Anthropic SDK,
+# the bge-small ONNX model for the embedding kinds, and the API's crash.py + scrub.py (crash reports to Bugsink). No whisper, no laugh detector, no yt-dlp, no ffmpeg: the kinds
 # that need audio are never claimed here (worker/__main__.py TRANSCRIBER_KINDS).
 # Slim Python, wheels only (no compilers), non-root uid 10001, read-only root filesystem: the only writes go to /tmp
 # (an emptyDir in infra/k8s/35-worker.yaml: the disposable workspace, the heartbeat, the day's spend ledger).
@@ -34,8 +34,10 @@ COPY db/sdb.py db/kbmap.py db/srcpaths.py db/embedder.py db/
 COPY gsync/rules.py gsync/memos.py gsync/__init__.py gsync/
 COPY tools/explorer/kb.py tools/explorer/
 COPY infer/*.py infer/
+# crash reports: the API's SDK wrapper and scrubber, used by worker/crashreport.py (release punchable-worker@...)
+COPY api-dev/crash.py api-dev/scrub.py api-dev/
 RUN /venv/bin/python -m compileall -q /app \
- && cd /app && ENGINE_CONFIG=/app/engine/config.hosted.toml /venv/bin/python -c "import worker.__main__, worker.online, worker.execute, engine.providers, engine.budget, creative.askchat, creative.write, creative.memolink; from engine.config import Config; c = Config(); assert set(c.providers) == {'anthropic'}, c.providers"
+ && cd /app && ENGINE_CONFIG=/app/engine/config.hosted.toml /venv/bin/python -c "import worker.__main__, worker.online, worker.execute, worker.crashreport, sentry_sdk, engine.providers, engine.budget, creative.askchat, creative.write, creative.memolink; from engine.config import Config; c = Config(); assert set(c.providers) == {'anthropic'}, c.providers"
 ARG PK_BUILD_SHA=dev
 ENV PK_BUILD_SHA=$PK_BUILD_SHA \
     PATH=/venv/bin:$PATH \

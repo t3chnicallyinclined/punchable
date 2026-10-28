@@ -5,7 +5,7 @@
 #                 | legal-rules | cutover [--undo] | keycloak-theme [--dry-run]   (mounts the login theme: RESTARTS the shared Keycloak) | ai-secret | worker-secret
 #                 | observability | bugsink-secret | bugsink | sentry-secret   (infra/OBSERVABILITY.md)
 #   sentry-secret sends the SENTRY_DSN= line of ~/.punchable/secrets.env over ssh STDIN into the Secret punchable-sentry
-#   (the API's crash reports -> the self-hosted Bugsink). bugsink-secret sends the optional BUGSINK_SUPERUSER= line
+#   (the API's and the worker's crash reports -> the self-hosted Bugsink). bugsink-secret sends the optional BUGSINK_SUPERUSER= line
 #   (email:password for Bugsink's first user) the same way; the SECRET_KEY is generated on the server.
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.

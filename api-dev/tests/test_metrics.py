@@ -324,3 +324,43 @@ def test_crash_module_is_a_no_op_without_a_dsn(monkeypatch):
     CRASH.breadcrumb("/api/x", "GET", 500)
     CRASH.flush()
     assert CRASH.release().startswith("punchable-api@")
+    assert CRASH.release("punchable-worker").startswith("punchable-worker@")   # the worker's name for the same module
+
+
+def test_crash_report_sets_the_route_status_and_tags_on_the_scope(monkeypatch):
+    """report() hands the SDK the exception inside a scope carrying route, status and the caller's tags (the worker's
+    job kind), every value a bounded string."""
+    import crash as CRASH
+
+    class Scope:
+        def __init__(self):
+            self.tags = {}
+
+        def set_tag(self, k, v):
+            self.tags[k] = v
+
+    class Sdk:
+        def __init__(self):
+            self.scope, self.captured = Scope(), []
+
+        def new_scope(self):
+            sdk = self
+
+            class Cm:
+                def __enter__(self_):
+                    return sdk.scope
+
+                def __exit__(self_, *a):
+                    return False
+            return Cm()
+
+        def capture_exception(self, exc):
+            self.captured.append(exc)
+
+    fake = Sdk()
+    monkeypatch.setattr(CRASH, "_sdk", fake)
+    err = ValueError("x")
+    CRASH.report(err, route="/api/x", status=500, tags={"kind": "riff", "retry": False})
+    assert fake.captured == [err]
+    assert fake.scope.tags == {"route": "/api/x", "status": "500", "kind": "riff", "retry": "False"}
+    assert all(isinstance(v, str) and len(v) <= 64 for v in fake.scope.tags.values())

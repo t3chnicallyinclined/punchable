@@ -134,15 +134,16 @@ The size of the last R2 object is not a Prometheus number (nothing on this box p
 
 ## Crash reports (Bugsink)
 
-Crashes and errors from the phone app, the web app and the API go to a self-hosted **Bugsink** at
+Crashes and errors from the phone app, the web app, the API and the hosted worker go to a self-hosted **Bugsink** at
 `https://bugs.<domain>` (`infra/k8s/70-bugsink.yaml`: MIT, one container, SQLite on a 2 Gi PVC, 128 Mi requested).
 It speaks the Sentry protocol, so the SDKs are the standard ones (`@sentry/react-native` with its Expo plugin on the
-app, `sentry-sdk` on the API); only the DSN points at our box. No Sentry account, no data leaves the server.
+app, `sentry-sdk` on the API and the worker); only the DSN points at our box. No Sentry account, no data leaves the
+server.
 
 ### What is sent, and what never is
 
-Both SDKs run every event through a scrubber before it leaves the device or the pod (`app/src/lib/crash.ts`,
-`api-dev/scrub.py`):
+Every SDK runs every event through a scrubber before it leaves the device or the pod (`app/src/lib/crash.ts`;
+`api-dev/scrub.py` for the API and, through `worker/crashreport.py`, the worker):
 
 * request bodies, query strings, cookies and all headers but an allow-list: removed;
 * any field, at any depth, named `text`, `quote`, `transcript`, `query`, `title`, `name`, `venue`, `filename`,
@@ -152,8 +153,10 @@ Both SDKs run every event through a scrubber before it leaves the device or the 
 * the user is an opaque id; the device/OS context is kept (that is what explains a crash).
 
 What survives: the exception type, a bounded message with quoted literals blanked, the stack (file, function, line,
-column), the release (`punchable@<version>+<build>` on the app, `punchable-api@<version>+<sha>` on the API), the
-environment (`production` | `preview` | `dev`), and the API breadcrumbs.
+column), the release (`punchable@<version>+<build>` on the app, `punchable-api@<version>+<sha>` on the API,
+`punchable-worker@<version>+<sha>` on the worker), the environment (`production` | `preview` | `dev`), the API
+breadcrumbs, and on a worker event the tags `kind` (the job kind) and `retry`. A worker reports a failed job and a
+loop error (a claim or token failure); the daily budget pause is expected and is never reported.
 
 Both scrubbers have a test that proves the rule is load-bearing by breaking it (`app/tests/crash.test.mjs`,
 `api-dev/tests/test_metrics.py::test_the_scrubber_test_goes_red_when_the_rule_is_broken`). Run them before touching
@@ -179,10 +182,14 @@ python -m pytest api-dev/tests/test_metrics.py -q
    `Punchable`, projects **`punchable-api`** (id 1) and **`punchable-app`** (id 2), the superuser a member of both.
    Each project page at `https://bugs.<domain>` shows its **DSN** (`https://<key>@bugs.<domain>/<id>`). A DSN only
    lets a client *submit* events; it is still kept out of the public repo so nobody can spam the store.
-5. **API**: the `punchable-api` DSN is the `SENTRY_DSN=` line of `~/.punchable/secrets.env`; `infra/ship.sh sentry-secret`
-   writes the Secret. A changed Secret needs a NEW pod: `rollout api` re-applies the same digest and changes nothing, so
-   `kubectl rollout restart deploy/punchable-api -n punchable` (done by hand 2026-10-28). The API log then says
-   `crash reporting on: punchable-api@...`; a `capture_message` from the pod showed up as issue 1 within seconds.
+5. **API and worker**: the `punchable-api` DSN is the `SENTRY_DSN=` line of `~/.punchable/secrets.env`; `infra/ship.sh sentry-secret`
+   writes the Secret. Both Deployments read it (`30-api.yaml`, `35-worker.yaml`, optional); the worker's events are
+   told apart by their release (`punchable-worker@...`). A changed Secret needs a NEW pod: `rollout api|worker`
+   re-applies the same digest and changes nothing, so
+   `kubectl -n punchable rollout restart deploy/punchable-api deploy/punchable-worker` (API done by hand 2026-10-28).
+   The log then says `crash reporting on: punchable-api@...` / `punchable-worker@...`; a `capture_message` from the API
+   pod showed up as issue 1 within seconds. The worker side was wired 2026-10-28 and goes live with the next
+   `ship.sh build worker && ship.sh rollout worker` (a new digest, so the pod restarts and reads the Secret).
 6. **App**: the `punchable-app` DSN is the `APP_SENTRY_DSN=` line of `~/.punchable/secrets.env` and an **EAS environment
    variable** `EXPO_PUBLIC_SENTRY_DSN` (scope project, visibility sensitive) in the `production`, `preview` and
    `development` environments (`eas env:list --environment production`). Each build profile in `app/eas.json` names
@@ -217,7 +224,8 @@ python -m pytest api-dev/tests/test_metrics.py -q
 ### Verifying a crash lands
 
 From a phone build with the DSN set, Settings has nothing to tap on purpose; use a development build and throw from
-the console (`throw new Error('test crash')`), or on the API `kubectl -n punchable exec deploy/punchable-api -- python -c "import crash; crash.init(); crash.report(RuntimeError('test')); crash.flush()"`.
+the console (`throw new Error('test crash')`), or on the API `kubectl -n punchable exec deploy/punchable-api -- python -c "import crash; crash.init(); crash.report(RuntimeError('test')); crash.flush()"`,
+or on the worker `kubectl -n punchable exec deploy/punchable-worker -- python -c "from worker import crashreport as c; c.init(); c.report(RuntimeError('test'), kind='test'); c.flush()"`.
 The event appears in the Bugsink project within seconds, with no text field in it. If this had been in place on
 2026-10-27, the TestFlight launch crash (a module resolving to itself) would have shown as a native crash with the
 build number in `dist` the moment the first tester opened the app.

@@ -25,7 +25,8 @@
 #   bugsink-secret           Secret punchable-bugsink: SECRET_KEY generated HERE if absent; optional CREATE_SUPERUSER from
 #                            STDIN (ship.sh bugsink-secret; BUGSINK_SUPERUSER=email:password, never shown)
 #   bugsink                  the self-hosted crash-report store (70-bugsink.yaml): PVC, Deployment, Service, Ingress bugs.<domain>
-#   sentry-secret            Secret punchable-sentry from STDIN (ship.sh sentry-secret; SENTRY_DSN=, never shown): the API's DSN
+#   sentry-secret            Secret punchable-sentry from STDIN (ship.sh sentry-secret; SENTRY_DSN=, never shown): the DSN the
+#                            API and the worker both read (30-api.yaml, 35-worker.yaml)
 #   status                   what is live
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
@@ -319,7 +320,7 @@ case "$STEP" in
       --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
       | $K apply --server-side --field-manager=punchable -f - >/dev/null
     unset ENVF
-    echo "punchable-sentry applied (value not shown). The API reads it at start: infra/ship.sh rollout api" ;;
+    echo "punchable-sentry applied (value not shown). The API and the worker read it at start; a CHANGED value needs new pods: kubectl -n $NS rollout restart deploy/punchable-api deploy/punchable-worker" ;;
   status)
     $K -n $NS get all,netpol,pvc,secret,cronjob -o wide
     $K -n "$PK_KC_NS" get cm,job,ingress -l app.kubernetes.io/part-of=punchable 2>/dev/null

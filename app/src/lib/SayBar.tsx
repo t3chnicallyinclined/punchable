@@ -1,7 +1,7 @@
 // The single input bar (MixHome / MixAsk): "Jot it or ask it" + the big red hold-to-talk button. One input on
 // every screen; the app decides whether it was a bit, a question or a command (lib/say.ts, POST /api/say).
 // Hold to talk: web = the browser's speech recognition while the button is held (Chrome, Safari; Firefox focuses
-// the field); phone = expo-audio records while held and the voice note goes up to be transcribed (lib/holdToTalk).
+// the field); phone = the button focuses the field (jots are typed; voice is for recording sets only). lib/holdToTalk.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';

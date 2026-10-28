@@ -52,7 +52,8 @@ def test_worker_deployment():
     assert env["PK_HEARTBEAT_FILE"] == "/tmp/pk-worker/heartbeat"
     assert {e["name"] for e in c["env"] if "valueFrom" in e} == {"PK_WORKER_NAME"}
     refs = {s["secretRef"]["name"]: s["secretRef"].get("optional", False) for s in c["envFrom"]}
-    assert refs == {"punchable-worker": False, "punchable-anthropic": False}  # both required, never optional
+    # the two it cannot run without are required; the crash-report DSN is the API's Secret and optional (unset = off)
+    assert refs == {"punchable-worker": False, "punchable-anthropic": False, "punchable-sentry": True}
     assert "ANTHROPIC" not in str(c["env"])  # the key is never an inline value
     sc = c["securityContext"]
     assert sc["readOnlyRootFilesystem"] is True and sc["allowPrivilegeEscalation"] is False and sc["capabilities"] == {"drop": ["ALL"]}
@@ -102,6 +103,11 @@ def test_dockerfile_copies_are_in_the_dockerignore_and_config_is_hosted():
     req = "\n".join(l for l in (DESK / "infra" / "worker" / "requirements.txt").read_text(encoding="utf-8").splitlines()
                     if l.strip() and not l.startswith("#"))
     assert re.search(r"^anthropic==", req, re.M) and "torch" not in req and "whisper" not in req
+    # crash reports: the image carries the API's crash.py + scrub.py and the same sentry-sdk pin as the API image
+    assert "COPY api-dev/crash.py api-dev/scrub.py api-dev/" in code and "worker.crashreport" in code
+    api_req = (DESK / "api" / "requirements.txt").read_text(encoding="utf-8")
+    [pin] = re.findall(r"^sentry-sdk==\S+", req, re.M)
+    assert pin in api_req, pin
 
 
 def _bash():

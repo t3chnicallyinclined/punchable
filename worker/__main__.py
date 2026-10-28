@@ -7,8 +7,11 @@
     python -m worker --api http://127.0.0.1:8796 --no-auth     # against the local dev API (loopback, auth off)
 
 Hosted is the default deployment since 2026-10-27 (owner: "all phone / frontier models"); the PC mode stays for
-development. It only ever makes HTTP requests out (Keycloak for a token, the API for jobs); nothing listens: the
-liveness probe reads the heartbeat file this loop touches (PK_HEARTBEAT_FILE).
+development. It only ever makes HTTP requests out (Keycloak for a token, the API for jobs, Bugsink for a crash
+report); nothing listens: the liveness probe reads the heartbeat file this loop touches (PK_HEARTBEAT_FILE).
+- Crash reports: a failed job (not a budget pause) and a loop error go to the self-hosted Bugsink through
+  worker/crashreport.py when SENTRY_DSN is set (the Secret punchable-sentry, the same one the API reads); scrubbed,
+  tagged with the job kind only. Unset = off.
 - Token: Keycloak client credentials as `pk-worker` (confidential, realm role `worker`). The secret is read from
   %USERPROFILE%\\.punchable\\secrets.env (PK_WORKER_SECRET=...). It is never printed, logged or written elsewhere.
 - Decisions made on the phone are appended to comedy/kb/v0/decisions.jsonl: append-only, fsync, deduplicated by the
@@ -33,6 +36,7 @@ from pathlib import Path
 DESK = Path(__file__).resolve().parent.parent
 if str(DESK) not in sys.path:
     sys.path.insert(0, str(DESK))
+from worker import crashreport as CRASH  # noqa: E402  (a no-op without SENTRY_DSN)
 
 SECRETS = Path(os.environ.get("PUNCH_SECRETS", Path.home() / ".punchable" / "secrets.env"))
 DEFAULT_API = "https://punchable.io"
@@ -327,6 +331,8 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None, hosted: bool = False, 
         budget_hit = type(e).__name__ == "BudgetExceeded"
         retry = budget_hit or isinstance(e, (OSError, TimeoutError))
         timer.failed(retry=retry)
+        if not budget_hit:   # the budget pause is expected and visible in the app; everything else is a crash report
+            CRASH.report(e, kind=job["kind"], retry=retry)
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result",
                 {"ok": False, "error": (str(e) if budget_hit else f"{type(e).__name__}: {e}")[:1500],
                  "retry": retry})
@@ -405,6 +411,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.no_auth and not urllib.parse.urlparse(a.api).hostname in ("127.0.0.1", "localhost"):
         raise SystemExit("--no-auth is only for the loopback dev API")
+    CRASH.init(log=log)   # SENTRY_DSN from the Secret punchable-sentry (35-worker.yaml); off without it
     if a.hosted:
         a.online = True
     cl = Client(a.api, auth=not a.no_auth, token_url=a.token_url, client_id=s.get("PK_WORKER_CLIENT_ID", "pk-worker"),
@@ -454,9 +461,11 @@ def main(argv=None):
             if not busy:
                 time.sleep(a.idle)
         except KeyboardInterrupt:
+            CRASH.flush()
             return 0
         except Exception as e:  # noqa: BLE001
             log(f"error: {e}")
+            CRASH.report(e)   # a claim or token failure; Bugsink groups the repeats into one issue
             if a.once:
                 return 1
             time.sleep(backoff)

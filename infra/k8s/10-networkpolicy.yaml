@@ -136,7 +136,7 @@ spec:
 ---
 # Hosted worker (35-worker.yaml): in only from Prometheus (namespace observability) to its metrics port 9100. Out to
 # the API pods on 8080 (claims, results, file posts: its only path to the data), to Bugsink on 8000 (crash reports,
-# when wired) and the public internet on 443: api.anthropic.com and the auth host for its token. Calico here has no
+# worker/crashreport.py) and the public internet on 443: api.anthropic.com and the auth host for its token. Calico here has no
 # name-based rule, so 443 is "public, never a private range", the same shape as the API and backup policies; the
 # worker code itself talks to exactly those two hosts.
 apiVersion: networking.k8s.io/v1

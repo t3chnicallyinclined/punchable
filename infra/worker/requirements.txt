@@ -7,3 +7,6 @@ numpy==2.2.6
 onnxruntime==1.27.0
 tokenizers==0.22.1
 httpx==0.28.1
+# crash reports to the self-hosted Bugsink (worker/crashreport.py -> api-dev/crash.py; off without SENTRY_DSN). Pure-python
+# wheel, the same pin as api/requirements.txt.
+sentry-sdk==2.73.0

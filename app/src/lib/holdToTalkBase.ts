@@ -1,6 +1,7 @@
 // Hold to talk, web: the browser's speech recognition while the button is held (Chrome, Safari). Where there is
-// none (Firefox) the button focuses the field instead. The phone build (holdToTalk.native.ts) records the voice
-// with expo-audio and sends it up as a voice note that his PC transcribes.
+// none (Firefox, and every phone build: speechCtor() is null off the web) the button focuses the field instead.
+// Jots are typed on the phone; voice is for recording SETS only (lib/recorder). The former holdToTalk.native.ts,
+// which uploaded a voice note for the retired PC to transcribe, was removed 2026-10-28.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 

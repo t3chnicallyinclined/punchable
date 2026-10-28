@@ -208,9 +208,11 @@ def test_bugsink_manifest_is_one_small_pinned_pod_on_its_pvc():
     assert ing["metadata"]["annotations"]["cert-manager.io/cluster-issuer"] == "letsencrypt"
     # the probes send the real Host (Django's ALLOWED_HOSTS comes from BASE_URL)
     assert c["readinessProbe"]["httpGet"]["httpHeaders"] == [{"name": "Host", "value": "bugs.example.com"}]
-    # the API reads its DSN from the optional Secret the sentry-secret step makes
-    api = by_kind("Deployment", docs("30-api.yaml"))[0]["spec"]["template"]["spec"]["containers"][0]
-    assert {"secretRef": {"name": "punchable-sentry", "optional": True}} in api["envFrom"]
+    # the API and the worker read their DSN from the optional Secret the sentry-secret step makes (one Secret, two
+    # releases: punchable-api@..., punchable-worker@...)
+    for f in ("30-api.yaml", "35-worker.yaml"):
+        c = by_kind("Deployment", docs(f))[0]["spec"]["template"]["spec"]["containers"][0]
+        assert {"secretRef": {"name": "punchable-sentry", "optional": True}} in c["envFrom"], f
 
 
 def test_backup_cronjob_also_copies_the_bugsink_database():

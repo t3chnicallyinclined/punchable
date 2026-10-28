@@ -6,7 +6,8 @@
 # worker credentials from Secret punchable-worker (infra/ship.sh worker-secret: the pk-worker client secret).
 # Outbound only, but for one thing: GET /metrics on port 9100 (worker/metrics.py) for Prometheus, admitted from the
 # observability namespace alone (10-networkpolicy.yaml punchable-worker). It talks to the API Service (punchable-api,
-# port 80 -> 8080), to Keycloak on the public auth host for its token, and to api.anthropic.com on 443.
+# port 80 -> 8080), to Keycloak on the public auth host for its token, to api.anthropic.com on 443, and to Bugsink
+# in-cluster (crash reports, worker/crashreport.py; SENTRY_DSN from the optional Secret punchable-sentry, the API's).
 # It never claims a kind that needs audio (process_set, import_youtube): transcription happens on the phone.
 # Liveness = the worker's own heartbeat file (touched every poll and around every job; a job is at most ~15 min,
 # STALE_CLAIM_S): older than 20 minutes three times in a row -> restart. Recreate strategy: never two workers at once.
@@ -65,6 +66,9 @@ spec:
             - secretRef: { name: punchable-worker }
             # ANTHROPIC_API_KEY (infra/ship.sh ai-secret). Required: without it no task has a provider.
             - secretRef: { name: punchable-anthropic }
+            # SENTRY_DSN: crash reports to the self-hosted Bugsink (70-bugsink.yaml; infra/ship.sh sentry-secret), the
+            # same Secret the API reads (30-api.yaml). Optional: without it worker/crashreport.py is a no-op.
+            - secretRef: { name: punchable-sentry, optional: true }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

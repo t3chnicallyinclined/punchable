@@ -29,8 +29,8 @@ Metro picks a file per platform by extension, most specific first:
 | `<Name>.tsx` | **a shim only**: `export * from './<Name>Base';` (plus `export { X as default }` if needed) | nothing else |
 | `<Name>.native.tsx` | the phone implementation | `./<Name>Base` for the shared parts; **never `./<Name>`** |
 
-Examples on disk: `src/lib/RowMenu*.tsx`, `src/lib/SwipeRow*.tsx`, `src/lib/PanZoom*.tsx`, `src/lib/recorder*.ts`,
-`src/lib/holdToTalk*.ts`. The screen shell (`Screen.tsx` / `Screen.native.tsx`) and the icons (`Icon.tsx` → `IconSvg.tsx`
+Examples on disk: `src/lib/RowMenu*.tsx`, `src/lib/SwipeRow*.tsx`, `src/lib/PanZoom*.tsx`, `src/lib/recorder*.ts`.
+The screen shell (`Screen.tsx` / `Screen.native.tsx`) and the icons (`Icon.tsx` → `IconSvg.tsx`
 / `Icon.native.tsx`) are the two pairs still to be brought to the pattern (ARCHITECTURE.md, S1).
 
 When to use the other extensions instead:
