@@ -403,38 +403,43 @@ class SurrealKB:
             f.flush()
             os.fsync(f.fileno())
 
-    # ---- search ----------------------------------------------------------------
-    def hybrid_search(self, q: str, limit: int, include_hidden: bool):
-        """Joke ids, best first: BM25 (snowball-stemmed) over unit text and joke titles + HNSW KNN over unit
-        vectors (the hidden filter runs inside the index), fused with search::rrf. None if no query vector."""
-        qvec = None
-        try:
-            if self.embedder is None:
-                from embedder import Embedder
-                self.embedder = Embedder()
-            qvec = self.embedder.embed([q], query=True)[0]
-        except Exception as e:  # noqa: BLE001
-            sys.stderr.write(f"hybrid search: no query vector ({e}); full-text only\n")
-        hid = "" if include_hidden else " AND hidden != true"
-        k = max(20, min(200, limit * 3))
-        sql = (f"LET $ft = SELECT id, search::score(1) AS score FROM unit WHERE text @1@ $q{hid} ORDER BY score DESC LIMIT {k};"
-               f"LET $jt = SELECT id, search::score(1) AS score FROM joke WHERE title @1@ $q{hid} ORDER BY score DESC LIMIT {k};")
-        if qvec is not None:
-            sql += (f"LET $vs = SELECT id, vector::distance::knn() AS distance FROM unit "
-                    f"WHERE embedding <|{k},150|> $qvec{hid} ORDER BY distance;"
-                    f"RETURN search::rrf([$vs, $ft, $jt], {k}, 60);")
-        else:
-            sql += f"RETURN search::rrf([$ft, $jt], {k}, 60);"
+    # ---- search (api-dev/search_api.py) --------------------------------------------
+    def _emb(self):
+        """The embedder, resolved once: search_api.make_embedder (the model under PK_BGE_DIR, or PK_EMBEDDER=hash),
+        else db/embedder.py's node sidecar on a PC that still has it, else none (False: resolved, nothing here)."""
+        if self.embedder is None:
+            import search_api as SR
+            e = SR.make_embedder(log=lambda *a: sys.stderr.write(" ".join(map(str, a)) + "\n"))
+            if e is None:
+                try:
+                    from embedder import Embedder
+                    e = Embedder()
+                    e.name = getattr(e, "engine", "node")
+                except Exception:  # noqa: BLE001
+                    e = None
+            self.embedder = e if e is not None else False
+        return self.embedder or None
+
+    def search_all(self, q: str, limit: int, include_hidden: bool) -> dict:
+        """Raw fused hits over unit text, joke title, joke summary, performance text and the three vector indexes
+        (search_api.search_all); the caller folds units into jokes with the view."""
+        import search_api as SR
         with self.lock:
-            rows = self.rpc.last(sql, {"q": q, "qvec": qvec})
+            return SR.search_all(self.rpc, self._emb(), q, limit, include_hidden)
+
+    def similar_vectors(self, v, jid: str, limit: int, include_hidden: bool) -> dict:
+        import search_api as SR
+        with self.lock:
+            return SR.similar(self.rpc, self._emb(), v, jid, limit, include_hidden)
+
+    def hybrid_search(self, q: str, limit: int, include_hidden: bool):
+        """Joke ids, best first (the Bits list's search): BM25 over unit text, joke titles and typed ideas + HNSW KNN
+        over unit and joke vectors, fused with search::rrf. Words only when no query vector can be made."""
+        import search_api as SR
+        res = self.search_all(q, limit, include_hidden)
+        with self.lock:
             v = self.view(include_hidden)
-        out = []
-        for row in rows:
-            nid = sdb.rid_str(row["id"])
-            jid = nid if nid.startswith("joke:") else v.unit_joke.get(nid)
-            if jid and jid in v.nodes and jid not in out:
-                out.append(jid)
-        return out
+        return SR.fold_jokes(res["hits"], v)
 
     # ---- status ------------------------------------------------------------------
     def status(self) -> dict:
@@ -448,5 +453,7 @@ class SurrealKB:
                 "live": {"connected": bool(self.live and self.live.connected), "clients": len(self.live.clients) if self.live else 0,
                          "events_sent": self.live.sent if self.live else 0},
                 "snapshot_fetch_s": (self._snap or {}).get("fetch_s"), "writes": self.writes,
+                "vectors": (self.sweeper.status() if getattr(self, "sweeper", None) else
+                            {"embedder": getattr(self.embedder, "name", None) if self.embedder else None}),
                 "file_syncs": self.syncs[-5:], "sync_error": self.sync_error, "load_mode": info.get("mode"),
                 "last_sync_changed": info.get("sync_changed")}

@@ -10,3 +10,5 @@
 !infer/__init__.py
 !infer/scriptdiff.py
 !gsync/rules.py
+!engine/*.py
+!tools/kb/fetch_bge.py

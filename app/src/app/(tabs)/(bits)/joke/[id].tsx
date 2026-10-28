@@ -1,13 +1,17 @@
 // A bit (MixBit, docs/UX_2026-10.md): the versions as tabs (newest first), the text, the bird's-eye map, Punch up ·
 // Riff · Merge · To a set, and its own input bar (a question about this bit, or a new line for it). Two requests:
 // the joke (/api/jokes/<id>) and its map (/api/jokes/<id>/map). The old joke map stays at /map/<id>, the old
-// workspace (stage, numbers, brainstorm) at /bit/<id>.
+// workspace (stage, numbers, brainstorm) at /bit/<id>. "Elsewhere" (a third request, /api/jokes/<id>/similar) answers
+// "did I ever do this, and is it like anything?": the tapes it is on, the taped moments that sound like it but are
+// not linked, and the bits that sound like it (api-dev/search_api.py; lib/MomentRow).
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
 import { MergeHint } from '@/lib/MergeHint';
+import { MomentRow } from '@/lib/MomentRow';
+import { SimilarResult, closeness, oneLine } from '@/lib/searchRows';
 import { GROUP_COLOR, Radial } from '@/lib/jokemap';
 import { JokeMap, MapGroupKey, monthYear, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
@@ -43,6 +47,7 @@ export default function BitPage() {
   const { width } = useWindowDimensions();
   const d = useApi<any>(`/api/jokes/${encodeURIComponent(id)}`, { poll: 30000 });
   const m = useApi<JokeMap>(`/api/jokes/${encodeURIComponent(id)}/map?cap=6`);
+  const sim = useApi<SimilarResult>(`/api/jokes/${encodeURIComponent(id)}/similar?limit=5`);
   const [vi, setVi] = useState(0);
   const [rename, setRename] = useState(false);
   const [why, setWhy] = useState<{ title: string; why?: string; g: MapGroupKey } | null>(null);
@@ -140,6 +145,44 @@ export default function BitPage() {
           }} />
       </View>
       <MergeHint jokeId={id} onMerged={(main) => (main === id ? d.reload() : router.replace(`/joke/${encodeURIComponent(main)}` as any))} />
+
+      <View style={{ gap: 8 }} testID="bit-elsewhere">
+        <T v="eb">Elsewhere</T>
+        {sim.data ? (
+          <>
+            {sim.data.performed.length ? (
+              <View style={{ gap: 6 }}>
+                <T v="small">On tape · {sim.data.performed.length} {sim.data.performed.length === 1 ? 'time' : 'times'}</T>
+                {sim.data.performed.slice(0, 3).map((x, i) => <MomentRow key={x.id} m={x} showBit={false} testID={`bit-performed-${i}`} />)}
+                {sim.data.performed.length > 3 && <T v="small">{sim.data.performed.length - 3} more in the numbers (Edit).</T>}
+              </View>
+            ) : <T v="mut">Never on tape.</T>}
+            {!!sim.data.like.moments.length && (
+              <View style={{ gap: 6 }}>
+                <T v="small">Sounds like it, on tape (not linked to this bit)</T>
+                {sim.data.like.moments.map((x, i) => <MomentRow key={x.id} m={x} testID={`bit-echo-${i}`} />)}
+              </View>
+            )}
+            {!!sim.data.like.bits.length && (
+              <View style={{ gap: 6 }}>
+                <T v="small">Sounds like these bits</T>
+                {sim.data.like.bits.map((b, i) => (
+                  <Pressable key={b.id} testID={`bit-like-${i}`} accessibilityRole="button" accessibilityLabel={`${b.title}. ${closeness(b.distance) || 'Shares its words'}. Open`}
+                    onPress={() => router.push(`/joke/${encodeURIComponent(b.id)}` as any)}
+                    style={(s: any) => ({ minHeight: 52, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, gap: 2, backgroundColor: s.pressed || s.hovered ? C.card2 : C.card })}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                      <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 15, color: C.text }}>{shortNameOf(b.title, b.short_name)}</Text>
+                      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: C.mut2 }}>{closeness(b.distance) || 'shares its words'}</Text>
+                    </View>
+                    {!!b.why && <Text numberOfLines={2} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 14, lineHeight: 20, color: C.mut2 }}>{oneLine(b.why)}</Text>}
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {!sim.data.like.moments.length && !sim.data.like.bits.length && <T v="mut">Nothing else sounds like it{sim.data.vectors ? '' : ' (by its words; the model is off)'}.</T>}
+          </>
+        ) : sim.rawError ? <T v="mut">Couldn’t look elsewhere right now.</T> : <T v="mut">Looking through your sets and bits…</T>}
+      </View>
 
       <View style={{ gap: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

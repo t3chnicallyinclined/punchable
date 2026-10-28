@@ -1,6 +1,8 @@
 // Bits (MixBits, docs/UX_2026-10.md): every bit as a list, a status dot (kills · working · fresh · resting) and how
 // long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Notes · Map;
 // "N pairs look like the same idea → Review" when the merge judge found some. One list request, virtualized.
+// A search also asks /api/search for the taped moments that match ("In your sets": lib/MomentRow), so a word he half
+// remembers saying on stage comes back with where and when, not only the bits that carry it.
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -9,6 +11,8 @@ import { ApiError, JokeSummary, get, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { fmtDur } from '@/lib/laughs';
 import { VoiceMemos } from '@/lib/memos';
+import { MomentRow } from '@/lib/MomentRow';
+import type { SearchResult } from '@/lib/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
 import { Avatar, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
@@ -71,6 +75,9 @@ export default function Bits() {
   }, [q]);
   const question = dq.length >= 3 && isQuestion(dq);
   const list = useApi<{ items: JokeSummary[]; total: number }>(question ? null : `/api/jokes?sort=performed&limit=500${dq ? `&q=${encodeURIComponent(dq)}&mode=hybrid` : ''}`, { poll: 60000 });
+  // the taped moments that match the same words (api-dev/search_api.py); the bits above come from the list request
+  const found = useApi<SearchResult>(dq && !question ? `/api/search?q=${encodeURIComponent(dq)}&limit=6` : null);
+  const moments = dq && !question ? found.data?.moments || [] : [];
   const [pairs, setPairs] = useState<number | null>(null);
   useEffect(() => {
     let alive = true;
@@ -121,6 +128,15 @@ export default function Bits() {
         <Pressable testID="bits-ask" accessibilityRole="button" onPress={askIt} style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Icon name="chat" size={18} color={C.amber} /><T style={{ flex: 1 }}>Ask your material: “{dq}”</T><T style={{ color: C.amber }}>Ask ›</T>
         </Pressable>
+      )}
+      {!!moments.length && (
+        <View testID="bits-moments" style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <T v="eb" style={{ flex: 1 }}>In your sets</T>
+            <T v="small">{moments.length === 6 ? 'the closest 6' : `${moments.length} on tape`}</T>
+          </View>
+          {moments.map((m, i) => <MomentRow key={m.id} m={m} testID={`bits-moment-${i}`} />)}
+        </View>
       )}
       <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
       {view === 'bits' && !!pairs && (

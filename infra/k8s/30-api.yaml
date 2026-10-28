@@ -83,10 +83,11 @@ spec:
           # Burstable on purpose: evicted before the box's Guaranteed databases.
           # Request raised 128 -> 256 Mi on evidence (2026-10-26, real data, infra/README.md "Memory"): RSS 146 MiB
           # warm and idle, 202 MiB peak under 8 concurrent clients (3,416 requests over every route incl. creative).
-          # The 512 Mi limit is unchanged.
+          # 2026-10-28: the image now holds the bge-small ONNX model and onnxruntime for search (api-dev/search_api.py),
+          # about +200 MiB resident once warm; request 320 Mi, limit 1 Gi until measured (then tighten).
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { cpu: "1", memory: 512Mi }
+            requests: { cpu: 100m, memory: 320Mi }
+            limits: { cpu: "1", memory: 1Gi }
           readinessProbe:
             httpGet: { path: "/api/health?ready=1", port: 8080 }
             periodSeconds: 3

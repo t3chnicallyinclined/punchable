@@ -2,5 +2,9 @@
 cbor2==6.1.5
 websocket-client==1.9.0
 numpy==2.2.6
+# search over everything (api-dev/search_api.py): bge-small query/passage vectors in-process over the ONNX export the
+# Dockerfile fetches (tools/kb/fetch_bge.py). The same pins as infra/worker/requirements.txt.
+onnxruntime==1.27.0
+tokenizers==0.22.1
 # crash reports to the self-hosted Bugsink (api-dev/crash.py; off without SENTRY_DSN). Pure-python wheel.
 sentry-sdk==2.73.0

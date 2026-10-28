@@ -47,11 +47,6 @@ def log(*a):
     print(time.strftime("%H:%M:%S"), *a, file=sys.stderr, flush=True)
 
 
-class _NoEmbedder:
-    def embed(self, *a, **k):
-        raise RuntimeError("no embedding model in the hosted image")
-
-
 def materialize(r: sdb.Rpc, bundle: dict):
     """srcfile rows -> files under DATA (one row at a time, so memory stays flat). Vector parts -> .f32 caches."""
     import numpy as np
@@ -211,7 +206,12 @@ def start_kb(ns: str, db: str, bundle: dict):
     kb = cls(kbdir, COMEDY / "corpus", DATA / "tapes", DATA / "inbox", None, graph=graph, id_map=id_map)
     kb.init_surreal(ns, db, None, live=True, watch=False)
     kb.creative_graph = graph  # load_info.graph is the dbload pod's path; creative/ reads the copy here
-    kb.embedder = _NoEmbedder()
+    # search over everything (api-dev/search_api.py): the bge-small model shipped in this image (PK_BGE_DIR), and a
+    # sweeper that embeds every typed idea and set moment at start and every minute after. No model: words only.
+    import search_api as SR
+    kb.embedder = SR.make_embedder(log) or False   # False = resolved, none here (surreal_kb._emb)
+    if kb.embedder:
+        kb.sweeper = SR.Sweeper(kb, kb.embedder, log).start()
     write_decisions_cache(kb)
     import creative_api as CR
     SV.Handler.creative = CR.Creative(COMEDY / "kb" / "creative", VEC if VEC.is_dir() else None, geocode=False,

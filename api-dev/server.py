@@ -1289,6 +1289,13 @@ class Handler(BaseHTTPRequestHandler):
                         self.log_message("today: creative part failed: %r", e)
                         old["creative_error"] = f"{type(e).__name__}: {e}"
                 return self.send_json(old)
+            if path == "/api/search":   # bits + taped set moments, best first (api-dev/search_api.py)
+                import search_api as SR
+                qs = (arg("q") or "").strip()
+                if not qs:
+                    return self.err(400, "q is required")
+                lim = max(1, min(int(arg("limit", "20")), SR.MAX_LIMIT))
+                return self.send_json(SR.search_payload(kb, a, qs, lim, bool(getattr(kb.tl, "include_hidden", False))))
             if path == "/api/jokes":
                 items = a.summaries()
                 qs = (arg("q") or "").strip()
@@ -1331,6 +1338,12 @@ class Handler(BaseHTTPRequestHandler):
                     out[st] = {"total": len(xs), "items": [{k: x[k] for k in ("id", "title", "stage", "sets", "hit_sets", "ai_hit_sets", "versions", "stage_ai")}
                                                           for x in xs[: int(arg("limit", "60"))]]}
                 return self.send_json({"stages": out})
+            m = re.match(r"^/api/jokes/(.+)/similar$", path)
+            if m:   # where he did this bit, and what sounds like it (api-dev/search_api.py)
+                import search_api as SR
+                lim = max(1, min(int(arg("limit", "8")), SR.MAX_LIMIT))
+                st, out = SR.similar_payload(kb, a, unquote(m.group(1)), lim, bool(getattr(kb.tl, "include_hidden", False)))
+                return self.send_json(out, st)
             m = re.match(r"^/api/jokes/(.+)$", path)
             if m:
                 return self.joke(a, unquote(m.group(1)))

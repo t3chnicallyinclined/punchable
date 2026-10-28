@@ -132,6 +132,17 @@ The size of the last R2 object is not a Prometheus number (nothing on this box p
    refuses a rule or a panel that names a `pk_*` metric nothing emits.
 5. `ship.sh rollout api|worker`, `ship.sh observability`, restart Grafana.
 
+## Search vectors (api-dev/search_api.py)
+
+The API image carries the bge-small ONNX model (`PK_BGE_DIR`, fetched at build by `tools/kb/fetch_bge.py`) and embeds
+in-process: query vectors for `/api/jokes?q=&mode=hybrid`, `/api/search` and `/api/jokes/<id>/similar`, and a sweeper
+thread that fills `embedding` + `embedded_sha` on every typed idea (`joke.summary`, jokes with no unit) and every set
+moment (`performance.text`), plus any unit without a vector, at start and every `PK_VEC_SWEEP_S` (60 s). Log lines:
+`vectors: bge-small-en-v1.5 from …` at start (or `vectors: no bge-small model here … words alone`), `vectors: embedded
+{…}` after a pass that did work, `vectors: sweep failed (…)` otherwise. `GET /api/backend` → `backends.surreal.vectors`
+shows the embedder, runs, the last counts and the last error. Memory: the model and onnxruntime add roughly 200 MiB
+resident; the Deployment's limit is 1 Gi (was 512 Mi), request 320 Mi. Measure after the first day and tighten.
+
 ## Crash reports (Bugsink)
 
 Crashes and errors from the phone app, the web app, the API and the hosted worker go to a self-hosted **Bugsink** at

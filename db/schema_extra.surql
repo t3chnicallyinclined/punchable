@@ -46,3 +46,17 @@ DEFINE FIELD OVERWRITE extra_sha  ON meta TYPE option<string>;
 DEFINE FIELD OVERWRITE files_rev    ON meta TYPE option<int>;
 DEFINE FIELD OVERWRITE online_first ON meta TYPE option<object> FLEXIBLE;
 DEFINE FIELD OVERWRITE cutover_log  ON meta TYPE option<array<object>> FLEXIBLE;
+
+-- Search over everything (2026-10-28, api-dev/search_api.py). A typed idea lives in joke.summary (no unit) and a
+-- taped set moment in performance.text; neither had an index or a vector, so word search missed the jots and the
+-- tapes were invisible. Full-text (the same analyzer as unit.text) and a bge-small vector on both, like unit.text.
+-- The API's sweeper fills `embedding` and records the sha256 of the text it embedded in `embedded_sha`, so an edited
+-- text is embedded again and an unchanged one never is. HNSW indexes live in RAM and rebuild on restart.
+DEFINE FIELD OVERWRITE embedding    ON joke        TYPE option<array<float, 384>>;
+DEFINE FIELD OVERWRITE embedded_sha ON joke        TYPE option<string>;
+DEFINE FIELD OVERWRITE embedding    ON performance TYPE option<array<float, 384>>;
+DEFINE FIELD OVERWRITE embedded_sha ON performance TYPE option<string>;
+DEFINE INDEX OVERWRITE joke_sum_ft  ON joke        FIELDS summary FULLTEXT ANALYZER punch_en BM25 HIGHLIGHTS;
+DEFINE INDEX OVERWRITE perf_ft      ON performance FIELDS text    FULLTEXT ANALYZER punch_en BM25 HIGHLIGHTS;
+DEFINE INDEX OVERWRITE joke_vec     ON joke        FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 150 M 12;
+DEFINE INDEX OVERWRITE perf_vec     ON performance FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 150 M 12;

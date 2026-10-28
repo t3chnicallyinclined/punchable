@@ -10,16 +10,26 @@ RUN python -m venv /venv \
  && /venv/bin/pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt \
  && /venv/bin/pip uninstall -y pip \
  && rm -rf /venv/lib/python3.13/site-packages/setuptools* /venv/lib/python3.13/site-packages/_distutils_hack
+# the bge-small-en-v1.5 ONNX export (MIT), checked against the hub's hashes and the fingerprint vector
+# (tools/kb/fetch_bge.py), for query and passage vectors in the API (api-dev/search_api.py). Model files only.
+# PK_WITH_BGE=0 skips it; the API then searches on words alone and says so at start.
+ARG PK_WITH_BGE=1
+COPY engine/*.py /src/engine/
+COPY tools/kb/fetch_bge.py /src/tools/kb/fetch_bge.py
+RUN if [ "$PK_WITH_BGE" = 1 ]; then /venv/bin/python /src/tools/kb/fetch_bge.py --dest /opt/punchable/models/bge-small-en-v1.5; \
+    else mkdir -p /opt/punchable/models; fi
 
 FROM python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530
 RUN python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true
 COPY --from=deps /venv /venv
+COPY --from=deps /opt/punchable/models /opt/punchable/models
 WORKDIR /app
 COPY api/entry.py api/
 # every api-dev module: a hand-kept list shipped an image without say_api.py (health 500, pod never ready)
 COPY api-dev/*.py api-dev/
-# the Prometheus registry (api-dev/metrics.py); the rest of engine/ stays out of this image on purpose
-COPY engine/__init__.py engine/prom.py engine/
+# the Prometheus registry (api-dev/metrics.py) and the ONNX embedder (api-dev/search_api.py); the rest of engine/
+# stays out of this image on purpose
+COPY engine/__init__.py engine/prom.py engine/embed.py engine/
 COPY db/sdb.py db/kbmap.py db/load.py db/push_remote.py db/srcpaths.py db/schema.surql db/schema_extra.surql db/
 # the legal rules gsync applies (court material is never stored); only this file of gsync, read by api-dev/ingest_api.py
 COPY gsync/rules.py gsync/
@@ -28,7 +38,8 @@ COPY tools/explorer/kb.py tools/explorer/
 COPY creative/*.py creative/
 COPY infer/__init__.py infer/scriptdiff.py infer/
 RUN /venv/bin/python -m compileall -q /app \
- && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib, server; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')]"
+ && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib, server; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')]" \
+ && cd /app && PK_BGE_DIR=/opt/punchable/models/bge-small-en-v1.5 /venv/bin/python -c "import sys; sys.path[:0]=['api-dev']; import search_api as S; e = S.make_embedder(); assert e is None or len(e.embed(['x'])[0]) == 384"
 # the git sha of the shipped tree (infra/deploy.sh build passes it): pk_build_info and the crash-report release
 ARG PK_BUILD_SHA=dev
 ENV PK_BUILD_SHA=$PK_BUILD_SHA \
@@ -39,6 +50,7 @@ ENV PK_BUILD_SHA=$PK_BUILD_SHA \
     MALLOC_ARENA_MAX=2 \
     PK_AUTH=1 \
     PK_DATA=/tmp/punchable \
+    PK_BGE_DIR=/opt/punchable/models/bge-small-en-v1.5 \
     PK_DBLOAD_DIR=/tmp/pk-dbload \
     COMEDY_DIR=/tmp/punchable/comedy \
     PORT=8080

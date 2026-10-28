@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from sdb import NONE, RecordID, TYPE_OF_TABLE, edge_key, node_rid, rid_str, strip_none
 
-DB_ONLY_NODE = {"ord", "working", "working_sets", "embedding"}
+DB_ONLY_NODE = {"ord", "working", "working_sets", "embedding", "embedded_sha"}
 DB_ONLY_EDGE = {"ord", "run_id"}
 EDGE_TABLE_OF_KIND = {k: k for k in ["part_of", "variant_of", "performed_as", "tag_of", "same_shape", "callback_to",
                                      "same_premise", "has_label", "segue", "custom"]}

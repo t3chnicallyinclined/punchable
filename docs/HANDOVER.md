@@ -20,6 +20,7 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 | iPhone | TestFlight **0.1.0 (9)**, built from `e4c5057`, auto-submitted. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7, 8, 9 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
+| Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. |
 | Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). Worker wired 2026-10-28 (`worker/crashreport.py`, the same Secret, release `punchable-worker@…`, tags kind/retry; a budget pause is never reported) and **waits for its first `build worker` + `rollout worker`**. |
 | Metrics | Prometheus scrape of API + worker, Grafana dashboard, 13 alert rules. **Two alerts can never fire** (backup missed, certificate expiring): the cluster has no kube-state-metrics and cert-manager is not scraped. Fix needs the owner's go (shared namespace). |
 | DNS | `infra/dns/cf_dns.py plan` / `apply` with a token scoped to this one zone (DNS Write + Zone Read). Records: apex, auth, bugs. |
@@ -28,7 +29,7 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 
 - **Tonight**: tonight's set list as one bar, "N to sort" inbox, three questions to ask the material, a system search
   field ("Ask your material", typed only). "+" opens the create sheet. No input bar in the tab bar (owner decision).
-- **Bits**: every joke with versions and stage history; the **galaxy map** (`/map`: clusters by likeness, edge kinds by
+- **Bits**: every joke with versions and stage history; a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page has **Elsewhere**: the tapes it is on, taped moments that sound like it but are not linked, and bits that sound like it; the **galaxy map** (`/map`: clusters by likeness, edge kinds by
   colour and dash, status by shape, shuffle / centre / find / legend isolate); write + riff; merge same-idea notes.
 - **Sets**: set lists (boards) with timing, gaps, bridges; the **stage** screen (`/stage/[id]`) with the set recorder.
 - **Recorder** (sets only; jots and questions are text): 48 kHz stereo AAC .m4a, keep-awake while taping, real dBFS
@@ -51,6 +52,13 @@ Before today the voice profile was a static document and nothing he did with dra
 Code: `creative/learned.py`, `creative/voice.py` (`learned_block`, `cacheable_learned`), `api-dev/profile_api.py`,
 `app/src/lib/simple.ts` (`saveIdea`, `dismissDraft`), `app/src/app/(tabs)/(tonight)/learned.tsx`. The block is only
 cached as a prefix together with the profile (alone it is under the 512-token cache minimum).
+
+## Where this is going (owner, 2026-10-28): organizing ideas
+
+The unit he thinks in is the **premise** (a handle like "raccoons"), not the note. Agreed direction, not yet built:
+a bit is a named premise; notes **attach** to bits (one tap, undoable, a note may sit under several), merge stays for
+true duplicates; a typed word anywhere opens everything on it (notes, versions, tapes) with "add to this bit";
+after a jot, a quiet "goes with X?" suggestion. Search over everything (above) is step one of that.
 
 ## Standing owner decisions (do not re-open)
 
@@ -95,6 +103,11 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 | Never on the server | `docker run` (restarts the whole cluster), `ship.sh test`, touching other namespaces beyond the agreed Keycloak theme mount and the observability ConfigMaps. |
 
 ## Open, in order
+
+0. **Ship the search** (code on main): `ship.sh build api && ship.sh rollout api`, `build web && rollout web`, `build worker &&
+   rollout worker`; then the API log should say `vectors: bge-small-en-v1.5 from /opt/punchable/models/...` and, within
+   a minute, `vectors: embedded {'joke': 162, 'performance': 675, 'unit': 0}`; `/api/backend` shows `vectors`. Then a
+   TestFlight build (10) for the two new sections. Watch the API pod's memory (limit raised to 1 Gi for the model).
 
 1. **Owner checks on build 9**: tape a short set from Record, clap near the phone and watch the meter; riff a bit, keep
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.
