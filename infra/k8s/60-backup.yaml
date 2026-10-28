@@ -8,7 +8,7 @@
 # NetworkPolicy punchable-backup (10-networkpolicy.yaml): out to surrealdb:8000 and TCP 443 on the public internet only.
 # Since the crash-report store (70-bugsink.yaml): the same Job also copies Bugsink's SQLite (sqlite3's online backup API,
 # then gzip, integrity_check, PUT under bugsink/daily|weekly, same retention). Its PVC is mounted here read-write because
-# a WAL-mode reader needs the -shm file; the job only ever reads. The PVC must exist (infra/ship.sh bugsink) before
+# a WAL-mode reader needs the -shm file; the job only ever reads, and it runs as Bugsink's uid (see securityContext). The PVC must exist (infra/ship.sh bugsink) before
 # `infra/ship.sh backup` applies this file, or the pod stays Pending.
 apiVersion: batch/v1
 kind: CronJob
@@ -33,11 +33,14 @@ spec:
           restartPolicy: Never
           automountServiceAccountToken: false
           enableServiceLinks: false
+          # uid 14237 = Bugsink's own user (70-bugsink.yaml). A WAL-mode reader CREATES db.sqlite3-shm/-wal when they are
+          # absent, owned by whoever opened it, mode 644: run as any other uid and Bugsink can no longer write its own
+          # database after the first backup ("attempt to write a readonly database", seen 2026-10-28). Same uid, no trap.
           securityContext:
             runAsNonRoot: true
-            runAsUser: 10001
-            runAsGroup: 10001
-            fsGroup: 10001
+            runAsUser: 14237
+            runAsGroup: 14237
+            fsGroup: 14237
             seccompProfile: { type: RuntimeDefault }
           containers:
             - name: backup

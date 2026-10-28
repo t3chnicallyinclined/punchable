@@ -223,6 +223,11 @@ def test_backup_cronjob_also_copies_the_bugsink_database():
     assert mounts["/bugsink"]["readOnly"] is False   # sqlite3's backup API needs the -wal/-shm files writable
     vols = {v["name"]: v for v in pod["volumes"]}
     assert vols[mounts["/bugsink"]["name"]]["persistentVolumeClaim"]["claimName"] == "punchable-bugsink-data"
+    # the reader CREATES -shm/-wal (mode 644) when absent: it must be Bugsink's own uid or Bugsink loses write access
+    [bs] = by_kind("Deployment", docs("70-bugsink.yaml"))
+    bsc = bs["spec"]["template"]["spec"]["securityContext"]
+    sc = pod["securityContext"]
+    assert (sc["runAsUser"], sc["runAsGroup"], sc["fsGroup"]) == (bsc["runAsUser"], bsc["runAsGroup"], bsc["fsGroup"])
 
 
 # --------------------------------------------------------------------------------------------- dashboard
