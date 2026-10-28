@@ -8,6 +8,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { C } from './theme';
 import { useUI } from './ui';
 import { ACCESSORY } from './accessory';
+import { useFlags } from './useFlags';
 import { SayBar } from './SayBar';
 
 /** The input bar inside the tab bar's bottom accessory. Two copies exist (regular and inline); the system draws the glass. */
@@ -21,9 +22,12 @@ function AccessoryBar() {
 export function TabsShell() {
   const ui = useUI();
   const toSort = ui.toSort > 0 ? String(ui.toSort) : '';
+  // Liquid Glass available (ACCESSORY) AND not switched off remotely (/api/health flags.glass_accessory, lib/flags):
+  // the switch exists so the accessory can be turned off on every phone without a build if it misbehaves.
+  const glass = ACCESSORY && useFlags().glassAccessory;
   return (
     <NativeTabs tintColor={C.amber} minimizeBehavior="onScrollDown" backBehavior="history">
-      {ACCESSORY && !!ui.bar && (
+      {glass && !!ui.bar && (
         <NativeTabs.BottomAccessory>
           <AccessoryBar />
         </NativeTabs.BottomAccessory>

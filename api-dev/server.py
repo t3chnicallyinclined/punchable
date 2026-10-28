@@ -35,6 +35,19 @@ import auth as AUTH  # noqa: E402  (Keycloak bearer tokens when PK_AUTH=1)
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
+
+def _app_flags() -> dict:
+    """PK_APP_FLAGS: a JSON object of switches the phone reads off /api/health without a new build
+    (app/src/lib/flags.ts), e.g. {"glass_accessory": false}. Unset or unreadable = no flags (the app's defaults)."""
+    try:
+        v = json.loads(os.environ.get("PK_APP_FLAGS") or "{}")
+        return v if isinstance(v, dict) else {}
+    except ValueError:
+        return {}
+
+
+APP_FLAGS = _app_flags()
+
 COMEDY = Path(os.path.expanduser(os.environ.get("COMEDY_DIR", "~/punchable-data")))  # your data folder
 DEFAULT_PORT = 8796
 MAX_BODY = 256 * 1024
@@ -1192,8 +1205,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/health":
                 v = kb.view()
                 if self.verifier is not None and self.principal is None:  # signed out: liveness only, no paths
-                    return self.send_json({"ok": True, "rev": kb.rev, "auth": "required"})
-                return self.send_json({"ok": True, "graph": str(kb.graph_path), "graph_state": kb.graph_state,
+                    return self.send_json({"ok": True, "rev": kb.rev, "auth": "required", "flags": APP_FLAGS})
+                return self.send_json({"ok": True, "flags": APP_FLAGS, "graph": str(kb.graph_path), "graph_state": kb.graph_state,
                                        "decisions": str(kb.decisions_path), "decision_lines": len(v.decisions),
                                        "bad_lines": kb.bad_lines, "inbox": str(kb.inbox), "corpus": str(kb.corpus),
                                        "tapes": str(kb.tapes), "rev": kb.rev, "ai": ai_status(kb)})
