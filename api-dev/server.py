@@ -32,6 +32,8 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))  # the creative package (short names, the say route's store)
 import ai_overlay as AI  # noqa: E402  (inferred.json + analysis.json over graph.json)
 import auth as AUTH  # noqa: E402  (Keycloak bearer tokens when PK_AUTH=1)
+import metrics as M  # noqa: E402  (GET /metrics: Prometheus text; infra/OBSERVABILITY.md)
+import crash as CRASH  # noqa: E402  (sentry-sdk -> the self-hosted Bugsink; off without SENTRY_DSN)
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
@@ -993,6 +995,22 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
 
+    def send_response(self, code, message=None):
+        self._pk_status = code   # metrics.instrument reads the status this handler sent
+        super().send_response(code, message)
+
+    def metrics(self):
+        """GET /metrics: open, in-cluster only (the Ingress never forwards it; the NetworkPolicy admits the
+        observability namespace). Answers while booting too, so `up` and pk_build_info exist from the first second."""
+        b = M.render()
+        self.send_response(200)
+        self.send_header("Content-Type", M.CONTENT_TYPE)
+        self.send_header("Content-Length", str(len(b)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(b)
+
     def log_message(self, fmt, *args):
         if os.environ.get("PUNCH_API_QUIET"):
             return
@@ -1165,6 +1183,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         path, q = u.path, parse_qs(u.query)
         arg = lambda k, d=None: q.get(k, [d])[0]  # noqa: E731
+        if path == "/metrics":
+            return self.metrics()
         if not self.authorize(path):
             return
         if not self.kbs:
@@ -1347,6 +1367,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.err(400, str(e))
         except Exception as e:  # noqa: BLE001
             self.log_message("ERROR %r", e)
+            CRASH.report(e, route=M.route_pattern(self.path), status=500)
             return self.err(500, f"{type(e).__name__}: {e}")
 
     def joke(self, a: AppIndex, jid: str):
@@ -1479,6 +1500,7 @@ class Handler(BaseHTTPRequestHandler):
         q = queue.Queue()
         hub.subscribe(q)
         threading.Thread(target=reader, daemon=True).start()
+        M.live_clients.inc()
         try:
             send(0x1, json.dumps({"type": "hello", "rev": getattr(kb, "rev", None), "live": hub.connected}).encode())
             while not closed.is_set():
@@ -1490,6 +1512,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
         finally:
+            M.live_clients.dec()
             hub.unsubscribe(q)
             closed.set()
             try:
@@ -1608,6 +1631,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.err(e.status, str(e))
         except Exception as e:  # noqa: BLE001
             self.log_message("ERROR %r", e)
+            CRASH.report(e, route=M.route_pattern(self.path), status=500)
             return self.err(500, f"{type(e).__name__}: {e}")
 
     def do_PATCH(self):
@@ -1626,6 +1650,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.err(e.status, str(e))
         except Exception as e:  # noqa: BLE001
             self.log_message("ERROR %r", e)
+            CRASH.report(e, route=M.route_pattern(self.path), status=500)
             return self.err(500, f"{type(e).__name__}: {e}")
 
     def do_DELETE(self):
@@ -1644,6 +1669,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.err(e.status, str(e))
         except Exception as e:  # noqa: BLE001
             self.log_message("ERROR %r", e)
+            CRASH.report(e, route=M.route_pattern(self.path), status=500)
             return self.err(500, f"{type(e).__name__}: {e}")
 
     def inventory(self, kb: AppKB) -> list[dict]:
@@ -1971,6 +1997,13 @@ def default_graph(kb_given: bool, kbdir: Path) -> tuple[Path, Path | None]:
         return v1 / "graph.json", (v1 / "id_map.json") if (v1 / "id_map.json").is_file() else None
     return kbdir / "graph.json", None
 
+
+# Every do_* is timed and counted by route pattern (api-dev/metrics.py); /api/live is left to pk_live_clients.
+for _m in ("do_GET", "do_HEAD", "do_POST", "do_PATCH", "do_DELETE", "do_OPTIONS"):
+    setattr(Handler, _m, M.instrument(getattr(Handler, _m)))
+# pk_jobs_queued{kind} etc. are read at scrape time from the job store of the primary backend.
+M.set_jobs_source(lambda: (lambda cr, kb: cr.stores(kb)["jobs"].items.values() if cr and kb else [])(
+    Handler.creative, Handler.kbs.get(Handler.primary)))
 
 def surreal_kb_class():
     import surreal_kb as SK

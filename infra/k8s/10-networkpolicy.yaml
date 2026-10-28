@@ -100,9 +100,20 @@ spec:
         - podSelector: { matchLabels: { app: punchable-worker } }
       ports:
         - { protocol: TCP, port: 8080 }
+    # Prometheus (namespace observability) scrapes GET /metrics (60-observability.yaml). The public Ingress never
+    # forwards /metrics, so this rule is the only way in to that route.
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: observability } }
+      ports:
+        - { protocol: TCP, port: 8080 }
   egress:
     - to:
         - podSelector: { matchLabels: { app: surrealdb } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+    # crash reports (api-dev/crash.py) to the self-hosted Bugsink (70-bugsink.yaml), in-cluster
+    - to:
+        - podSelector: { matchLabels: { app: punchable-bugsink } }
       ports:
         - { protocol: TCP, port: 8000 }
     - to:
@@ -123,21 +134,31 @@ spec:
       ports:
         - { protocol: TCP, port: 443 }
 ---
-# Hosted worker (35-worker.yaml): nothing in (it listens on nothing). Out to the API pods on 8080 (claims, results,
-# file posts: its only path to the data) and the public internet on 443: api.anthropic.com and the auth host for
-# its token. Calico here has no name-based rule, so 443 is "public, never a private range", the same shape as the
-# API and backup policies; the worker code itself talks to exactly those two hosts.
+# Hosted worker (35-worker.yaml): in only from Prometheus (namespace observability) to its metrics port 9100. Out to
+# the API pods on 8080 (claims, results, file posts: its only path to the data), to Bugsink on 8000 (crash reports,
+# when wired) and the public internet on 443: api.anthropic.com and the auth host for its token. Calico here has no
+# name-based rule, so 443 is "public, never a private range", the same shape as the API and backup policies; the
+# worker code itself talks to exactly those two hosts.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: punchable-worker, namespace: punchable }
 spec:
   podSelector: { matchLabels: { app: punchable-worker } }
   policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: observability } }
+      ports:
+        - { protocol: TCP, port: 9100 }
   egress:
     - to:
         - podSelector: { matchLabels: { app: punchable-api } }
       ports:
         - { protocol: TCP, port: 8080 }
+    - to:
+        - podSelector: { matchLabels: { app: punchable-bugsink } }
+      ports:
+        - { protocol: TCP, port: 8000 }
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -150,6 +171,23 @@ spec:
               - 100.64.0.0/10
       ports:
         - { protocol: TCP, port: 443 }
+---
+# Bugsink (70-bugsink.yaml), the self-hosted crash-report store: in from the ingress controller (the app's SDK on
+# phones and browsers posts through https://bugs.<domain>) and from the API and worker pods (their SDKs, in-cluster).
+# Out: nothing but DNS (PHONEHOME is off, no email, no outbound alert webhooks). It never reaches SurrealDB.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-bugsink, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-bugsink } }
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+        - podSelector: { matchLabels: { app: punchable-api } }
+        - podSelector: { matchLabels: { app: punchable-worker } }
+      ports:
+        - { protocol: TCP, port: 8000 }
 ---
 # Web (static files): in from the ingress controller only. No egress at all beyond DNS.
 apiVersion: networking.k8s.io/v1

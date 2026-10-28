@@ -68,6 +68,8 @@ class Budget:
             p = Path(base) / "ai_spend.json"
         self.path = Path(p)
         self._lock = threading.Lock()
+        # called after every charge with (model, usage, usd, task); worker/metrics.py counts tokens and USD there.
+        self.listeners: list = []
 
     # ------------------------------------------------------------------ ledger
     def _read(self) -> dict:
@@ -119,6 +121,11 @@ class Budget:
                     if len(d) <= 14:
                         break
             self._write(d)
+        for fn in list(self.listeners):
+            try:
+                fn(model, usage, usd, task)
+            except Exception:  # noqa: BLE001  a metrics hook never fails a job
+                pass
         return usd
 
 

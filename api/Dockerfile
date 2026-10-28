@@ -18,6 +18,8 @@ WORKDIR /app
 COPY api/entry.py api/
 # every api-dev module: a hand-kept list shipped an image without say_api.py (health 500, pod never ready)
 COPY api-dev/*.py api-dev/
+# the Prometheus registry (api-dev/metrics.py); the rest of engine/ stays out of this image on purpose
+COPY engine/__init__.py engine/prom.py engine/
 COPY db/sdb.py db/kbmap.py db/load.py db/push_remote.py db/srcpaths.py db/schema.surql db/schema_extra.surql db/
 # the legal rules gsync applies (court material is never stored); only this file of gsync, read by api-dev/ingest_api.py
 COPY gsync/rules.py gsync/
@@ -27,7 +29,10 @@ COPY creative/*.py creative/
 COPY infer/__init__.py infer/scriptdiff.py infer/
 RUN /venv/bin/python -m compileall -q /app \
  && cd /app/api-dev && /venv/bin/python -c "import sys; sys.path[:0]=['.','..']; import importlib, pathlib, server; [importlib.import_module(p.stem) for p in pathlib.Path('.').glob('*_api.py')]"
-ENV PATH=/venv/bin:$PATH \
+# the git sha of the shipped tree (infra/deploy.sh build passes it): pk_build_info and the crash-report release
+ARG PK_BUILD_SHA=dev
+ENV PK_BUILD_SHA=$PK_BUILD_SHA \
+    PATH=/venv/bin:$PATH \
     HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

@@ -82,7 +82,8 @@ case "$STEP" in
       worker) DF=infra/worker/Dockerfile; ARGS=(--build-arg "PK_WITH_BGE=${PK_WITH_BGE:-1}") ;;
       *) echo "build api|web|worker"; exit 1 ;;
     esac
-    nice -n 10 docker build -f "$DF" "${ARGS[@]}" -t "$REPO:$TAG" .
+    # PK_BUILD_SHA: pk_build_info{sha} on /metrics and the crash-report release (api/Dockerfile, infra/worker/Dockerfile)
+    nice -n 10 docker build -f "$DF" "${ARGS[@]}" --build-arg "PK_BUILD_SHA=$SHA" -t "$REPO:$TAG" .
     docker push "$REPO:$TAG"
     REF=$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$REPO:$TAG" | grep -E "^$REPO@sha256:[0-9a-f]{64}$" | head -1)
     [ -n "$REF" ] || { echo "!! no digest after push"; exit 1; }

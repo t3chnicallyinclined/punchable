@@ -2,3 +2,5 @@
 cbor2==6.1.5
 websocket-client==1.9.0
 numpy==2.2.6
+# crash reports to the self-hosted Bugsink (api-dev/crash.py; off without SENTRY_DSN). Pure-python wheel.
+sentry-sdk==2.73.0

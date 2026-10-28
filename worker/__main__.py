@@ -290,9 +290,12 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None, hosted: bool = False, 
     if paused or not r:
         return False
     job = r["job"]
+    from worker import metrics as MX
+    timer = MX.JobTimer(job["kind"])   # pk_worker_jobs_claimed_total{kind}; done/failed + duration below
     if hosted and job["kind"] in TRANSCRIBER_KINDS:  # the API must never hand these out to a hosted worker
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result",
                 {"ok": False, "retry": True, "error": "this worker has no audio pipeline: transcription happens on the phone"})
+        timer.failed(retry=True)
         raise RuntimeError(f"claimed a {job['kind']} job while hosted; handed back")
     log(f"job {job['id']} ({job['kind']})")
     file = None
@@ -316,14 +319,17 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None, hosted: bool = False, 
         else:
             res = execute.run(job, file=file)
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result", {"ok": True, "result": res})
+        timer.done()
         log(f"job {job['id']} done ({res.get('status') if isinstance(res, dict) else 'ok'})")
     except Exception as e:  # noqa: BLE001
         log(f"job {job['id']} failed: {type(e).__name__}: {e}")
         # the day's AI budget ran out mid-job: back to the queue with the reason (a retry, not a failure)
         budget_hit = type(e).__name__ == "BudgetExceeded"
+        retry = budget_hit or isinstance(e, (OSError, TimeoutError))
+        timer.failed(retry=retry)
         cl.call("POST", f"/api/worker/jobs/{urllib.parse.quote(job['id'])}/result",
                 {"ok": False, "error": (str(e) if budget_hit else f"{type(e).__name__}: {e}")[:1500],
-                 "retry": budget_hit or isinstance(e, (OSError, TimeoutError))})
+                 "retry": retry})
     return True
 
 
@@ -364,6 +370,11 @@ def default_kinds(online: bool, hosted: bool = False) -> list[str]:
 
 def heartbeat(path: Path | None):
     """Touch the liveness file (the Deployment's probe checks its age). Nothing else is written there."""
+    try:
+        from worker import metrics as MX
+        MX.heartbeat()   # pk_worker_heartbeat_age_seconds, whether or not a file is configured
+    except Exception:  # noqa: BLE001
+        pass
     if path is None:
         return
     try:
@@ -412,6 +423,11 @@ def main(argv=None):
         budget = Budget()
         hb = Path(os.environ.get("PK_HEARTBEAT_FILE") or ws.root / "heartbeat")
         heartbeat(hb)
+        from worker import metrics as MX
+        MX.attach_budget(budget)          # pk_ai_spend_usd_today, pk_ai_paused, tokens per model
+        msrv = MX.serve()                 # GET /metrics on PK_METRICS_PORT (default 9100; 0 = off)
+        if msrv is not None:
+            log(f"metrics on :{msrv.server_address[1]}/metrics")
         log(f"hosted: {model_line() or 'no model'}; budget ${budget.daily_usd:.2f}/day (spent ${budget.spent_today():.2f}); "
             f"bge {'yes' if _has_bge() else 'no (embed/memolink/ask not claimed)'}")
     from creative.data import comedy_dir, creative_dir

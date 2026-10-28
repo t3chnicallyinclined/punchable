@@ -10,10 +10,12 @@
 # before the process gets SIGTERM.
 apiVersion: v1
 kind: Service
-metadata: { name: punchable-api, namespace: punchable }
+# labels.app: the ServiceMonitor's jobLabel, so the scrape job is named punchable-api (the alerts match on it)
+metadata: { name: punchable-api, namespace: punchable, labels: { app: punchable-api } }
 spec:
   selector: { app: punchable-api }
-  ports: [ { port: 80, targetPort: 8080 } ]
+  # named `http`: the ServiceMonitor in 60-observability.yaml scrapes /metrics on it
+  ports: [ { name: http, port: 80, targetPort: 8080 } ]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -67,6 +69,9 @@ spec:
             - secretRef: { name: punchable-r2, optional: true }
             # ANTHROPIC_API_KEY etc. Optional.
             - secretRef: { name: punchable-ai, optional: true }
+            # SENTRY_DSN: crash reports to the self-hosted Bugsink (70-bugsink.yaml; infra/ship.sh sentry-secret).
+            # Optional: without it api-dev/crash.py is a no-op.
+            - secretRef: { name: punchable-sentry, optional: true }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

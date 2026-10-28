@@ -4,8 +4,9 @@
 # Since 2026-10-27 this is where every AI job runs (owner: "all phone / frontier models"; the PC is retired): the
 # Anthropic API per engine/config.hosted.toml, key from Secret punchable-anthropic (infra/ship.sh ai-secret),
 # worker credentials from Secret punchable-worker (infra/ship.sh worker-secret: the pk-worker client secret).
-# Outbound only: nothing listens. It talks to the API Service (punchable-api, port 80 -> 8080), to Keycloak on the
-# public auth host for its token, and to api.anthropic.com on 443 (10-networkpolicy.yaml punchable-worker).
+# Outbound only, but for one thing: GET /metrics on port 9100 (worker/metrics.py) for Prometheus, admitted from the
+# observability namespace alone (10-networkpolicy.yaml punchable-worker). It talks to the API Service (punchable-api,
+# port 80 -> 8080), to Keycloak on the public auth host for its token, and to api.anthropic.com on 443.
 # It never claims a kind that needs audio (process_set, import_youtube): transcription happens on the phone.
 # Liveness = the worker's own heartbeat file (touched every poll and around every job; a job is at most ~15 min,
 # STALE_CLAIM_S): older than 20 minutes three times in a row -> restart. Recreate strategy: never two workers at once.
@@ -32,7 +33,11 @@ spec:
       containers:
         - name: worker
           image: __IMAGE_REF__
+          ports:
+            - { name: metrics, containerPort: 9100 }
           env:
+            # worker/metrics.py: pk_worker_* and pk_ai_* on :9100/metrics (0 = off)
+            - { name: PK_METRICS_PORT, value: "9100" }
             # the API inside the cluster (Service punchable-api, port 80 -> the pod's 8080); never the public hostname
             - { name: PK_API, value: "http://punchable-api" }
             # the token comes from the public issuer so `iss` matches what the API checks (OIDC_ISSUER in 30-api.yaml)
@@ -78,3 +83,11 @@ spec:
         - name: tmp
           # the disposable workspace (rebuilt from the API on every job), the heartbeat and the day's spend ledger
           emptyDir: { sizeLimit: 2Gi }
+---
+# The worker's metrics for Prometheus (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker).
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-worker-metrics, namespace: punchable, labels: { app: punchable-worker } }
+spec:
+  selector: { app: punchable-worker }
+  ports: [ { name: metrics, port: 9100, targetPort: 9100 } ]

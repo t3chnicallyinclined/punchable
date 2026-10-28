@@ -36,7 +36,9 @@ COPY tools/explorer/kb.py tools/explorer/
 COPY infer/*.py infer/
 RUN /venv/bin/python -m compileall -q /app \
  && cd /app && ENGINE_CONFIG=/app/engine/config.hosted.toml /venv/bin/python -c "import worker.__main__, worker.online, worker.execute, engine.providers, engine.budget, creative.askchat, creative.write, creative.memolink; from engine.config import Config; c = Config(); assert set(c.providers) == {'anthropic'}, c.providers"
-ENV PATH=/venv/bin:$PATH \
+ARG PK_BUILD_SHA=dev
+ENV PK_BUILD_SHA=$PK_BUILD_SHA \
+    PATH=/venv/bin:$PATH \
     HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -51,4 +53,6 @@ ENV PATH=/venv/bin:$PATH \
     PK_AI_SPEND_FILE=/tmp/pk-worker/ai_spend.json \
     PUNCH_SECRETS=/nonexistent
 USER 10001:10001
+# GET /metrics for Prometheus (worker/metrics.py; PK_METRICS_PORT): the only thing this image listens on
+EXPOSE 9100
 ENTRYPOINT ["python", "-m", "worker", "--hosted"]

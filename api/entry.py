@@ -33,6 +33,7 @@ os.environ.setdefault("PUNCH_API_QUIET", "1")
 
 import server as SV  # noqa: E402
 import auth as AUTH  # noqa: E402
+import crash as CRASH  # noqa: E402  (sentry-sdk -> Bugsink; off without SENTRY_DSN)
 import sdb  # noqa: E402
 
 DATA = Path(os.environ.get("PK_DATA", "/tmp/punchable"))
@@ -197,6 +198,8 @@ def boot(ns: str, db: str):
             STATE.update(surreal=False if "connect" in str(e).lower() or isinstance(e, OSError) else STATE["surreal"],
                          error=f"{type(e).__name__}: {str(e)[:200]}")
             log("boot:", STATE["error"])
+            if not isinstance(e, OSError):   # a connection refused while SurrealDB restarts is routine, not a crash
+                CRASH.report(e, route="boot")
         time.sleep(5 if not STATE["loaded"] else float(os.environ.get("PK_BOOT_POLL_S", "15")))
 
 
@@ -242,6 +245,7 @@ def main():
     SV.Handler.origins = tuple(x for x in [os.environ.get("PUBLIC_URL", "").rstrip("/")] if x)
     SV.Handler.kbs = {}
     SV.Handler.boot = staticmethod(boot_status)
+    CRASH.init(log=log)   # SENTRY_DSN from the Secret punchable-sentry; every event is scrubbed (api-dev/scrub.py)
     threading.Thread(target=boot, args=(ns, db), daemon=True, name="boot").start()
     host = os.environ.get("HOST", "0.0.0.0")
     srv = ThreadingHTTPServer((host, port), SV.Handler)
