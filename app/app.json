@@ -96,7 +96,9 @@
         {
           "microphonePermission": "Punchable records your sets and voice notes so it can find each joke and measure the laughs. Audio goes only to your own server."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": false,
