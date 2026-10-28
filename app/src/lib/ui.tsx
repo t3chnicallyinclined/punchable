@@ -10,9 +10,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { C, F, WIDE, onSchemeChange, stageInfo, stageWord } from './theme';
 import { AskButton } from './AskButton';
-import { upload, useOnline } from './api';
+import { upload } from './api';
 import { useSession } from './auth';
-import { haptics } from './haptics';
 import { loginHref } from './session';
 import { isWeb, micExplained, micSupported, pickFile, requestMic, setMicExplained } from './media';
 
@@ -342,98 +341,6 @@ export function Icon({ name, size = 22, color = C.text, sw = 2 }: { name: keyof 
 // ------------------------------------------------------------------ layout
 export const useWide = () => useWindowDimensions().width >= WIDE;
 
-// The three tabs (docs/UX_2026-10.md): Tonight · Bits · Sets. Ask is on every screen (the input bar), not a tab.
-const ROOTS = [
-  { key: 'tonight', label: 'Tonight', path: '/' },
-  { key: 'bits', label: 'Bits', path: '/bits' },
-  { key: 'sets', label: 'Sets', path: '/sets' },
-];
-// screens one tap down, and the tab they belong under (the old tabs Write / Boards / Notebook stay as routes)
-const PUSHED_ROOT: Record<string, string> = {
-  joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', set: 'bits', venue: 'bits', calendar: 'bits',
-  merge: 'bits', write: 'bits', today: 'tonight', import: 'tonight', record: 'tonight', inbox: 'tonight', say: 'tonight', ask: 'tonight',
-  board: 'sets', builder: 'sets', list: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
-  settings: 'tonight', profile: 'tonight', learned: 'tonight',
-};
-
-function rootOf(pathname: string, last: string) {
-  if (pathname === '/' || pathname === '') return 'tonight';
-  const k = pathname.split('/')[1];
-  if (ROOTS.some((r) => r.key === k)) return k;
-  return PUSHED_ROOT[k] && last === 'tonight' && k !== 'settings' && k !== 'profile' ? PUSHED_ROOT[k] : last;
-}
-
-export function goRoot(key: string) {
-  const r = ROOTS.find((x) => x.key === key);
-  if (r) router.navigate(r.path as any);
-}
-
-function BottomNav({ active }: { active: string }) {
-  const ins = useSafeAreaInsets();
-  const tab = (r: (typeof ROOTS)[number]) => {
-    const on = active === r.key;
-    return (
-      <Pressable key={r.key} testID={`tab-${r.key}`} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={r.label}
-        onPress={() => { if (!on) haptics.selection(); goRoot(r.key); }} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 }}>
-        <Icon name={r.key} color={on ? C.amber : C.tabOff} size={24} />
-        <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 11, color: on ? C.amber : C.tabOff }}>{r.label}</Text>
-      </Pressable>
-    );
-  };
-  return (
-    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 64 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.hairline }}>
-      {ROOTS.map(tab)}
-    </View>
-  );
-}
-
-function Sidebar({ active }: { active: string }) {
-  const ui = useUI();
-  const item = (key: string, label: string, onPress: () => void, icon?: string) => {
-    const on = active === key;
-    return (
-      <Pressable key={key} testID={`side-${key}`} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress}
-        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, backgroundColor: on || st.hovered ? C.surface2 : 'transparent' })}>
-        {icon && <Icon name={icon} size={18} color={on ? C.amber : C.mut} />}
-        <Text style={{ fontFamily: F.medium, fontSize: 15, color: on ? C.amber : C.mut, flex: 1 }}>{label}</Text>
-      </Pressable>
-    );
-  };
-  return (
-    <View testID="sidebar" style={{ width: 232, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.border, paddingVertical: 18, paddingHorizontal: 12, gap: 2 }}>
-      <Text style={{ fontFamily: F.g7, fontSize: 20, color: C.text, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 16 }}>Punchable</Text>
-      {ROOTS.map((r) => item(r.key, r.label, () => goRoot(r.key), r.key))}
-      <View style={{ flex: 1 }} />
-      {ui.workingSet && (
-        <Pressable testID="side-working-set" accessibilityRole="button" onPress={() => router.push(`/workingset/${encodeURIComponent(ui.workingSet!.id)}` as any)}
-          style={{ borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 10, gap: 2, marginBottom: 8, minHeight: 44 }}>
-          <Text style={{ fontFamily: F.g7, fontSize: 11, letterSpacing: 0.6, color: C.amber }}>★ WORKING SET</Text>
-          <Text numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 14, color: C.text }}>{ui.workingSet.title}</Text>
-          <Text style={{ fontFamily: F.body, fontSize: 12, color: C.mut }}>{ui.workingSet.sub}</Text>
-        </Pressable>
-      )}
-      <SidebarYou />
-    </View>
-  );
-}
-
-/** Bottom of the desktop sidebar: who is signed in (opens You), or Sign in. */
-function SidebarYou() {
-  const sess = useSession();
-  if (sess.enabled && !sess.signedIn) return <SignInBtn testID="side-signin" full />;
-  const p = sess.profile;
-  return (
-    <Pressable testID="side-you" accessibilityRole="button" accessibilityLabel="You: profile, sign out, settings" onPress={() => router.push('/profile' as any)}
-      style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 8, borderRadius: 8, backgroundColor: st.hovered ? C.surface2 : 'transparent' })}>
-      <Face size={32} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 14, color: C.text }}>{p?.name || 'You'}</Text>
-        <Text numberOfLines={1} style={{ fontFamily: F.body, fontSize: 12, color: C.mut }}>Profile · settings</Text>
-      </View>
-    </Pressable>
-  );
-}
-
 /** His face: the Google photo from the token, else his initials, else a person outline (local copy, no sign-in). */
 export function Face({ size = 34 }: { size?: number }) {
   const { profile: p } = useSession();
@@ -480,30 +387,6 @@ export function Avatar({ ask = true }: { ask?: boolean }) {
   );
 }
 
-const ROOT_LABEL: Record<string, string> = { tonight: 'Tonight', bits: 'Bits', sets: 'Sets' };
-/** The bar itself. The safe-area inset is NOT added here: `Screen` wraps every header (this one or a custom one) in it. */
-function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
-  const ui = useUI();
-  // HIG: the back button carries the previous screen's name (the tab he came from unless the screen says otherwise)
-  const label = backLabel ?? (ROOT_LABEL[ui.lastRoot] || 'Back');
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52, paddingTop: 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
-      {left ? left : back ? (
-        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
-          style={{ minWidth: 44, height: 44, maxWidth: 140, borderRadius: 22, flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
-          <Icon name="back" size={24} color={C.amber} sw={2.4} />
-          <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 16, color: C.amber, marginLeft: -4 }}>{label}</Text>
-        </Pressable>
-      ) : <View style={{ width: 44 }} />}
-      <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ flex: 1, textAlign: 'center', fontFamily: F.g6, fontSize: 17, color: C.text }}>{title}</Text>
-      {right || <TopBarRight />}
-    </View>
-  );
-}
-function TopBarRight() {
-  const sess = useSession();
-  return sess.enabled && !sess.signedIn && !sess.checking ? <SignInBtn testID="topbar-signin" /> : <View style={{ width: 44 }} />;
-}
 
 export function IconBtn({ label, onPress, children, testID, disabled }: { label: string; onPress: () => void; children: React.ReactNode; testID?: string; disabled?: boolean }) {
   return (
@@ -522,106 +405,6 @@ export function TextBtn({ label, onPress, testID, color = C.amber }: { label: st
   );
 }
 
-function OfflineStrip() {
-  const online = useOnline();
-  if (online) return null;
-  return (
-    <View testID="offline" style={{ paddingHorizontal: 16, paddingVertical: 6, backgroundColor: C.warnBg, borderBottomWidth: 1, borderBottomColor: C.addBorder }}>
-      <Text style={{ fontFamily: F.semi, fontSize: 13, color: C.amber, textAlign: 'center' }}>Offline · showing what this phone saved · imports wait in your outbox</Text>
-    </View>
-  );
-}
-
-/**
- * A screen. Root tabs get the bottom nav (phone) or the sidebar (>= 900 px).
- * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
- * `scroll={false}` hands the body to the child (a virtualized list).
- */
-export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle }: {
-  title: string; children: React.ReactNode; back?: boolean; onBack?: () => void; right?: React.ReactNode; dock?: React.ReactNode;
-  task?: boolean; header?: React.ReactNode; testID?: string; deep?: boolean; scrollKey?: string | number | null; scroll?: boolean; maxWidth?: number;
-  scrollRef?: React.MutableRefObject<any>;
-  /** The input bar (lib/SayBar): pinned above the tab bar, the tabs stay (unlike `dock`). */
-  bar?: React.ReactNode;
-  /** Pull to refresh (HIG: on every list). */
-  onRefresh?: () => Promise<any> | void;
-  /** The back button's label (default: the tab he came from). */
-  backLabel?: string;
-  /** A large title at the top of the content that collapses into the bar as he scrolls. */
-  largeTitle?: boolean;
-}) {
-  const wide = useWide();
-  const sv = useRef<any>(null);
-  useEffect(() => {
-    if (scrollKey != null) sv.current?.scrollTo?.({ y: 0, animated: true });
-  }, [scrollKey]);
-  const ui = useUI();
-  const pathname = usePathname();
-  const active = rootOf(pathname, ui.lastRoot);
-  useEffect(() => {
-    if (ROOTS.some((r) => r.key === active) && active !== ui.lastRoot && rootOf(pathname, '') === active) ui.setLastRoot(active);
-  }, [active, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ins = useSafeAreaInsets();
-  const showNav = !wide && !task && !dock;
-  const bottomPad = dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0);
-  const mw = maxWidth || (wide ? 1120 : 720);
-  // the snackbar sits above whatever is pinned at the bottom (the input bar, the dock, the tabs)
-  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + (showNav ? 64 : 0) + (dock || showNav ? ins.bottom : 0);
-  useEffect(() => {
-    ui.setPinnedHeight(pinned);
-  }, [pinned]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [refreshing, setRefreshing] = useState(false);
-  const refresh = useCallback(async () => {
-    if (!onRefresh) return;
-    setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [onRefresh]);
-  const [collapsed, setCollapsed] = useState(false);
-  const barTitle = largeTitle && !collapsed ? '' : title;
-  const kav = (node: React.ReactNode) => (Platform.OS === 'ios' ? <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>{node}</KeyboardAvoidingView> : <>{node}</>);
-  return (
-    <View testID={testID} style={{ flex: 1, flexDirection: 'row', backgroundColor: deep ? C.bgDeep : C.bg }}>
-      {wide && !task && <Sidebar active={active} />}
-      {kav(
-      <View style={{ flex: 1, minWidth: 0 }}>
-        {/* HIG/layout: every header, custom or not, starts below the status bar and the Dynamic Island (the inset is the
-            system's; no fixed number). The wrapper carries the bar's ground so the inset never shows a seam. */}
-        <View testID="header-inset" style={{ zIndex: 4, paddingTop: ins.top, backgroundColor: task || deep ? C.bgDeep : C.bg }}>
-          {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
-        </View>
-        <OfflineStrip />
-        {scroll ? (
-          <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
-            contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: wide ? 24 : 12, paddingBottom: bottomPad }}
-            scrollEventThrottle={32} onScroll={largeTitle ? (e) => setCollapsed(e.nativeEvent.contentOffset.y > 36) : undefined}
-            refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
-            <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>
-              {largeTitle && <Text maxFontSizeMultiplier={1.3} accessibilityRole="header" style={{ fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>{title}</Text>}
-              {children}
-            </View>
-          </ScrollView>
-        ) : (
-          <View style={{ flex: 1, paddingBottom: (showNav ? 64 + ins.bottom : 0) + (bar ? 112 : 0) }}>{children}</View>
-        )}
-        {bar && (
-          <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom, zIndex: 6, paddingBottom: showNav ? 4 : 12, backgroundColor: deep ? C.bgDeep : C.bg }}>
-            {bar}
-          </View>
-        )}
-        {dock && (
-          <View testID="dock" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: ins.bottom + 12, backgroundColor: deep ? C.bgDeep : C.surface, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
-            <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', gap: 8 }}>{dock}</View>
-          </View>
-        )}
-        {showNav && <BottomNav active={active} />}
-      </View>)}
-    </View>
-  );
-}
 
 /** Pull to refresh for screens that own their list (FlatList): the same control, the same colours. */
 export function useRefresh(onRefresh?: () => Promise<any> | void) {
@@ -637,7 +420,6 @@ export function useRefresh(onRefresh?: () => Promise<any> | void) {
   }, [onRefresh]);
   return onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined;
 }
-export { TopBar };
 
 // ------------------------------------------------------------------ sheets
 /**
@@ -746,6 +528,9 @@ type UIState = {
   setImportCount: (n: number) => void;
   workingSet: WSPin;
   setWorkingSet: (w: WSPin) => void;
+  /** Tonight's "N to sort" count: the Tonight tab's badge on the phone (only when > 0, HIG/tab-bars). */
+  toSort: number;
+  setToSort: (n: number) => void;
   /** How much of the bottom a bar/dock/tabs covers on the current screen (the snackbar sits above it). */
   setPinnedHeight: (h: number) => void;
 };
@@ -762,6 +547,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [lastRoot, setLastRoot] = useState('tonight');
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
+  const [toSort, setToSort] = useState(0);
   const [pinnedHeight, setPinnedHeight] = useState(0);
   const pendingMic = useRef<null | (() => void)>(null);
   const timer = useRef<any>(null);
@@ -806,8 +592,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<UIState>(() => ({
     snack: showSnack, openCapture: () => setSheet('cap'), openRecord: () => setSheet('cap'), quickVoiceNote: voiceNote, withMic, uploadFile,
-    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, setPinnedHeight,
-  }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet]);
+    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, toSort, setToSort, setPinnedHeight,
+  }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet, toSort]);
 
   return (
     <Ctx.Provider value={value}>

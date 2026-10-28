@@ -20,6 +20,11 @@ import { SET_MIN_S } from '@/lib/importgroup';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/** The document title on the web; the native header title on the phone. */
+export const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
+/** A full-screen modal on the phone (slides up, covers the tab bar); a plain route on the web. */
+const fullScreen = Platform.OS === 'web' ? { animation: 'slide_from_bottom' as const } : { animation: 'slide_from_bottom' as const, presentation: 'fullScreenModal' as const, autoHideHomeIndicator: true };
+
 /** Native: the Capture badge = set-length videos from the last 14 days (only once he has granted Photos access). */
 function PhotosBadge() {
   const ui = useUI();
@@ -92,7 +97,6 @@ export default function RootLayout() {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
   if (!ready) return null;
-  const tab = { animation: 'none' as const };
   return (
     <GestureRoot key={scheme} style={{ backgroundColor: C.bg }}>
       <SafeAreaProvider>
@@ -102,41 +106,13 @@ export default function RootLayout() {
             <BoardProvider>
               <PhotosBadge />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-                <Stack.Screen name="index" options={{ ...tab, title: 'Tonight · Punchable' }} />
-                <Stack.Screen name="bits" options={{ ...tab, title: 'Bits · Punchable' }} />
-                <Stack.Screen name="sets" options={{ ...tab, title: 'Sets · Punchable' }} />
-                <Stack.Screen name="say" options={{ title: 'Asking · Punchable' }} />
-                <Stack.Screen name="inbox" options={{ title: 'Inbox · Punchable' }} />
-                <Stack.Screen name="merge" options={{ title: 'Merge · Punchable' }} />
-                <Stack.Screen name="list/[id]" options={{ title: 'Set list · Punchable' }} />
-                <Stack.Screen name="stage/[id]" options={{ animation: 'slide_from_bottom', gestureEnabled: false, title: 'On stage · Punchable' }} />
-                <Stack.Screen name="map/[id]" options={{ title: 'Joke map · Punchable' }} />
-                <Stack.Screen name="builder/[id]" options={{ title: 'Set builder · Punchable' }} />
-                <Stack.Screen name="write" options={{ ...tab, title: 'Write · Punchable' }} />
-                <Stack.Screen name="boards" options={{ ...tab, title: 'Boards · Punchable' }} />
-                <Stack.Screen name="notebook" options={{ ...tab, title: 'Notebook · Punchable' }} />
-                <Stack.Screen name="desk" options={{ ...tab, title: 'Notebook · Punchable' }} />
-                <Stack.Screen name="shows" options={{ title: 'Shows · Punchable' }} />
-                <Stack.Screen name="today" options={{ title: 'After a show · Punchable' }} />
-                <Stack.Screen name="joke/[id]" options={{ title: 'Joke · Punchable' }} />
-                <Stack.Screen name="bit/[id]" options={{ title: 'The bit · Punchable' }} />
-                <Stack.Screen name="set/[id]" options={{ title: 'Set · Punchable' }} />
-                <Stack.Screen name="venue/[id]" options={{ title: 'Venue · Punchable' }} />
-                <Stack.Screen name="board/[id]" options={{ title: 'Storyboard · Punchable' }} />
-                <Stack.Screen name="workingset/[id]" options={{ title: 'Working set · Punchable' }} />
-                <Stack.Screen name="myset/[id]" options={{ title: 'Set · Punchable' }} />
-                <Stack.Screen name="setlist/[id]" options={{ animation: 'slide_from_bottom', title: 'Set list · Punchable' }} />
-                <Stack.Screen name="import" options={{ animation: 'slide_from_bottom', title: 'Import sets · Punchable' }} />
-                <Stack.Screen name="settings" options={{ title: 'Settings · Punchable' }} />
-                <Stack.Screen name="profile" options={{ title: 'You · Punchable' }} />
-                <Stack.Screen name="learned" options={{ title: 'What I’ve learned · Punchable' }} />
-                <Stack.Screen name="notes" options={{ title: 'Notes · Punchable' }} />
-                <Stack.Screen name="ask/index" options={{ title: 'Ask · Punchable' }} />
-                <Stack.Screen name="ask/[id]" options={{ title: 'Ask · Punchable' }} />
-                <Stack.Screen name="review" options={{ animation: 'slide_from_bottom', title: 'Step through · Punchable' }} />
+                {/* The three tabs, each its own stack: app/(tabs). Route groups keep every URL (/joke/x, /list/x, /inbox, ...). */}
+                <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+                {/* Full-screen tasks (HIG/modality: "a full-screen modal style for ... a complex task"); nothing swipes him off the stage. */}
+                <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
+                <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
+                <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
-                <Stack.Screen name="record" options={{ animation: 'slide_from_bottom', gestureEnabled: false, title: 'Record · Punchable' }} />
-                <Stack.Screen name="map/index" options={{ title: 'Map · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />
               </Stack>

@@ -6,7 +6,9 @@ import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Step, decide, get, post, undo, useApi } from '@/lib/api';
 import { C, F, RATING, fmtDate, fmtMs, stageInfo } from '@/lib/theme';
-import { BAR_WORDS, Badge, Btn, Card, ErrorCard, LaughBars, List, ListRow, Screen, Sheet, T, TextBtn, TopBar, s, useUI } from '@/lib/ui';
+import { BAR_WORDS, Badge, Btn, Card, ErrorCard, LaughBars, List, ListRow, Sheet, T, TextBtn, s, useUI } from '@/lib/ui';
+import { Screen } from '@/lib/Screen';
+import { TopBar } from '@/lib/TopBar';
 import { HearIt, Reference } from '@/lib/hear';
 import { stopPlayback } from '@/lib/media';
 

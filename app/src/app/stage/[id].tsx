@@ -15,7 +15,9 @@ import { enqueueUpload } from '@/lib/uploads';
 import { Build } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { C, F, fmtMs } from '@/lib/theme';
-import { Btn, Empty, Screen, Sheet, SheetHead, Skeleton, T, TopBar, useUI } from '@/lib/ui';
+import { Btn, Empty, Sheet, SheetHead, Skeleton, T, useUI } from '@/lib/ui';
+import { Screen } from '@/lib/Screen';
+import { TopBar } from '@/lib/TopBar';
 
 export default function Stage() {
   useKeepAwake();

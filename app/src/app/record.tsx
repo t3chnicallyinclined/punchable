@@ -8,7 +8,9 @@ import { haptics } from '@/lib/haptics';
 import { useRecorder } from '@/lib/recorder';
 import { enqueueUpload, usePendingUploads } from '@/lib/uploads';
 import { C, F, fmtMs } from '@/lib/theme';
-import { Badge, Btn, Card, Chip, Screen, Sheet, SheetHead, T, TextBtn, TopBar, s, useUI } from '@/lib/ui';
+import { Badge, Btn, Card, Chip, Sheet, SheetHead, T, TextBtn, s, useUI } from '@/lib/ui';
+import { Screen } from '@/lib/Screen';
+import { TopBar } from '@/lib/TopBar';
 import { isWeb } from '@/lib/media';
 
 const TARGETS = [5, 7, 10, 15, 20];
