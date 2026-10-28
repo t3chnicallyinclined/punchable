@@ -3,18 +3,19 @@
 // Hold to talk: web = the browser's speech recognition while the button is held (Chrome, Safari; Firefox focuses
 // the field); phone = expo-audio records while held and the voice note goes up to be transcribed (lib/holdToTalk).
 import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from './theme';
 import { haptics } from './haptics';
 import { useHoldToTalk } from './holdToTalk';
-import { useUI } from './ui';
+import { Icon, useUI } from './ui';
 import type { Worker } from './ask';
 
 export { canListen, useHoldToTalk } from './holdToTalk';
 
 function MicGlyph({ size = 22, color = '#fff' }: { size?: number; color?: string }) {
+  if (Platform.OS !== 'web') return <Icon name="mic" size={size} color={color} sw={2} />;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
       <Rect x={9} y={3} width={6} height={11} rx={3} />
