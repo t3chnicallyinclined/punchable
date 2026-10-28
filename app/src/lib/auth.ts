@@ -20,6 +20,7 @@ import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { API_URL, setAuthHeaderProvider } from './api';
 import { Profile, endSessionUrl, loginHref, originSlash, profileFrom } from './session';
+import { retry } from './retry';
 
 if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession(); // web only: the popup's /auth/callback hands the code back to the opener
 
@@ -84,16 +85,23 @@ let refreshing: Promise<string | null> | null = null;
 const listeners = new Set<(signedIn: boolean) => void>();
 
 // ---------------------------------------------------------------- refresh-token storage
+// The keychain write is guarded: it never throws into the sign-in path (setTokens does not await it), it retries a
+// transient keychain failure (lib/retry), and a lasting one is logged, not fatal: he signs in again next time.
+// AFTER_FIRST_UNLOCK: the token stays readable while the phone is locked after its first unlock, so a recording that
+// uploads in the background can still refresh (expo-secure-store: keychainAccessible / kSecAttrAccessible).
+// Size: expo-secure-store enforces no limit; the keychain itself rejects nothing at the sizes Keycloak issues (a
+// refresh token here is ~1 KB); a native error, if any, lands in the catch below.
+const KEYCHAIN = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
 async function saveRefresh(rt: string | null) {
   try {
     if (Platform.OS === 'web') {
       const ss = (globalThis as any).sessionStorage;
       if (rt) ss?.setItem(REFRESH_KEY, rt);
       else ss?.removeItem(REFRESH_KEY);
-    } else if (rt) await SecureStore.setItemAsync(REFRESH_KEY, rt);
-    else await SecureStore.deleteItemAsync(REFRESH_KEY);
-  } catch {
-    /* storage unavailable: he signs in again next time */
+    } else if (rt) await retry(() => SecureStore.setItemAsync(REFRESH_KEY, rt, KEYCHAIN));
+    else await retry(() => SecureStore.deleteItemAsync(REFRESH_KEY));
+  } catch (e: any) {
+    console.warn('[auth] the refresh token was not stored; sign-in will not survive a relaunch:', e?.message || String(e));
   }
 }
 async function loadRefresh(): Promise<string | null> {
