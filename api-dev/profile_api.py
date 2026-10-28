@@ -14,9 +14,11 @@ rows, reconciled like every creative store). Two ops on the document `profile:vo
                                 (`previous`), so a save is undone by saving the previous text again (the app's Undo).
                                 A put never touches `learned`.
     learn {kept[], dropped[]}   the learned section (creative/learned.py): appended by the API itself when he keeps
-                                one of the app's drafts (learn_kept: POST /api/ideas with a riff draft's text, or the
-                                Brainstorm decision with a punch-up draft's text), never by a PUT. Capped and merged
-                                by creative.learned.merge; never touches `text` or `previous`.
+                                one of the app's drafts (learn_kept: POST /api/ideas with `draft: true` or a riff
+                                draft's exact text, or the Brainstorm decision with a punch-up draft's text) and
+                                when he dismisses one (POST /api/profile/voice/learn {dropped: [text | {text, bit}]},
+                                app token only, learn_dropped: the same legal rule, 422). Never by a PUT. Capped and
+                                merged by creative.learned.merge; never touches `text` or `previous`.
 Both GETs return `learned` ({kept, dropped, updated_at}: the lines, with the bit id and the date); the worker's GET
 also returns `laugh_lines` (computed from the corpus each time: creative.learned.laugh_lines, [] without a laugh map).
 The text is never a file in the repo or in an image, and never logged: the worker (creative/voice.py) logs its length,
@@ -44,6 +46,7 @@ STORE = "profile"
 VOICE_ID = "profile:voice"
 MAX_CHARS = 60_000
 ROUTE = re.compile(r"^/api/(worker/)?profile/voice$")
+LEARN_ROUTE = re.compile(r"^/api/profile/voice/learn$")   # POST {dropped: [...]}: he dismissed a draft (app token only)
 LEGAL_MSG = "That reads like court material; Punchable won't keep it as your voice profile. Nothing was saved."
 
 
@@ -114,27 +117,65 @@ def laugh_lines(cr, kb) -> list[dict]:
         return []
 
 
-def learn_kept(cr, kb, text: str, bit: str | None, by: str) -> dict | None:
+def learn_kept(cr, kb, text: str, bit: str | None, by: str, draft: bool = False) -> dict | None:
     """He kept one of the app's drafts: `text` is a line he just saved as his own (POST /api/ideas, or the Brainstorm
-    unit with source "draft"). If it is the text of a finished riff or punch-up job's draft (creative.learned.drafted
-    over the job store), one `learn` event: that line kept, the job's other drafts passed over. His own typed line is
-    not a draft: nothing is written, None. Never raises: the caller's write is already done."""
+    unit with source "draft"). Kept when EITHER the app flagged it (`draft` = `draft: true` on POST /api/ideas) OR it
+    is the exact text of a finished riff or punch-up job's draft (creative.learned.drafted over the job store). One
+    `learn` event: that line kept (marked `edited` when the flag is set but no draft matches: his edit of a draft),
+    and, when a job matched, its other drafts passed over (minus any he kept or dismissed before). His own typed
+    line, unflagged: nothing is written, None. Never raises: the caller's write is already done."""
     try:
         with cr.lock:
             jobs = cr.stores(kb)["jobs"].items
             kind, others = L.drafted(jobs, text)
-            if kind is None:
+            if kind is None and not draft:
                 return None
             st = store(cr, kb)
-            # a sibling he kept earlier (two keeps from one riff) is not passed over: only lines he never took are
-            already = {L._norm(e["text"]) for e in ((st.get(VOICE_ID) or {}).get("learned") or {}).get("kept") or []}
-            others = [t for t in others if L._norm(t) not in already]
-            doc = st.append("learn", VOICE_ID, {"kept": [{"text": text, "bit": bit}],
-                                                "dropped": [{"text": t, "bit": bit} for t in others],
-                                                "from": kind}, by=by)
+            learned = (st.get(VOICE_ID) or {}).get("learned") or {}
+            # a sibling he kept or dismissed earlier is already a signal of its own: only lines he never acted on
+            seen = {L._norm(e["text"]) for k in ("kept", "dropped") for e in learned.get(k) or []}
+            others = [t for t in others if L._norm(t) not in seen]
+            kept = {"text": text, "bit": bit, **({"edited": True} if kind is None else {})}
+            doc = st.append("learn", VOICE_ID, {"kept": [kept], "dropped": [{"text": t, "bit": bit} for t in others],
+                                                "from": kind or "draft_flag"}, by=by)
         return L.counts(doc.get("learned"))
     except Exception:  # noqa: BLE001  the learned section is a nicety: his save stands either way
         return None
+
+
+MAX_DISMISS = 10
+LINE_MAX = 2000   # a riff line on the way in (creative_api.riff) is at most this long
+
+
+def clean_dropped(body: dict) -> list[dict]:
+    """POST /api/profile/voice/learn {dropped: [text | {text, bit?}], bit?}: 1-10 lines, each up to 2000 characters."""
+    if not isinstance(body, dict):
+        raise CR.HttpError(400, "body must be an object")
+    xs = body.get("dropped")
+    if not isinstance(xs, list) or not xs or len(xs) > MAX_DISMISS:
+        raise CR.HttpError(400, f"dropped must be a list of 1-{MAX_DISMISS} lines")
+    bit0 = body.get("bit") if isinstance(body.get("bit"), str) and CR.ID_RE.match(body["bit"]) else None
+    out = []
+    for x in xs:
+        if isinstance(x, str):
+            x = {"text": x}
+        if not isinstance(x, dict) or not isinstance(x.get("text"), str) or not x["text"].strip():
+            raise CR.HttpError(400, "each dropped line needs its text")
+        if len(x["text"]) > LINE_MAX:
+            raise CR.HttpError(413, f"a line is at most {LINE_MAX:,} characters")
+        bit = x.get("bit") if isinstance(x.get("bit"), str) and CR.ID_RE.match(x["bit"]) else bit0
+        out.append({"text": x["text"].strip(), "bit": bit})
+    return out
+
+
+def learn_dropped(cr, kb, body: dict, by: str) -> dict:
+    """He dismissed a draft (Write's or Brainstorm's "Dismiss"): one `learn {dropped}` event, by him. The same legal
+    rule as every stored text (422, nothing kept). Returns the counts; the lines themselves are in GET's `learned`."""
+    lines = clean_dropped(body)
+    CR.refuse_legal(*[x["text"] for x in lines])
+    with cr.lock:
+        doc = store(cr, kb).append("learn", VOICE_ID, {"dropped": lines, "from": "dismiss"}, by=by)
+    return {"ok": True, "learned": L.counts(doc.get("learned"))}
 
 
 def clean_text(body: dict) -> str:
@@ -170,6 +211,15 @@ def load_into_voice(cr, kb) -> bool:
 
 
 def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
+    if LEARN_ROUTE.match(path):
+        # the app's token only: server.Handler keeps a worker token on /api/worker/*, so this is always him
+        try:
+            if method != "POST":
+                raise CR.HttpError(405, "POST")
+            h.send_json(learn_dropped(cr, h.kb, body_fn(), h.actor({})))
+        except (CR.HttpError, K.DecisionError) as e:
+            h.err(e.status, str(e))
+        return True
     m = ROUTE.match(path)
     if not m:
         return False

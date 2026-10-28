@@ -246,6 +246,7 @@ NEW_ROUTES = [  # docs/API_CONTRACT.md "Requested by app (2026-10-26)"
     ("PATCH", "/api/workingsets/ws:x/try/try:x", {"done": True}), ("GET", "/api/jokes?sort=strongest", None),
     ("GET", "/api/connections", None),
     ("GET", "/api/profile/voice", None), ("PUT", "/api/profile/voice", {"text": "# Voice\n\nHe talks fast."}),
+    ("POST", "/api/profile/voice/learn", {"dropped": ["a line he dismissed"]}),
 ]
 
 

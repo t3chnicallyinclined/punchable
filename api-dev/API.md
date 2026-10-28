@@ -262,13 +262,19 @@ one op `put {kind, text}`; the document keeps its `previous` version.
 - Local dev with `--jobs inproc`: the API loads its own copy into `creative.voice` before running the job.
 - **The learned section** (2026-10-28, `creative/learned.py`): a second op `learn {kept[], dropped[]}` on the same
   document, written by the API itself, never by a PUT (`put` keeps `learned` as it was: the loader and Settings
-  cannot clobber it). It fires on writes he already makes: `POST /api/ideas` whose text is a finished riff job's
-  draft ("Use as mine" on Write), and the `POST /api/decision` that adds a `unit` with `source: "draft"` (Brainstorm's
-  "Use as mine"). The kept line goes to `learned.kept` (cap 25, newest first, `{text, bit, date}`); the same job's other
-  drafts go to `learned.dropped` (cap 25: passed over beside a keep, the only drop signal the server has; the app's
-  Dismiss is local). Both GETs return `learned`; the worker's GET also returns `laugh_lines` (cap 15, computed from
-  the corpus: the punchlines with the longest detector laughs; `[]` without a laugh map). The worker sends it as the
-  SECOND system block of a writing prompt, behind the profile (never for Ask).
+  cannot clobber it). It fires on writes he already makes: `POST /api/ideas` with `draft: true` ("Use as mine" on
+  Write, edited or not) or whose text is a finished riff job's draft word for word, and the `POST /api/decision` that
+  adds a `unit` with `source: "draft"` (Brainstorm's "Use as mine"). The kept line goes to `learned.kept` (cap 25,
+  newest first, `{text, bit, date, edited?}`: `edited` when the flag was set but no draft matched, his edit of a
+  draft); the same job's other drafts, the ones he neither kept nor dismissed, go to `learned.dropped` (cap 25).
+- **`POST /api/profile/voice/learn {dropped: [text | {text, bit?}], bit?}`** (app token only; 1-10 lines, each up to
+  2,000 characters): he dismissed a draft ("Dismiss" on Write or Brainstorm; the app fires it in the background and
+  never blocks on it). One `learn {dropped}` event by him; the same legal rule (422). `{ok, learned: {kept, dropped,
+  updated_at}}` (counts).
+- Both GETs return `learned`; the worker's GET also returns `laugh_lines` (cap 15, computed from the corpus: the
+  punchlines with the longest detector laughs; `[]` without a laugh map). The worker sends it as the SECOND system
+  block of a writing prompt, behind the profile (never for Ask). The app shows it read-only twice: Settings › Voice
+  profile (under the editor) and "What I've learned" (`(tonight)/learned.tsx`, the same rows).
 
 ## Legal rules on the request path (2026-10-28)
 `creative_api.refuse_legal`: the same `content_is_legal` runs on the texts a request would send to a model, **before

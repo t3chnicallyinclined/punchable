@@ -2,6 +2,7 @@
 // builder. The merge spot is lib/MergeHint.tsx.
 import { get, post } from './api';
 import { Job, creative } from './creative';
+import { retry } from './retry';
 
 /** A bit as the app shows it anywhere: short title, his line (verbatim), its date, one stage line in words. */
 export type BitCard = {
@@ -31,9 +32,16 @@ export const simple = {
   facts: (text: string, fresh = false) => post<any>('/api/facts', fresh ? { text, fresh } : { text }),
   riff: (idea: string, lines: string[], fresh = false) => post<any>('/api/riff', { idea, lines, ...(fresh ? { fresh } : {}) }),
   /** A riff line → an idea in his notebook. `attach` (the merge module): the line is clearly one existing bit and is
-   *  filed as a dated note of `into` instead; Undo = POST /api/merge/undo {merge_id: attach.id}. */
-  saveIdea: (text: string, idea: string) => post<{ ok: boolean; id: string; indexes: number[]; attach?: { decision: 'attach' | 'ambiguous' | 'new'; id?: string; into?: string; title?: string } }>(
-    '/api/ideas', { text, reason: `riff on: ${idea.slice(0, 200)}` }),
+   *  filed as a dated note of `into` instead; Undo = POST /api/merge/undo {merge_id: attach.id}. `draft` = one of the
+   *  AI's riff drafts taken as his ("Use as mine"), edited or not: the server's learned section counts it as kept. */
+  saveIdea: (text: string, idea: string, draft = false) => post<{ ok: boolean; id: string; indexes: number[]; attach?: { decision: 'attach' | 'ambiguous' | 'new'; id?: string; into?: string; title?: string } }>(
+    '/api/ideas', { text, reason: `riff on: ${idea.slice(0, 200)}`, ...(draft ? { draft: true } : {}) }),
+  /** He dismissed one of the AI's drafts (Write's riff, Brainstorm's punch-up): the voice profile's learned section
+   *  (api-dev/profile_api.py, POST /api/profile/voice/learn) remembers it as passed over. Fire and forget: three
+   *  tries in the background, never a snack, never a block; a lost dismiss costs nothing but the signal. */
+  dismissDraft: (text: string, bit: string | null = null): void => {
+    void retry(() => post('/api/profile/voice/learn', { dropped: [{ text, ...(bit ? { bit } : {}) }] }), { tries: 3, delayMs: 500 }).catch(() => {});
+  },
 };
 
 /**

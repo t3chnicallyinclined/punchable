@@ -7,9 +7,11 @@ it, maintained by the API on write events he already makes (no new chore, no PUT
     kept     a riff or punch-up draft he took as his own ("Use as mine"): POST /api/ideas with the text of a finished
              riff job's idea (server.Handler.idea_result), or the Brainstorm decision that adds a unit with
              source "draft" (POST /api/decision) with the text of a finished punch-up job's draft
-    dropped  the OTHER drafts of that same job, the ones he saw next to the one he kept and left. "Dismiss" in the
-             app is local state today (nothing is sent), so this is the only honest drop signal the server has:
-             passed over beside a keep, never "he disliked it"
+    dropped  a draft he dismissed ("Dismiss" on Write or Brainstorm: POST /api/profile/voice/learn {dropped},
+             profile_api.learn_dropped), and the OTHER drafts of a job he kept one from: the ones he saw next to the
+             kept line and neither kept nor dismissed (passed over beside a keep)
+    edited   a kept line the app flagged as a draft (`draft: true` on POST /api/ideas) whose words no longer match
+             any draft exactly: his line, edited from a draft; shown as such in the block
     laughs   not stored: computed from the corpus each time the worker fetches the profile (laugh_lines), the
              top punchlines by the laugh the detector tied to them (analysis.json punchlines + laughs_auto.json)
 
@@ -54,7 +56,10 @@ def _entry(x, ts: str | None) -> dict | None:
         text = text[:cut if cut > LINE_CHARS // 2 else LINE_CHARS].rstrip() + " [...]"
     bit = x.get("bit")
     date = x.get("date") or (ts or "")[:10] or None
-    return {"text": text, "bit": bit if isinstance(bit, str) and bit else None, "date": date}
+    out = {"text": text, "bit": bit if isinstance(bit, str) and bit else None, "date": date}
+    if x.get("edited") is True:   # his own words, edited from a draft (the app said `draft: true`, no exact match)
+        out["edited"] = True
+    return out
 
 
 def merge(cur: dict | None, kept=None, dropped=None, ts: str | None = None) -> dict:
@@ -154,7 +159,8 @@ def block(learned: dict | None, laughs: list[dict] | None = None) -> str | None:
 
     def line(e: dict) -> str:
         d = (e.get("date") or "")[:7]
-        return f"- \"{e['text']}\"" + (f" ({d})" if d else "")
+        tail = ", his edit of a draft" if e.get("edited") else ""
+        return f"- \"{e['text']}\"" + (f" ({d}{tail})" if d else (f" ({tail[2:]})" if tail else ""))
 
     parts = []
     if kept or dropped:

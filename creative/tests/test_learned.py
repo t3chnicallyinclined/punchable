@@ -92,3 +92,9 @@ def test_block_reads_as_evidence_and_is_none_when_nothing_is_learned():
     assert "joke:" not in b and "updated_at" not in b, "ids and field names never reach the model"
     only_laughs = L.block(None, [{"text": "Laugh line.", "laugh_s": 2}])
     assert only_laughs.startswith(L.LAUGH_HEAD) and L.HEAD not in only_laughs
+    # a kept line he edited from a draft (the app's `draft: true`, no exact match) is said to be his edit
+    e = L.merge(None, kept=[{"text": "Edited line.", "edited": True}, {"text": "Plain keep.", "edited": False}], ts=T1)
+    assert e["kept"][0] == {"text": "Edited line.", "bit": None, "date": "2026-10-28", "edited": True} and "edited" not in e["kept"][1]
+    b2 = L.block(e)
+    assert "- \"Edited line.\" (2026-10, his edit of a draft)" in b2 and "- \"Plain keep.\" (2026-10)" in b2
+    assert L.block(L.merge(None, kept=[{"text": "No date.", "edited": True, "date": None}], ts=None)).endswith("- \"No date.\" (his edit of a draft)")

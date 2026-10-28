@@ -10,6 +10,7 @@ import { ConnGroup, ConnGroupKey, ConnItem, Connections, PunchUp, WSView, creati
 import { confWord, fmt1, fmtDur, fmtShortDate, fmtVs, mergeNights, trendWord } from '@/lib/laughs';
 import { Sparkline } from '@/lib/metrics';
 import { useSets } from '@/lib/sets';
+import { simple } from '@/lib/simple';
 import { useBoards } from '@/lib/boards';
 import { playSegment, youtubeSource } from '@/lib/media';
 import { WorkerLine } from '@/lib/worker';
@@ -505,7 +506,7 @@ function BrainstormTab({ id, title, wsId, locked, conn }: { id: string; title: s
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <Btn testID={`draft-use-${i}`} small label="Use as mine" onPress={() => useAsMine(d.alt, i)} />
             <Btn small label="Another" v="ghost" onPress={() => give(true)} />
-            <Btn testID={`draft-dismiss-${i}`} small label="Dismiss" v="ghost" onPress={() => setDismissed((x) => new Set(x).add(i))} />
+            <Btn testID={`draft-dismiss-${i}`} small label="Dismiss" v="ghost" onPress={() => { setDismissed((x) => new Set(x).add(i)); simple.dismissDraft(d.alt, id); }} />
           </View>
         </View>
       ))}

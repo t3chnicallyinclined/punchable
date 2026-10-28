@@ -1909,12 +1909,13 @@ class Handler(BaseHTTPRequestHandler):
                 "gdocs" if (b.get("reason") or "").startswith("[gdocs]") else "app")
             out["attach"] = MG.after_idea(self.creative, kb, d["id"], text, src)
             if by == OWNER_ID:
-                # the text of a riff draft he took as his own ("Use as mine"): the voice profile's learned section
+                # a riff draft he took as his own ("Use as mine": the app says `draft: true`, or the text is a
+                # finished riff job's draft word for word): the voice profile's learned section
                 # (profile_api.learn_kept) remembers it, and the drafts he passed over beside it; his own typed
                 # line is no draft and writes nothing there
                 import profile_api as PF
                 into = (out["attach"] or {}).get("into") if isinstance(out.get("attach"), dict) else None
-                out["learned"] = PF.learn_kept(self.creative, kb, text, into or d["id"], by)
+                out["learned"] = PF.learn_kept(self.creative, kb, text, into or d["id"], by, draft=b.get("draft") is True)
             if self.jobs_on_upload and by == OWNER_ID:
                 # hosted: no model in this process, so his typed idea gets its vector from the home worker (job
                 # `embed`, one pending at a time); imports queue theirs in ingest_api.enqueue_followups
