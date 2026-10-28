@@ -1,5 +1,7 @@
 // Record a set (full-screen task). Web: MediaRecorder; phone: expo-audio in the background (lib/recorder). The
-// timer, the light warning, level bars, Mark / Pause / Done, then the tape goes to the upload queue (lib/uploads:
+// timer, the light warning, level bars (lib/recorder level(): 0..1 over a -60 dBFS floor), Mark / Pause / Done; a phone
+// call shows "Paused by a call" and Pause reads Resume (expo-audio resumes on its own when the call ends; the tap covers the
+// case it does not). Then the tape goes to the upload queue (lib/uploads:
 // retried on the backoff schedule when there is no signal) as a set for the tapes inbox.
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -22,6 +24,7 @@ export default function RecordScreen() {
   const [ms, setMs] = useState(0);
   const [marks, setMarks] = useState<number[]>([]);
   const [levels, setLevels] = useState<number[]>(Array(28).fill(0));
+  const [intr, setIntr] = useState(false); // the system paused the tape (a call); lib/recorder interrupted()
   const [target, setTarget] = useState(7);
   const [err, setErr] = useState<string | null>(null);
   const [ask, setAsk] = useState(false);
@@ -41,6 +44,7 @@ export default function RecordScreen() {
     const t = setInterval(() => {
       setMs(rec.elapsedMs());
       setLevels((xs) => [...xs.slice(1), rec.level()]);
+      setIntr(rec.interrupted());
     }, 200);
     return () => {
       clearInterval(t);
@@ -79,13 +83,13 @@ export default function RecordScreen() {
       dock={
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Btn testID="record-mark" label="Mark" style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording'} onPress={() => { haptics.light(); setMarks((m) => [...m, ms]); ui.snack(`Marked at ${fmtMs(ms)}`); }} />
-          <Btn testID="record-pause" label={state === 'paused' ? 'Resume' : 'Pause'} style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording' && state !== 'paused'}
-            onPress={() => { if (state === 'paused') { rec.resume(); setState('recording'); } else { rec.pause(); setState('paused'); } }} />
+          <Btn testID="record-pause" label={state === 'paused' || intr ? 'Resume' : 'Pause'} style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording' && state !== 'paused'}
+            onPress={() => { if (state === 'paused') { rec.resume(); setState('recording'); } else if (intr) { rec.resume(); setIntr(rec.interrupted()); } else { rec.pause(); setState('paused'); } }} />
           <Btn testID="record-done" v="primary" label={state === 'saving' ? 'Saving…' : 'Done'} style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording' && state !== 'paused'} onPress={done} />
         </View>
       }>
       <View style={{ alignItems: 'center' }}>
-        <Badge label={state === 'paused' ? 'Paused' : state === 'recording' ? '● REC' : state === 'saving' ? 'Saving' : 'Ready'} fg={state === 'recording' ? C.redSoft : C.text} style={{ borderWidth: 2, borderColor: C.amber, minHeight: 28 }} />
+        <Badge label={state === 'paused' ? 'Paused' : intr ? 'Paused by a call' : state === 'recording' ? '● REC' : state === 'saving' ? 'Saving' : 'Ready'} fg={state === 'recording' && !intr ? C.redSoft : C.text} style={{ borderWidth: 2, borderColor: C.amber, minHeight: 28 }} />
       </View>
       <Card style={{ alignItems: 'center' }}>
         <T v="eb">On stage</T>
