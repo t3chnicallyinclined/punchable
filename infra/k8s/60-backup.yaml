@@ -6,6 +6,10 @@
 #   Secret punchable-r2-backup          R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY: a token scoped to
 #                                       the backup bucket only (infra/ship.sh backup-secret; never in git)
 # NetworkPolicy punchable-backup (10-networkpolicy.yaml): out to surrealdb:8000 and TCP 443 on the public internet only.
+# Since the crash-report store (70-bugsink.yaml): the same Job also copies Bugsink's SQLite (sqlite3's online backup API,
+# then gzip, integrity_check, PUT under bugsink/daily|weekly, same retention). Its PVC is mounted here read-write because
+# a WAL-mode reader needs the -shm file; the job only ever reads. The PVC must exist (infra/ship.sh bugsink) before
+# `infra/ship.sh backup` applies this file, or the pod stays Pending.
 apiVersion: batch/v1
 kind: CronJob
 metadata: { name: punchable-backup, namespace: punchable, labels: { app: punchable-backup } }
@@ -55,6 +59,8 @@ spec:
                 - { name: BACKUP_KEEP_WEEKLY, value: "8" }
                 - { name: BACKUP_WEEKLY, value: auto }
                 - { name: BACKUP_TMP, value: /tmp }
+                - { name: BUGSINK_DB_PATH, value: /bugsink/db.sqlite3 }
+                - { name: BUGSINK_PREFIX, value: bugsink/ }
               envFrom:
                 - secretRef: { name: punchable-r2-backup }
               securityContext:
@@ -68,8 +74,12 @@ spec:
               volumeMounts:
                 - { name: tmp, mountPath: /tmp }
                 - { name: script, mountPath: /opt/backup, readOnly: true }
+                - { name: bugsink, mountPath: /bugsink, readOnly: false }
           volumes:
             - name: tmp
-              emptyDir: { sizeLimit: 1Gi }
+              # the SurrealDB dump (~11 MB gz) and the Bugsink copy (bounded by its 2 Gi PVC) both stage here
+              emptyDir: { sizeLimit: 2Gi }
+            - name: bugsink
+              persistentVolumeClaim: { claimName: punchable-bugsink-data }
             - name: script
               configMap: { name: punchable-backup-script, defaultMode: 0444 }

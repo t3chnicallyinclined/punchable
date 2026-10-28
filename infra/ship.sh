@@ -3,6 +3,10 @@
 #   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker
 #                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
 #                 | legal-rules | cutover [--undo] | keycloak-theme [--dry-run]   (mounts the login theme: RESTARTS the shared Keycloak) | ai-secret | worker-secret
+#                 | observability | bugsink-secret | bugsink | sentry-secret   (infra/OBSERVABILITY.md)
+#   sentry-secret sends the SENTRY_DSN= line of ~/.punchable/secrets.env over ssh STDIN into the Secret punchable-sentry
+#   (the API's crash reports -> the self-hosted Bugsink). bugsink-secret sends the optional BUGSINK_SUPERUSER= line
+#   (email:password for Bugsink's first user) the same way; the SECRET_KEY is generated on the server.
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
 #   ai-secret sends the ANTHROPIC_API_KEY= line of ~/.punchable/secrets.env over ssh STDIN into the Secret
@@ -52,14 +56,23 @@ if [ "$STEP" = legal-rules ]; then
   ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh legal-rules" < "$F"
   exit $?
 fi
-if [ "$STEP" = ai-secret ] || [ "$STEP" = worker-secret ]; then
-  # The key / the worker's client secret live in ~/.punchable/secrets.env (never committed). Only the one matching
-  # line goes over ssh STDIN into deploy.sh, which pipes it into the Secret: never in argv, git, logs or the screen.
+if [ "$STEP" = ai-secret ] || [ "$STEP" = worker-secret ] || [ "$STEP" = sentry-secret ]; then
+  # The key / the worker's client secret / the crash-report DSN live in ~/.punchable/secrets.env (never committed). Only
+  # the one matching line goes over ssh STDIN into deploy.sh, which pipes it into the Secret: never in argv, git, logs
+  # or the screen.
   F="${PUNCHABLE_SECRETS_ENV:-$HOME/.punchable/secrets.env}"
   [ -f "$F" ] || { echo "!! $F not found"; exit 1; }
-  if [ "$STEP" = ai-secret ]; then VAR=ANTHROPIC_API_KEY; else VAR=PK_WORKER_SECRET; fi
+  case "$STEP" in ai-secret) VAR=ANTHROPIC_API_KEY ;; worker-secret) VAR=PK_WORKER_SECRET ;; *) VAR=SENTRY_DSN ;; esac
   [ "$(grep -cE "^$VAR=." "$F")" = 1 ] || { echo "!! expected exactly one $VAR= line in $F"; exit 1; }
   grep -E "^$VAR=" "$F" | tr -d '\r' | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh $STEP"
+  exit $?
+fi
+if [ "$STEP" = bugsink-secret ]; then
+  # Optional first-user line BUGSINK_SUPERUSER=email:password from ~/.punchable/secrets.env; absent = an empty stdin and
+  # the server generates only the SECRET_KEY (then create the user with `bugsink-manage createsuperuser` in the pod).
+  F="${PUNCHABLE_SECRETS_ENV:-$HOME/.punchable/secrets.env}"
+  { [ -f "$F" ] && grep -E '^BUGSINK_SUPERUSER=' "$F" | tr -d '\r'; true; } \
+    | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh bugsink-secret"
   exit $?
 fi
 if [ "$STEP" = backup-secret ]; then

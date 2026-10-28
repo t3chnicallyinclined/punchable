@@ -9,6 +9,7 @@ Records (grey-cloud: both names resolve straight to the origin;
 cert-manager's HTTP-01 issues the certificate, so Cloudflare's SSL mode does not apply):
     A  <domain>       -> PK_ORIGIN_IP   proxied=false  ttl=300
     A  auth.<domain>  -> PK_ORIGIN_IP   proxied=false  ttl=300
+    A  bugs.<domain>  -> PK_ORIGIN_IP   proxied=false  ttl=300   (the crash-report store, infra/k8s/70-bugsink.yaml)
 Token: CF_API_TOKEN from ~/.punchable/cloudflare.env, read in-process, never printed. The token can see other zones;
 this tool resolves the zone BY NAME, asserts the answer is exactly PK_DOMAIN, and refuses any write whose URL is not
 under that zone id. Ledger of created record ids: ~/.punchable/dns-created.json (ids only, no secrets).

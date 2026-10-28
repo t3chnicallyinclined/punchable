@@ -19,6 +19,13 @@
 #   backup                   ConfigMap from infra/backup/backup.py + NetworkPolicies + the nightly CronJob
 #   backup-now               one backup now (a Job from the CronJob), waits, prints its log
 #   backup-list              the backups in the bucket (a one-off pod with the same image, Secret and policy)
+#   observability            ServiceMonitors + PrometheusRule (60-observability.yaml) and the Grafana dashboard ConfigMap
+#                            (infra/grafana/punchable.json -> namespace observability); without the Prometheus Operator
+#                            CRDs, the same jobs and rules go into the plain Prometheus (infra/observability/apply_prometheus.py)
+#   bugsink-secret           Secret punchable-bugsink: SECRET_KEY generated HERE if absent; optional CREATE_SUPERUSER from
+#                            STDIN (ship.sh bugsink-secret; BUGSINK_SUPERUSER=email:password, never shown)
+#   bugsink                  the self-hosted crash-report store (70-bugsink.yaml): PVC, Deployment, Service, Ingress bugs.<domain>
+#   sentry-secret            Secret punchable-sentry from STDIN (ship.sh sentry-secret; SENTRY_DSN=, never shown): the API's DSN
 #   status                   what is live
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
@@ -212,6 +219,8 @@ case "$STEP" in
   backup)
     $K -n $NS get secret punchable-api >/dev/null || { echo "!! run base first"; exit 1; }
     $K -n $NS get secret punchable-r2-backup >/dev/null || { echo "!! run infra/ship.sh backup-secret first"; exit 1; }
+    # the Job mounts Bugsink's PVC for the second file (60-backup.yaml); without it the pod would stay Pending
+    $K -n $NS get pvc punchable-bugsink-data >/dev/null || { echo "!! run infra/ship.sh bugsink first (the backup Job also copies its database)"; exit 1; }
     $K -n $NS create configmap punchable-backup-script --from-file=backup.py=infra/backup/backup.py \
       --dry-run=client -o yaml | $K label --local -f - app=punchable-backup app.kubernetes.io/part-of=punchable -o yaml \
       | $K apply --server-side --field-manager=punchable -f - >/dev/null
@@ -252,6 +261,65 @@ case "$STEP" in
       "volumes":[{"name":"script","configMap":{"name":"punchable-backup-script"}}]}}'
     $K -n $NS run pk-backup-list --rm -i --quiet --restart=Never --labels=app=punchable-backup --image="$PYIMG" \
       --overrides="$OV" </dev/null ;;
+  observability)
+    # The dashboard lives where this cluster's Grafana loads dashboards from: a ConfigMap in namespace `observability`
+    # labelled grafana_dashboard=1 (the convention on this box). Grafana mounts each one with subPath, which
+    # the kubelet NEVER refreshes in place: a changed dashboard needs `rollout restart deploy/grafana` to show up.
+    python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' infra/grafana/punchable.json
+    $K create configmap grafana-dashboard-punchable -n observability --from-file=punchable.json=infra/grafana/punchable.json \
+      --dry-run=client -o yaml | $K label --local -f - grafana_dashboard=1 app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    echo "dashboard ConfigMap observability/grafana-dashboard-punchable applied (restart Grafana to pick up a CHANGED file)"
+    apply infra/k8s/10-networkpolicy.yaml   # the API and worker admit the observability namespace to their metrics ports
+    if $K api-resources --api-group=monitoring.coreos.com 2>/dev/null | grep -q '^servicemonitors'; then
+      apply infra/k8s/60-observability.yaml
+      $K -n $NS get servicemonitor,prometheusrule
+      echo "Prometheus Operator: ServiceMonitors + PrometheusRule applied. Verify targets punchable-api / punchable-worker are UP in Prometheus."
+    else
+      echo "no ServiceMonitor CRD on this cluster: installing the scrape jobs and rules into observability/prometheus-config"
+      python3 infra/observability/apply_prometheus.py
+    fi
+    echo "$(date -u +%FT%TZ) observability sha=${SHA:-?}" >> "$STATE/deploys.log" ;;
+  bugsink-secret)
+    # Secret punchable-bugsink. SECRET_KEY: >= 50 random characters, generated HERE on first run and never rotated by this
+    # step (rotating it signs every session out; do it by hand if ever needed). CREATE_SUPERUSER: optional, one
+    # BUGSINK_SUPERUSER=email:password line on STDIN (ship.sh bugsink-secret), used by Bugsink only while no user exists.
+    # Same path as ai-secret: a variable, printf, a pipe into the Secret; never argv, ps, a file on the host, or the output.
+    ENVF="$(cat)"
+    SU="$(grep -E '^BUGSINK_SUPERUSER=.+@.+:.+' <<<"$ENVF" | head -1 | cut -d= -f2-)"
+    if $K -n $NS get secret punchable-bugsink >/dev/null 2>&1; then
+      KEYV="$($K -n $NS get secret punchable-bugsink -o jsonpath='{.data.SECRET_KEY}' | base64 -d)"
+      echo "punchable-bugsink exists: SECRET_KEY kept"
+    else
+      KEYV="$(openssl rand -base64 60 | tr -d '\n')"
+      echo "punchable-bugsink: SECRET_KEY generated"
+    fi
+    printf 'SECRET_KEY=%s\n%s' "$KEYV" "${SU:+CREATE_SUPERUSER=$SU
+}" | $K -n $NS create secret generic punchable-bugsink --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF SU KEYV
+    echo "punchable-bugsink applied (values not shown). Next: infra/ship.sh bugsink" ;;
+  bugsink)
+    $K -n $NS get secret punchable-bugsink >/dev/null || { echo "!! run infra/ship.sh bugsink-secret first"; exit 1; }
+    getent hosts "bugs.$PK_DOMAIN" | grep -q "$PK_ORIGIN_IP" || echo "!! bugs.$PK_DOMAIN does not resolve to $PK_ORIGIN_IP yet (infra/ship.sh dns apply): the certificate will wait"
+    apply infra/k8s/10-networkpolicy.yaml
+    apply infra/k8s/70-bugsink.yaml
+    $K -n $NS rollout status deploy/punchable-bugsink --timeout=10m
+    $K -n $NS wait --for=condition=Ready certificate/punchable-bugsink-tls --timeout=5m || echo "!! certificate not ready yet; check DNS and `kubectl -n $NS get challenges`"
+    echo "$(date -u +%FT%TZ) bugsink sha=${SHA:-?}" >> "$STATE/deploys.log"
+    echo "Bugsink at https://bugs.$PK_DOMAIN. Sign in, create the project 'punchable' (platform: other / React Native), copy its DSN: infra/OBSERVABILITY.md 'Crash reports'" ;;
+  sentry-secret)
+    # STDIN = the SENTRY_DSN=... line (from ship.sh sentry-secret): the DSN Bugsink shows for the API's project. A DSN is
+    # a public value by design, but it goes the same way as every other secret: a variable, printf, a pipe; never argv.
+    ENVF="$(cat)"
+    grep -qE '^SENTRY_DSN=https://[A-Za-z0-9]+@[A-Za-z0-9.-]+(:[0-9]+)?/[0-9]+\s*$' <<<"$ENVF" || { echo "!! expected one SENTRY_DSN=https://<key>@<host>/<project id> line on stdin"; exit 1; }
+    [ "$(grep -c . <<<"$ENVF")" = 1 ] || { echo "!! exactly one line on stdin"; exit 1; }
+    printf '%s\n' "$ENVF" | $K -n $NS create secret generic punchable-sentry --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF
+    echo "punchable-sentry applied (value not shown). The API reads it at start: infra/ship.sh rollout api" ;;
   status)
     $K -n $NS get all,netpol,pvc,secret,cronjob -o wide
     $K -n "$PK_KC_NS" get cm,job,ingress -l app.kubernetes.io/part-of=punchable 2>/dev/null

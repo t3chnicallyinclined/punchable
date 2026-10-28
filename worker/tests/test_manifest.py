@@ -29,8 +29,11 @@ def render(name: str) -> list[dict]:
 
 
 def test_worker_deployment():
-    [dep] = render("35-worker.yaml")
+    dep, svc = render("35-worker.yaml")
     assert dep["kind"] == "Deployment" and dep["metadata"] == {"name": "punchable-worker", "namespace": "punchable"}
+    # the metrics Service (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker, port `metrics`)
+    assert svc["kind"] == "Service" and svc["metadata"]["labels"] == {"app": "punchable-worker"}
+    assert svc["spec"] == {"selector": {"app": "punchable-worker"}, "ports": [{"name": "metrics", "port": 9100, "targetPort": 9100}]}
     spec = dep["spec"]
     assert spec["replicas"] == 1 and spec["strategy"] == {"type": "Recreate"}
     pod = spec["template"]["spec"]
@@ -39,6 +42,7 @@ def test_worker_deployment():
     assert pod["securityContext"]["runAsNonRoot"] is True and pod["securityContext"]["runAsUser"] == 10001
     [c] = pod["containers"]
     env = {e["name"]: e.get("value") for e in c["env"]}
+    assert c["ports"] == [{"name": "metrics", "containerPort": 9100}] and env["PK_METRICS_PORT"] == "9100"  # the only listener
     assert env["PK_API"] == "http://punchable-api"            # the Service (port 80 -> 8080), in-cluster
     assert env["PK_HOSTED"] == "1" and env["PK_ONLINE_FIRST"] == "1"
     assert env["ENGINE_CONFIG"].endswith("config.hosted.toml")
@@ -64,10 +68,15 @@ def test_network_policy_worker_and_api_ingress():
     docs = {d["metadata"]["name"]: d for d in render("10-networkpolicy.yaml") if d["kind"] == "NetworkPolicy"}
     w = docs["punchable-worker"]["spec"]
     assert w["podSelector"] == {"matchLabels": {"app": "punchable-worker"}}
-    assert w["policyTypes"] == ["Ingress", "Egress"] and "ingress" not in w  # default-deny in: nothing listens
-    to_api, to_public = w["egress"]
+    assert w["policyTypes"] == ["Ingress", "Egress"]
+    # in: ONLY Prometheus (namespace observability) to the metrics port; nothing else listens, nothing else may reach it
+    assert w["ingress"] == [{"from": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "observability"}}}],
+                             "ports": [{"protocol": "TCP", "port": 9100}]}]
+    to_api, to_bugsink, to_public = w["egress"]
     assert to_api["to"] == [{"podSelector": {"matchLabels": {"app": "punchable-api"}}}]
     assert to_api["ports"] == [{"protocol": "TCP", "port": 8080}]
+    assert to_bugsink["to"] == [{"podSelector": {"matchLabels": {"app": "punchable-bugsink"}}}]   # crash reports, in-cluster
+    assert to_bugsink["ports"] == [{"protocol": "TCP", "port": 8000}]
     ipb = to_public["to"][0]["ipBlock"]
     assert ipb["cidr"] == "0.0.0.0/0" and "10.0.0.0/8" in ipb["except"] and "192.168.0.0/16" in ipb["except"]
     assert to_public["ports"] == [{"protocol": "TCP", "port": 443}]

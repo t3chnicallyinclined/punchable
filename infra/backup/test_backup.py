@@ -195,3 +195,129 @@ def test_main_prints_one_line_without_secrets(monkeypatch, capsys):
     assert B.main(["list"]) == 1
     err = capsys.readouterr().err.strip().splitlines()
     assert len(err) == 1 and err[0].startswith("backup: FAIL")
+
+
+# ----------------------------------------------------------------------------------------- the second file: Bugsink
+def _sqlite(tmp_path, rows=200):
+    import sqlite3
+    p = tmp_path / "db.sqlite3"
+    c = sqlite3.connect(p)
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("CREATE TABLE event (id INTEGER PRIMARY KEY, body TEXT)")
+    c.executemany("INSERT INTO event (body) VALUES (?)", [("x" * 100,)] * rows)
+    c.commit()
+    return c, p
+
+
+def test_sqlite_backup_is_a_consistent_copy_that_passes_integrity_check(tmp_path):
+    c, p = _sqlite(tmp_path)
+    out = str(tmp_path / "copy.sqlite3.gz")
+    got = B.sqlite_backup_to_gzip(str(p), out)
+    info = B.check_sqlite_gz(out, min_bytes=1024)
+    assert got["bytes_db"] == info["bytes_db"] and info["tables"] == 1 and info["bytes_gz"] < info["bytes_db"]
+    assert len(info["sha256"]) == 64
+    assert not (tmp_path / "copy.sqlite3.gz.db").exists() and not (tmp_path / "copy.sqlite3.gz.check").exists()
+    c.close()
+
+
+def test_sqlite_backup_works_while_a_writer_holds_the_database_open(tmp_path):
+    c, p = _sqlite(tmp_path)
+    c.execute("INSERT INTO event (body) VALUES ('open transaction')")   # uncommitted: the copy is of the last commit
+    out = str(tmp_path / "copy.sqlite3.gz")
+    B.sqlite_backup_to_gzip(str(p), out)
+    import gzip, sqlite3
+    raw = tmp_path / "copy.sqlite3"
+    raw.write_bytes(gzip.open(out).read())
+    n = sqlite3.connect(raw).execute("SELECT count(*) FROM event").fetchone()[0]
+    assert n == 200
+    c.rollback()
+    c.close()
+
+
+def test_check_sqlite_gz_rejects_a_truncated_or_foreign_file(tmp_path):
+    c, p = _sqlite(tmp_path)
+    c.close()
+    out = str(tmp_path / "copy.sqlite3.gz")
+    B.sqlite_backup_to_gzip(str(p), out)
+    data = open(out, "rb").read()
+    cut = tmp_path / "cut.sqlite3.gz"
+    cut.write_bytes(data[: len(data) // 2])
+    with pytest.raises(B.BackupError, match="not a complete gzip"):
+        B.check_sqlite_gz(str(cut), min_bytes=1024)
+    other = tmp_path / "other.sqlite3.gz"
+    other.write_bytes(gzip.compress(b"OPTION IMPORT;\n" + b"x" * 5000))
+    with pytest.raises(B.BackupError, match="not a SQLite file"):
+        B.check_sqlite_gz(str(other), min_bytes=1024)
+    with pytest.raises(B.BackupError, match="no such file"):
+        B.sqlite_backup_to_gzip(str(tmp_path / "missing.sqlite3"), out)
+
+
+def test_bugsink_retention_uses_its_own_prefix_and_extension():
+    pfx = "bugsink/"
+    keys = [f"bugsink/daily/bugsink-db-2026101{d}T041700Z.sqlite3.gz" for d in range(0, 10)]
+    keys += ["bugsink/weekly/bugsink-db-20261005T041700Z.sqlite3.gz", "surreal/daily/punchable-main-20261010T041700Z.surql.gz",
+             "bugsink/daily/bugsink-db-20261010T041700Z.surql.gz"]   # wrong extension: never a candidate
+    keep, delete = B.select_prune(keys, pfx, "bugsink-db", 3, 8, ext=".sqlite3.gz")
+    assert len(keep) == 4 and len(delete) == 7
+    assert all(k.startswith("bugsink/daily/") and k.endswith(".sqlite3.gz") for k in delete)
+    assert "surreal/daily/punchable-main-20261010T041700Z.surql.gz" not in delete
+    assert "bugsink/daily/bugsink-db-20261010T041700Z.surql.gz" not in delete
+    with pytest.raises(B.BackupError):
+        B.select_prune(keys, "bugsink/", "bugsink-db", 3, 8, ext=".tar")
+    with pytest.raises(B.BackupError):
+        B.select_prune(keys, "audio/", "bugsink-db", 3, 8, ext=".sqlite3.gz")
+
+
+def test_bugsink_prefix_env(monkeypatch):
+    monkeypatch.setenv("BUGSINK_PREFIX", "bugsink-test/")
+    assert B.bugsink_prefix() == "bugsink-test/"
+    monkeypatch.setenv("BUGSINK_PREFIX", "surreal/")
+    with pytest.raises(B.BackupError):
+        B.bugsink_prefix()
+    assert B.redact("bugsink/daily/bugsink-db-20261010T041700Z.sqlite3.gz") == "bugsink/daily/bugsink-db-20261010T041700Z.sqlite3.gz"
+
+
+class _FakeS3:
+    def __init__(self):
+        self.objects: dict[str, int] = {}
+        self.deleted: list[str] = []
+
+    def put_file(self, key, path, sha256):
+        self.objects[key] = os.path.getsize(path)
+
+    def head(self, key):
+        return self.objects.get(key)
+
+    def copy(self, src, dst):
+        self.objects[dst] = self.objects[src]
+
+    def delete(self, key):
+        self.deleted.append(key)
+        self.objects.pop(key, None)
+
+    def list(self, pfx):
+        return [(k, v) for k, v in self.objects.items() if k.startswith(pfx)]
+
+
+def test_run_sqlite_uploads_verifies_and_prunes(tmp_path, monkeypatch):
+    import datetime as dt
+    c, p = _sqlite(tmp_path)
+    c.close()
+    monkeypatch.setenv("BUGSINK_DB_PATH", str(p))
+    monkeypatch.setenv("BACKUP_TMP", str(tmp_path))
+    monkeypatch.setenv("BACKUP_WEEKLY", "always")
+    monkeypatch.setattr(B, "check_sqlite_gz", lambda path, min_bytes=8192: B.__dict__["check_sqlite_gz"].__wrapped__(path, 1024)
+                        if hasattr(B.check_sqlite_gz, "__wrapped__") else _orig_check(path, 1024))
+    s3 = _FakeS3()
+    for i in range(1, 16):   # fifteen old dailies already there
+        s3.objects[f"bugsink/daily/bugsink-db-202609{i:02d}T041700Z.sqlite3.gz"] = 10
+    now = dt.datetime(2026, 10, 28, 4, 17, tzinfo=dt.UTC)
+    B.run_sqlite(s3, now, 14, 8)
+    assert "bugsink/daily/bugsink-db-20261028T041700Z.sqlite3.gz" in s3.objects
+    assert "bugsink/weekly/bugsink-db-20261028T041700Z.sqlite3.gz" in s3.objects
+    assert len([k for k in s3.objects if k.startswith("bugsink/daily/")]) == 14
+    assert set(s3.deleted) == {"bugsink/daily/bugsink-db-20260901T041700Z.sqlite3.gz", "bugsink/daily/bugsink-db-20260902T041700Z.sqlite3.gz"}
+    assert not list(tmp_path.glob("bugsink-*"))   # the temp copy is gone
+
+
+_orig_check = B.check_sqlite_gz

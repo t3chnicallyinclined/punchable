@@ -1,0 +1,146 @@
+# Bugsink: the self-hosted, Sentry-SDK-compatible crash-report store (MIT; one container, SQLite). The phone app and the
+# web app (@sentry/react-native, app/src/lib/crash.ts) and the API (api-dev/crash.py) send their events here, scrubbed
+# before they leave. No SaaS account anywhere. Applied by `infra/ship.sh bugsink` after `infra/ship.sh bugsink-secret`.
+#
+# Settings are Bugsink's documented ones (bugsink.com/docs/settings, read 2026-10-28):
+#   SECRET_KEY        >= 50 random characters; Secret punchable-bugsink (generated ON the server by deploy.sh bugsink-secret)
+#   CREATE_SUPERUSER  email:password, used only while no user exists; same Secret, optional (BUGSINK_SUPERUSER= line of
+#                     ~/.punchable/secrets.env over ssh stdin, the ai-secret pattern). Without it: `bugsink-manage createsuperuser`.
+#   BASE_URL          https://bugs.<domain>  (also sets ALLOWED_HOSTS; the DSNs it shows are built from it)
+#   BEHIND_HTTPS_PROXY True: the Ingress terminates TLS; secure cookies, X-Forwarded-Proto trusted
+#   DATABASE_PATH     /data/db.sqlite3 on the PVC. SQLite in WAL mode wants a real filesystem, not a Docker volume driver:
+#                     microk8s-hostpath is a bind mount of the node's disk, which is fine.
+#   SINGLE_USER / SINGLE_TEAM / USER_REGISTRATION=CB_NOBODY: one owner, no sign-up page. PHONEHOME=False: it calls nobody.
+#   Events and uploaded source maps stay in the database (no FILE_*_STORAGE), so the nightly SQLite copy in
+#   infra/backup/backup.py is the whole backup.
+# Memory: the node is at ~93% reservable memory. requests 128Mi / limits 512Mi; one gunicorn worker + the `snappea`
+# background worker inside the same container (the image's own `monofy` command). SNAPPEA_NUM_WORKERS=2 keeps it small.
+# The container image runs as uid 14237 (its Dockerfile's `bugsink` user); fsGroup makes the PVC writable to it.
+# readOnlyRootFilesystem is OFF for this one container: Django/gunicorn write under /tmp and the image's own paths, and the
+# set of paths is not documented; the PodSecurity `restricted` profile does not require it (warn only, 00-namespace.yaml).
+# Pin the image by DIGEST after the first `docker pull bugsink/bugsink:2.6.2` on the server (docker pull is safe there;
+# `docker run` is not: it restarts MicroK8s). 2.6.2 = the latest release on 2026-10-22; source-map upload needs >= 2.0.14.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: punchable-bugsink-data, namespace: punchable, labels: { app: punchable-bugsink } }
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: microk8s-hostpath
+  # a request, not a quota (hostpath enforces nothing); MAX_EVENT_AGE_DAYS / retention below keep it small
+  resources: { requests: { storage: 2Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-bugsink, namespace: punchable, labels: { app: punchable-bugsink } }
+spec:
+  selector: { app: punchable-bugsink }
+  ports: [ { name: http, port: 8000, targetPort: 8000 } ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-bugsink, namespace: punchable, labels: { app: punchable-bugsink } }
+spec:
+  replicas: 1
+  # ONE writer on one SQLite file: never two pods at once
+  strategy: { type: Recreate }
+  progressDeadlineSeconds: 600
+  selector: { matchLabels: { app: punchable-bugsink } }
+  template:
+    metadata: { labels: { app: punchable-bugsink } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 14237
+        runAsGroup: 14237
+        fsGroup: 14237
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: bugsink
+          image: bugsink/bugsink:2.6.2
+          ports: [ { name: http, containerPort: 8000 } ]
+          env:
+            - { name: PORT, value: "8000" }
+            - { name: BASE_URL, value: "https://bugs.__PK_DOMAIN__" }
+            - { name: BEHIND_HTTPS_PROXY, value: "True" }
+            - { name: DATABASE_PATH, value: /data/db.sqlite3 }
+            - { name: SINGLE_USER, value: "True" }
+            - { name: SINGLE_TEAM, value: "True" }
+            - { name: USER_REGISTRATION, value: CB_NOBODY }
+            - { name: PHONEHOME, value: "False" }
+            - { name: TIME_ZONE, value: UTC }
+            - { name: SITE_TITLE, value: "Punchable crashes" }
+            - { name: SNAPPEA_NUM_WORKERS, value: "2" }
+            # keep the SQLite small: a crash older than 90 days or beyond 20k events per project is pruned
+            - { name: MAX_EVENT_AGE_DAYS, value: "90" }
+            - { name: MAX_RETENTION_PER_PROJECT_EVENT_COUNT, value: "20000" }
+            - { name: MAX_EVENTS_PER_PROJECT_PER_HOUR, value: "500" }
+            # outbound alert webhooks are never used; deny private targets anyway (the documented default, stated)
+            - { name: ALERTS_WEBHOOK_DENY_NON_GLOBAL, value: "True" }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: punchable-bugsink, key: SECRET_KEY } }
+            - name: CREATE_SUPERUSER
+              valueFrom: { secretKeyRef: { name: punchable-bugsink, key: CREATE_SUPERUSER, optional: true } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          # Django answers 400 to a Host it does not serve (ALLOWED_HOSTS from BASE_URL), so the probes send the real one.
+          # `/` is a redirect to the login page (3xx counts as success for an httpGet probe).
+          startupProbe:
+            httpGet: { path: /, port: 8000, httpHeaders: [ { name: Host, value: "bugs.__PK_DOMAIN__" } ] }
+            periodSeconds: 5
+            failureThreshold: 60      # first boot runs the migrations
+          readinessProbe:
+            httpGet: { path: /, port: 8000, httpHeaders: [ { name: Host, value: "bugs.__PK_DOMAIN__" } ] }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket: { port: 8000 }
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: punchable-bugsink-data }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+---
+# bugs.<domain>: the SDK ingest (`/api/<project id>/envelope/`, from phones and browsers anywhere) and the owner's UI.
+# The UI is behind Bugsink's own login (one superuser, registration closed). The estate has no oauth2-proxy pattern for
+# admin UIs (the box's Grafana uses Grafana's own Keycloak login; the Keycloak admin console keeps a home-IP
+# whitelist-source-range that is not in git), so this mirrors Grafana: the app's own login. To add an IP allowlist on
+# the UI alone, split `/` into a second Ingress with `nginx.ingress.kubernetes.io/whitelist-source-range` and leave
+# `/api/` open for the SDKs.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-bugsink
+  namespace: punchable
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    # an envelope is at most 20 MiB compressed (Bugsink's MAX_ENVELOPE_COMPRESSED_SIZE default)
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [bugs.__PK_DOMAIN__]
+      secretName: punchable-bugsink-tls
+  rules:
+    - host: bugs.__PK_DOMAIN__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: punchable-bugsink, port: { number: 8000 } } }

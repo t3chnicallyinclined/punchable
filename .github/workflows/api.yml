@@ -1,0 +1,70 @@
+# The server side's gate: the API (api-dev) and the worker test suites, and the static checks on the Keycloak login
+# theme. No SurrealDB and no knowledge base on the runner: api-dev/tests/conftest.py skips every test that needs a real
+# KB (TempKB / the `api` fixture), and the SurrealDB-backed tests skip themselves when no scratch server answers; what
+# remains is the fixture-backed logic (auth, say, memos, merge rules, metrics, the worker's text pipeline on the
+# engine's mock provider). Locally: `python -m pytest api-dev/tests worker -q` and
+# `python infra/keycloak/test_theme_static.py`.
+name: api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'api-dev/**'
+      - 'worker/**'
+      - 'engine/**'
+      - 'creative/**'
+      - 'db/**'
+      - 'infer/**'
+      - 'infra/keycloak/**'
+      - 'conftest.py'
+      - '.github/workflows/api.yml'
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'api-dev/**'
+      - 'worker/**'
+      - 'engine/**'
+      - 'creative/**'
+      - 'db/**'
+      - 'infer/**'
+      - 'infra/keycloak/**'
+      - 'conftest.py'
+      - '.github/workflows/api.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          # the same interpreter the images run (api/Dockerfile, infra/worker/Dockerfile: python:3.13-slim)
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: |
+            api/requirements.txt
+            infra/worker/requirements.txt
+
+      - name: Install
+        # the API image's pins, plus: jsonschema (the engine validates every provider answer; pinned as in
+        # infra/worker/requirements.txt), cryptography (test_auth signs test JWTs), pyyaml (test_manifest reads k8s)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r api/requirements.txt jsonschema==4.26.0 pytest cryptography pyyaml
+
+      - name: API and worker tests
+        run: python -m pytest api-dev/tests worker -q -p no:cacheprovider
+
+      - name: Keycloak theme static checks
+        run: python infra/keycloak/test_theme_static.py

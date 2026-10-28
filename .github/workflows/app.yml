@@ -1,0 +1,98 @@
+# The app's gate (docs/ENGINEERING.md "The build checklist"). Runs on every push and pull request that touches app/.
+# Each step is the same command a developer runs locally; a red step here is a red step on the desk.
+#
+#   npm ci                          the lockfile installs cleanly (a missing native peer, like expo-asset on 2026-10-28,
+#                                   shows up here as an expo-doctor failure below, not in TestFlight)
+#   npx tsc --noEmit                types
+#   npm run test:unit               the unit tests (laugh rules, routes, session, ...)
+#   tests/static.*.test.mjs         the static guards: self-imports, import cycles, platform twins, route shape,
+#                                   console.log, Platform.OS forks (until package.json lists them in test:unit)
+#   npx expo-doctor                 every check green (the count changes with expo-doctor's version; "N/N" is the rule)
+#   npx expo export --platform web  Metro bundles every route for the web (a bad import fails the bundle)
+#   npx expo export --platform ios  Metro bundles the iOS JS + Hermes bytecode with the .ios/.native resolution: the
+#                                   bundle that TestFlight ships, without Xcode (no ios/ directory needed; verified on
+#                                   a machine with no Xcode on 2026-10-28). This is where the self-import recursion of
+#                                   2026-10-28 would NOT have shown (it was a runtime recursion), but every resolution
+#                                   error, missing module and syntax error in a .native file does.
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/app.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/app.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: app
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      # the production profile's public env (app/eas.json): the export must bundle what TestFlight bundles
+      EXPO_PUBLIC_API_URL: https://punchable.io/api
+      EXPO_PUBLIC_AUTH: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: npm ci
+        run: npm ci --no-audit --no-fund
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Static guards
+        # self-imports (in test:unit), cycles, twins, routes, console/Platform forks: each < 1 s
+        run: |
+          for t in tests/static.*.test.mjs; do
+            echo "== $t"
+            node --experimental-strip-types --no-warnings "$t"
+          done
+
+      - name: expo-doctor (every check must pass)
+        run: |
+          npx expo-doctor | tee doctor.log
+          grep -Eq '^([0-9]+)/\1 checks passed' doctor.log
+
+      - name: Web export (every route bundles)
+        run: npx expo export --platform web --output-dir "$RUNNER_TEMP/dist-web"
+
+      - name: iOS bundle smoke (Metro + Hermes bytecode, no Xcode)
+        run: |
+          npx expo export --platform ios --output-dir "$RUNNER_TEMP/dist-ios"
+          hbc="$(find "$RUNNER_TEMP/dist-ios" -name '*.hbc' | head -n 1)"
+          test -n "$hbc" || { echo "no Hermes bytecode in the iOS export"; exit 1; }
+
+      - name: Bundle sizes
+        # a number per build so a regression is visible in the run summary (docs/design/ARCHITECTURE.md "Measurement")
+        run: |
+          {
+            echo '### Bundle sizes'
+            echo '| bundle | bytes |'
+            echo '|---|---|'
+            for f in $(find "$RUNNER_TEMP/dist-ios" -name '*.hbc') $(find "$RUNNER_TEMP/dist-web/_expo/static/js/web" -name '*.js' | sort | head -n 5); do
+              echo "| $(basename "$f") | $(wc -c < "$f") |"
+            done
+            echo "| iOS export total | $(du -sb "$RUNNER_TEMP/dist-ios" | cut -f1) |"
+            echo "| web export total | $(du -sb "$RUNNER_TEMP/dist-web" | cut -f1) |"
+          } >> "$GITHUB_STEP_SUMMARY"

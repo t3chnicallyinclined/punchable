@@ -3,6 +3,8 @@
 the pinned python slim image with no pip (infra/k8s/60-backup.yaml).
 
   backup.py run                     export -> gzip -> check -> PUT -> HEAD -> (Sunday UTC: weekly copy) -> prune
+                                    then, when BUGSINK_DB_PATH is set: the same for Bugsink's SQLite (sqlite3 online
+                                    backup -> gzip -> integrity_check -> PUT under BUGSINK_PREFIX, same retention)
   backup.py list                    the backups under the prefix, oldest first
   backup.py fetch <key> <out.gz>    download one, check its length and gzip CRC
   backup.py restore-check <file.gz> the same checks `run` makes before an upload, on a local file
@@ -18,12 +20,15 @@ Settings (environment only; nothing secret is ever on argv or printed):
   R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY  a token scoped to that one bucket
   R2_REGION         auto
   BACKUP_PREFIX     surreal/        must start with "surreal" and end with "/"; nothing outside it is ever deleted
+  BUGSINK_DB_PATH   (unset)         Bugsink's /data/db.sqlite3, mounted from its PVC (infra/k8s/60-backup.yaml); unset = skipped
+  BUGSINK_PREFIX    bugsink/        must start with "bugsink" and end with "/"; same daily/weekly layout and retention
   BACKUP_KEEP_DAILY 14   BACKUP_KEEP_WEEKLY 8
   BACKUP_WEEKLY     auto (Sunday UTC) | always | never
   BACKUP_MIN_BYTES  4096 (uncompressed export smaller than this is refused)
   BACKUP_TMP        /tmp
 
-Keys: <prefix>daily/<ns>-<db>-<yyyymmddTHHMMSSZ>.surql.gz and <prefix>weekly/<same name>.
+Keys: <prefix>daily/<ns>-<db>-<yyyymmddTHHMMSSZ>.surql.gz and <prefix>weekly/<same name>;
+      bugsink/daily/bugsink-db-<stamp>.sqlite3.gz and bugsink/weekly/<same name>.
 Exit status: 0 ok, 1 any failure (one line on stderr, token-like strings redacted)."""
 from __future__ import annotations
 
@@ -35,6 +40,8 @@ import hmac
 import http.client
 import os
 import re
+import shutil
+import sqlite3
 import sys
 import tempfile
 import time
@@ -67,7 +74,7 @@ def redact(text: str) -> str:
 
 
 # a backup key is not a token: surreal[-x]/daily|weekly/<ns>-<db>-<stamp>(.surql.gz is cut off by the token regex)
-_OUR_KEY = re.compile(r"surreal[a-z0-9-]*/(daily|weekly)/[a-z0-9_-]+-\d{8}T\d{6}Z")
+_OUR_KEY = re.compile(r"(surreal|bugsink)[a-z0-9-]*/(daily|weekly)/[a-z0-9_-]+-\d{8}T\d{6}Z")
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -84,6 +91,13 @@ def prefix() -> str:
     p = os.environ.get("BACKUP_PREFIX", "surreal/")
     if not re.fullmatch(r"surreal[a-z0-9-]*/", p):
         raise BackupError(f"BACKUP_PREFIX must look like 'surreal/' or 'surreal-<word>/' (got {p!r})")
+    return p
+
+
+def bugsink_prefix() -> str:
+    p = os.environ.get("BUGSINK_PREFIX", "bugsink/")
+    if not re.fullmatch(r"bugsink[a-z0-9-]*/", p):
+        raise BackupError(f"BUGSINK_PREFIX must look like 'bugsink/' or 'bugsink-<word>/' (got {p!r})")
     return p
 
 
@@ -318,31 +332,116 @@ def check_dump(path: str, min_bytes: int | None = None) -> dict:
 
 
 # --------------------------------------------------------------------------------------------------------------------
+# the second file: Bugsink's SQLite (crash reports), copied with sqlite3's online backup API, never a raw file copy
+# (a WAL-mode database is three files and a plain copy of a live one is not a consistent snapshot)
+# --------------------------------------------------------------------------------------------------------------------
+SQLITE_MAGIC = b"SQLite format 3\x00"
+
+
+def sqlite_backup_to_gzip(src: str, dest: str) -> dict:
+    """Online backup of `src` into a temp file next to `dest`, then gzip it. Returns {bytes_db, pages}."""
+    if not os.path.isfile(src):
+        raise BackupError(f"BUGSINK_DB_PATH {src}: no such file")
+    tmp = dest + ".db"
+    try:
+        s = sqlite3.connect(f"file:{src}?mode=ro", uri=True, timeout=60)
+        try:
+            d = sqlite3.connect(tmp)
+            try:
+                s.backup(d, pages=1024)   # pages at a time: a writer can get in between steps
+            finally:
+                d.close()
+        finally:
+            s.close()
+        n = os.path.getsize(tmp)
+        with open(tmp, "rb") as f, open(dest, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=6, mtime=0) as gz:
+            shutil.copyfileobj(f, gz, CHUNK)
+    except (sqlite3.Error, OSError) as e:
+        raise BackupError(f"sqlite backup: {type(e).__name__}: {e}") from None
+    finally:
+        _rm_sqlite(tmp)
+    return {"bytes_db": n, "pages": n // 4096}
+
+
+def _rm_sqlite(path: str) -> None:
+    """A copy of a WAL-mode database brings its -wal/-shm side files when opened; remove all three."""
+    for suffix in ("", "-wal", "-shm", "-journal"):
+        try:
+            os.remove(path + suffix)
+        except OSError:
+            pass
+
+
+def check_sqlite_gz(path: str, min_bytes: int = 8192) -> dict:
+    """Read the whole gzip back (CRC/length), confirm the SQLite header and run PRAGMA integrity_check on the copy."""
+    if not os.path.isfile(path):
+        raise BackupError(f"{path}: no such file")
+    sha = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(CHUNK):
+            sha.update(chunk)
+    tmp = path + ".check"
+    try:
+        n, head = 0, b""
+        with gzip.open(path, "rb") as g, open(tmp, "wb") as out:
+            while chunk := g.read(CHUNK):
+                if len(head) < 16:
+                    head = (head + chunk)[:16]
+                out.write(chunk)
+                n += len(chunk)
+        if n < min_bytes:
+            raise BackupError(f"{os.path.basename(path)}: database copy is only {n} bytes")
+        if head != SQLITE_MAGIC:
+            raise BackupError(f"{os.path.basename(path)}: not a SQLite file")
+        c = sqlite3.connect(f"file:{tmp}?mode=ro", uri=True)
+        try:
+            rows = [r[0] for r in c.execute("PRAGMA integrity_check")]
+            tables = c.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
+        finally:
+            c.close()
+        if rows != ["ok"]:
+            raise BackupError(f"{os.path.basename(path)}: integrity_check: {'; '.join(rows)[:200]}")
+        if tables < 1:
+            raise BackupError(f"{os.path.basename(path)}: no tables")
+    except (EOFError, OSError, zlib.error, sqlite3.Error) as e:
+        raise BackupError(f"{os.path.basename(path)}: not a complete gzip of a database ({type(e).__name__}: {e})") from None
+    finally:
+        _rm_sqlite(tmp)
+    return {"bytes_gz": os.path.getsize(path), "bytes_db": n, "tables": tables, "sha256": sha.hexdigest()}
+
+
+# --------------------------------------------------------------------------------------------------------------------
 # retention
 # --------------------------------------------------------------------------------------------------------------------
-def key_re(pfx: str, kind: str, name: str) -> re.Pattern:
-    return re.compile(re.escape(pfx) + kind + "/" + re.escape(name) + r"-(\d{8}T\d{6}Z)\.surql\.gz")
+_PFX_OK = re.compile(r"(surreal|bugsink)[a-z0-9-]*/")
 
 
-def select_prune(keys: list[str], pfx: str, name: str, keep_daily: int, keep_weekly: int
+def key_re(pfx: str, kind: str, name: str, ext: str = ".surql.gz") -> re.Pattern:
+    return re.compile(re.escape(pfx) + kind + "/" + re.escape(name) + r"-(\d{8}T\d{6}Z)" + re.escape(ext))
+
+
+def select_prune(keys: list[str], pfx: str, name: str, keep_daily: int, keep_weekly: int, ext: str = ".surql.gz"
                  ) -> tuple[list[str], list[str]]:
-    """(keep, delete). Only keys that are exactly <pfx>daily|weekly/<name>-<stamp>.surql.gz (name = <ns>-<db>) are
-    ever candidates; anything else, under or outside the prefix (another database's backups too), is left alone."""
-    if not re.fullmatch(r"surreal[a-z0-9-]*/", pfx):
+    """(keep, delete). Only keys that are exactly <pfx>daily|weekly/<name>-<stamp><ext> (name = <ns>-<db>, or
+    bugsink-db) are ever candidates; anything else, under or outside the prefix (another database's backups too), is
+    left alone."""
+    if not _PFX_OK.fullmatch(pfx):
         raise BackupError(f"refusing to prune with prefix {pfx!r}")
     if not re.fullmatch(r"[a-z0-9_]+-[a-z0-9_]+", name):
         raise BackupError(f"refusing to prune with name {name!r}")
+    if ext not in (".surql.gz", ".sqlite3.gz"):
+        raise BackupError(f"refusing to prune with extension {ext!r}")
     if keep_daily < 1 or keep_weekly < 1:
         raise BackupError("retention must keep at least one daily and one weekly")
     keep, delete = [], []
     for kind, n in (("daily", keep_daily), ("weekly", keep_weekly)):
-        rx = key_re(pfx, kind, name)
+        rx = key_re(pfx, kind, name, ext)
         mine = sorted((m.group(1), k) for k in keys if (m := rx.fullmatch(k)))
         mine.reverse()   # newest first
         keep += [k for _, k in mine[:n]]
         delete += [k for _, k in mine[n:]]
     for k in delete:   # belt and braces: the regex already guarantees this
-        assert k.startswith(pfx) and k.startswith("surreal") and ".." not in k, k
+        assert k.startswith(pfx) and _PFX_OK.match(k) and ".." not in k, k
     return keep, delete
 
 
@@ -407,7 +506,52 @@ def cmd_run() -> int:
     for k in delete:
         s3.delete(k)
     log(f"retention: kept {len(keep)} ({keep_d} daily / {keep_w} weekly max), deleted {len(delete)}")
+    # the second file: Bugsink's crash-report database. After the SurrealDB backup on purpose: a Bugsink problem can
+    # never cost the night's database backup, and its failure still fails the Job (the alert fires).
+    if os.environ.get("BUGSINK_DB_PATH"):
+        run_sqlite(s3, now, keep_d, keep_w)
     return 0
+
+
+def run_sqlite(s3: "S3", now: dt.datetime, keep_d: int, keep_w: int) -> None:
+    src = env("BUGSINK_DB_PATH")
+    pfx = bugsink_prefix()
+    name = "bugsink-db"
+    key_name = f"{name}-{now.strftime('%Y%m%dT%H%M%SZ')}.sqlite3.gz"
+    tmpdir = os.environ.get("BACKUP_TMP", tempfile.gettempdir())
+    fd, tmp = tempfile.mkstemp(prefix="bugsink-", suffix=".sqlite3.gz", dir=tmpdir)
+    os.close(fd)
+    try:
+        t0 = time.monotonic()
+        got = sqlite_backup_to_gzip(src, tmp)
+        info = check_sqlite_gz(tmp)
+        if info["bytes_db"] != got["bytes_db"]:
+            raise BackupError("gzip re-read length differs from the database copy")
+        log(f"bugsink ok: {got['bytes_db']} bytes -> {info['bytes_gz']} gz, {info['tables']} tables, integrity ok, "
+            f"{time.monotonic() - t0:.1f}s")
+        daily = f"{pfx}daily/{key_name}"
+        s3.put_file(daily, tmp, info["sha256"])
+        if s3.head(daily) != info["bytes_gz"]:
+            raise BackupError(f"HEAD {daily}: size differs from the upload")
+        log(f"uploaded {daily} ({info['bytes_gz']} bytes, verified)")
+        if want_weekly(now):
+            weekly = f"{pfx}weekly/{key_name}"
+            s3.copy(daily, weekly)
+            if s3.head(weekly) != info["bytes_gz"]:
+                raise BackupError(f"HEAD {weekly}: size differs from the copy")
+            log(f"weekly copy {weekly} (verified)")
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    keys = [k for k, _ in s3.list(pfx)]
+    keep, delete = select_prune(keys, pfx, name, keep_d, keep_w, ext=".sqlite3.gz")
+    if daily not in keep:
+        raise BackupError(f"prune refused: the new backup {daily} is not among the newest {keep_d} (clock skew?)")
+    for k in delete:
+        s3.delete(k)
+    log(f"bugsink retention: kept {len(keep)}, deleted {len(delete)}")
 
 
 def cmd_list() -> int:

@@ -25,7 +25,10 @@ Punchable on your own computer; see the top-level README for that.
 | `ingress` | the `<domain>` Ingress and certificate |
 | `status` | what is live |
 | `backup-secret` | the R2 token for the backup bucket, from `~/.punchable/r2.env`, over ssh stdin, into a Secret |
-| `backup` / `backup-now` / `backup-list` | schedule the nightly SurrealDB backup; run one now; list what is in the bucket |
+| `backup` / `backup-now` / `backup-list` | schedule the nightly SurrealDB backup (and the Bugsink SQLite copy); run one now; list what is in the bucket |
+| `observability` | ServiceMonitors, alert rules and the Grafana dashboard (`OBSERVABILITY.md`); falls back to the plain Prometheus's ConfigMap without the operator |
+| `bugsink-secret` / `bugsink` | the self-hosted crash-report store at `bugs.<domain>` (`k8s/70-bugsink.yaml`): its key (generated on the server) and first user, then the Deployment and Ingress |
+| `sentry-secret` | the `SENTRY_DSN=` line of `~/.punchable/secrets.env` (the API's Bugsink DSN), over ssh stdin, into the Secret `punchable-sentry` |
 
 `infra/ship.sh dns plan|apply|undo` runs locally against the Cloudflare API (`CF_API_TOKEN` in
 `~/.punchable/cloudflare.env`) and only touches the records it created.

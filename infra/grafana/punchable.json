@@ -1,0 +1,237 @@
+{
+  "title": "Punchable",
+  "uid": "punchable-main",
+  "tags": ["punchable"],
+  "timezone": "utc",
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    { "id": 100, "type": "row", "title": "Overview", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+    {
+      "id": 101, "type": "stat", "title": "Firing alerts", "datasource": "Prometheus",
+      "description": "Punchable rules from infra/k8s/60-observability.yaml. Anything above zero needs a human.",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\", service=\"punchable\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 102, "type": "stat", "title": "API up", "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "max(up{job=\"punchable-api\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 103, "type": "stat", "title": "Worker up", "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "max(up{job=\"punchable-worker\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 104, "type": "stat", "title": "Live clients", "datasource": "Prometheus",
+      "description": "Open /api/live WebSockets: phones and browser tabs in front right now.",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "sum(pk_live_clients) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } },
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 105, "type": "stat", "title": "5xx (5m)", "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "sum(rate(pk_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(pk_http_requests_total[5m])), 0.001)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.01 }, { "color": "red", "value": 0.05 }] } } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 106, "type": "stat", "title": "Build", "datasource": "Prometheus",
+      "description": "The git sha of the running API image (pk_build_info).",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "max by (sha, version) (pk_build_info)", "instant": true, "legendFormat": "{{version}} {{sha}}" }],
+      "options": { "colorMode": "none", "graphMode": "none", "textMode": "name", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 110, "type": "timeseries", "title": "Requests by route", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "targets": [{ "refId": "A", "expr": "sum by (route) (rate(pk_http_requests_total[5m]))", "legendFormat": "{{route}}" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10, "lineWidth": 1 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean"] } }
+    },
+    {
+      "id": 111, "type": "timeseries", "title": "5xx by route", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "targets": [{ "refId": "A", "expr": "sum by (route) (rate(pk_http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "{{route}}" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" }, "custom": { "fillOpacity": 20, "lineWidth": 1 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] } }
+    },
+    {
+      "id": 112, "type": "timeseries", "title": "Latency p50 / p95 / p99 (uploads and audio excluded)", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(pk_http_request_duration_seconds_bucket{route!~\"/api/upload|/api/audio/.*\"}[5m])) by (le))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(pk_http_request_duration_seconds_bucket{route!~\"/api/upload|/api/audio/.*\"}[5m])) by (le))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum(rate(pk_http_request_duration_seconds_bucket{route!~\"/api/upload|/api/audio/.*\"}[5m])) by (le))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5, "lineWidth": 2 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 2 }] }, "custom.thresholdsStyle": { "mode": "line" } } }
+    },
+    {
+      "id": 113, "type": "timeseries", "title": "p95 by route", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum(rate(pk_http_request_duration_seconds_bucket[5m])) by (le, route))", "legendFormat": "{{route}}" }],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 0, "lineWidth": 1 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["max"] } }
+    },
+    {
+      "id": 114, "type": "timeseries", "title": "In flight and status mix", "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
+      "targets": [
+        { "refId": "A", "expr": "sum(pk_http_requests_in_flight)", "legendFormat": "in flight" },
+        { "refId": "B", "expr": "sum by (status) (rate(pk_http_requests_total[5m]))", "legendFormat": "{{status}}" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 115, "type": "timeseries", "title": "SurrealDB round trips (p95, rate)", "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum(rate(pk_db_query_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95 s" },
+        { "refId": "B", "expr": "sum(rate(pk_db_query_duration_seconds_count[5m]))", "legendFormat": "queries/s" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } }, "overrides": [{ "matcher": { "id": "byName", "options": "queries/s" }, "properties": [{ "id": "custom.axisPlacement", "value": "right" }, { "id": "unit", "value": "ops" }] }, { "matcher": { "id": "byName", "options": "p95 s" }, "properties": [{ "id": "unit", "value": "s" }] }] }
+    },
+
+    { "id": 200, "type": "row", "title": "Jobs", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 } },
+    {
+      "id": 201, "type": "timeseries", "title": "Queue depth by kind", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 29 },
+      "targets": [{ "refId": "A", "expr": "sum by (kind) (pk_jobs_queued)", "legendFormat": "{{kind}}" }],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 30, "stacking": { "mode": "normal" } } } }
+    },
+    {
+      "id": 202, "type": "stat", "title": "Waiting for a transcriber", "datasource": "Prometheus",
+      "description": "Uploads and YouTube imports no server worker runs (transcription happens on the phone). The second number is the oldest one's age.",
+      "gridPos": { "h": 8, "w": 4, "x": 8, "y": 29 },
+      "targets": [
+        { "refId": "A", "expr": "max(pk_jobs_waiting_transcriber) or vector(0)", "instant": true, "legendFormat": "jobs" },
+        { "refId": "B", "expr": "max(pk_jobs_waiting_transcriber_oldest_seconds) or vector(0)", "instant": true, "legendFormat": "oldest" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }] } }, "overrides": [{ "matcher": { "id": "byName", "options": "oldest" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 86400 }] } }] }] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 203, "type": "timeseries", "title": "Worker jobs/min by kind and outcome", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (kind) (rate(pk_worker_jobs_done_total[15m])) * 60", "legendFormat": "{{kind}} done" },
+        { "refId": "B", "expr": "sum by (kind, retry) (rate(pk_worker_jobs_failed_total[15m])) * 60", "legendFormat": "{{kind}} failed (retry={{retry}})" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 10 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] } }
+    },
+    {
+      "id": 204, "type": "timeseries", "title": "Job duration p95 by kind", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum(rate(pk_worker_job_duration_seconds_bucket[30m])) by (le, kind))", "legendFormat": "{{kind}}" }],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 0 } } }
+    },
+    {
+      "id": 205, "type": "timeseries", "title": "Worker heartbeat age", "datasource": "Prometheus",
+      "description": "Seconds since the poll loop last ticked. The liveness probe restarts the pod at 20 minutes; the alert fires at 10.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 },
+      "targets": [{ "refId": "A", "expr": "max(pk_worker_heartbeat_age_seconds)", "legendFormat": "age" }],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 10, "thresholdsStyle": { "mode": "line" } }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 600 }, { "color": "red", "value": 1200 }] } } }
+    },
+
+    { "id": 300, "type": "row", "title": "AI spend", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 } },
+    {
+      "id": 301, "type": "gauge", "title": "Today (UTC) vs budget", "datasource": "Prometheus",
+      "description": "pk_ai_spend_usd_today over pk_ai_budget_usd (PK_AI_DAILY_USD). At 100% the worker pauses and the app says why.",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 46 },
+      "targets": [{ "refId": "A", "expr": "max(pk_ai_spend_usd_today) / clamp_min(max(pk_ai_budget_usd), 0.01)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.6 }, { "color": "red", "value": 0.9 }] } } }
+    },
+    {
+      "id": 302, "type": "stat", "title": "Spent today / cap / paused", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 46 },
+      "targets": [
+        { "refId": "A", "expr": "max(pk_ai_spend_usd_today)", "instant": true, "legendFormat": "spent" },
+        { "refId": "B", "expr": "max(pk_ai_budget_usd)", "instant": true, "legendFormat": "cap" },
+        { "refId": "C", "expr": "max(pk_ai_paused)", "instant": true, "legendFormat": "paused" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 }, "overrides": [{ "matcher": { "id": "byName", "options": "paused" }, "properties": [{ "id": "unit", "value": "none" }, { "id": "mappings", "value": [{ "type": "value", "options": { "0": { "text": "running", "color": "green" }, "1": { "text": "PAUSED", "color": "red" } } }] }] }] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 303, "type": "timeseries", "title": "Tokens/min by model and direction", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 46 },
+      "targets": [{ "refId": "A", "expr": "sum by (model, direction) (rate(pk_ai_tokens_total[15m])) * 60", "legendFormat": "{{model}} {{direction}}" }],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 10, "stacking": { "mode": "normal" } } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] } }
+    },
+    {
+      "id": 304, "type": "timeseries", "title": "USD/hour by model and task", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 54 },
+      "targets": [{ "refId": "A", "expr": "sum by (model, task) (rate(pk_ai_spend_usd_total[1h])) * 3600", "legendFormat": "{{model}} / {{task}}" }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "fillOpacity": 20, "stacking": { "mode": "normal" } } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] } }
+    },
+    {
+      "id": 305, "type": "timeseries", "title": "Model calls/min", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 54 },
+      "targets": [{ "refId": "A", "expr": "sum by (model) (rate(pk_ai_calls_total[15m])) * 60", "legendFormat": "{{model}}" }],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 10 } } }
+    },
+
+    { "id": 400, "type": "row", "title": "Data", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 62 } },
+    {
+      "id": 401, "type": "stat", "title": "SurrealDB restarts (24h)", "datasource": "Prometheus",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 63 },
+      "targets": [{ "refId": "A", "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"punchable\", pod=~\"surrealdb-.*\"}[24h])) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 402, "type": "stat", "title": "Last successful backup", "datasource": "Prometheus",
+      "description": "Age of the last successful punchable-backup run (kube-state-metrics kube_cronjob_status_last_successful_time; VERIFY it is emitted here). The alert fires at 36 h.",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 63 },
+      "targets": [{ "refId": "A", "expr": "time() - max(kube_cronjob_status_last_successful_time{namespace=\"punchable\", cronjob=\"punchable-backup\"})", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 93600 }, { "color": "red", "value": 129600 }] } } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 403, "type": "stat", "title": "Failed backup Jobs (visible)", "datasource": "Prometheus",
+      "description": "Failed Jobs stay for a week (ttlSecondsAfterFinished). The size of the last R2 object is not a Prometheus number: `infra/ship.sh backup-list` prints it.",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 63 },
+      "targets": [{ "refId": "A", "expr": "sum(kube_job_status_failed{namespace=\"punchable\", job_name=~\"punchable-backup.*\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 404, "type": "stat", "title": "Bugsink available", "datasource": "Prometheus",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 63 },
+      "targets": [{ "refId": "A", "expr": "max(kube_deployment_status_replicas_available{namespace=\"punchable\", deployment=\"punchable-bugsink\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 405, "type": "timeseries", "title": "Pod memory (working set) vs limits", "datasource": "Prometheus",
+      "description": "The node is near its reservable memory; SurrealDB is Guaranteed at 512 Mi, the API and worker are Burstable.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 69 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"punchable\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "fillOpacity": 5 } } }
+    },
+    {
+      "id": 406, "type": "timeseries", "title": "Pod restarts (1h increase)", "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 69 },
+      "targets": [{ "refId": "A", "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"punchable\"}[1h]))", "legendFormat": "{{pod}}" }],
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 20, "drawStyle": "bars" } } }
+    }
+  ]
+}

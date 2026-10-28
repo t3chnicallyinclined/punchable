@@ -1,0 +1,210 @@
+# Observability for Punchable on the shared cluster (infra/OBSERVABILITY.md). Applied by `infra/ship.sh observability`.
+#
+# The conventions are the estate's (the other app on this box, read-only reference):
+#   * ServiceMonitor / PrometheusRule carry `release: prometheus`, the label the Prometheus Operator's selectors match;
+#   * every alert carries `service: punchable` and a `severity` (critical | warning | info). The shared Alertmanager in
+#     namespace `observability` routes on `severity` (critical repeats hourly, the rest every 4 h) and inhibits on
+#     `service`, and the host's alert poller posts firing alerts to the owner's chat channel. Nothing here
+#     builds a new receiver: a Punchable alert reaches the owner the same way a the other app one does.
+#   * `jobLabel: app` names the scrape jobs punchable-api / punchable-worker (the Services' `app` label), which is
+#     what the `up{job=...}` rules below match.
+# Every expression is built on a metric that is emitted (api-dev/metrics.py, worker/metrics.py, kube-state-metrics,
+# cert-manager). A rule on a metric nobody emits never fires and reads exactly like a rule that is passing; the two
+# that depend on scrapes this repo does not own are marked VERIFY and infra/OBSERVABILITY.md says how to check them.
+# If the cluster's Prometheus is NOT run by the operator (the other app's live one was not), `infra/ship.sh observability`
+# falls back to infra/observability/apply_prometheus.py, which installs the same scrape jobs and these rule groups
+# into the plain Prometheus's ConfigMap.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: punchable-api
+  namespace: punchable
+  labels: { app: punchable-api, release: prometheus }
+spec:
+  jobLabel: app
+  selector: { matchLabels: { app: punchable-api } }
+  namespaceSelector: { matchNames: [punchable] }
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: punchable-worker
+  namespace: punchable
+  labels: { app: punchable-worker, release: prometheus }
+spec:
+  jobLabel: app
+  selector: { matchLabels: { app: punchable-worker } }
+  namespaceSelector: { matchNames: [punchable] }
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: punchable-alerts
+  namespace: punchable
+  labels: { app: punchable, release: prometheus }
+spec:
+  groups:
+    - name: punchable-availability
+      rules:
+        - alert: PunchableApiDown
+          expr: up{job="punchable-api"} == 0
+          for: 2m
+          labels: { severity: critical, service: punchable }
+          annotations:
+            summary: "punchable-api is not scrapeable"
+            description: "Prometheus cannot reach the API's /metrics for 2 minutes. The app and the web are down with it."
+            runbook: >-
+              `infra/ship.sh status`; `microk8s kubectl -n punchable get pods`; `kubectl -n punchable logs deploy/punchable-api --tail=100`.
+              A pod stuck not-ready after a rollout: `/api/health?ready=1` is 503 until the bundle is materialized (watch the log
+              for "serving N jokes"). Roll back with `infra/ship.sh rollout api <previous digest>` (images.log on the server).
+        - alert: PunchableWorkerDown
+          expr: up{job="punchable-worker"} == 0
+          for: 5m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "punchable-worker is not scrapeable"
+            description: "The hosted worker's :9100/metrics has been unreachable for 5 minutes. AI jobs stay queued; nothing is lost."
+            runbook: >-
+              `kubectl -n punchable get pods -l app=punchable-worker`; `kubectl -n punchable logs deploy/punchable-worker --tail=50`.
+              A CrashLoop at start is almost always a missing Secret (punchable-worker, punchable-anthropic): `infra/ship.sh worker-secret`,
+              `infra/ship.sh ai-secret`, then `rollout worker`.
+        - alert: PunchableWorkerHeartbeatStale
+          expr: pk_worker_heartbeat_age_seconds > 600
+          for: 2m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "the worker loop has not ticked for 10 minutes"
+            description: "The process answers /metrics but its poll loop is stuck ({{ $value | humanizeDuration }} since the last heartbeat). The liveness probe restarts it at 20 minutes; this is the early warning."
+            runbook: >-
+              `kubectl -n punchable logs deploy/punchable-worker --tail=100`: a job hung on a model call or on the API. If it does not
+              clear itself, `kubectl -n punchable rollout restart deploy/punchable-worker` (the claimed job is handed out again after STALE_CLAIM_S).
+        - alert: PunchableBugsinkDown
+          expr: kube_deployment_status_replicas_available{namespace="punchable", deployment="punchable-bugsink"} == 0
+          for: 10m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "Bugsink (crash reports) has no available replica"
+            description: "Crashes from the phone, the web app and the API are being dropped by their SDKs until it is back."
+            runbook: "`kubectl -n punchable describe deploy/punchable-bugsink`; `kubectl -n punchable logs deploy/punchable-bugsink --tail=100`. A PVC or SECRET_KEY problem shows there. `infra/ship.sh bugsink` re-applies."
+
+    - name: punchable-errors
+      rules:
+        - alert: PunchableApiHighErrorRate
+          expr: >-
+            sum(rate(pk_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(pk_http_requests_total[5m])), 0.001)
+            > 0.05
+          for: 5m
+          labels: { severity: critical, service: punchable }
+          annotations:
+            summary: "over 5% of API responses are 5xx"
+            description: "{{ $value | humanizePercentage }} of requests failed over 5 minutes. clamp_min keeps an idle API from dividing by zero."
+            runbook: >-
+              Which route: the "5xx by route" panel on the dashboard, or
+              `sum by (route) (rate(pk_http_requests_total{status=~"5.."}[5m]))`. The traceback is in Bugsink (bugs.<domain>) with the
+              route tag, and in `kubectl -n punchable logs deploy/punchable-api | grep ERROR`. SurrealDB refusing connections shows
+              as every route failing at once: check `PunchableSurrealDbRestarted`.
+        - alert: PunchableApiHighLatency
+          expr: >-
+            histogram_quantile(0.95,
+              sum(rate(pk_http_request_duration_seconds_bucket{route!~"/api/upload|/api/audio/.*"}[5m])) by (le)) > 2
+          for: 10m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "API p95 latency above 2 s"
+            description: "p95 over the last 5 minutes is {{ $value | humanizeDuration }} (uploads and audio streaming excluded: they are long by design)."
+            runbook: >-
+              The "p95 by route" and "SurrealDB round trips" panels say whether it is one route or the database. A slow database
+              with a high memtable: db/DB.md "Compaction". The API pod near its 512 Mi limit swaps its caches: `kubectl -n punchable top pod`.
+        - alert: PunchablePodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{namespace="punchable"}[1h]) > 3
+          for: 5m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "a pod in punchable restarted more than 3 times in an hour"
+            description: "{{ $labels.pod }} ({{ $labels.container }}) keeps restarting."
+            runbook: "`kubectl -n punchable describe pod {{ $labels.pod }}` (OOMKilled? a failed probe?), then its previous log: `kubectl -n punchable logs {{ $labels.pod }} --previous`."
+
+    - name: punchable-jobs
+      rules:
+        - alert: PunchableAiBudgetPaused
+          expr: pk_ai_paused == 1
+          for: 15m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "the worker is paused: today's AI budget is spent"
+            description: "pk_ai_spend_usd_today reached pk_ai_budget_usd (PK_AI_DAILY_USD). Jobs stay queued with the reason shown in the app until midnight UTC."
+            runbook: >-
+              Expected after a heavy day; not an outage. To keep going today, raise PK_AI_DAILY_USD in infra/k8s/35-worker.yaml and
+              `infra/ship.sh rollout worker` (the ledger is in the pod's /tmp, so a restart also resets the day's count: know that before
+              you use it). An unexpected spend spike: the "USD by model and task" panel, then `runs.jsonl` in the worker's workspace.
+        - alert: PunchableJobsWaitingForTranscriber
+          expr: pk_jobs_waiting_transcriber_oldest_seconds > 86400
+          for: 1h
+          labels: { severity: info, service: punchable }
+          annotations:
+            summary: "a recording has waited more than a day for a transcriber"
+            description: "{{ $value | humanizeDuration }}: an upload or a YouTube import is queued as waiting_for=transcriber. Since 2026-10-27 transcription happens on the phone; the server never runs these."
+            runbook: >-
+              Nothing is broken on the server. The owner finishes it on the phone (the app shows the waiting file), or the job is
+              dropped. If this fires for a set he already transcribed on the phone, the phone's POST /api/sets/transcript did not land:
+              check the API log for that route.
+
+    - name: punchable-data
+      rules:
+        - alert: PunchableSurrealDbRestarted
+          expr: increase(kube_pod_container_status_restarts_total{namespace="punchable", pod=~"surrealdb-.*"}[1h]) > 0
+          for: 0m
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "the SurrealDB pod restarted"
+            description: "{{ $labels.pod }} restarted {{ $value }} time(s) in the last hour. One writer, a WAL replay on every start: the API returns 503 meanwhile."
+            runbook: >-
+              `kubectl -n punchable describe pod surrealdb-0`: OOMKilled at the 512 Mi Guaranteed limit means the memtable or the HNSW
+              index grew (db/DB.md "Compaction", SURREAL_SURREALKV_MAX_MEMTABLE_SIZE in 20-surrealdb.yaml). A liveness timeout under load
+              is the other cause. Then check the last backup is recent (PunchableBackupMissed) before anything else.
+        - alert: PunchableBackupFailed
+          expr: kube_job_status_failed{namespace="punchable", job_name=~"punchable-backup.*"} > 0
+          for: 10m
+          labels: { severity: critical, service: punchable }
+          annotations:
+            summary: "a nightly backup Job failed"
+            description: "{{ $labels.job_name }} has a failed pod. The failed Job stays visible for a week (ttlSecondsAfterFinished)."
+            runbook: >-
+              `kubectl -n punchable logs -l job-name={{ $labels.job_name }} --tail=-1`: backup.py prints one line on failure, secrets
+              redacted. Usual causes: R2 token revoked or rotated (`infra/ship.sh backup-secret`), the export refused as incomplete,
+              SurrealDB down during the run. Run one now: `infra/ship.sh backup-now`.
+        - alert: PunchableBackupMissed
+          # VERIFY on the live Prometheus that kube_cronjob_status_last_successful_time exists (kube-state-metrics >= 2.x).
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="punchable", cronjob="punchable-backup"} > 36 * 3600
+          for: 30m
+          labels: { severity: critical, service: punchable }
+          annotations:
+            summary: "no successful backup for 36 hours"
+            description: "The 04:17 UTC CronJob has not succeeded since {{ $value | humanizeDuration }} ago (two nights)."
+            runbook: >-
+              `kubectl -n punchable get cronjob punchable-backup` (suspended after a restore drill?), `get jobs`. If the CronJob never
+              ran: startingDeadlineSeconds missed while the node was busy. `infra/ship.sh backup-now`, then `backup-list` to see the
+              bucket. The Bugsink SQLite copy rides in the same Job (infra/backup/backup.py).
+        - alert: PunchableCertificateExpiringSoon
+          # VERIFY: needs cert-manager's /metrics scraped by this Prometheus (the box's live config did not scrape it on 2026-09-23).
+          expr: (certmanager_certificate_expiration_timestamp_seconds{namespace="punchable"} - time()) < 14 * 86400
+          for: 1h
+          labels: { severity: warning, service: punchable }
+          annotations:
+            summary: "a punchable TLS certificate expires in under 14 days"
+            description: "{{ $labels.name }} expires in {{ $value | humanizeDuration }}. cert-manager renews at 30 days, so this means renewal is failing."
+            runbook: >-
+              `kubectl -n punchable describe certificate {{ $labels.name }}` and the challenges: `kubectl -n punchable get challenges`.
+              HTTP-01 needs the acme-solver NetworkPolicy (10-networkpolicy.yaml) and the host to resolve to the origin
+              (`infra/ship.sh dns plan`).
