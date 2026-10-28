@@ -17,8 +17,21 @@ import { C, F, resolveScheme, setScheme } from '@/lib/theme';
 import { getPrefs, loadPrefs, onPrefs } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
 import { SET_MIN_S } from '@/lib/importgroup';
+import { installCrashReporter, setCrashContext } from '@/lib/crashReport';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// A fatal JS error in a release build ends the process (RN: RCTExceptionsManager.reportFatal -> RCTFatal). This writes
+// the error to the phone first, so the next launch shows it on /login under "Last crash" (lib/crashReport.ts).
+installCrashReporter();
+
+/** Every crash record carries where the app was. */
+function CrashContext() {
+  const pathname = usePathname();
+  useEffect(() => {
+    setCrashContext(() => ({ path: pathname }));
+  }, [pathname]);
+  return null;
+}
 
 /** The document title on the web; the native header title on the phone. */
 const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
@@ -113,6 +126,7 @@ export default function RootLayout() {
           <WhyProvider>
             <BoardProvider>
               <PhotosBadge />
+              <CrashContext />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
                 {/* The three tabs, each its own stack: app/(tabs). Route groups keep every URL (/joke/x, /list/x, /inbox, ...). */}
                 <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />

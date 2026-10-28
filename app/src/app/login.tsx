@@ -16,6 +16,9 @@ import { Lockup } from '@/lib/Brand';
 import { AUTH_ENABLED, ISSUER, authRequestConfig, completeSignIn, getAccessToken, rememberWay } from '@/lib/auth';
 import { safeNext } from '@/lib/session';
 import { C, F } from '@/lib/theme';
+import { crashText, type CrashRecord } from '@/lib/crashlog';
+import { clearLastCrash, readLastCrash } from '@/lib/crashReport';
+import { copyOrShare } from '@/lib/CrashScreen';
 
 const BASE = authRequestConfig();
 const GOOGLE = authRequestConfig({ kc_idp_hint: 'google' });
@@ -46,6 +49,15 @@ export default function Login() {
   const [failed, setFailed] = useState<{ for: unknown; msg: string } | null>(null);
   const [cleared, setCleared] = useState<unknown>(null);
   const [popupErr, setPopupErr] = useState<string | null>(null);
+  // "Last crash": the record the previous run wrote before it died (lib/crashReport); shown until he dismisses it.
+  const [lastCrash, setLastCrash] = useState<CrashRecord | null>(null);
+  useEffect(() => {
+    let alive = true;
+    readLastCrash().then((r) => alive && setLastCrash(r));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const busy = result?.type === 'success' && failed?.for !== result;
   const ready = !!eRequest && (!GOOGLE_OFFERED || !!gRequest);
   const error =
@@ -149,6 +161,23 @@ export default function Login() {
           ) : null}
         </View>
 
+        {lastCrash ? (
+          <View testID="last-crash" style={[s.err, { borderColor: C.dangerBorder, backgroundColor: light ? '#fdecec' : '#2a1210', gap: 8 }]} accessibilityRole="summary">
+            <Text style={[s.errText, { color: C.redSoft, fontFamily: F.bold }]}>Last crash · {lastCrash.at.replace('T', ' ').slice(0, 19)}</Text>
+            <Text testID="last-crash-message" selectable numberOfLines={6} style={[s.note2, { color: C.text }]}>
+              {lastCrash.name}: {lastCrash.message}
+              {lastCrash.context.path ? `\nat ${lastCrash.context.path}` : ''}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 16 }}>
+              <Pressable testID="last-crash-copy" accessibilityRole="button" hitSlop={8} onPress={() => copyOrShare(crashText(lastCrash))}>
+                <Text style={[s.note2, { color: C.amber, fontFamily: F.semi }]}>{Platform.OS === 'web' ? 'Copy' : 'Copy or share'}</Text>
+              </Pressable>
+              <Pressable testID="last-crash-dismiss" accessibilityRole="button" hitSlop={8} onPress={() => { setLastCrash(null); clearLastCrash(); }}>
+                <Text style={[s.note2, { color: C.mut2, fontFamily: F.semi }]}>Dismiss</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <Text style={[s.foot, { color: C.dim }]}>Punchable is one comic’s notebook. There’s no sign-up.</Text>
       </View>
     </ScrollView>
