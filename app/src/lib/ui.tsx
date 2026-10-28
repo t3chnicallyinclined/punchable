@@ -464,13 +464,14 @@ export function SignInBtn({ testID = 'signin', full }: { testID?: string; full?:
   );
 }
 
-/** The avatar on Today's top bar: opens You (profile, sign out, settings). Signed out: a Sign in button. */
-export function Avatar() {
+/** The avatar on a tab's top bar: opens You (profile, sign out, settings). Signed out: a Sign in button.
+ *  `ask={false}` on a screen whose input bar IS Ask (Tonight): the standing decision is that Ask lives in the bar. */
+export function Avatar({ ask = true }: { ask?: boolean }) {
   const sess = useSession();
   if (sess.enabled && !sess.signedIn && !sess.checking) return <SignInBtn />;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <AskButton />
+      {ask && <AskButton />}
       <Pressable testID="avatar" accessibilityRole="button" accessibilityLabel="You: profile, sign out, settings" onPress={() => router.push('/profile' as any)}
         style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
         <Face />
@@ -480,13 +481,13 @@ export function Avatar() {
 }
 
 const ROOT_LABEL: Record<string, string> = { tonight: 'Tonight', bits: 'Bits', sets: 'Sets' };
+/** The bar itself. The safe-area inset is NOT added here: `Screen` wraps every header (this one or a custom one) in it. */
 function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
-  const ins = useSafeAreaInsets();
   const ui = useUI();
   // HIG: the back button carries the previous screen's name (the tab he came from unless the screen says otherwise)
   const label = backLabel ?? (ROOT_LABEL[ui.lastRoot] || 'Back');
   return (
-    <View style={{ zIndex: 4, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52 + ins.top, paddingTop: ins.top + 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52, paddingTop: 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
       {left ? left : back ? (
         <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
           style={{ minWidth: 44, height: 44, maxWidth: 140, borderRadius: 22, flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
@@ -587,7 +588,11 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
       {wide && !task && <Sidebar active={active} />}
       {kav(
       <View style={{ flex: 1, minWidth: 0 }}>
-        {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
+        {/* HIG/layout: every header, custom or not, starts below the status bar and the Dynamic Island (the inset is the
+            system's; no fixed number). The wrapper carries the bar's ground so the inset never shows a seam. */}
+        <View testID="header-inset" style={{ zIndex: 4, paddingTop: ins.top, backgroundColor: task || deep ? C.bgDeep : C.bg }}>
+          {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
+        </View>
         <OfflineStrip />
         {scroll ? (
           <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"

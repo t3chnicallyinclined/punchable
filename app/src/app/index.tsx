@@ -2,7 +2,7 @@
 // sheet), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap), three questions
 // to ask his material, and the one input bar. One request: GET /api/tonight/screen; changes arrive over /api/live.
 import React, { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { PixelRatio, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApi } from '@/lib/api';
 import { fmtDur } from '@/lib/laughs';
@@ -10,6 +10,7 @@ import { TonightScreen, useOutbox } from '@/lib/say';
 import { SayBar } from '@/lib/SayBar';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
+import { tonightTitleRow } from '@/lib/layoutRules';
 import { noteWorker } from '@/lib/worker';
 import { Avatar, Icon, Screen, Skeleton, T, useWide } from '@/lib/ui';
 
@@ -41,21 +42,26 @@ export default function Tonight() {
   // the conversation screen sends it (and keeps it on this phone when Punchable can't be reached)
   const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, screen: 'tonight' } } as any), []);
 
+  // HIG large-title shape (docs/design/HIG.md §0): row 1 is the bar (the date, "+", the face); row 2 is the title with
+  // the "N to sort" pill, which stacks under the title at text sizes >= 1.3x. No Ask button: the input bar IS Ask.
+  const titleRow = tonightTitleRow(PixelRatio.getFontScale());
   const header = (
-    <View style={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 12, paddingBottom: 4, gap: 4 }}>
-      <T v="eb" testID="tonight-date" style={{ color: C.mut2 }}>{DAYS[now.getDay()]}{d?.latest_set?.date === d?.date ? ' · set tonight' : ''}</T>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text maxFontSizeMultiplier={1.3} style={{ flex: 1, fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>Tonight</Text>
-        <Pressable testID="to-sort" accessibilityRole="button" accessibilityLabel={`${d?.to_sort || 0} to sort. Open the inbox`} onPress={() => router.push('/inbox' as any)}
-          style={{ minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: C.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d?.to_sort ? C.amber : C.borderStrong }} />
-          {d ? <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.text }}>{d.to_sort} to sort</Text> : <View style={{ width: 54, height: 12, borderRadius: 6, backgroundColor: C.surface2 }} accessibilityLabel="Loading" />}
-        </Pressable>
+    <View testID="tonight-header" style={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 4, paddingBottom: 4, gap: 2 }}>
+      <View testID="tonight-bar" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+        <T v="eb" testID="tonight-date" numberOfLines={1} style={{ flex: 1, minWidth: 0, color: C.mut2 }}>{DAYS[now.getDay()]}{d?.latest_set?.date === d?.date ? ' · set tonight' : ''}</T>
         <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={() => setCreate(true)} hitSlop={4}
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' }}>
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon name="plus" size={20} color={C.amber} sw={2.4} />
         </Pressable>
-        <Avatar />
+        <Avatar ask={false} />
+      </View>
+      <View testID={`tonight-title-${titleRow.direction}`} style={{ flexDirection: titleRow.direction, alignItems: titleRow.direction === 'row' ? 'center' : 'flex-start', gap: 8 }}>
+        <Text numberOfLines={1} maxFontSizeMultiplier={1.3} accessibilityRole="header" style={{ flexShrink: 1, minWidth: 0, fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>Tonight</Text>
+        <Pressable testID="to-sort" accessibilityRole="button" accessibilityLabel={`${d?.to_sort || 0} to sort. Open the inbox`} onPress={() => router.push('/inbox' as any)}
+          style={{ flexShrink: 0, minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: C.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d?.to_sort ? C.amber : C.borderStrong }} />
+          {d ? <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={{ fontFamily: F.semi, fontSize: 14, color: C.text }}>{d.to_sort} to sort</Text> : <View style={{ width: 54, height: 12, borderRadius: 6, backgroundColor: C.surface2 }} accessibilityLabel="Loading" />}
+        </Pressable>
       </View>
     </View>
   );
