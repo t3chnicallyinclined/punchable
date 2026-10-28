@@ -1,12 +1,15 @@
-// Sign in (hosted only). Look: docs/DESIGN.md §9, matching the Keycloak theme on auth.punchable.io.
-// Two ways in, both the same authorization-code + PKCE request to Keycloak (src/lib/auth.ts, unchanged):
-//   Continue with Google  adds kc_idp_hint=google, so Keycloak hands straight to Google. The owner's normal way in:
-//                         his first Google login auto-links to his account (realm flow pk-google-link-only).
-//   Use email             no hint: Keycloak's own page (password, or "Forgot password?" to set one).
+// Sign in (hosted only). The screen before Keycloak's page (infra/keycloak/theme, auth.punchable.io), matched to it:
+// the lockup, one line of what Punchable is, and the way in.
+//   Phone: ONE button, "Sign in". It opens Keycloak's page in the in-app browser sheet (expo-web-browser auth session,
+//          redirect punchable://auth/callback); that page offers Google and email. No Google button in the native
+//          app (owner decision; App Store guideline 4.8 would then require Sign in with Apple as an equal option).
+//   Web:   the same, plus "Sign in with Google" (kc_idp_hint=google: Keycloak hands straight to Google) when the realm
+//          offers the IdP (EXPO_PUBLIC_OIDC_GOOGLE=0 hides it). The email button is then "Sign in with email".
+// Both are the same authorization-code + PKCE request to Keycloak (src/lib/auth.ts, unchanged).
 import * as AuthSession from 'expo-auth-session';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Lockup } from '@/lib/Brand';
@@ -16,13 +19,16 @@ import { C, F } from '@/lib/theme';
 
 const BASE = authRequestConfig();
 const GOOGLE = authRequestConfig({ kc_idp_hint: 'google' });
+/** Google is a web-only shortcut; the realm offers it (realm-punchable.yaml identityProviders) unless the build says no. */
+const GOOGLE_OFFERED = Platform.OS === 'web' && (process.env as Record<string, string | undefined>).EXPO_PUBLIC_OIDC_GOOGLE !== '0';
+const PITCH = 'Every bit you’ve written, and how long they laughed.';
 
 type Way = 'google' | 'email';
 
-/** Errors in plain words (DESIGN.md §2): what happened, what to do. */
+/** Errors in plain words: what happened, what to do. */
 function plain(msg: string | undefined | null): string {
   const m = (msg || '').toLowerCase();
-  if (m.includes('access_denied') || m.includes('cancel')) return 'Sign-in was cancelled. Try again when you’re ready.';
+  if (m.includes('access_denied') || m.includes('cancel') || m.includes('dismiss')) return 'Sign-in was cancelled. Try again when you’re ready.';
   if (m.includes('network') || m.includes('fetch')) return 'Can’t reach the sign-in server. Check your connection and try again.';
   return msg ? `Sign-in didn’t finish: ${msg}. Try again.` : 'Sign-in didn’t finish. Try again.';
 }
@@ -34,14 +40,14 @@ export default function Login() {
   const discovery = AuthSession.useAutoDiscovery(ISSUER);
   const [gRequest, gResult, gPrompt] = AuthSession.useAuthRequest(GOOGLE, discovery);
   const [eRequest, eResult, ePrompt] = AuthSession.useAuthRequest(BASE, discovery);
-  const [way, setWay] = useState<Way>('google');
+  const [way, setWay] = useState<Way>(GOOGLE_OFFERED ? 'google' : 'email');
   const request = way === 'google' ? gRequest : eRequest;
   const result = way === 'google' ? gResult : eResult;
   const [failed, setFailed] = useState<{ for: unknown; msg: string } | null>(null);
   const [cleared, setCleared] = useState<unknown>(null);
   const [popupErr, setPopupErr] = useState<string | null>(null);
   const busy = result?.type === 'success' && failed?.for !== result;
-  const ready = !!gRequest && !!eRequest;
+  const ready = !!eRequest && (!GOOGLE_OFFERED || !!gRequest);
   const error =
     popupErr ??
     (cleared === result ? null : failed?.for === result ? failed.msg : result?.type === 'error' ? plain(result.error?.message || result.error?.code) : null);
@@ -75,59 +81,75 @@ export default function Login() {
       setPopupErr(/popup/i.test(String(e?.message)) ? 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.' : plain(e?.message)),
     );
   };
+  const off = !ready || busy;
+  // Colours are read here, at render: the tree remounts on a scheme change (theme.ts) and the palette follows.
+  const light = C.scheme === 'light';
+  const ink = light ? '#111214' : '#0B0B0D'; // text on the amber button, both schemes (theme.ts: amber with ink text)
+  const amber = light ? '#f5b544' : C.amber;
 
   return (
     <ScrollView
       testID="login"
       style={{ flex: 1, backgroundColor: C.bg }}
+      accessibilityLabel="Sign in"
       contentContainerStyle={[s.page, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}
       keyboardShouldPersistTaps="handled">
       <View style={s.col}>
-        <Lockup size={52} />
-        <View style={{ gap: 10 }}>
-          <Text style={s.h1} accessibilityRole="header">Sign in</Text>
-          <Text style={s.pitch} testID="login-pitch">Every bit you&apos;ve written, and how long they laughed.</Text>
-          {next !== '/' ? <Text style={s.note2} testID="login-next">You&apos;ll go straight back to the page you opened.</Text> : null}
+        <Lockup size={44} />
+        <View style={{ gap: 8 }}>
+          <Text style={[s.h1, { color: C.text }]} accessibilityRole="header" maxFontSizeMultiplier={1.4}>
+            Sign in
+          </Text>
+          <Text style={[s.pitch, { color: C.mut2 }]} testID="login-pitch">
+            {PITCH}
+          </Text>
+          {next !== '/' ? (
+            <Text style={[s.note2, { color: C.dim }]} testID="login-next">
+              You’ll go straight back to the page you opened.
+            </Text>
+          ) : null}
         </View>
 
         <View style={{ gap: 12 }}>
-          <Pressable
-            testID="login-google"
-            accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
-            accessibilityState={{ disabled: !ready || busy, busy: busy && way === 'google' }}
-            disabled={!ready || busy}
-            onPress={() => go('google')}
-            style={({ pressed }) => [s.google, (!ready || busy) && s.off, pressed && { backgroundColor: '#e6e6e6' }]}>
-            {busy && way === 'google' ? (
-              <ActivityIndicator color="#1f1f1f" />
-            ) : (
-              <>
-                <GoogleG />
-                <Text style={s.googleText}>Continue with Google</Text>
-              </>
-            )}
-          </Pressable>
+          {GOOGLE_OFFERED ? (
+            <Pressable
+              testID="login-google"
+              accessibilityRole="button"
+              accessibilityLabel="Sign in with Google"
+              accessibilityState={{ disabled: off, busy: busy && way === 'google' }}
+              disabled={off}
+              onPress={() => go('google')}
+              style={({ pressed }) => [s.google, light ? s.googleLight : s.googleDark, off && s.off, pressed && { opacity: 0.85 }]}>
+              {busy && way === 'google' ? (
+                <ActivityIndicator color={light ? '#1F1F1F' : '#E3E3E3'} />
+              ) : (
+                <>
+                  <GoogleG />
+                  <Text style={[s.googleText, { color: light ? '#1F1F1F' : '#E3E3E3' }]}>Sign in with Google</Text>
+                </>
+              )}
+            </Pressable>
+          ) : null}
           <Pressable
             testID="login-button"
             accessibilityRole="button"
-            accessibilityLabel="Use email"
-            accessibilityHint="Opens the email and password sign-in page"
-            accessibilityState={{ disabled: !ready || busy, busy: busy && way === 'email' }}
-            disabled={!ready || busy}
+            accessibilityLabel={GOOGLE_OFFERED ? 'Sign in with email' : 'Sign in'}
+            accessibilityHint="Opens the sign-in page"
+            accessibilityState={{ disabled: off, busy: busy && way === 'email' }}
+            disabled={off}
             onPress={() => go('email')}
-            style={({ pressed }) => [s.email, (!ready || busy) && s.off, pressed && { backgroundColor: C.surface2 }]}>
-            {busy && way === 'email' ? <ActivityIndicator color={C.text} /> : <Text style={s.emailText}>Use email</Text>}
+            style={({ pressed }) => [s.primary, { backgroundColor: amber }, off && s.off, pressed && { opacity: 0.9 }]}>
+            {busy && way === 'email' ? <ActivityIndicator color={ink} /> : <Text style={[s.primaryText, { color: ink }]}>{GOOGLE_OFFERED ? 'Sign in with email' : 'Sign in'}</Text>}
           </Pressable>
-          {!ready && !error ? <Text style={s.note}>Reaching the sign-in server…</Text> : null}
+          {!ready && !error ? <Text style={[s.note, { color: C.mut2 }]}>Reaching the sign-in server…</Text> : null}
           {error ? (
-            <View style={s.err} accessibilityRole="alert" testID="login-error">
-              <Text style={s.errText}>{error}</Text>
+            <View style={[s.err, { borderColor: C.dangerBorder, backgroundColor: light ? '#fdecec' : '#2a1210' }]} accessibilityRole="alert" testID="login-error">
+              <Text style={[s.errText, { color: C.redSoft }]}>{error}</Text>
             </View>
           ) : null}
         </View>
 
-        <Text style={s.foot}>Use email only if you've set a Punchable password.</Text>
+        <Text style={[s.foot, { color: C.dim }]}>Punchable is one comic’s notebook. There’s no sign-up.</Text>
       </View>
     </ScrollView>
   );
@@ -144,20 +166,25 @@ function GoogleG() {
   );
 }
 
+// Same measures as the Keycloak page: 52 pt buttons, 12 pt radius, 28/800 title, muted 15 pt pitch, 13 pt footer.
+// Colours are applied in render (above) so a scheme change shows; only shape lives here.
 const s = StyleSheet.create({
   page: { flexGrow: 1, alignItems: 'center' },
-  col: { width: '100%', maxWidth: 400, gap: 28 },
-  h1: { color: C.text, fontFamily: F.g7, fontSize: 30, lineHeight: 35, letterSpacing: -0.6 },
-  pitch: { color: C.mut, fontFamily: F.body, fontSize: 17, lineHeight: 24 },
-  // Google's own light button: white, the four-colour G (their brand rules). 52 pt.
-  google: { minHeight: 52, borderRadius: 12, backgroundColor: '#ffffff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16 },
-  googleText: { color: '#1f1f1f', fontFamily: F.semi, fontSize: 17 },
-  email: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: C.borderStrong, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  emailText: { color: C.text, fontFamily: F.g7, fontSize: 16, letterSpacing: 0.3 },
-  off: { opacity: 0.5 },
-  note: { color: C.mut, fontFamily: F.body, fontSize: 14, textAlign: 'center' },
-  err: { borderWidth: 1, borderColor: C.dangerBorder, backgroundColor: 'rgba(239,68,68,.08)', borderRadius: 12, padding: 12 },
-  errText: { color: C.redSoft, fontFamily: F.body, fontSize: 15, lineHeight: 21 },
-  note2: { color: C.dim, fontFamily: F.body, fontSize: 14, lineHeight: 20 },
-  foot: { color: C.dim, fontFamily: F.body, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  col: { width: '100%', maxWidth: 400, gap: 24 },
+  h1: { fontFamily: F.black, fontSize: 28, lineHeight: 33, letterSpacing: -0.5 },
+  pitch: { fontFamily: F.body, fontSize: 15, lineHeight: 22 },
+  // Google's own button in their dark / light variant (brand rules), same as the Keycloak page.
+  google: { minHeight: 52, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 16 },
+  googleDark: { backgroundColor: '#131314', borderColor: '#8E918F' },
+  googleLight: { backgroundColor: '#ffffff', borderColor: '#747775' },
+  googleText: { fontFamily: F.semi, fontSize: 17 },
+  // The amber button: ink text on amber in both schemes (theme.ts: buttons stay amber with ink text).
+  primary: { minHeight: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  primaryText: { fontFamily: F.bold, fontSize: 17 },
+  off: { opacity: 0.55 },
+  note: { fontFamily: F.body, fontSize: 14, textAlign: 'center' },
+  err: { borderWidth: 1, borderRadius: 12, padding: 12 },
+  errText: { fontFamily: F.body, fontSize: 15, lineHeight: 21 },
+  note2: { fontFamily: F.body, fontSize: 14, lineHeight: 20 },
+  foot: { fontFamily: F.body, fontSize: 13, lineHeight: 19, textAlign: 'center' },
 });
