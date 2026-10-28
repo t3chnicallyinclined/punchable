@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { C } from '@/lib/theme';
 
-export const unstable_settings = { initialRouteName: 'index' };
+export const unstable_settings = { anchor: 'index' }; // expo-router 58: `initialRouteName` is deprecated for `anchor` (layoutAnchor.js)
 const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
 
 export default function TonightStack() {
