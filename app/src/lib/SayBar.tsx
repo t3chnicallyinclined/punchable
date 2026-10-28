@@ -9,6 +9,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from './theme';
 import { haptics } from './haptics';
+import { holdHaptic } from './feedback';
 import { useHoldToTalk } from './holdToTalk';
 import { BarConfig, Icon, useUI } from './ui';
 import { ACCESSORY } from './accessory';
@@ -118,8 +119,8 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
           )}
         </View>
         {Z.ring > 0 && <Pressable testID={`${testID}-talk`} accessibilityRole="button" accessibilityLabel={talkLabel}
-          onPressIn={() => { if (!talk.supported) { input.current?.focus(); return; } haptics.light(); talk.start(); }}
-          onPressOut={() => { if (talk.supported) { talk.stop(); haptics.light(); } }}
+          onPressIn={() => { if (!talk.supported) { input.current?.focus(); return; } const h = holdHaptic('in'); if (h) haptics[h](); talk.start(); }}
+          onPressOut={() => { if (talk.supported) { talk.stop(); const h = holdHaptic('out'); if (h) haptics[h](); } }}
           style={{ width: Z.ring, height: Z.ring, borderRadius: Z.ring / 2, borderWidth: variant === 'dock' ? 4 : 3, borderColor: talk.on ? C.amber : C.borderStrong, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: Z.inner, height: Z.inner, borderRadius: Z.inner / 2, backgroundColor: talk.supported ? C.rec : C.card, alignItems: 'center', justifyContent: 'center', transform: [{ scale: talk.on ? 0.86 : 1 }] }}>
             {recording ? <Text accessibilityLabel="Recording" style={{ fontFamily: F.g7, fontSize: variant === 'dock' ? 11 : 9, color: '#fff', letterSpacing: 0.6 }}>● REC</Text> : <MicGlyph size={variant === 'dock' ? 22 : 18} color={talk.supported ? '#fff' : C.mut2} />}

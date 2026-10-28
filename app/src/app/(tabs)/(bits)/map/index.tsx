@@ -20,8 +20,11 @@ import { Screen } from '@/lib/Screen';
 type AllMap = { rev: string | null; cap: number; nodes: MapNode[]; edges: MapEdge[]; counts: { jokes: number; nodes: number; edges: number; by_kind: Record<string, number> }; groups: { key: MapGroupKey; title: string }[] };
 const FIRST_N = 300;       // laid out at once; the rest come in as he expands
 const LABEL_MIN_SCALE = 0.6; // below this only dots draw (a readable map, not a word cloud)
-const DOT: Record<string, string> = { kills: '#30D158', working: '#FFB340', fresh: '#64D2FF', resting: '#8E8E93' };
-function status(n: MapNode): keyof typeof DOT {
+type Status = 'kills' | 'working' | 'fresh' | 'resting';
+const STATUSES: Status[] = ['kills', 'working', 'fresh', 'resting'];
+// read at render so the Light / Dark switch reaches the dots (theme.ts tokens with light variants)
+const dotOf = (st: Status) => ({ kills: C.statusKills, working: C.statusWorking, fresh: C.statusFresh, resting: C.statusResting }[st]);
+function status(n: MapNode): Status {
   if (n.stage === 'retired') return 'resting';
   if (n.nights >= 2 && (n.heat || 0) >= 1.3) return 'kills';
   if (n.nights > 0 || n.stage === 'working') return 'working';
@@ -105,14 +108,14 @@ export default function AllBitsMap() {
                 const lit = sel && (e.a === sel || e.b === sel);
                 return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={GROUP_COLOR[e.kind as MapGroupKey] || C.mut} strokeOpacity={sel ? (lit ? 0.9 : 0.12) : 0.35 + 0.35 * e.w} strokeWidth={lit ? 2.5 : 1.2} />;
               })}
-              {!labels && shown.map((n) => <Circle key={n.id} cx={n.x} cy={n.y} r={n.id === sel ? 9 : 4 + Math.min(4, n.nights)} fill={DOT[status(n)]} opacity={sel && n.id !== sel && !neighbours.has(n.id) ? 0.35 : 1} />)}
+              {!labels && shown.map((n) => <Circle key={n.id} cx={n.x} cy={n.y} r={n.id === sel ? 9 : 4 + Math.min(4, n.nights)} fill={dotOf(status(n))} opacity={sel && n.id !== sel && !neighbours.has(n.id) ? 0.35 : 1} />)}
             </Svg>
             {labels && shown.map((n) => {
               const on = n.id === sel, near = neighbours.has(n.id);
               return (
                 <Pressable key={n.id} testID={`allmap-node-${n.id}`} accessibilityRole="button" accessibilityLabel={`${n.short_name}, ${n.nights} night${n.nights === 1 ? '' : 's'}. ${on ? 'Open' : 'Select'}`} onPress={() => tap(n)}
                   style={{ position: 'absolute', left: n.x - 60, top: n.y - 16, width: 120, minHeight: 32, borderRadius: 16, borderWidth: on ? 2 : 1, borderColor: on ? C.amber : near ? C.text : C.border, backgroundColor: C.surface, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: sel && !on && !near ? 0.45 : 1 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: DOT[status(n)] }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotOf(status(n)) }} />
                   <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ flex: 1, fontFamily: on ? F.semi : F.medium, fontSize: 12, color: C.text }}>{n.short_name}</Text>
                 </Pressable>
               );
@@ -131,7 +134,7 @@ export default function AllBitsMap() {
           )}
           {!reduce && null}
           <SafeBottom style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
-            {Object.entries(DOT).map(([k, c]) => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} /><T v="small">{k[0].toUpperCase() + k.slice(1)}</T></View>)}
+            {STATUSES.map((k) => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotOf(k) }} /><T v="small">{k[0].toUpperCase() + k.slice(1)}</T></View>)}
             {!native && <Pressable accessibilityRole="button" accessibilityLabel="Fit the map to the screen" onPress={fit} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}><T v="small" style={{ color: C.amber }}>Fit</T></Pressable>}
           </SafeBottom>
         </View>

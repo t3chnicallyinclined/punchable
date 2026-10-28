@@ -7,9 +7,13 @@
     "icon": "./assets/images/icon.png",
     "scheme": "punchable",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#111214",
+    "backgroundColor": "#0B0B0D",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      },
       "bundleIdentifier": "com.tristanrega.punchable",
       "infoPlist": {
         "UIBackgroundModes": [
@@ -72,8 +76,8 @@
       "output": "single",
       "favicon": "./assets/images/favicon.png",
       "name": "Punchable",
-      "backgroundColor": "#111214",
-      "themeColor": "#111214",
+      "backgroundColor": "#0B0B0D",
+      "themeColor": "#0B0B0D",
       "description": "Every bit you've written, and how long they laughed."
     },
     "plugins": [
@@ -81,9 +85,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#111214",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 160
+          "backgroundColor": "#f6f6f4",
+          "dark": {
+            "backgroundColor": "#0B0B0D"
+          }
         }
       ],
       [

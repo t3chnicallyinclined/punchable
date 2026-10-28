@@ -273,7 +273,7 @@ function ShortNameForm({ x, onSave }: { x: Step; onSave: (v: string) => void }) 
   return (
     <View style={{ gap: 8 }}>
       <T v="mut">What you’d write on the paper list. Up to 24 letters. The full title stays “{x.title}”.</T>
-      <TextInput testID="shortname-input" value={v} onChangeText={setV} maxLength={24} autoFocus placeholder={shortNameOf(x.title)} placeholderTextColor={C.dim} accessibilityLabel="Short name"
+      <TextInput testID="shortname-input" value={v} onChangeText={setV} maxLength={24} autoFocus placeholder={shortNameOf(x.title)} placeholderTextColor={C.dim} clearButtonMode="while-editing" accessibilityLabel="Short name"
         style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.bold, fontSize: 18 }} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn testID="shortname-save" label="Save" v="primary" style={{ flex: 1 }} disabled={!v.trim()} onPress={() => onSave(v)} />
@@ -286,7 +286,7 @@ function TitleForm({ title, onSave }: { title: string; onSave: (t: string) => vo
   const [t, setT] = useState(title);
   return (
     <View style={{ gap: 8 }}>
-      <TextInput testID="title-input" value={t} onChangeText={setT} autoFocus accessibilityLabel="Set list title" style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16 }} />
+      <TextInput testID="title-input" value={t} onChangeText={setT} autoFocus clearButtonMode="while-editing" accessibilityLabel="Set list title" style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16 }} />
       <Btn label="Save" v="primary" disabled={!t.trim()} onPress={() => onSave(t.trim())} />
     </View>
   );

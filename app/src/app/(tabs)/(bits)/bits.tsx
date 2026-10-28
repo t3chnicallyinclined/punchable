@@ -17,7 +17,9 @@ import { Screen } from '@/lib/Screen';
 type View_ = 'bits' | 'notes';
 const native = Platform.OS !== 'web';
 type Status = 'kills' | 'working' | 'fresh' | 'resting';
-const DOT: Record<Status, string> = { kills: '#30D158', working: C.amber, fresh: '#64D2FF', resting: C.tabOff };
+const STATUSES: Status[] = ['kills', 'working', 'fresh', 'resting'];
+// read at render so the Light / Dark switch reaches the dots (theme.ts tokens with light variants)
+const dotOf = (st: Status) => ({ kills: C.statusKills, working: C.statusWorking, fresh: C.statusFresh, resting: C.statusResting }[st]);
 const WORD: Record<Status, string> = { kills: 'Kills', working: 'Working', fresh: 'Fresh', resting: 'Resting' };
 // a glyph next to the dot, so the status is never colour alone (HIG)
 const GLYPH: Record<Status, string> = { kills: '★', working: '●', fresh: '○', resting: '–' };
@@ -43,9 +45,9 @@ const Row = memo(function Row({ j }: { j: JokeSummary }) {
   const st = statusOf(j);
   return (
     <Pressable testID={`bit-${j.id}`} accessibilityRole="button" accessibilityLabel={`${j.short_title || j.title}. ${subOf(j, st)}. Open`} onPress={() => router.push(`/joke/${encodeURIComponent(j.id)}` as any)}
-      style={(s: any) => ({ height: ROW_H, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#1F1F22', backgroundColor: s.hovered ? C.card2 : 'transparent' })}>
+      style={(s: any) => ({ height: ROW_H, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: C.hairline, backgroundColor: s.hovered ? C.card2 : 'transparent' })}>
       <View style={{ width: 18, alignItems: 'center' }} accessibilityLabel={WORD[st]}>
-        <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 12, color: DOT[st], fontFamily: F.g7 }}>{GLYPH[st]}</Text>
+        <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 12, color: dotOf(st), fontFamily: F.g7 }}>{GLYPH[st]}</Text>
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.semi, fontSize: 16, color: C.text }}>{j.short_title || shortNameOf(j.title)}</Text>
@@ -152,8 +154,8 @@ export default function Bits() {
         ListEmptyComponent={list.loading && !list.data ? <Skeleton lines={8} height={18} testID="bits-skeleton" /> : list.rawError && !list.data ? <ErrorCard error={list.rawError} onRetry={list.reload} /> : <Empty text={dq ? 'Nothing matches.' : 'No bits yet. Say one.'} />}
         ListFooterComponent={items.length ? (
           <View testID="bits-legend" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, paddingVertical: 14, justifyContent: 'center' }}>
-            {(Object.keys(DOT) as Status[]).map((k) => (
-              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: DOT[k] }} /><T v="small">{WORD[k]} · {counts[k]}</T></View>
+            {STATUSES.map((k) => (
+              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotOf(k) }} /><T v="small">{WORD[k]} · {counts[k]}</T></View>
             ))}
           </View>
         ) : undefined}

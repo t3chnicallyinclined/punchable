@@ -15,6 +15,7 @@ import { useSayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { actionSheet } from '@/lib/actionSheet';
+import { afterWrite } from '@/lib/feedback';
 import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, StageWord, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
@@ -128,7 +129,7 @@ export default function BitPage() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Btn small testID="bit-punchup" label="Punch up" onPress={() => router.push({ pathname: `/bit/${encodeURIComponent(id)}`, params: { tab: 'brainstorm' } } as any)} />
         <Btn small testID="bit-riff" label="Riff" onPress={() => router.push({ pathname: '/write', params: { idea: v?.text?.slice(0, 300) || title } } as any)} />
-        <Btn small testID="bit-toset" v="add" label="To a set" onPress={() => { haptics.success(); boards.add(id, title); }}
+        <Btn small testID="bit-toset" v="add" label="To a set" onPress={() => afterWrite(() => boards.add(id, title), (ok) => ok, haptics)}
           onLongPress={() => {
             const items: MenuItem[] = [
               { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => boards.add(id, title), disabled: !boards.current },
@@ -183,7 +184,7 @@ function ShortName({ value, title, onSave }: { value: string; title: string; onS
   return (
     <View style={{ gap: 8 }}>
       <T v="mut">What you’d write on the paper list. Up to 24 letters.</T>
-      <TextInput testID="bit-shortname-input" value={v} onChangeText={setV} maxLength={24} autoFocus placeholder={shortNameOf(title)} placeholderTextColor={C.dim}
+      <TextInput testID="bit-shortname-input" value={v} onChangeText={setV} maxLength={24} autoFocus placeholder={shortNameOf(title)} placeholderTextColor={C.dim} clearButtonMode="while-editing"
         style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.bold, fontSize: 18 }} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn testID="bit-shortname-save" label="Save" v="primary" style={{ flex: 1 }} disabled={!v.trim()} onPress={() => onSave(v)} />

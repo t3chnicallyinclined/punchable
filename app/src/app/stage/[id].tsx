@@ -54,7 +54,7 @@ export default function Stage() {
   const back = () => (router.canGoBack() ? router.back() : router.navigate(`/list/${encodeURIComponent(id)}` as any));
   const stop = () => {
     if (rec !== 'on') return back();
-    haptics.warning();
+    // no haptic here (lib/feedback stopHaptic): a confirmation is not a warning; saving plays its own success
     if (Platform.OS === 'web') return setAsk(true);
     // HIG/action-sheets: choices tied to an intentional action; the destructive one on top, Cancel ("Keep going") at the bottom
     actionSheet({ title: 'Stop recording?', message: `${fmtMs(ms)} on tape. Save it and it gets reviewed after the show.`, options: [

@@ -28,7 +28,8 @@ function writeCur(c: Cur) {
 type BoardCtx = {
   current: Cur;
   setCurrent: (c: Cur) => void;
-  add: (jokeId: string, title?: string) => Promise<void>;
+  /** Resolves true when the bit was written to a board; false when the picker opened instead or the write failed. */
+  add: (jokeId: string, title?: string) => Promise<boolean>;
   pick: (jokeId: string, title?: string) => void;
 };
 const Ctx = createContext<BoardCtx | null>(null);
@@ -64,22 +65,23 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addTo = useCallback(async (board: { id: string; title: string }, jokeId: string, title?: string, quiet?: boolean) => {
+  const addTo = useCallback(async (board: { id: string; title: string }, jokeId: string, title?: string, quiet?: boolean): Promise<boolean> => {
     try {
       await creative.addItem(board.id, jokeId);
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 409) {
         ui.snack(`${title || 'It'} is already on ${board.title}`, undefined, { label: 'Open', run: () => router.push(`/board/${encodeURIComponent(board.id)}` as any) });
-        return;
+        return false;
       }
       ui.snack(`Couldn't add: ${e.message}`);
-      return;
+      return false;
     }
     setCurrent(board);
-    if (quiet) return;
+    if (quiet) return true;
     ui.snack(`Added to ${board.title}`, async () => {
       await creative.patchBoard(board.id, { remove: { joke_id: jokeId } });
     }, { label: 'Change', testID: 'snack-change', run: () => setPicker({ jokeId, title, moveFrom: board.id }) });
+    return true;
   }, [setCurrent, ui]);
 
   const add = useCallback(async (jokeId: string, title?: string) => {
@@ -90,9 +92,9 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     }
     if (!target) {
       setPicker({ jokeId, title });
-      return;
+      return false;
     }
-    await addTo(target, jokeId, title);
+    return addTo(target, jokeId, title);
   }, [addTo]);
 
   const pick = useCallback((jokeId: string, title?: string) => setPicker({ jokeId, title }), []);
