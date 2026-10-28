@@ -276,6 +276,9 @@ def run_job(cl, ws: Workspace, job: dict, file: Path | None = None, execute=None
         from worker import execute
     ws.activate()
     ref = ws.refresh()
+    # his voice profile (creative/voice.py): fetched per job, replaced only when updated_at moved, never logged
+    from creative import voice
+    vp = voice.fetch(cl, log)
     before = ws.snapshot()
     kind = job["kind"]
     actor = ACTOR.get(kind, "ai:" + kind)
@@ -298,7 +301,9 @@ def run_job(cl, ws: Workspace, job: dict, file: Path | None = None, execute=None
     if isinstance(res, dict):
         res = {**res, "online": {"refresh": {k: ref[k] for k in ("fetched", "files", "decisions")},
                                  "pushed": pushed["sent"], "legal_refused": len(pushed["legal_refused"]),
-                                 "media_deleted": purged}}
+                                 "media_deleted": purged,
+                                 # the profile the job ran with (never its text): the app can say "no voice profile yet"
+                                 "voice": {k: vp.get(k) for k in ("loaded", "updated_at", "sha", "chars")}}}
     return res
 
 

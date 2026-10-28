@@ -226,9 +226,7 @@ def test_http_worker_and_app_routes_are_separate(api):
     st, body, _ = a.get("/api/worker/decisions?after=0", raw=True, headers=H(worker_token(KEY)))
     assert st == 200 and json.loads(body)["total"] >= 0
     # his voice profile: the app's token reads and writes /api/profile/voice; the worker's token only its own copy
-    st, body = a.post("/api/profile/voice", {"text": "# Voice
-
-He talks fast."}, method="PUT", headers=H(token(KEY)))
+    st, body = a.post("/api/profile/voice", {"text": "# Voice\n\nHe talks fast."}, method="PUT", headers=H(token(KEY)))
     assert st == 200 and body["by"] == "owner" and body["text"].startswith("# Voice")
     st, body, _ = a.get("/api/worker/profile/voice", raw=True, headers=H(worker_token(KEY)))
     assert st == 200 and json.loads(body)["text"].startswith("# Voice") and "previous" not in json.loads(body)
@@ -247,9 +245,7 @@ NEW_ROUTES = [  # docs/API_CONTRACT.md "Requested by app (2026-10-26)"
     ("POST", "/api/jokes/joke:airport-bit/punchup", {}), ("POST", "/api/workingsets/ws:x/try", {"text": "x"}),
     ("PATCH", "/api/workingsets/ws:x/try/try:x", {"done": True}), ("GET", "/api/jokes?sort=strongest", None),
     ("GET", "/api/connections", None),
-    ("GET", "/api/profile/voice", None), ("PUT", "/api/profile/voice", {"text": "# Voice
-
-He talks fast."}),
+    ("GET", "/api/profile/voice", None), ("PUT", "/api/profile/voice", {"text": "# Voice\n\nHe talks fast."}),
 ]
 
 

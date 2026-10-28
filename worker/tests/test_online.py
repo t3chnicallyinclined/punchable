@@ -54,6 +54,9 @@ class FakeApi:
             return {"total": len(self.decisions), "lines": [{"decision": d} for d in self.decisions[after:]]}
         if path.startswith("/api/worker/creative"):
             return {"lines": []}
+        if path == "/api/worker/profile/voice":
+            self.profile_gets = getattr(self, "profile_gets", 0) + 1
+            return self.profile if hasattr(self, "profile") else {"kind": "voice", "text": None}
         if path == "/api/worker/ideas":
             self.ideas.append(body)
             return {"ok": True, "id": "joke:new", "attach": {"decision": "new"}}
@@ -188,3 +191,36 @@ def test_local_mode_never_asks_for_online_only_kinds():
     import worker.__main__ as WM
     assert "embed" not in WM.default_kinds(False) and "memolink" not in WM.default_kinds(False)
     assert {"embed", "memolink"} <= set(WM.default_kinds(True))
+
+
+def test_every_job_fetches_the_voice_profile_and_runs_with_it(ws, monkeypatch):
+    """online.run_job: GET /api/worker/profile/voice before the job, cached by updated_at, the text never in the log,
+    the result saying which profile the job ran with (loaded, updated_at, sha, chars: never the text)."""
+    from creative import voice
+    api, w = ws
+    voice.clear()
+    lines = []
+    monkeypatch.setattr(online, "log", lambda *a: lines.append(" ".join(str(x) for x in a)))
+    seen = []
+
+    class Exec:
+        @staticmethod
+        def run(job, file=None):
+            seen.append(voice.profile())
+            return {"status": "ok"}
+    try:
+        r = online.run_job(api, w, {"kind": "riff", "input": {}}, execute=Exec)
+        assert r["online"]["voice"] == {"loaded": False, "updated_at": None, "sha": None, "chars": 0} and seen[-1] is None
+        api.profile = {"kind": "voice", "text": "# Voice\n\nHe sits on the punch word; the parrot bit closes.",
+                       "updated_at": "2026-10-28T10:00:00+00:00", "by": "owner"}
+        r = online.run_job(api, w, {"kind": "riff", "input": {}}, execute=Exec)
+        assert r["online"]["voice"]["loaded"] and r["online"]["voice"]["updated_at"] == "2026-10-28T10:00:00+00:00"
+        assert seen[-1]["text"].startswith("# Voice") and seen[-1]["source"] == "api"
+        n = api.profile_gets
+        online.run_job(api, w, {"kind": "punchup", "input": {}}, execute=Exec)
+        assert api.profile_gets == n + 1, "fetched per job (cheap), replaced only when updated_at moves"
+        blob = "\n".join(lines) + json.dumps(r)
+        assert "parrot" not in blob and "punch word" not in blob
+        assert any(l.startswith("voice profile: loaded (") for l in lines)
+    finally:
+        voice.clear()
