@@ -7,6 +7,8 @@ and every line the AI shows you that claims to be yours is checked word for word
 The hosted version runs at [punchable.io](https://punchable.io). This repository is the code, released under the MIT
 license. It holds no one's material: the examples and test data are invented.
 
+**Working on it next?** Start at [docs/HANDOVER.md](docs/HANDOVER.md): what is live, what learns, what is open, the traps.
+
 ## What it does
 
 - **Write and riff.** Start from a premise or a line; get related bits from your own notebook and riff ideas built on
