@@ -12,10 +12,20 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
+        "EXPO_PUBLIC_AUTH": "1",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
+        "EXPO_PUBLIC_AUTH": "1",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
+      }
     }
   },
   "submit": {
