@@ -268,11 +268,18 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   interrupted, you can tell the system to avoid interrupting the currently playing audio for an incoming call unless
   people choose to accept it." Not visible in the screen; check `lib/recorder.native.ts` (not read for this spec).
 
-### 3.10 All-bits map (`/map`)
-- Push, inline title "Map", `headerRight` "Fit" (`arrow.down.left.and.arrow.up.right`); chips and legend as now; pan +
-  pinch (kept); the selected-bit card with Open · Centre · Done (kept).
-- Hardcoded dot colours (`map/index.tsx:22`, `bits.tsx:17`) move into `theme.ts` with light variants (HIG/color: "If
-  you define a custom color, make sure to supply light and dark variants").
+### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
+- Push, inline title "Map"; `Stack.Toolbar` right: Shuffle (`shuffle`), Centre (`scope`, "Centre on the selected
+  bit"), List (`list.bullet`, the map as a SectionList grouped by cluster for VoiceOver); the header search field
+  ("Find a bit") on the phone, a field above the map on the web. Pan + pinch (`lib/PanZoom`), double-tap zooms.
+- Colour = which bits are alike (cluster tokens `cluster1…6` in `theme.ts`, light and dark, all ≥ 4.5:1); status =
+  shape only (★ ● ○ –); links keep `GROUP_COLOR` plus a dash per kind so colour is never alone (HIG/color). Amber is
+  the focus ring only. Labels 12 pt in a pill (`maxFontSizeMultiplier` 1.2), never overlapping; the card and the
+  legend scale fully; the legend goes to one column at font scale ≥ 1.3.
+- Touch-and-hold a labelled bit = the system context menu (`RowMenu`/`Link.Menu`: Open · To a set… · Merge with… ·
+  Rename short name…); a dot with no label = the action sheet; the web and Android = `MenuSheet`. The card keeps a
+  visible path (Open · To a set · Merge · Done) and swipes down to dismiss. Haptics: selection on focus only. Reduce
+  Motion: no tween on Shuffle, Centre or Find.
 
 ### 3.11 Settings (`/settings`)
 - Push, large title "Settings" (the in-content "Settings & privacy" h1 goes).

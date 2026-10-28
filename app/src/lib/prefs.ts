@@ -4,8 +4,8 @@
 import { Platform } from 'react-native';
 
 export type SchemePref = 'system' | 'dark' | 'light';
-export type Prefs = { appearance: SchemePref; haptics: boolean };
-export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true };
+export type Prefs = { appearance: SchemePref; haptics: boolean; /** the galaxy map's legend strip open */ mapLegend: boolean };
+export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true };
 
 const KEY = 'pk.prefs.v1';
 let cache: Prefs = { ...DEFAULT_PREFS };
@@ -17,6 +17,7 @@ function clean(raw: any): Prefs {
   if (raw && typeof raw === 'object') {
     if (raw.appearance === 'system' || raw.appearance === 'dark' || raw.appearance === 'light') p.appearance = raw.appearance;
     if (typeof raw.haptics === 'boolean') p.haptics = raw.haptics;
+    if (typeof raw.mapLegend === 'boolean') p.mapLegend = raw.mapLegend;
   }
   return p;
 }

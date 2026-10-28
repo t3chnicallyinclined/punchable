@@ -41,12 +41,14 @@ export function PanZoom({ view, onView, width, height, children, minScale, maxSc
         const r = e.currentTarget?.getBoundingClientRect?.() || { left: 0, top: 0 };
         onView(zoomAt(view, e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top, minScale, maxScale));
       } } as any)}
-      onPointerDown={(e: any) => { drag.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, id: e.pointerId }; moved.current = false; e.currentTarget?.setPointerCapture?.(e.pointerId); }}
+      onPointerDown={(e: any) => { drag.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, id: e.pointerId }; moved.current = false; }}
       onPointerMove={(e: any) => {
         const d = drag.current;
         if (!d || e.pointerId !== d.id) return;
         const dx = e.clientX - d.x, dy = e.clientY - d.y;
-        if (Math.abs(dx) + Math.abs(dy) > 3) moved.current = true;
+        // capture the pointer only once this is a drag: capturing on pointerdown retargets pointerup to this view,
+        // and no Pressable inside (a bit's label) ever gets its tap
+        if (!moved.current && Math.abs(dx) + Math.abs(dy) > 3) { moved.current = true; e.currentTarget?.setPointerCapture?.(e.pointerId); }
         if (moved.current) onView({ ...view, x: d.vx + dx, y: d.vy + dy });
       }}
       onPointerUp={() => { drag.current = null; }}

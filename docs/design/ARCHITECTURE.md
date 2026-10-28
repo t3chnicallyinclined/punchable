@@ -52,7 +52,7 @@ imports nothing above it; a feature never imports another feature (shared things
 | `src/api/` | `api.ts` → `client.ts` (req, headers, ApiError, upload), `live.ts` (the socket), `store.ts` (the cache, in-flight dedupe, rev), `useApi.ts`, `types.ts` (the shapes at the bottom of `api.ts`); `creative.ts`, `simple.ts`, `mysets.ts`, `sets.ts` (the client half), `devFixtures.ts` |
 | `src/auth/` | `auth.ts`, `session.ts`, the `AuthGate` component out of `_layout.tsx` |
 | `src/features/tonight/` | `say.ts`, `sayRules.ts`, `SayBar.tsx`, `holdToTalk*.ts`, `ask.tsx`, `hear.tsx`, `worker.tsx`, `memos.tsx`, `importgroup.ts`, `CreateSheet.tsx`, `SetBar` (out of `(tonight)/index.tsx`) |
-| `src/features/bits/` | `jokemap.tsx`, `allmap.ts`, `mapPins.ts`, `VenueMap*.tsx`, `leafletMount.ts`, `why.tsx`, `laughs.ts`, `BitRow` (out of `(bits)/write.tsx`) |
+| `src/features/bits/` | `jokemap.tsx`, `galaxyLayout.ts` + `Galaxy.tsx` (the all-bits map; `allmap.ts` is its predecessor, kept until nothing imports it), `mapPins.ts`, `VenueMap*.tsx`, `leafletMount.ts`, `why.tsx`, `laughs.ts`, `BitRow` (out of `(bits)/write.tsx`) |
 | `src/features/sets/` | `boards.tsx`, `AddJokeSheet.tsx`, `bridge.tsx`, `PaperCard` (out of `(sets)/sets.tsx`), the view half of `sets.ts` |
 | `src/features/stage/` | `recorder*.ts`, `media.ts`, `uploads*.ts`, `uploadsCore.ts`, `photos*.ts` |
 | `src/platform/` | `prefs.ts`, **`kv.ts` (new, §2)**, `actionSheet.ts`, `accessory*.ts`, `screenTypes.ts`, `routeTable.ts` |
