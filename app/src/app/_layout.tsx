@@ -1,3 +1,4 @@
+import { wrapRoot } from '@/lib/crashReporting'; // first: starts crash reporting (off without EXPO_PUBLIC_SENTRY_DSN)
 import { Stack, router, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -97,7 +98,7 @@ function useAppearance() {
   return { scheme, prefsReady };
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
   const { scheme, prefsReady } = useAppearance();
   const ready = (loaded || !!error) && prefsReady;
@@ -135,3 +136,5 @@ export default function RootLayout() {
     </GestureRoot>
   );
 }
+
+export default wrapRoot(RootLayout);

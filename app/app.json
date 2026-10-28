@@ -98,7 +98,16 @@
         }
       ],
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://bugs.punchable.io",
+          "organization": "bugsinkhasnoorgs",
+          "project": "punchable",
+          "note": "Self-hosted Bugsink (infra/k8s/70-bugsink.yaml). Source maps upload at build time only with the EAS secret SENTRY_AUTH_TOKEN and SENTRY_DISABLE_AUTO_UPLOAD removed from eas.json; see infra/OBSERVABILITY.md."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

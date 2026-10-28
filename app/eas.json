@@ -16,6 +16,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
         "EXPO_PUBLIC_AUTH": "1",
+        "EXPO_PUBLIC_ENV": "preview",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
       }
     },
@@ -24,6 +27,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
         "EXPO_PUBLIC_AUTH": "1",
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
       }
     },
@@ -33,6 +39,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
         "EXPO_PUBLIC_AUTH": "1",
+        "EXPO_PUBLIC_ENV": "dev",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
       }
     }

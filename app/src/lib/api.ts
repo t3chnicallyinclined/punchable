@@ -40,14 +40,36 @@ export class ApiError extends Error {
   }
 }
 
+// ---- failed requests, for the crash reporter (src/lib/crashReporting.ts): method, path and status only. The listener
+// turns the path into a route pattern before anything is recorded; a body or a query is never handed over.
+export type ApiEvent = { method: string; path: string; status: number; reason?: string };
+let apiListener: ((ev: ApiEvent) => void) | null = null;
+export function setApiEventListener(f: ((ev: ApiEvent) => void) | null) {
+  apiListener = f;
+}
+function failed(method: string, path: string, status: number, reason?: string) {
+  try {
+    apiListener?.({ method, path: path.split('?')[0], status, reason });
+  } catch {}
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const r = await fetch(API_URL + path, {
-    method,
-    headers: await headers(body !== undefined ? { 'Content-Type': 'application/json' } : undefined),
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let r: Response;
+  try {
+    r = await fetch(API_URL + path, {
+      method,
+      headers: await headers(body !== undefined ? { 'Content-Type': 'application/json' } : undefined),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e: any) {
+    failed(method, path, 0, e?.name || 'network');
+    throw e;
+  }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ApiError(r.status, (j && j.error) || `HTTP ${r.status}`);
+  if (!r.ok) {
+    failed(method, path, r.status);
+    throw new ApiError(r.status, (j && j.error) || `HTTP ${r.status}`);
+  }
   if (r.status === 202 && j && typeof j === 'object') (j as any).__status = 202;
   return j as T;
 }
@@ -87,7 +109,10 @@ export async function upload(blob: Blob, opts: UploadMeta) {
     body: blob,
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ApiError(r.status, j.error || `HTTP ${r.status}`);
+  if (!r.ok) {
+    failed('POST', '/api/upload', r.status);
+    throw new ApiError(r.status, j.error || `HTTP ${r.status}`);
+  }
   return j as { status: 'queued'; file: string; kind: string; bytes: number };
 }
 

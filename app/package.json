@@ -6,6 +6,7 @@
     "@expo-google-fonts/inter": "0.4.2",
     "@expo-google-fonts/space-grotesk": "0.4.1",
     "@expo/ui": "~58.0.24",
+    "@sentry/react-native": "~8.28.0",
     "expo": "~58.0.20",
     "expo-asset": "~58.0.18",
     "expo-audio": "58.0.10",
@@ -58,7 +59,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e.mjs",
     "lint": "expo lint",
-    "test:unit": "node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs && node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs && node --experimental-strip-types --no-warnings tests/routes.test.mjs && node --experimental-strip-types --no-warnings tests/feedback.test.mjs && node --experimental-strip-types --no-warnings tests/selfImport.test.mjs",
+    "test:unit": "node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs && node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs && node --experimental-strip-types --no-warnings tests/routes.test.mjs && node --experimental-strip-types --no-warnings tests/feedback.test.mjs && node --experimental-strip-types --no-warnings tests/selfImport.test.mjs && node --experimental-strip-types --no-warnings tests/crash.test.mjs",
     "dev-fixtures": "node scripts/dev-fixtures.mjs"
   },
   "private": true
