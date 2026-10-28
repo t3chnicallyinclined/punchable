@@ -286,7 +286,7 @@ case "$STEP" in
     # BUGSINK_SUPERUSER=email:password line on STDIN (ship.sh bugsink-secret), used by Bugsink only while no user exists.
     # Same path as ai-secret: a variable, printf, a pipe into the Secret; never argv, ps, a file on the host, or the output.
     ENVF="$(cat)"
-    SU="$(grep -E '^BUGSINK_SUPERUSER=.+@.+:.+' <<<"$ENVF" | head -1 | cut -d= -f2-)"
+    SU="$(grep -E '^BUGSINK_SUPERUSER=.+@.+:.+' <<<"$ENVF" | head -1 | cut -d= -f2- || true)"   # no line = empty, not an exit under set -e
     if $K -n $NS get secret punchable-bugsink >/dev/null 2>&1; then
       KEYV="$($K -n $NS get secret punchable-bugsink -o jsonpath='{.data.SECRET_KEY}' | base64 -d)"
       echo "punchable-bugsink exists: SECRET_KEY kept"
