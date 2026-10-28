@@ -55,7 +55,7 @@ def test_worker_deployment():
     assert "ANTHROPIC" not in str(c["env"])  # the key is never an inline value
     sc = c["securityContext"]
     assert sc["readOnlyRootFilesystem"] is True and sc["allowPrivilegeEscalation"] is False and sc["capabilities"] == {"drop": ["ALL"]}
-    assert "ports" not in c  # nothing listens
+    assert [p["containerPort"] for p in c["ports"]] == [9100]  # the metrics port is the ONLY listener (worker/metrics.py)
     assert "nvidia.com/gpu" not in str(c["resources"]) and c["resources"]["limits"]["memory"] == "1Gi"
     lp = c["livenessProbe"]
     assert "heartbeat" in " ".join(lp["exec"]["command"]) and lp["periodSeconds"] == 60 and lp["failureThreshold"] == 3

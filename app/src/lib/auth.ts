@@ -3,7 +3,8 @@
 //   native: client pk-mobile, redirect punchable://auth/callback
 // Tokens: the access token lives in memory only. The refresh token is kept in expo-secure-store on the phone and in
 // sessionStorage on the web (gone when the tab closes). The access token is refreshed 60 s before it expires; the
-// realm rotates refresh tokens, so each refresh stores the new one.
+// realm rotates refresh tokens, so each refresh stores the new one BEFORE it is used (lib/tokens.ts: one refresh in
+// flight; only Keycloak's invalid_grant signs him out, a network failure retries and keeps the session).
 // Wiring (no change to the screens): importing this module once (the root layout: `import '@/lib/auth';`)
 //   - registers the bearer with api.ts (setAuthHeaderProvider),
 //   - sends the token as the first message on /api/live (never in the URL),
@@ -20,6 +21,8 @@ import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { API_URL, setAuthHeaderProvider } from './api';
 import { Profile, endSessionUrl, loginHref, originSlash, profileFrom } from './session';
+import { retry } from './retry';
+import { Tokens } from './tokens';
 
 if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession(); // web only: the popup's /auth/callback hands the code back to the opener
 
@@ -75,25 +78,26 @@ export const AUTH_ENABLED = computeEnabled();
 
 const REFRESH_KEY = 'punchable.refresh';
 const WAY_KEY = 'punchable.signin-way'; // 'google' | 'email': which button he used last on this device (a label only)
-type Tokens = { access: string; expiresAt: number; refresh: string | null; idToken: string | null };
-let tokens: Tokens | null = null;
-// Has the stored refresh token been tried yet? Until then the app doesn't know whether he is signed in.
-let checked = false;
 let discovery: AuthSession.DiscoveryDocument | null = null;
-let refreshing: Promise<string | null> | null = null;
-const listeners = new Set<(signedIn: boolean) => void>();
 
 // ---------------------------------------------------------------- refresh-token storage
+// The keychain write is guarded: it never throws into the sign-in path (setTokens does not await it), it retries a
+// transient keychain failure (lib/retry), and a lasting one is logged, not fatal: he signs in again next time.
+// AFTER_FIRST_UNLOCK: the token stays readable while the phone is locked after its first unlock, so a recording that
+// uploads in the background can still refresh (expo-secure-store: keychainAccessible / kSecAttrAccessible).
+// Size: expo-secure-store enforces no limit; the keychain itself rejects nothing at the sizes Keycloak issues (a
+// refresh token here is ~1 KB); a native error, if any, lands in the catch below.
+const KEYCHAIN = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
 async function saveRefresh(rt: string | null) {
   try {
     if (Platform.OS === 'web') {
       const ss = (globalThis as any).sessionStorage;
       if (rt) ss?.setItem(REFRESH_KEY, rt);
       else ss?.removeItem(REFRESH_KEY);
-    } else if (rt) await SecureStore.setItemAsync(REFRESH_KEY, rt);
-    else await SecureStore.deleteItemAsync(REFRESH_KEY);
-  } catch {
-    /* storage unavailable: he signs in again next time */
+    } else if (rt) await retry(() => SecureStore.setItemAsync(REFRESH_KEY, rt, KEYCHAIN));
+    else await retry(() => SecureStore.deleteItemAsync(REFRESH_KEY));
+  } catch (e: any) {
+    console.warn('[auth] the refresh token was not stored; sign-in will not survive a relaunch:', e?.message || String(e));
   }
 }
 async function loadRefresh(): Promise<string | null> {
@@ -110,51 +114,26 @@ export async function getDiscovery(): Promise<AuthSession.DiscoveryDocument> {
   return discovery;
 }
 
-function setTokens(r: AuthSession.TokenResponse | null) {
-  if (!r) {
-    tokens = null;
-  } else {
-    const ttl = r.expiresIn ?? 300;
-    tokens = {
-      access: r.accessToken,
-      expiresAt: (r.issuedAt ?? Math.floor(Date.now() / 1000)) + ttl,
-      refresh: r.refreshToken ?? tokens?.refresh ?? null,
-      idToken: r.idToken ?? tokens?.idToken ?? null, // memory only: the sign-out hint and the profile's claims
-    };
-  }
-  saveRefresh(tokens?.refresh ?? null);
-  checked = true;
-  listeners.forEach((f) => f(!!tokens));
-}
+// ---------------------------------------------------------------- the token state (lib/tokens.ts, unit-tested)
+// Access token and ID token in memory, the refresh token in the store above. The machine persists a new refresh token
+// BEFORE publishing it, keeps one refresh in flight for every caller (headers, the live socket, uploads, a 401),
+// treats only Keycloak's invalid_grant as signed-out (a network failure retries, then keeps the session), and on
+// invalid_grant tries the stored token once if it differs from the one in memory (rotation grace).
+const machine = new Tokens({
+  refresh: async (rt) => AuthSession.refreshAsync({ clientId: CLIENT_ID, refreshToken: rt, scopes: SCOPES }, await getDiscovery()),
+  store: { load: loadRefresh, save: saveRefresh },
+  log: (m) => console.warn('[auth]', m),
+});
 
-async function refreshWith(rt: string): Promise<string | null> {
-  try {
-    const d = await getDiscovery();
-    const r = await AuthSession.refreshAsync({ clientId: CLIENT_ID, refreshToken: rt, scopes: SCOPES }, d);
-    setTokens(r);
-    return r.accessToken;
-  } catch {
-    setTokens(null); // expired or reused (rotation): sign in again
-    return null;
-  }
-}
-
-/** A valid access token, refreshed when it has under 60 s left; null when signed out. */
+/** A valid access token, refreshed when it has under 60 s left; null when signed out. A network problem keeps the
+ *  session and returns the stale token (the API decides; a 401 then goes through handle401, not straight to /login). */
 export async function getAccessToken(): Promise<string | null> {
   if (!AUTH_ENABLED) return null;
-  const now = Math.floor(Date.now() / 1000);
-  if (tokens && tokens.expiresAt - now > 60) return tokens.access;
-  if (refreshing) return refreshing;
-  const rt = tokens?.refresh ?? (await loadRefresh());
-  if (!rt) return null;
-  refreshing = refreshWith(rt).finally(() => {
-    refreshing = null;
-  });
-  return refreshing;
+  return machine.getAccessToken();
 }
 
 export function isSignedIn() {
-  return !!tokens;
+  return machine.signedIn;
 }
 
 let rememberedWay: string | null = (() => {
@@ -176,16 +155,16 @@ export function rememberWay(way: 'google' | 'email') {
 
 /** Who is signed in, from the ID token (name, email, picture, how). Null when signed out or auth is off. */
 export function getProfile(): Profile | null {
-  return tokens ? profileFrom(tokens.idToken, tokens.access, rememberedWay) : null;
+  const t = machine.tokens;
+  return t ? profileFrom(t.idToken, t.access, rememberedWay) : null;
 }
 
 let checking: Promise<void> | null = null;
 function checkOnce(): Promise<void> {
-  if (checked || !AUTH_ENABLED) return Promise.resolve();
+  if (machine.checked || !AUTH_ENABLED) return Promise.resolve();
   if (!checking) {
     const done = () => {
-      checked = true;
-      listeners.forEach((f) => f(!!tokens));
+      machine.checked = true;
     };
     checking = getAccessToken().then(done, done);
   }
@@ -195,7 +174,7 @@ function checkOnce(): Promise<void> {
 export type Session = { enabled: boolean; checking: boolean; signedIn: boolean; profile: Profile | null };
 /** For screens: re-renders when he signs in or out. */
 export function useSession(): Session {
-  const read = (): Session => ({ enabled: AUTH_ENABLED, checking: AUTH_ENABLED && !checked, signedIn: !!tokens, profile: getProfile() });
+  const read = (): Session => ({ enabled: AUTH_ENABLED, checking: AUTH_ENABLED && !machine.checked, signedIn: machine.signedIn, profile: getProfile() });
   const [st, setSt] = useState<Session>(read);
   useEffect(() => {
     const off = onAuthChange(() => setSt(read()));
@@ -205,20 +184,18 @@ export function useSession(): Session {
   return st;
 }
 export function onAuthChange(f: (signedIn: boolean) => void) {
-  listeners.add(f);
-  return () => {
-    listeners.delete(f);
-  };
+  return machine.onChange(f);
 }
 
-/** The code from the login screen's AuthRequest -> tokens (the PKCE verifier proves it is the same client). */
+/** The code from the login screen's AuthRequest -> tokens (the PKCE verifier proves it is the same client).
+ *  Resolves once the refresh token is stored, so a reload right after sign-in finds it. */
 export async function completeSignIn(code: string, codeVerifier: string | undefined) {
   const d = await getDiscovery();
   const r = await AuthSession.exchangeCodeAsync(
     { clientId: CLIENT_ID, code, redirectUri: REDIRECT_URI, extraParams: codeVerifier ? { code_verifier: codeVerifier } : undefined },
     d,
   );
-  setTokens(r);
+  await machine.accept(r);
 }
 
 /**
@@ -228,10 +205,10 @@ export async function completeSignIn(code: string, codeVerifier: string | undefi
  * If Keycloak can't be reached, the refresh token is revoked instead; this device forgets it either way.
  */
 export async function signOut(): Promise<void> {
-  const idToken = tokens?.idToken ?? null;
-  const rt = tokens?.refresh ?? (await loadRefresh());
+  const idToken = machine.tokens?.idToken ?? null;
+  const rt = machine.tokens?.refresh ?? (await loadRefresh());
   leaving = true;
-  setTokens(null);
+  await machine.clear();
   if (!AUTH_ENABLED) {
     leaving = false;
     goLogin();
@@ -308,8 +285,11 @@ function install() {
     const r = await realFetch(input, init);
     const url = typeof input === 'string' ? input : input?.url ?? '';
     if (r.status === 401 && apiOrigin(url) && !url.includes('/api/health')) {
-      setTokens(null);
-      goLogin();
+      // the API rejected the token: refresh through the one shared path; only Keycloak's invalid_grant means /login
+      // (a network failure keeps the session: this request failed, the next one tries again)
+      machine.handle401().then((stillSignedIn) => {
+        if (!stillSignedIn) goLogin();
+      });
     }
     return r;
   };

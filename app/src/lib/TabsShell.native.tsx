@@ -7,16 +7,6 @@ import React from 'react';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { C } from './theme';
 import { useUI } from './ui';
-import { ACCESSORY } from './accessory';
-import { SayBar } from './SayBar';
-
-/** The input bar inside the tab bar's bottom accessory. Two copies exist (regular and inline); the system draws the glass. */
-function AccessoryBar() {
-  const ui = useUI();
-  const placement = NativeTabs.BottomAccessory.usePlacement();
-  if (!ui.bar) return null;
-  return <SayBar {...ui.bar} variant={placement === 'inline' ? 'inline' : 'accessory'} />;
-}
 
 export function TabsShell() {
   const ui = useUI();

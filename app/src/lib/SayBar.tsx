@@ -13,6 +13,7 @@ import { holdHaptic } from './feedback';
 import { useHoldToTalk } from './holdToTalk';
 import { BarConfig, Icon, useUI } from './ui';
 import { ACCESSORY } from './accessory';
+import { useFlags } from './useFlags';
 import type { Worker } from './ask';
 
 export { canListen, useHoldToTalk } from './holdToTalk';
@@ -54,6 +55,8 @@ export const BAR_SIZES = {
  */
 export function useSayBar(cfg: SayBarProps): React.ReactNode {
   const ui = useUI();
+  // the accessory needs the system's glass (ACCESSORY) AND the remote switch (lib/flags: /api/health flags.glass_accessory)
+  const accessory = ACCESSORY && useFlags().glassAccessory;
   const ref = useRef(cfg);
   ref.current = cfg;
   const focused = useRef(false);
@@ -63,15 +66,15 @@ export function useSayBar(cfg: SayBarProps): React.ReactNode {
     ui.setBar(b);
   }, [ui.setBar]); // eslint-disable-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => {
-    if (!ACCESSORY) return;
+    if (!accessory) return;
     focused.current = true;
     publish();
     return () => { focused.current = false; ui.setBar(null); };
-  }, [publish])); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [publish, accessory])); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (ACCESSORY && focused.current) publish();
-  }, [cfg.placeholder, cfg.hint, cfg.worker?.online, cfg.worker?.paused, cfg.busy, publish]);
-  if (ACCESSORY) return null;
+    if (accessory && focused.current) publish();
+  }, [cfg.placeholder, cfg.hint, cfg.worker?.online, cfg.worker?.paused, cfg.busy, publish, accessory]);
+  if (accessory) return null;
   return <SayBar {...cfg} />;
 }
 
