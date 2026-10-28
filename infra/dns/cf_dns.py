@@ -29,7 +29,7 @@ AUTH = CFG["PK_AUTH_HOST"]
 assert AUTH.endswith("." + DOMAIN), "auth host must be inside the zone"
 # The comment that marks records this tool made (undo deletes only those). PK_DNS_TAG keeps an older tag working.
 TAG = CFG.get("PK_DNS_TAG") or "punchable-infra (punchable/infra/dns/cf_dns.py)"
-WANT = [("A", DOMAIN, ORIGIN), ("A", AUTH, ORIGIN)]
+WANT = [("A", DOMAIN, ORIGIN), ("A", AUTH, ORIGIN), ("A", "bugs." + DOMAIN, ORIGIN)]
 SECRETS = Path.home() / ".punchable"
 LEDGER = SECRETS / "dns-created.json"
 
