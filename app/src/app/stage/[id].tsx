@@ -4,11 +4,12 @@
 // (HIG: a confirmation before an upload you can't take back). Saving hands the tape to the upload queue (retried
 // on the backoff schedule if the venue has no signal). The screen stays awake.
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
+import { actionSheet } from '@/lib/actionSheet';
 import { isWeb, micExplained } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
 import { enqueueUpload } from '@/lib/uploads';
@@ -54,7 +55,13 @@ export default function Stage() {
   const stop = () => {
     if (rec !== 'on') return back();
     haptics.warning();
-    setAsk(true);
+    if (Platform.OS === 'web') return setAsk(true);
+    // HIG/action-sheets: choices tied to an intentional action; the destructive one on top, Cancel ("Keep going") at the bottom
+    actionSheet({ title: 'Stop recording?', message: `${fmtMs(ms)} on tape. Save it and it gets reviewed after the show.`, options: [
+      { label: 'Discard the recording', destructive: true, onPress: discard },
+      { label: 'Save the set', onPress: save },
+      { label: 'Keep going', cancel: true },
+    ] });
   };
   const discard = () => {
     setAsk(false);

@@ -7,13 +7,14 @@
 // HIG (the audit): the four buttons stay primary; on the phone the card also has LABELLED swipe actions (leading:
 // Accept = the suggested action; trailing: Not a joke) and a long-press menu. No hidden card flick.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ApiError, decide, get, post, undo, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { HearIt } from '@/lib/hear';
 import { Memo, MemosResp, memoTitle } from '@/lib/memos';
 import { SwipeRow } from '@/lib/SwipeRow';
+import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { C, F, fmtDate, fmtMs } from '@/lib/theme';
 import { WorkerLine } from '@/lib/worker';
 import { AIBadge, Btn, Empty, ErrorCard, List, ListRow, MenuItem, MenuSheet, Skeleton, T, useUI } from '@/lib/ui';
@@ -23,6 +24,7 @@ type NotJoke = { joke_id: string; title: string; text: string; kind: string; why
 type Like = { joke_id: string; title: string; why?: string } | null;
 type Batch = Record<string, { group: any; others?: any[]; attached_to?: any }>;
 const ON_DECK = 8; // how many cards' "sounds like" one call fetches
+const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
 
 function likeOf(jid: string, b: Batch | null): Like | undefined {
   if (!b || !(jid in b)) return undefined;
@@ -62,16 +64,17 @@ function Card({ x, memo, like, onDone, onMenu }: { x: NotJoke; memo: Memo | null
   }, [like, onDone, ui, x]);
   const accept = like ? { label: `Add to ${like.title.slice(0, 14)}`, onPress: () => act('version'), testID: `inbox-swipe-accept-${x.joke_id}` } : { label: 'New bit', onPress: () => act('new'), testID: `inbox-swipe-accept-${x.joke_id}` };
   const menu: MenuItem[] = [
-    { label: 'Open the jot', onPress: () => router.push(`/joke/${encodeURIComponent(x.joke_id)}` as any) },
-    ...(like ? [{ label: `Add as a new version of ${like.title}`, onPress: () => act('version') }] : []),
-    { label: 'Keep as a new bit', onPress: () => act('new') },
-    { label: 'Ask about it', onPress: () => act('ask') },
-    { label: 'Not a joke', onPress: () => act('not'), destructive: true },
+    { label: 'Open the jot', icon: 'doc.text', onPress: () => router.push(`/joke/${encodeURIComponent(x.joke_id)}` as any) },
+    ...(like ? [{ label: `Add as a new version of ${like.title}`, icon: 'plus.square.on.square', onPress: () => act('version') }] : []),
+    { label: 'Keep as a new bit', icon: 'plus', onPress: () => act('new') },
+    { label: 'Ask about it', icon: 'text.bubble', onPress: () => act('ask') },
+    { label: 'Not a joke', icon: 'trash', onPress: () => act('not'), destructive: true },
   ];
   return (
-    <SwipeRow testID={`inbox-swipe-${x.joke_id}`} leading={busy ? null : accept} trailing={busy ? null : { label: 'Not a joke', destructive: true, onPress: () => act('not'), testID: `inbox-swipe-not-${x.joke_id}` }} onLongPress={() => onMenu(menu)}>
-      <Pressable onLongPress={() => onMenu(menu)} delayLongPress={350} accessibilityLabel={`${memo ? 'Voice memo' : 'Jot'}: ${x.text.slice(0, 120)}. Long press for actions`} testID={`inbox-card-${x.joke_id}`}
-        style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
+    <SwipeRow testID={`inbox-swipe-${x.joke_id}`} leading={busy ? null : accept} trailing={busy ? null : { label: 'Not a joke', destructive: true, onPress: () => act('not'), testID: `inbox-swipe-not-${x.joke_id}` }} onLongPress={ios ? undefined : () => onMenu(menu)}>
+      <RowMenu href={`/joke/${encodeURIComponent(x.joke_id)}`} items={menu}>
+      <Pressable onLongPress={ios ? undefined : () => onMenu(menu)} delayLongPress={350} accessibilityLabel={`${memo ? 'Voice memo' : 'Jot'}: ${x.text.slice(0, 120)}. Long press for actions`} testID={`inbox-card-${x.joke_id}`}
+        {...rowActions(menu)} style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <T v="eb" style={{ flex: 1 }}>{memo ? 'Voice memo' : 'Jot'}</T>
           <T v="small">{memo?.recorded_at ? `${fmtDate(memo.recorded_at.slice(0, 10))}` : ''}{memo?.duration_s ? ` · ${fmtMs(memo.duration_s * 1000)}` : ''}</T>
@@ -91,6 +94,7 @@ function Card({ x, memo, like, onDone, onMenu }: { x: NotJoke; memo: Memo | null
           <Btn small testID={`inbox-ask-${x.joke_id}`} v="ghost" label="Ask" disabled={busy} onPress={() => act('ask')} />
         </View>
       </Pressable>
+      </RowMenu>
     </SwipeRow>
   );
 }

@@ -21,6 +21,7 @@ import { useBoards } from '@/lib/boards';
 import { Build, Step, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { SwipeRow } from '@/lib/SwipeRow';
+import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { C, F } from '@/lib/theme';
 import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -30,12 +31,14 @@ const enc = encodeURIComponent;
 const boardPatch = (id: string, body: any) => patch<any>(`/api/boards/${enc(id)}`, body);
 
 const native = Platform.OS !== 'web';
+const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
 
-function Row({ x, i, handle, onOpen, onMenu }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void }) {
+function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; items: MenuItem[] }) {
   const name = x.short_name || shortNameOf(x.title);
   return (
     <View testID={`row-${i}`} style={{ borderRadius: 16, paddingVertical: 4 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${fmtDur(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={onMenu} delayLongPress={350}
+      <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${fmtDur(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={ios ? undefined : onMenu} delayLongPress={350}
+        {...rowActions(items)}
         style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, paddingRight: 12, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
         {handle}
         <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.semi, fontSize: 14, color: C.mut2, textAlign: 'right' }}>{i + 1}</Text>
@@ -129,16 +132,18 @@ export default function SetListScreen() {
       ui.snack(`Couldn't rename: ${e.message}`);
     }
   };
+  // HIG/menus: an ellipsis where more input follows; the destructive item last (HIG/context-menus)
+  const rowItems = (x: Step, i: number): MenuItem[] => [
+    { label: 'Open the bit', icon: 'doc.text', onPress: () => router.push(`/joke/${enc(x.joke_id)}` as any), testID: `row-openbit-${i}` },
+    { label: 'Swap…', icon: 'arrow.triangle.swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swap-${i}` },
+    { label: 'Rename short name…', icon: 'pencil', onPress: () => setRename(x), testID: `row-rename-${i}` },
+    { label: 'Move to top', icon: 'arrow.up.to.line', onPress: () => reorder(i, 0), disabled: i === 0, testID: `row-top-${i}` },
+    { label: 'Move to bottom', icon: 'arrow.down.to.line', onPress: () => reorder(i, steps.length - 1), disabled: i === steps.length - 1, testID: `row-bottom-${i}` },
+    { label: 'Remove from this list', icon: 'trash', onPress: () => remove(x, i), destructive: true, testID: `row-remove-${i}` },
+  ];
   const openMenu = (x: Step, i: number) => {
     haptics.light();
-    setMenu({ title: nameOf(x), items: [
-      { label: 'Open the bit', onPress: () => router.push(`/joke/${enc(x.joke_id)}` as any), testID: `row-openbit-${i}` },
-      { label: 'Swap for another', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swap-${i}` },
-      { label: 'Rename the short name', onPress: () => setRename(x), testID: `row-rename-${i}` },
-      { label: 'Move to top', onPress: () => reorder(i, 0), disabled: i === 0, testID: `row-top-${i}` },
-      { label: 'Move to bottom', onPress: () => reorder(i, steps.length - 1), disabled: i === steps.length - 1, testID: `row-bottom-${i}` },
-      { label: 'Remove from this list', onPress: () => remove(x, i), destructive: true, testID: `row-remove-${i}` },
-    ] });
+    setMenu({ title: nameOf(x), items: rowItems(x, i) });
   };
 
   if (b.rawError && !B) return <Screen title="Set list" back backLabel="Sets"><ErrorCard error={String(b.rawError)} onRetry={b.reload} /></Screen>;
@@ -236,8 +241,10 @@ export default function SetListScreen() {
             <SwipeRow testID={`row-swipe-${i}`}
               trailing={{ label: 'Remove', destructive: true, onPress: () => remove(x, i), testID: `row-swipe-remove-${i}` }}
               second={{ label: 'Swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swipe-swap-${i}` }}
-              onLongPress={() => openMenu(x, i)}>
-              <Row x={x} i={i} handle={handle} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} />
+              onLongPress={ios ? undefined : () => openMenu(x, i)}>
+              <RowMenu href={`/joke/${enc(x.joke_id)}`} items={rowItems(x, i)}>
+                <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} />
+              </RowMenu>
             </SwipeRow>
           </View>
         )} />

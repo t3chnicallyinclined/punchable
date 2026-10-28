@@ -14,6 +14,7 @@ import { shortNameOf } from '@/lib/say';
 import { SayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
+import { actionSheet } from '@/lib/actionSheet';
 import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, StageWord, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
@@ -127,10 +128,14 @@ export default function BitPage() {
         <Btn small testID="bit-punchup" label="Punch up" onPress={() => router.push({ pathname: `/bit/${encodeURIComponent(id)}`, params: { tab: 'brainstorm' } } as any)} />
         <Btn small testID="bit-riff" label="Riff" onPress={() => router.push({ pathname: '/write', params: { idea: v?.text?.slice(0, 300) || title } } as any)} />
         <Btn small testID="bit-toset" v="add" label="To a set" onPress={() => { haptics.success(); boards.add(id, title); }}
-          onLongPress={() => setMenu([
-            { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => boards.add(id, title), disabled: !boards.current },
-            { label: 'Pick a set list…', onPress: () => boards.pick(id, title) },
-          ])} />
+          onLongPress={() => {
+            const items: MenuItem[] = [
+              { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => boards.add(id, title), disabled: !boards.current },
+              { label: 'Pick a set list…', onPress: () => boards.pick(id, title) },
+            ];
+            if (native) actionSheet({ title: 'To a set', options: [...items.filter((it) => !it.disabled).map((it) => ({ label: it.label, onPress: it.onPress })), { label: 'Cancel', cancel: true }] });
+            else setMenu(items);
+          }} />
       </View>
       <MergeHint jokeId={id} onMerged={(main) => (main === id ? d.reload() : router.replace(`/joke/${encodeURIComponent(main)}` as any))} />
 

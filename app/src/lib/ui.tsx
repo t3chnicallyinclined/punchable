@@ -473,8 +473,8 @@ export function SheetHead({ title, onCancel, onDone, doneLabel = 'Done', doneDis
   );
 }
 
-export type MenuItem = { label: string; onPress: () => void; destructive?: boolean; testID?: string; disabled?: boolean };
-/** A long-press context menu (HIG: Open · Rename · Move to top/bottom · Remove), as a sheet on every platform. */
+export type MenuItem = { label: string; onPress: () => void; destructive?: boolean; testID?: string; disabled?: boolean; /** an SF Symbol name for the phone's native menu */ icon?: string };
+/** A long-press menu as a sheet: the web and Android. iOS rows get the system context menu instead (lib/RowMenu.native). */
 export function MenuSheet({ visible, title, items, onClose, testID }: { visible: boolean; title?: string; items: MenuItem[]; onClose: () => void; testID?: string }) {
   return (
     <Sheet visible={visible} onClose={onClose} label={title || 'Actions'} testID={testID}>
