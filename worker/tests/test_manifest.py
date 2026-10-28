@@ -17,7 +17,8 @@ DESK = Path(__file__).resolve().parents[2]
 K8S = DESK / "infra" / "k8s"
 FILL = {"__PK_DOMAIN__": "example.com", "__PK_AUTH_HOST__": "auth.example.com", "__PK_MAIL_FROM__": "x@example.com",
         "__PK_NS__": "punchable", "__PK_KC_NS__": "keycloak", "__PK_REALM__": "punchable", "__PK_ORIGIN_IP__": "203.0.113.10",
-        "__PK_OWNER_ID__": "owner", "__IMAGE_REF__": "localhost:32000/punchable-worker@sha256:" + "0" * 64}
+        "__PK_OWNER_ID__": "owner", "__PK_COMIC_NAME__": "the comic", "__PK_COMIC_FIRST__": "the comic",
+        "__IMAGE_REF__": "localhost:32000/punchable-worker@sha256:" + "0" * 64}
 
 
 def render(name: str) -> list[dict]:
@@ -101,3 +102,40 @@ def test_dockerfile_copies_are_in_the_dockerignore_and_config_is_hosted():
     req = "\n".join(l for l in (DESK / "infra" / "worker" / "requirements.txt").read_text(encoding="utf-8").splitlines()
                     if l.strip() and not l.startswith("#"))
     assert re.search(r"^anthropic==", req, re.M) and "torch" not in req and "whisper" not in req
+
+
+def _bash():
+    import shutil
+    return shutil.which("bash")
+
+
+@pytest.mark.skipif(not _bash(), reason="needs bash for infra/render.sh")
+def test_render_sh_fills_the_comic_name_with_a_safe_default_and_leaves_no_placeholder(tmp_path):
+    """infra/render.sh with a config that names the comic, and with one that does not: both manifests render with no
+    __PK_ placeholder; the name lands in PK_COMIC_NAME / PK_COMIC_FIRST; unset, both are "the comic" (the prompts then
+    say "a stand-up comic's", never "stand-up comic the comic's")."""
+    import os
+    import shutil
+    import subprocess
+    infra = tmp_path / "infra"
+    shutil.copytree(DESK / "infra" / "k8s", infra / "k8s")
+    shutil.copy(DESK / "infra" / "render.sh", infra / "render.sh")
+    base = ("PK_DOMAIN=example.com\nPK_AUTH_HOST=auth.example.com\nPK_MAIL_FROM=x@example.com\nPK_NS=punchable\n"
+            "PK_KC_NS=keycloak\nPK_REALM=punchable\nPK_ORIGIN_IP=203.0.113.10\nPK_OWNER_ID=owner\n")
+
+    def render(cfg: str, name: str) -> dict:
+        (infra / "config.env").write_text(cfg, encoding="utf-8")
+        r = subprocess.run([_bash(), str(infra / "render.sh"), str(infra / "k8s" / name), "localhost:32000/x@sha256:" + "0" * 64],
+                           capture_output=True, text=True, encoding="utf-8", env={**os.environ, "PK_COMIC_NAME": "", "PK_COMIC_FIRST": ""})
+        assert r.returncode == 0, r.stderr
+        assert not re.search(r"__(PK_[A-Z_]+|IMAGE_REF)__", r.stdout), r.stdout[:300]
+        docs = [d for d in yaml.safe_load_all(r.stdout) if d]
+        dep = next(d for d in docs if d["kind"] == "Deployment")
+        return {e["name"]: e.get("value") for e in dep["spec"]["template"]["spec"]["containers"][0]["env"]}
+    for name in ("30-api.yaml", "35-worker.yaml"):
+        env = render(base, name)
+        assert env["PK_COMIC_NAME"] == "the comic" and env["PK_COMIC_FIRST"] == "the comic", name
+        env = render(base + 'PK_COMIC_NAME="Pat Example"\n', name)  # bash sources the file: a space needs quotes
+        assert env["PK_COMIC_NAME"] == "Pat Example" and env["PK_COMIC_FIRST"] == "Pat Example", "the first name defaults to the name"
+        env = render(base + 'PK_COMIC_NAME="Pat Example"\nPK_COMIC_FIRST=Pat\n', name)
+        assert env["PK_COMIC_NAME"] == "Pat Example" and env["PK_COMIC_FIRST"] == "Pat", name

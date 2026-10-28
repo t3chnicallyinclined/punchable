@@ -50,6 +50,10 @@ spec:
             - { name: PK_DATA, value: /tmp/punchable }
             # the actor id written on your own edits (`by`); must match the id in your data (PK_OWNER_ID in config)
             - { name: PK_OWNER_ID, value: "__PK_OWNER_ID__" }
+            # how the AI prompts name the comic (PK_COMIC_NAME / PK_COMIC_FIRST in infra/config.env; render.sh
+            # defaults both to "the comic", and the prompts then read "a stand-up comic's", "his idea")
+            - { name: PK_COMIC_NAME, value: "__PK_COMIC_NAME__" }
+            - { name: PK_COMIC_FIRST, value: "__PK_COMIC_FIRST__" }
             - { name: PUBLIC_URL, value: "https://__PK_DOMAIN__" }
             - { name: OIDC_ISSUER, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__" }
             - { name: OIDC_AUDIENCE, value: pk-api }

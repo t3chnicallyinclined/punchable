@@ -27,7 +27,8 @@ ROOT = Path(__file__).resolve().parents[1]
 K8S = ROOT / "infra" / "k8s"
 SAMPLE = {"__PK_DOMAIN__": "example.com", "__PK_AUTH_HOST__": "auth.example.com", "__PK_MAIL_FROM__": "no-reply@example.com",
           "__PK_NS__": "punchable", "__PK_KC_NS__": "keycloak", "__PK_REALM__": "punchable", "__PK_ORIGIN_IP__": "203.0.113.10",
-          "__PK_OWNER_ID__": "owner", "__IMAGE_REF__": "localhost:32000/punchable-x@sha256:" + "0" * 64}
+          "__PK_OWNER_ID__": "owner", "__PK_COMIC_NAME__": "the comic", "__PK_COMIC_FIRST__": "the comic",
+          "__IMAGE_REF__": "localhost:32000/punchable-x@sha256:" + "0" * 64}
 
 sys.path.insert(0, str(ROOT / "api-dev"))
 sys.path.insert(0, str(ROOT))

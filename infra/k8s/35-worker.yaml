@@ -53,6 +53,10 @@ spec:
             # the cost guard (engine/budget.py): USD per UTC day across every job kind; over it, jobs stay queued
             # with the reason shown in the app. Owner's call; 2.00 is the default.
             - { name: PK_AI_DAILY_USD, value: "2.00" }
+            # how the prompts name the comic (creative/voice.py; PK_COMIC_NAME / PK_COMIC_FIRST in infra/config.env,
+            # "the comic" when unset: the prompts then read "a stand-up comic's", "his idea", never "the comic's idea")
+            - { name: PK_COMIC_NAME, value: "__PK_COMIC_NAME__" }
+            - { name: PK_COMIC_FIRST, value: "__PK_COMIC_FIRST__" }
             # the comic's actor id on the ideas the worker posts is set by the API; this is the worker's own name
             - name: PK_WORKER_NAME
               valueFrom: { fieldRef: { fieldPath: metadata.name } }
