@@ -286,11 +286,18 @@ def header(s: dict) -> str:
     return f"{kind} · \"{s['title']}\" · {s.get('date') or 'undated'}{st}"
 
 
-SYSTEM = ("You answer stand-up comic " + COMIC + "'s questions about his OWN material: his written bits, his ideas, "
-          "his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). "
-          "Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you "
-          "what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never "
-          "invent a line, a show or a laugh.")
+def system_text() -> str:
+    """The task's own system line. Named: "You answer stand-up comic Pat Example's questions"; unnamed: "You answer a
+    stand-up comic's questions" (never "stand-up comic the comic's")."""
+    from . import voice
+    return ("You answer " + voice.material_owner() + " questions about his OWN material: his written bits, his ideas, "
+            "his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). "
+            "Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you "
+            "what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never "
+            "invent a line, a show or a laugh.")
+
+
+SYSTEM = system_text()
 RULES = ("Rules:\n"
          "- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. "
          "Say dates the way a person would (Jun 20, 2015).\n"
@@ -307,7 +314,8 @@ RULES = ("Rules:\n"
 def prompt(c: Corpus, question: str, history: list[dict] | None, ids: list[str]) -> list[dict]:
     S = sources(c)
     terms = {w for w in tokens(question) if w not in QSTOP}
-    msgs = [{"role": "system", "content": SYSTEM}]
+    # the rules sit in the system block with the task line (stable: cached), not after the volatile sources
+    msgs = [{"role": "system", "content": system_text() + "\n\n" + RULES}]
     for h in (history or [])[-HISTORY_TURNS:]:
         if h.get("q"):
             msgs.append({"role": "user", "content": h["q"]})
@@ -317,7 +325,7 @@ def prompt(c: Corpus, question: str, history: list[dict] | None, ids: list[str])
         s = S[sid]
         blocks.append(f"[S{i}] {header(s)}\nTEXT: {_snippet(s['text'], terms)}")
     msgs.append({"role": "user", "content": f"QUESTION: {question}\n\nSOURCES:\n\n" + "\n\n".join(blocks)
-                 + "\n\n" + RULES})
+                 + "\n\nAnswer by the rules above."})
     return msgs
 
 
@@ -436,6 +444,10 @@ def run_job(inp: dict, complete=None) -> dict:
     if complete is None:
         from .story import _creative_complete
         complete = _creative_complete()
+    from . import voice
+    block = voice.system_block(TASK)
+    if block:  # the profile first (the worker's copy, cached): background for reading his notebook, never a source
+        msgs = [{"role": "system", "content": block}] + msgs
     r = complete(TASK, msgs, SCHEMA)
     return {"status": "answered", "data": getattr(r, "data", None) or {}, "provider": getattr(r, "provider", None),
             "model": getattr(r, "model", None)}

@@ -131,12 +131,15 @@ class Vectors:
 class Corpus:
     def __init__(self, graph: dict, analyses: dict | None = None, inferred: dict | None = None,
                  insights: dict | None = None, decisions: list | None = None, id_map: dict | None = None,
-                 metas: dict | None = None, vectors: Vectors | None = None):
+                 metas: dict | None = None, vectors: Vectors | None = None, laughs: dict | None = None):
         self.id_map = id_map or {}
         self.inferred = inferred or {}
         self.insights = insights or {}
         self.decisions = decisions or []
         self.metas = metas or {}
+        # set key -> {laugh id: {start_ms, end_ms, bars}} from corpus/sets/<set>/laughs_auto.json (the laugh map);
+        # a punchline's `laugh_id` points into it, which is how a line gets its "[laugh 2.1 s]" in a punch-up prompt
+        self.laughs: dict[str, dict] = laughs or {}
         self.vectors = vectors or Vectors(table={})
         self._joke_vec: dict = {}
         self._build_graph(graph)
@@ -164,7 +167,7 @@ class Corpus:
                             decisions.append(json.loads(line))
                         except json.JSONDecodeError:
                             pass
-        analyses, metas = {}, {}
+        analyses, metas, laughs = {}, {}, {}
         sets = root / "corpus" / "sets"
         if sets.exists():
             for d in sorted(os.listdir(sets)):
@@ -176,8 +179,11 @@ class Corpus:
                     m = opt(sets / d / "meta.json")
                     if m:
                         metas[key] = m
+                    la = opt(sets / d / "laughs_auto.json")
+                    if isinstance(la, dict) and isinstance(la.get("laughs"), list):
+                        laughs[key] = {x["id"]: x for x in la["laughs"] if isinstance(x, dict) and x.get("id")}
         return cls(graph, analyses, opt(kb0 / "inferred.json"), opt(kb0 / "insights.json"), decisions, id_map,
-                   metas, Vectors())
+                   metas, Vectors(), laughs)
 
     # ------------------------------------------------------------------ id mapping
     def map_joke(self, jid):

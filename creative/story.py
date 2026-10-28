@@ -410,6 +410,8 @@ BRIDGE_SCHEMA = {"type": "object", "properties": {"bridge": {"type": "string"},
                                                   "uses": {"type": "array", "items": {"type": "string"}}},
                  "required": ["bridge", "uses"], "additionalProperties": False}
 DRAFT_LABEL = "DRAFT · AI · not your words yet"
+BRIDGE_SYSTEM = ("You draft transitions for one comedian's own set. You never invent facts about his life beyond the "
+                 "links given.")
 
 
 def _creative_complete():
@@ -457,20 +459,22 @@ def bridge_draft(c: Corpus, a: str, b: str, complete=None) -> dict:
                 examples.append(f"- '{ev[0]['quote']}' -> '{ev[1]['quote']}'")
         if len(examples) >= 3:
             break
-    msg = (f"Write ONE short spoken bridge line (max 30 words) that {COMIC_FIRST} could say between two of his bits.\n"
+    from . import voice
+    from .util import provider_why
+    msg = (f"Write ONE short spoken bridge line (max 30 words) that {voice.he_could_say()} between two of his bits.\n"
            f"End of '{c.title(a)}': \"{_edge_text(c, a, True)}\"\n"
            f"Start of '{c.title(b)}': \"{_edge_text(c, b, False)}\"\n"
            f"Ground it ONLY in these links between the two bits (cite their ids in `uses`):\n"
            + "\n".join(f"{x['id']}: {x['kind']} = {x['name']}" for x in links)
            + ("\nHow his real transitions on tape sound:\n" + "\n".join(examples) if examples else "")
-           + "\nFirst person, his conversational voice, no new premise, no punchline of its own.")
+           + "\nFirst person, his conversational voice (the way his bridges sound in the profile, when it says), "
+             "no new premise, no punchline of its own.")
     complete = complete or _creative_complete()
     try:
-        r = complete("creative_bridge", [{"role": "system", "content": "You draft transitions for one comedian's own "
-                                          "set. You never invent facts about his life beyond the links given."},
-                                         {"role": "user", "content": msg}], BRIDGE_SCHEMA)
+        r = complete("creative_bridge", voice.messages("creative_bridge", BRIDGE_SYSTEM, {"role": "user", "content": msg}),
+                     BRIDGE_SCHEMA)
     except Exception as ex:  # provider down: say so, never fake a draft
-        return dict(base, status="provider_error", text=None, grounded_in=links, why=f"{type(ex).__name__}: {str(ex)[:160]}")
+        return dict(base, status="provider_error", text=None, grounded_in=links, why=provider_why(ex))
     data = r.data or {}
     known = {x["id"] for x in links}
     uses = [u for u in data.get("uses") or [] if u in known] or [links[0]["id"]]

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from types import SimpleNamespace
 
 from creative import askchat as A
 
@@ -152,3 +153,28 @@ def test_copy_has_no_jargon(corpus):
         ch = A.chip(s, i, None)
         assert not banned.search(ch["label"] + " " + ch["sub"]), ch
     assert TEXT["b"]  # the fixture is the synthetic one
+
+
+def test_rules_live_in_the_system_block_and_the_profile_comes_first_in_the_job(corpus):
+    from creative import voice
+    from creative.tests.test_voice import FAKE_PROFILE
+    ids = A.retrieve(corpus, "what did I write about my niece?")
+    msgs = A.prompt(corpus, "what did I write about my niece?", None, ids)
+    assert msgs[0]["role"] == "system" and A.RULES in msgs[0]["content"]
+    assert msgs[0]["content"].startswith("You answer a stand-up comic's questions about his OWN material")
+    assert "stand-up comic the comic's" not in msgs[0]["content"]
+    assert msgs[-1]["role"] == "user" and "Rules:" not in msgs[-1]["content"] and "SOURCES:" in msgs[-1]["content"]
+    # the worker's half: the profile block first (background, never a source), then the API's messages unchanged
+    voice.set_profile(FAKE_PROFILE, "t1", "owner")
+    try:
+        calls = []
+
+        def complete(task, m, schema):
+            calls.append(m)
+            return SimpleNamespace(data={"found": False, "answer": "", "citations": []}, provider="fake", model="f")
+        A.run_job({"messages": msgs}, complete=complete)
+        sent = calls[0]
+        assert sent[0]["content"].startswith(voice.HEAD) and sent[0]["content"].endswith(voice.READING)
+        assert sent[1:] == msgs
+    finally:
+        voice.clear()

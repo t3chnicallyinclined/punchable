@@ -118,6 +118,13 @@ def suffix_words(text: str, n: int = 8) -> str:
     return text[ms[max(0, len(ms) - n)].start():ms[-1].end()]
 
 
+def provider_why(ex: BaseException) -> str:
+    """What the screen says when a model call fails: a refusal or a cut answer already carries plain words
+    (engine.providers.Refusal / CutShort `.plain`); anything else names the error, short."""
+    plain = getattr(ex, "plain", None)
+    return plain if isinstance(plain, str) and plain else f"{type(ex).__name__}: {str(ex)[:160]}"
+
+
 def first_line(text: str, max_chars: int = 160) -> str:
     """First non-empty line of `text`, cut on a word boundary; always an exact substring."""
     for line in (text or "").splitlines():

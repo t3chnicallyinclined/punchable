@@ -11,11 +11,11 @@ from __future__ import annotations
 import os
 import math
 
-from . import story
+from . import story, voice
 from .data import Corpus, creative_dir, venue_short
 from .store import Store
 from .textdiff import phrases, present, toks
-from .util import cv, mean, mmss, r2, sha8, slug, trend
+from .util import cv, mean, mmss, provider_why, r2, sha8, slug, trend
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
@@ -27,6 +27,9 @@ PUNCH_SCHEMA = {"type": "object", "properties": {"drafts": {"type": "array", "it
 DRAFT_LABEL = story.DRAFT_LABEL
 LOW_N = 3  # fewer nights than this on either side = low n
 VR_CLIP = 3.0
+PUNCH_SYSTEM = "You punch up one comedian's own lines in his voice. Drafts only; he decides."
+PUNCH_LINES = 40
+PUNCH_SETUP_CHARS = 400  # of his written version of the bit
 
 
 # ============================================================== store
@@ -413,41 +416,115 @@ def try_tonight(c: Corpus, ws: dict, cap: int = 6, hist: list | None = None) -> 
 
 
 # ============================================================== punch-up drafts
+def latest_lines(c: Corpus, jid: str) -> tuple[dict | None, list[tuple[str, str]]]:
+    """His latest taped night of a bit and its lines as (phrase, segment id), locks not applied."""
+    ps = c.perfs.get(jid, [])
+    if not ps:
+        return None, []
+    p = ps[-1]
+    return p, [(ph, sid) for sid in p["seg_ids"] for ph in phrases(c.text_of(sid) or "")]
+
+
+def punch_text(c: Corpus, jid: str) -> str:
+    """Every word a punch-up would show the model for this bit (the API's legal check runs on it before enqueue)."""
+    _, lines = latest_lines(c, jid)
+    lead = c.lead_unit(jid)
+    return "\n".join(ph for ph, _ in lines) + "\n" + (((c.nodes.get(lead) or {}).get("text") or "") if lead else "")
+
+
+def _same_line(a: str, b: str) -> bool:
+    ta, tb = toks(a), toks(b)
+    if not ta or not tb:
+        return False
+    if " ".join(ta) in " ".join(tb) or " ".join(tb) in " ".join(ta):
+        return True  # one is a run of the other (a punchline is a cut of the line, or the line of the punchline)
+    return len(set(ta) & set(tb)) >= max(3, math.ceil(min(len(ta), len(tb)) * 0.75))
+
+
+def laugh_marks(c: Corpus, perf: dict, lines: list[tuple[str, str]]) -> list[str]:
+    """One mark per line from the laugh map of that night: "laugh 2.1 s" (the laugh the detector tied to that line,
+    its length from laughs_auto.json), "laugh · 3/4 bars" when the map has no timing, "silence" when no laugh landed
+    on the line. The model targets the dead spots and leaves a line that already lands."""
+    pls = perf.get("punchlines") or []
+    events = c.laughs.get(perf.get("set")) or {}
+    out = []
+    for ph, sid in lines:
+        hit = None
+        for pl in pls:
+            if pl.get("seg_id") not in (None, sid) or not _same_line(ph, pl.get("text") or ""):
+                continue
+            if hit is None or (pl.get("bars") or 0) > (hit.get("bars") or 0):
+                hit = pl
+        if hit is None:
+            out.append("silence")
+            continue
+        ev = events.get(hit.get("laugh_id")) or {}
+        if isinstance(ev.get("start_ms"), (int, float)) and isinstance(ev.get("end_ms"), (int, float)) and ev["end_ms"] > ev["start_ms"]:
+            out.append(f"laugh {(ev['end_ms'] - ev['start_ms']) / 1000:.1f} s")
+        else:
+            out.append(f"laugh · {int(hit.get('bars') or 0)}/4 bars")
+    return out
+
+
+def punch_messages(c: Corpus, ws: dict, jid: str, n: int = 3) -> tuple[list[dict] | None, dict]:
+    """The messages for one punch-up call (None when there is nothing to punch up) and what they were built from:
+    `perf` (the latest night), `lines` [(phrase, seg)] after the locks, `blocked` (locked lines left out)."""
+    p, raw = latest_lines(c, jid)
+    if p is None:
+        return None, {"perf": None, "lines": [], "blocked": 0}
+    lines, blocked = [], 0
+    for ph, sid in raw:
+        if is_locked_line(ws, jid, ph):
+            blocked += 1
+            continue
+        lines.append((ph, sid))
+    lines = lines[:PUNCH_LINES]
+    info = {"perf": p, "lines": lines, "blocked": blocked}
+    if not lines:
+        return None, info
+    ps = c.perfs.get(jid, [])
+    best = max(ps, key=lambda x: (x["laugh_s_per_min"] or 0, x["date"]))
+    hits = [x["text"] for x in best["punchlines"] if (x.get("bars") or 0) >= 2][:4]
+    devs = [c.labels[l]["name"] for l in c.devices(jid)]
+    marks = laugh_marks(c, p, lines)
+    lead = c.lead_unit(jid)
+    written = (((c.nodes.get(lead) or {}).get("text") or "") if lead else "").strip()
+    if any(is_locked_line(ws, jid, ph) for ph in phrases(written)):
+        written = ""  # a locked line is never shown to the model, not even as context
+    if len(written) > PUNCH_SETUP_CHARS:
+        cut = written.rfind(" ", 0, PUNCH_SETUP_CHARS)
+        written = written[:cut if cut > PUNCH_SETUP_CHARS // 2 else PUNCH_SETUP_CHARS].rstrip() + " [...]"
+    dead = sum(1 for m in marks if m == "silence")
+    msg = (f"Bit: '{c.title(jid)}'. His moves in this bit: {', '.join(devs) or 'n/a'}.\n"
+           f"Lines that got real laughs on his best night ({venue_short(best['venue'], best['date'])}):\n"
+           + ("\n".join(f"- {h}" for h in hits) if hits else "- (none on tape)")
+           + (f"\n\nHis written version of the setup (verbatim):\n\"{written}\"" if written else "")
+           + f"\n\nLines from his latest night ({venue_short(p['venue'], p['date'])}) you MAY punch up (only these, "
+             "by number), each with what the room did right after it:\n"
+           + "\n".join(f"{i}. {ph}   [{m}]" for i, ((ph, _), m) in enumerate(zip(lines, marks), 1))
+           + f"\n\nGive up to {n} punch-up drafts: a sharper alternative for one numbered line each, in his voice, "
+             "using his own moves. Keep the premise. "
+           + (f"Target the lines that got nothing ([silence]: {dead} of {len(lines)}); leave a line that already "
+              "lands. " if dead else "Every line got a laugh: sharpen the weakest, leave the biggest alone. ")
+           + "`move` names the move you used, by the name his profile gives it.")
+    return voice.messages("creative_punchup", PUNCH_SYSTEM, {"role": "user", "content": msg}), info
+
+
 def punch_up(c: Corpus, ws: dict, jid: str, complete=None, n: int = 3) -> dict:
     base = {"joke_id": jid, "title": c.title(jid), "draft": True, "label": DRAFT_LABEL, "drafts": []}
     if bit_locked(ws, jid):
         return dict(base, status="locked", why="This bit is locked (perfected); no punch-ups.")
-    ps = c.perfs.get(jid, [])
-    if not ps:
+    msgs, info = punch_messages(c, ws, jid, n)
+    p, lines, blocked = info["perf"], info["lines"], info["blocked"]
+    if p is None:
         return dict(base, status="no_tape", why="No taped night to work from.")
-    p = ps[-1]
-    lines, blocked = [], 0
-    for sid in p["seg_ids"]:
-        for ph in phrases(c.text_of(sid) or ""):
-            if is_locked_line(ws, jid, ph):
-                blocked += 1
-                continue
-            lines.append((ph, sid))
-    if not lines:
+    if msgs is None:
         return dict(base, status="all_locked", why="Every line on the last night is locked.", blocked_locked=blocked)
-    lines = lines[:40]
-    best = max(ps, key=lambda x: (x["laugh_s_per_min"] or 0, x["date"]))
-    hits = [x["text"] for x in best["punchlines"] if (x.get("bars") or 0) >= 2][:4]
-    devs = [c.labels[l]["name"] for l in c.devices(jid)]
-    msg = (f"Bit: '{c.title(jid)}'. His moves in this bit: {', '.join(devs) or 'n/a'}.\n"
-           f"Lines that got real laughs on his best night ({venue_short(best['venue'], best['date'])}):\n"
-           + "\n".join(f"- {h}" for h in hits)
-           + "\n\nLines from his latest night you MAY punch up (only these, by number):\n"
-           + "\n".join(f"{i}. {ph}" for i, (ph, _) in enumerate(lines, 1))
-           + f"\n\nGive up to {n} punch-up drafts: a sharper alternative for one numbered line each, in his voice, "
-             "using his own moves. Keep the premise. `move` names the device you used.")
     complete = complete or story._creative_complete()
     try:
-        r = complete("creative_punchup", [{"role": "system", "content": "You punch up one comedian's own lines in "
-                                           "his voice. Drafts only; he decides."},
-                                          {"role": "user", "content": msg}], PUNCH_SCHEMA)
+        r = complete("creative_punchup", msgs, PUNCH_SCHEMA)
     except Exception as ex:
-        return dict(base, status="provider_error", why=f"{type(ex).__name__}: {str(ex)[:160]}", blocked_locked=blocked)
+        return dict(base, status="provider_error", why=provider_why(ex), blocked_locked=blocked)
     out = []
     for d in (r.data or {}).get("drafts", [])[:n]:
         k = d.get("line_no")

@@ -102,7 +102,8 @@ S_LINK = _obj({"links": {"type": "array", "items": _obj({
     "confidence": {"type": "number"}, "reason": {"type": "string"},
     "new_quote": {"type": "string"}, "old_quote": {"type": "string"}})}})
 
-SYS_VOICE = ("You work on stand-up comic " + COMIC + "'s own material. Be literal and exact. "
+SYS_VOICE = ("You work on " + (f"stand-up comic {COMIC}'s" if COMIC != "the comic" else "a stand-up comic's")
+             + " own material. Be literal and exact. "
              "Every quote you give must be copied character for character from the text it names; never paraphrase a quote. "
              "Reasons are one plain sentence a comic would understand.")
 

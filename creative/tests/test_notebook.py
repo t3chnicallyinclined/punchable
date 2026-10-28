@@ -193,3 +193,53 @@ def test_real_related_and_map_verbatim_plain(real):
         assert q["quote"] in real.text_of(q["quote_node"]), q
     for k, v in shown_strings(m):
         assert not BANNED.search(v), (k, v)
+
+
+def test_riff_prompt_shows_whole_bits_with_their_stage_line_and_asks_for_the_move(corpus):
+    from creative import voice
+    from creative.tests.test_voice import FAKE_PROFILE
+    voice.clear()
+    msgs, grounds = WR.riff_messages(corpus, "my niece and the laundromat", ["the castle has a bouncer"])
+    assert [m["role"] for m in msgs] == ["system", "user"] and msgs[0]["content"] == WR.RIFF_SYSTEM
+    user = msgs[1]["content"]
+    assert user.startswith("His idea: ")  # PK_COMIC_NAME unset: never "the comic's idea"
+    d = next(g for g in grounds if g["joke_id"] == "joke:d")
+    assert d["text"] == "Delta bit about my niece and the laundromat place." and d["text"] in user, "the whole lead text"
+    assert d["stage_line"] and d["stage_line"] in user and d["last_night"] and d["last_night"] in user
+    f = [g for g in grounds if g["joke_id"] == "joke:f"]
+    assert not f or "not on tape" in user
+    assert len(grounds) <= WR.RIFF_BITS and all(len(g["text"]) <= WR.RIFF_BIT_CHARS + 6 for g in grounds)
+    assert "name the move in `move`" in user and "No new facts about his life" in user
+    assert "move" in WR.RIFF_SCHEMA["properties"]["ideas"]["items"]["required"]
+    # with the profile loaded (the worker's copy) it is the FIRST block; the task line is second; the user turn last
+    voice.set_profile(FAKE_PROFILE, "2026-10-28T00:00:00+00:00", "owner")
+    try:
+        msgs2, _ = WR.riff_messages(corpus, "my niece and the laundromat", [])
+        assert [m["role"] for m in msgs2] == ["system", "system", "user"]
+        assert FAKE_PROFILE in msgs2[0]["content"] and msgs2[0]["content"].endswith(voice.CRAFT)
+        assert msgs2[1]["content"] == WR.RIFF_SYSTEM
+        llm = FakeLLM({"ideas": [{"line": "A line.", "built_on": ["B1"], "move": "poll the room"}]})
+        r = WR.riff_ideas(corpus, "my niece and the laundromat", [], complete=llm)
+        assert r["ideas"][0]["move"] == "poll the room" and llm.calls[0][1][0]["content"].startswith(voice.HEAD)
+    finally:
+        voice.clear()
+
+
+def test_a_refusal_reaches_the_screen_in_plain_words(corpus):
+    from engine.providers import CutShort, Refusal
+
+    def declined(task, messages, schema):
+        raise Refusal("general_harms", "it names a real person")
+    r = WR.riff_ideas(corpus, "my niece and the laundromat", [], complete=declined)
+    assert r["status"] == "provider_error" and r["why"] == "Claude declined this one: it names a real person. Try rewording."
+    assert "ProviderError" not in r["why"] and "Refusal" not in r["why"]
+
+    def cut(task, messages, schema):
+        raise CutShort(16000)
+    r = WR.check_facts("airports and belts", complete=cut, fetch=lambda u: None)
+    assert r["status"] == "provider_error" and r["why"].startswith("Claude ran out of room on this one")
+
+    def down(task, messages, schema):
+        raise RuntimeError("connection reset")
+    r = WR.riff_ideas(corpus, "my niece and the laundromat", [], complete=down)
+    assert r["why"] == "RuntimeError: connection reset"  # anything else still names itself, short

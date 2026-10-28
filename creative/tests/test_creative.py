@@ -301,3 +301,36 @@ def test_real_demo_verbatim(real, tmp_path):
     assert evs and not bad, bad[:3]
     out2 = W.demo(real, S2.board_store(tmp_path), W.ws_store(tmp_path), ts=TS, with_drafts=False)
     assert json.dumps(out, sort_keys=True) == json.dumps(out2, sort_keys=True)
+
+
+def test_punch_up_marks_every_line_from_the_laugh_map_and_aims_at_the_silence(tmp_path):
+    """Each numbered line carries [laugh 2.1 s] (the laugh the detector tied to it, timed from laughs_auto.json),
+    [laugh · 3/4 bars] without timing, or [silence]; the instruction targets the silent ones."""
+    from .conftest import TEXT
+    an = make_analyses()
+    seg = an["2024-03-01_z"]["jokes"][0]  # joke:b on the latest night: two lines, one laugh
+    seg["punchlines"] = [{"text": "Bravo closer words about the cat today.", "at_ms": 30000, "laugh_id": "l30", "bars": 3}]
+    laughs = {"2024-03-01_z": {"l30": {"id": "l30", "start_ms": 30000, "end_ms": 32100, "bars": 3}}}
+    c = Corpus(make_graph(), an, laughs=laughs)
+    wss = W.ws_store(tmp_path)
+    w = W.promote(c, wss, board(["joke:b"], id_="sb:p"), ts=TS, id_="ws:p", bit_targets={"joke:b": 60})
+    msgs, info = W.punch_messages(c, w, "joke:b")
+    user = msgs[-1]["content"]
+    assert "1. Bravo setup about the dog.   [silence]" in user
+    assert "2. Bravo closer words about the cat today.   [laugh 2.1 s]" in user
+    assert "Target the lines that got nothing ([silence]: 1 of 2)" in user and "leave a line that already lands" in user
+    assert f"His written version of the setup (verbatim):\n\"{TEXT['b']}\"" in user
+    assert "by the name his profile gives it" in user
+    assert W.laugh_marks(c, info["perf"], info["lines"]) == ["silence", "laugh 2.1 s"]
+    # no timing in the laugh map: the bars word; no profile loaded: the task line is the first and only system block
+    c2 = Corpus(make_graph(), an)
+    assert W.laugh_marks(c2, c2.perfs["joke:b"][-1], info["lines"]) == ["silence", "laugh · 3/4 bars"]
+    assert [m["role"] for m in msgs] == ["system", "user"] and msgs[0]["content"] == W.PUNCH_SYSTEM
+    # what the API's legal check sees before enqueue: every line the model would be shown
+    pt = W.punch_text(c, "joke:b")
+    assert "Bravo closer words about the cat today." in pt and TEXT["b"] in pt
+    # the drafts still land on the numbered line (the laugh mark is not part of the target)
+    llm = FakeLLM({"drafts": [{"line_no": 1, "alt": "Bravo setup, now with a cat.", "move": "repeat the word"}]})
+    r = W.punch_up(c, w, "joke:b", complete=llm)
+    assert r["status"] == "ok" and r["drafts"][0]["target_line"] == "Bravo setup about the dog."
+    assert r["drafts"][0]["target_evidence"]["quote"] == "Bravo setup about the dog."

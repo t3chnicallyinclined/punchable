@@ -141,6 +141,9 @@ def chat_view(ch: dict, cr) -> dict:
 
 def _plain_error(err: str) -> str:
     e = (err or "").lower()
+    if "claude declined this one" in e or "claude ran out of room" in e:
+        # engine.providers.Refusal / CutShort: the worker posts "<Type>: <plain words>"; the words are the message
+        return err.split(": ", 1)[1] if err.startswith(("Refusal: ", "CutShort: ")) else err
     if "rate limit" in e or "usage limit" in e or "ratelimited" in e:
         return "Claude is at its usage limit on your PC right now. Ask again in a bit."
     if "timeout" in e or "timed out" in e:
