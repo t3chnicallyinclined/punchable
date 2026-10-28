@@ -133,12 +133,28 @@ Every route in the contract, serving creative/'s JSON as-is. Additions the contr
 - **Drafts never block.** `POST /api/boards/{id}/bridge`, `POST /api/workingsets/{id}/bits/{joke_id}/punchup` and
   `POST /api/ask {question}` return the cached draft (200, `cached: true`) or `202 {status:"queued", job, poll}`;
   `GET /api/jobs/{id}` polls. `{fresh: true}` asks again. A locked bit answers `status: "locked"` with no job.
-  Jobs run on the comic's PC (worker/README.md); `--jobs inproc` runs them in this process (local dev).
+  Jobs run on the hosted worker (the server, the Anthropic API; worker/README.md); `--jobs inproc` runs them in this
+  process (local dev).
+- **Nothing transcribes on the server (2026-10-27).** The PC worker is retired; whisper, the laugh detector and yt-dlp
+  have no worker, and transcription happens on the phone (a separate build). A job of a transcriber kind
+  (`process_set`, `import_youtube`) is still queued, never dropped, and says so: the job carries `waiting_for:
+  "transcriber"` (persisted: derived from the kind on every replay, cleared by a claim) and the 202 body / the job
+  brief add `waiting_for` and `note` ("Transcription happens on your phone for now; this file is waiting."). The
+  app shows it under the worker line. `GET /api/inbox` rows carry the same two fields hosted.
+- **`POST /api/sets/transcript`** `{segments: [{text, start?, end?}], title?, recorded_at?, venue?, duration_s?,
+  engine?}`: a set transcribed on the phone. 202 `{status:"queued", job, poll}` with a `set_text` job for the hosted
+  worker: the text-only analysis (the split step; `corpus/sets/<date>_ph<sha9>/{transcript,meta,analysis}.json` with
+  every audio-derived field null and `audio.status: "unavailable"`, timestamps `device` or `synthetic`), and every
+  funny unit posted as an idea (actor `ai:set_text`). 400 for a bad body, 413 over 400,000 characters. Same text =
+  same job key (no duplicates).
 - Writes: append-only `<store>.jsonl` + snapshot under `--creative-dir` (default comedy/kb/creative); on SurrealDB
   also a `creative_event` row (written first), pushed on `/api/live` as `{table:"creative_event", store, op, item}`.
   `?backend=files` reads the jsonl; db/tests/test_creative.py diffs the two.
-- Home worker only (`worker` role when auth is on): `POST /api/worker/claim`, `POST /api/worker/jobs/{id}/result`,
+- Worker only (`worker` role when auth is on): `POST /api/worker/claim`, `POST /api/worker/jobs/{id}/result`,
   `GET /api/worker/jobs/{id}/file`, `GET /api/worker/decisions?after=N`, `GET /api/worker/creative?store=`.
+  The claim body is `{kinds, worker, hosted, model?, paused?}`: a hosted worker must list its kinds and never a
+  transcriber kind (400 otherwise); `paused` (the day's AI budget is spent, with the reason) is recorded as the
+  worker's status and answered 204 so the jobs stay queued with the reason visible.
 - Uploads also keep `X-Recorded-At`, `X-Venue`, `X-Lat`/`X-Lng`, `X-Show-Group`, `X-Align-Working-Set` in the meta;
   hosted, an upload queues a `process_set` job.
 
@@ -211,14 +227,19 @@ Every row of the contract's "Requested by app" table. Both backends serve them; 
 ## Settings > Connections (2026-10-26)
 - **`GET /api/connections`** (read-only, auth required hosted, both backends): one plain status per outside source.
   `{google_docs: {status, last_sync, last_ok, docs_linked, joke_docs, boards, conflicts, errors_last_run, last_mode,
-  where: "your PC"}, youtube: {sets, import: "link"}, ai: {provider, worker: {online, last_seen, name,
-  online_window_s}}, audio_storage: {status: "not_set_up", provider: "Cloudflare R2"}}`.
+  where: "your PC"}, youtube: {sets, import: "link"}, ai: {provider, worker: {online, last_seen, name, where,
+  hosted, model, paused, online_window_s}}, transcriber: {where: "your phone", waiting, note}, audio_storage:
+  {status: "not_set_up", provider: "Cloudflare R2"}}`.
   - `google_docs` is read from gsync's own files (`PK_GSYNC_DIR`, default `<creative-dir>/../gsync` =
     `comedy/kb/gsync`): `map.json` (docs not hidden; joke docs = origin gdocs/app/mixed), the tail of `runs.jsonl`
     (dry runs ignored), `conflicts.jsonl` (count). **Counts only**: no titles, text, doc IDs or legal exclusions.
     `status`: `not_set_up` (no files; `not_reported` when hosted), `not_synced_yet`, `connected`, `stale` (no run in
     24 h), `error` (the last run had errors), `api_down` (gsync couldn't reach the local API).
-  - `ai.worker`: the last `POST /api/worker/claim` (in memory); `online` = within 120 s.
+  - `ai.worker`: the last `POST /api/worker/claim` (in memory); `online` = within 120 s. Hosted that is the server's
+    worker: `where: "the server"`, `name` (the pod), `model` (the provider and models it writes with), `paused` (the
+    budget reason while it is online and paused, else null). The same object is the `worker` on the ask/say
+    responses (`ask_api.worker_status`).
+  - `transcriber`: how many queued jobs wait for a transcript from the phone (`waiting`), and the note shown.
   - Hosted, gsync runs on his PC, so the pod has no gsync files until the worker reports them (not built).
 
 ## Merge (2026-10-26, docs/API_CONTRACT.md "Merge", `merge_api.py`)

@@ -44,7 +44,13 @@ from creative.util import mmss, now_iso  # noqa: E402
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
-JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "embed", "memolink")
+JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "embed", "memolink",
+             "set_text")
+# Kinds that need the recording (whisper, the laugh detector, yt-dlp). Since 2026-10-27 no worker runs them: the PC
+# is retired and transcription happens on the phone (a separate build). A queued job of these kinds is honest about
+# it: `waiting_for: "transcriber"`, persisted (derived from the kind on every replay), shown by the app.
+TRANSCRIBER_KINDS = {"process_set", "import_youtube"}
+WAITING_NOTE = {"transcriber": "Transcription happens on your phone for now; this file is waiting."}
 # Jobs that download or crunch tapes: only the home worker runs them, never this process (not even --jobs inproc).
 WORKER_ONLY = {"process_set", "import_youtube", "embed", "memolink"}
 STALE_CLAIM_S = 15 * 60          # a claimed job with no result after this is handed out again
@@ -95,7 +101,8 @@ def job_apply(items: dict, ev: dict) -> None:
             raise ValueError(f"job kind must be one of {JOB_KINDS}")
         items[i] = {"id": i, "kind": d["kind"], "key": d.get("key"), "input": d.get("input") or {}, "status": "queued",
                     "created_at": ev["ts"], "by": ev.get("by"), "attempts": 0, "claimed_at": None, "worker": None,
-                    "done_at": None, "result": None, "error": None}
+                    "done_at": None, "result": None, "error": None,
+                    "waiting_for": "transcriber" if d["kind"] in TRANSCRIBER_KINDS else None}
         return
     j = items.get(i)
     if j is None:
@@ -103,17 +110,19 @@ def job_apply(items: dict, ev: dict) -> None:
     if op == "claim":
         if j["status"] not in ("queued", "claimed"):
             raise ValueError(f"job {i} is {j['status']}")
-        j.update(status="claimed", claimed_at=ev["ts"], worker=d.get("worker"), attempts=j["attempts"] + 1)
+        j.update(status="claimed", claimed_at=ev["ts"], worker=d.get("worker"), attempts=j["attempts"] + 1,
+                 waiting_for=None)
     elif op == "done":
         if j["status"] != "claimed":
             raise ValueError(f"job {i} is {j['status']}, not claimed")
-        j.update(status="done", done_at=ev["ts"], result=d.get("result"), error=None)
+        j.update(status="done", done_at=ev["ts"], result=d.get("result"), error=None, waiting_for=None)
     elif op == "fail":
         if j["status"] not in ("claimed", "queued"):
             raise ValueError(f"job {i} is {j['status']}")
         retry = bool(d.get("retry")) and j["attempts"] < MAX_ATTEMPTS
         j.update(status="queued" if retry else "failed", error=str(d.get("error") or "failed")[:2000],
-                 done_at=None if retry else ev["ts"])
+                 done_at=None if retry else ev["ts"],
+                 waiting_for="transcriber" if retry and j["kind"] in TRANSCRIBER_KINDS else None)
     else:
         raise ValueError(f"unknown op {op}")
 
@@ -468,13 +477,12 @@ class Creative:
                 return 200, {"cached": True, "job": job_brief(j), **(j["result"] or {})}
         pend = [j for j in live if j["status"] in ("queued", "claimed")]
         if pend:
-            return 202, {"status": "queued", "job": job_brief(pend[0]), "poll": f"/api/jobs/{pend[0]['id']}"}
+            return 202, _queued(pend[0])
         jid = f"job:{kind}-{hashlib.sha1((key + now_iso() + str(len(jobs.items))).encode()).hexdigest()[:12]}"
         jobs.append("enqueue", jid, {"kind": kind, "key": key, "input": inp}, by=by)
         if self.jobs_mode == "inproc" and kb is not None and kind not in WORKER_ONLY:
             threading.Thread(target=self._run_inproc, args=(kb, jid), daemon=True).start()
-        j = jobs.get(jid)
-        return 202, {"status": "queued", "job": job_brief(j), "poll": f"/api/jobs/{jid}"}
+        return 202, _queued(jobs.get(jid))
 
     def enqueue_followup(self, st: dict, kind: str, by: str) -> dict | None:
         """A follow-up job (embed, memolink) after new material: one QUEUED job per kind at a time. A job that is
@@ -537,7 +545,52 @@ def _no_model(*a, **k):
 
 
 def job_brief(j: dict) -> dict:
-    return {k: j.get(k) for k in ("id", "kind", "status", "created_at", "done_at", "attempts", "error")}
+    out = {k: j.get(k) for k in ("id", "kind", "status", "created_at", "done_at", "attempts", "error")}
+    w = j.get("waiting_for")
+    if w:
+        out["waiting_for"], out["note"] = w, WAITING_NOTE.get(w)
+    return out
+
+
+def _queued(j: dict) -> dict:
+    """The 202 body: the job, where to poll, and -- for a kind no worker runs now -- what it is waiting for."""
+    out = {"status": "queued", "job": job_brief(j), "poll": f"/api/jobs/{j['id']}"}
+    if j.get("waiting_for"):
+        out["waiting_for"], out["note"] = j["waiting_for"], WAITING_NOTE.get(j["waiting_for"])
+    return out
+
+
+def worker_status(cr) -> dict:
+    """The AI worker as the app shows it (Settings > Connections, the line under anything queued). Hosted: the
+    server's worker (name, last heartbeat, the models it writes with, a budget pause with its reason). `where` is
+    plain words; "your PC" is gone."""
+    if getattr(cr, "jobs_mode", "worker") == "inproc":
+        return {"online": True, "last_seen": None, "name": "inproc", "where": "this computer", "hosted": False,
+                "model": None, "paused": None, "online_window_s": WORKER_ONLINE_S}
+    w = getattr(cr, "worker_seen", None)
+    online = bool(w) and time.time() - w["t"] < WORKER_ONLINE_S
+    hosted = bool(w and w.get("hosted"))
+    return {"online": online, "last_seen": w["at"] if w else None, "name": w["name"] if w else None,
+            "where": "the server" if hosted or os.environ.get("PK_AUTH") == "1" else "a development PC",
+            "hosted": hosted, "model": (w or {}).get("model"), "paused": (w or {}).get("paused") if online else None,
+            "online_window_s": WORKER_ONLINE_S}
+
+
+def check_claim(body: dict) -> tuple[list | None, dict]:
+    """A worker's claim: the kinds it may take, and what it reports (name, model, hosted, paused). A hosted worker
+    asking for a transcriber kind is a bug on its side and is refused outright (400); a paused worker (over its AI
+    budget) gets no job, and the reason is what /api/connections shows."""
+    kinds = body.get("kinds") or None
+    if kinds is not None and (not isinstance(kinds, list) or not set(kinds) <= set(JOB_KINDS)):
+        raise HttpError(400, f"kinds must be a subset of {JOB_KINDS}")
+    hosted = bool(body.get("hosted"))
+    if hosted and (kinds is None or set(kinds) & TRANSCRIBER_KINDS):
+        raise HttpError(400, "a hosted worker must list its kinds and never a transcriber kind "
+                             f"({sorted(TRANSCRIBER_KINDS)}): transcription happens on the phone")
+    seen = {"t": time.time(), "at": now_iso(), "name": str(body.get("worker") or "home")[:40], "hosted": hosted,
+            "model": (str(body["model"])[:120] if body.get("model") else None),
+            "paused": (str(body["paused"])[:300] if body.get("paused") else None)}
+    return kinds, seen
 
 
 def build_corpus(inp: dict, decisions: list, vectors: Vectors) -> Corpus:
@@ -737,6 +790,7 @@ POST_ROUTES = [
     (re.compile(r"^/api/import/youtube$"), "youtube"),
     (re.compile(r"^/api/facts$"), "facts"),
     (re.compile(r"^/api/riff$"), "riff"),
+    (re.compile(r"^/api/sets/transcript$"), "set_transcript"),
 ]
 PATCH_ROUTES = [
     (re.compile(r"^/api/boards/([^/]+)$"), "board_patch"),
@@ -1202,6 +1256,44 @@ class Routes:
         return self.cr.enqueue(self.st(), "import_youtube", f"youtube|{vid}",
                                {"url": f"https://www.youtube.com/watch?v={vid}", "video_id": vid}, kb=self.kb)
 
+    def set_transcript(self):
+        """POST /api/sets/transcript {segments: [{text, start?, end?}], title?, recorded_at?, venue?, duration_s?,
+        engine?}: a set transcribed ON THE PHONE (iOS SpeechTranscriber; the separate build). Queues `set_text` for
+        the hosted worker: the text-only analysis (bits, ideas), every audio-derived field marked unavailable until a
+        recording with timing is processed. No audio is sent or kept. 202 {status:"queued", job, poll}."""
+        segs = self.b.get("segments")
+        if not isinstance(segs, list) or not segs or len(segs) > 5000:
+            raise HttpError(400, "segments must be a list of 1-5000 {text, start?, end?}")
+        chars = 0
+        for s in segs:
+            if not isinstance(s, dict) or not isinstance(s.get("text"), str):
+                raise HttpError(400, "each segment needs text")
+            chars += len(s["text"])
+            for k in ("start", "end"):
+                if k in s and s[k] is not None and (isinstance(s[k], bool) or not isinstance(s[k], (int, float))):
+                    raise HttpError(400, f"segment {k} must be seconds (a number)")
+        if chars > 400_000:
+            raise HttpError(413, "transcript too long")
+        if not any(s["text"].strip() for s in segs):
+            raise HttpError(400, "the transcript is empty")
+        title = self.b.get("title")
+        if title is not None and (not isinstance(title, str) or len(title) > 200):
+            raise HttpError(400, "title must be text (at most 200 characters)")
+        rec = self.b.get("recorded_at")
+        if rec is not None and (not isinstance(rec, str) or not re.match(r"^\d{4}-\d{2}-\d{2}", rec) or len(rec) > 40):
+            raise HttpError(400, "recorded_at must be an ISO date-time")
+        venue = self.b.get("venue")
+        if venue is not None and (not isinstance(venue, str) or len(venue) > 120):
+            raise HttpError(400, "venue must be text (at most 120 characters)")
+        dur = self.b.get("duration_s")
+        if dur is not None and (isinstance(dur, bool) or not isinstance(dur, (int, float)) or dur < 0):
+            raise HttpError(400, "duration_s must be seconds")
+        digest = hashlib.sha256(json.dumps([s["text"].strip() for s in segs], ensure_ascii=False).encode()).hexdigest()[:16]
+        inp = {"segments": [{k: s[k] for k in ("text", "start", "end") if k in s} for s in segs], "title": title,
+               "recorded_at": rec, "venue": venue, "duration_s": dur, "received_at": now_iso(),
+               "engine": str(self.b.get("engine") or "phone")[:40]}
+        return self.cr.enqueue(self.st(), "set_text", f"set_text|{digest}", inp, kb=self.kb)
+
     def settings(self, st=None):
         it = (st or self.st())["account"].get("settings") or {}
         return 200, {**SETTINGS_DEFAULTS, **{k: it[k] for k in SETTINGS_DEFAULTS if k in it},
@@ -1209,17 +1301,17 @@ class Routes:
 
     def connections_status(self):
         """Settings > Connections: one plain status per outside source. Read-only."""
-        w = self.cr.worker_seen
-        online = bool(w) and time.time() - w["t"] < WORKER_ONLINE_S
         nodes = self.kb.view().nodes
         yt = sum(1 for k, n in nodes.items() if n.get("type") == "set" and re.search(r"_[A-Za-z0-9_-]{11}$", k))
         hosted = os.environ.get("PK_AUTH") == "1"
+        jobs = self.st()["jobs"].items.values()
+        waiting = sum(1 for j in jobs if j["status"] == "queued" and j.get("waiting_for") == "transcriber")
         return 200, {
             "google_docs": gsync_status(self.cr.gsync_dir, hosted),
             "youtube": {"sets": yt, "import": "link"},
-            "ai": {"provider": self.settings()[1]["provider"],
-                   "worker": {"online": online, "last_seen": w["at"] if w else None, "name": w["name"] if w else None,
-                              "online_window_s": WORKER_ONLINE_S}},
+            "ai": {"provider": self.settings()[1]["provider"], "worker": worker_status(self.cr)},
+            # the recording side: whisper and the laugh detector have no worker since the PC was retired
+            "transcriber": {"where": "your phone", "waiting": waiting, "note": WAITING_NOTE["transcriber"] if waiting else None},
             "audio_storage": {"status": "not_set_up", "provider": "Cloudflare R2"},
         }
 
@@ -1236,13 +1328,12 @@ class Routes:
 
     # ---------------------------------------------------------------- the home worker
     def w_claim(self):
-        kinds = self.b.get("kinds") or None
-        if kinds is not None and (not isinstance(kinds, list) or not set(kinds) <= set(JOB_KINDS)):
-            raise HttpError(400, f"kinds must be a subset of {JOB_KINDS}")
-        name = str(self.b.get("worker") or "home")[:40]
-        self.cr.worker_seen = {"t": time.time(), "at": now_iso(), "name": name}
+        kinds, seen = check_claim(self.b)
+        self.cr.worker_seen = seen
+        if seen["paused"]:  # over its AI budget: the heartbeat lands, nothing is handed out, the jobs stay queued
+            return 204, None
         with self.cr.lock:
-            j = self.cr.claim(self.st(), kinds, name)
+            j = self.cr.claim(self.st(), kinds, seen["name"])
         return (200, {"job": j}) if j else (204, None)
 
     def w_result(self, jid):

@@ -107,12 +107,9 @@ def store(cr, kb) -> Store:
 
 
 def worker_status(cr) -> dict:
-    """Is the home PC there to answer? Local dev with in-process jobs always is."""
-    if getattr(cr, "jobs_mode", "worker") == "inproc":
-        return {"online": True, "last_seen": None, "where": "this computer"}
-    w = cr.worker_seen
-    online = bool(w) and time.time() - w["t"] < CR.WORKER_ONLINE_S
-    return {"online": online, "last_seen": w["at"] if w else None, "where": "your home PC"}
+    """Is the writer there to answer? The hosted worker on the server (creative_api.worker_status: name, last
+    heartbeat, models, a budget pause); local dev with in-process jobs always is."""
+    return CR.worker_status(cr)
 
 
 def _history(ch: dict) -> list[dict]:

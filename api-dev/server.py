@@ -959,9 +959,13 @@ def inbox_list(kb: AppKB) -> list[dict]:
                 meta = json.loads(mp.read_text(encoding="utf-8"))
             except ValueError:
                 meta = {}
-        out.append({"file": p.name, "bytes": p.stat().st_size, "kind": meta.get("kind") or "upload",
-                    "title": meta.get("title") or p.name, "received_at": meta.get("received_at"),
-                    "duration_s": meta.get("duration_s"), "marks_ms": meta.get("marks_ms") or [], "status": "queued"})
+        row = {"file": p.name, "bytes": p.stat().st_size, "kind": meta.get("kind") or "upload",
+               "title": meta.get("title") or p.name, "received_at": meta.get("received_at"),
+               "duration_s": meta.get("duration_s"), "marks_ms": meta.get("marks_ms") or [], "status": "queued"}
+        if Handler.jobs_on_upload:  # hosted: nothing transcribes it here; the phone will (api-dev/creative_api.py)
+            import creative_api as CR
+            row["waiting_for"], row["note"] = "transcriber", CR.WAITING_NOTE["transcriber"]
+        out.append(row)
     return out
 
 
@@ -1920,10 +1924,14 @@ class Handler(BaseHTTPRequestHandler):
         meta.update(upload_extras(self.headers))
         dest.with_name(dest.name + ".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
         out = {"status": "queued", "file": dest.name, "kind": kind, "bytes": n}
-        if self.jobs_on_upload and self.creative is not None:  # hosted: the home worker fetches and processes it
+        if self.jobs_on_upload and self.creative is not None:
+            # hosted: queued as process_set. No worker transcribes any more (the PC is retired; transcription
+            # happens on the phone), so the job says so: waiting_for "transcriber" and the note, never a silent drop.
             st = self.creative.stores(kb)
             _, q = self.creative.enqueue(st, "process_set", f"process|{dest.name}", {"file": dest.name, "meta": meta})
             out["job"] = q["job"]
+            if q.get("waiting_for"):
+                out["waiting_for"], out["note"] = q["waiting_for"], q.get("note")
         return self.send_json(out)
 
 
