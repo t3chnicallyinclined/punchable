@@ -56,7 +56,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e.mjs",
     "lint": "expo lint",
-    "test:unit": "node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs",
+    "test:unit": "node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs && node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs && node --experimental-strip-types --no-warnings tests/routes.test.mjs && node --experimental-strip-types --no-warnings tests/feedback.test.mjs",
     "dev-fixtures": "node scripts/dev-fixtures.mjs"
   },
   "private": true

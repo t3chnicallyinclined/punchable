@@ -41,6 +41,11 @@ export const DARK = {
   greenBorder: 'rgba(34,197,94,.45)',
   blue: '#38bdf8',
   blueSoft: 'rgba(56,189,248,.15)',
+  // a bit's status dot (Bits, the all-bits map): kills · working · fresh · resting; systemGreen / amber / systemCyan / the off tab
+  statusKills: '#30D158',
+  statusWorking: '#FFB340',
+  statusFresh: '#64D2FF',
+  statusResting: '#8E8E93',
   scrim: 'rgba(9,10,11,.8)',
   // prototype .ai chip, .add button, drafts
   aiBorder: '#1e3a52',
@@ -103,6 +108,10 @@ export const LIGHT_TOKENS: Tokens = {
   greenBorder: 'rgba(21,128,61,.45)',
   blue: '#0369a1',
   blueSoft: 'rgba(3,105,161,.12)',
+  statusKills: '#248a3d',
+  statusWorking: '#b47a0e',
+  statusFresh: '#0a6e9e',
+  statusResting: '#6b6f78',
   scrim: 'rgba(17,18,20,.45)',
   aiBorder: '#b9dcf0',
   aiBg: 'rgba(3,105,161,.06)',

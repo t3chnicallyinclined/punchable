@@ -2,19 +2,23 @@
 // every screen; the app decides whether it was a bit, a question or a command (lib/say.ts, POST /api/say).
 // Hold to talk: web = the browser's speech recognition while the button is held (Chrome, Safari; Firefox focuses
 // the field); phone = expo-audio records while held and the voice note goes up to be transcribed (lib/holdToTalk).
-import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from './theme';
 import { haptics } from './haptics';
+import { holdHaptic } from './feedback';
 import { useHoldToTalk } from './holdToTalk';
-import { useUI } from './ui';
+import { BarConfig, Icon, useUI } from './ui';
+import { ACCESSORY } from './accessory';
 import type { Worker } from './ask';
 
 export { canListen, useHoldToTalk } from './holdToTalk';
 
 function MicGlyph({ size = 22, color = '#fff' }: { size?: number; color?: string }) {
+  if (Platform.OS !== 'web') return <Icon name="mic" size={size} color={color} sw={2} />;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
       <Rect x={9} y={3} width={6} height={11} rx={3} />
@@ -27,10 +31,52 @@ function MicGlyph({ size = 22, color = '#fff' }: { size?: number; color?: string
  * The bar. `onSay(text)` gets the typed or spoken words; the screen decides what to do (usually lib/say.sayOrQueue
  * and a hop to /say). `worker` (when the screen has it) shows the honest line when the writer is offline or paused.
  */
-export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, testID = 'say', autoFocus, busy, pad = true }: {
+export type SayBarProps = {
   onSay: (text: string, how: 'typed' | 'spoken') => void; placeholder?: string; hint?: string | null; worker?: Worker | null;
   testID?: string; autoFocus?: boolean; busy?: boolean; pad?: boolean;
-}) {
+  /** `dock` (default): the full bar pinned above the tab bar. `accessory`: inside the tab bar's bottom accessory
+   *  (iOS 26; the system draws the glass, so nothing here does). `inline`: the accessory beside a minimised tab bar:
+   *  the field only, no hint, no record ring. */
+  variant?: 'dock' | 'accessory' | 'inline';
+};
+
+/** The sizes per variant: the field's height, the ring's outer and inner diameters (0 = no ring), the hint line. */
+export const BAR_SIZES = {
+  dock: { field: 52, ring: 72, inner: 54, hint: true, padX: 16, padY: 8, gap: 10 },
+  accessory: { field: 44, ring: 48, inner: 36, hint: false, padX: 8, padY: 4, gap: 8 },
+  inline: { field: 40, ring: 0, inner: 0, hint: false, padX: 6, padY: 2, gap: 6 },
+} as const;
+
+/**
+ * A screen's input bar. Returns the element for Screen's `bar` prop, or null on iOS 26 where the tab bar's bottom
+ * accessory draws it (lib/TabsShell.native): the screen publishes its config while it is in front, and keeps it
+ * current when the placeholder, the hint or the writer's status change.
+ */
+export function useSayBar(cfg: SayBarProps): React.ReactNode {
+  const ui = useUI();
+  const ref = useRef(cfg);
+  ref.current = cfg;
+  const focused = useRef(false);
+  const publish = useCallback(() => {
+    const c = ref.current;
+    const b: BarConfig = { onSay: (t, how) => ref.current.onSay(t, how), placeholder: c.placeholder, hint: c.hint, worker: c.worker, testID: c.testID, autoFocus: c.autoFocus, busy: c.busy };
+    ui.setBar(b);
+  }, [ui.setBar]); // eslint-disable-line react-hooks/exhaustive-deps
+  useFocusEffect(useCallback(() => {
+    if (!ACCESSORY) return;
+    focused.current = true;
+    publish();
+    return () => { focused.current = false; ui.setBar(null); };
+  }, [publish])); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (ACCESSORY && focused.current) publish();
+  }, [cfg.placeholder, cfg.hint, cfg.worker?.online, cfg.worker?.paused, cfg.busy, publish]);
+  if (ACCESSORY) return null;
+  return <SayBar {...cfg} />;
+}
+
+export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, testID = 'say', autoFocus, busy, pad = true, variant = 'dock' }: SayBarProps) {
+  const Z = BAR_SIZES[variant];
   const [text, setText] = useState('');
   const [interim, setInterim] = useState('');
   const input = useRef<any>(null);
@@ -57,14 +103,14 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
     ? (recording ? 'Recording; let go to send the voice note' : 'Hold to record a voice note')
     : (listening ? 'Listening; let go to send' : 'Hold to talk');
   return (
-    <View testID={`${testID}-bar`} style={{ paddingHorizontal: pad ? 16 : 0, paddingTop: 8, paddingBottom: pad ? 8 + ins.bottom * 0 : 0, gap: 10, alignItems: 'center' }}>
-      {!!line && <Text testID={`${testID}-hint`} maxFontSizeMultiplier={1.4} style={{ fontSize: 13, fontFamily: F.body, color: worker && !worker.online ? C.amber : C.mut2, textAlign: 'center' }}>{line}</Text>}
-      <View style={{ width: '100%', maxWidth: 720, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0, minHeight: 52, borderRadius: 26, backgroundColor: C.card, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
+    <View testID={`${testID}-bar`} style={{ paddingHorizontal: pad ? Z.padX : 0, paddingTop: Z.padY, paddingBottom: pad ? Z.padY + ins.bottom * 0 : 0, gap: Z.gap, alignItems: 'center' }}>
+      {!!line && Z.hint && <Text testID={`${testID}-hint`} maxFontSizeMultiplier={1.4} style={{ fontSize: 13, fontFamily: F.body, color: worker && !worker.online ? C.amber : C.mut2, textAlign: 'center' }}>{line}</Text>}
+      <View style={{ width: '100%', maxWidth: 720, flexDirection: 'row', alignItems: 'center', gap: Z.gap }}>
+        <View style={{ flex: 1, minWidth: 0, minHeight: Z.field, borderRadius: Z.field / 2, backgroundColor: C.card, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
           <TextInput ref={input} testID={`${testID}-input`} value={listening && interim ? interim : text} onChangeText={setText} onSubmitEditing={send} returnKeyType="send"
             blurOnSubmit={false} autoFocus={autoFocus} editable={!talk.on} placeholder={listening ? 'Listening…' : recording ? 'Recording… let go to send' : placeholder} placeholderTextColor={talk.on ? C.amber : C.dim}
             accessibilityLabel={placeholder} maxLength={4000} maxFontSizeMultiplier={1.4}
-            style={{ flex: 1, minWidth: 0, minHeight: 52, color: C.text, fontFamily: F.body, fontSize: 16 }} />
+            style={{ flex: 1, minWidth: 0, minHeight: Z.field, color: C.text, fontFamily: F.body, fontSize: 16 }} />
           {!!text.trim() && !talk.on && (
             <Pressable testID={`${testID}-send`} accessibilityRole="button" accessibilityLabel="Send" onPress={send} disabled={busy} hitSlop={6}
               style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.amber, alignItems: 'center', justifyContent: 'center', marginRight: -10 }}>
@@ -72,14 +118,14 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
             </Pressable>
           )}
         </View>
-        <Pressable testID={`${testID}-talk`} accessibilityRole="button" accessibilityLabel={talkLabel}
-          onPressIn={() => { if (!talk.supported) { input.current?.focus(); return; } haptics.light(); talk.start(); }}
-          onPressOut={() => { if (talk.supported) { talk.stop(); haptics.light(); } }}
-          style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: talk.on ? C.amber : C.borderStrong, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: talk.supported ? C.rec : C.card, alignItems: 'center', justifyContent: 'center', transform: [{ scale: talk.on ? 0.86 : 1 }] }}>
-            {recording ? <Text accessibilityLabel="Recording" style={{ fontFamily: F.g7, fontSize: 11, color: '#fff', letterSpacing: 0.6 }}>● REC</Text> : <MicGlyph color={talk.supported ? '#fff' : C.mut2} />}
+        {Z.ring > 0 && <Pressable testID={`${testID}-talk`} accessibilityRole="button" accessibilityLabel={talkLabel}
+          onPressIn={() => { if (!talk.supported) { input.current?.focus(); return; } const h = holdHaptic('in'); if (h) haptics[h](); talk.start(); }}
+          onPressOut={() => { if (talk.supported) { talk.stop(); const h = holdHaptic('out'); if (h) haptics[h](); } }}
+          style={{ width: Z.ring, height: Z.ring, borderRadius: Z.ring / 2, borderWidth: variant === 'dock' ? 4 : 3, borderColor: talk.on ? C.amber : C.borderStrong, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: Z.inner, height: Z.inner, borderRadius: Z.inner / 2, backgroundColor: talk.supported ? C.rec : C.card, alignItems: 'center', justifyContent: 'center', transform: [{ scale: talk.on ? 0.86 : 1 }] }}>
+            {recording ? <Text accessibilityLabel="Recording" style={{ fontFamily: F.g7, fontSize: variant === 'dock' ? 11 : 9, color: '#fff', letterSpacing: 0.6 }}>● REC</Text> : <MicGlyph size={variant === 'dock' ? 22 : 18} color={talk.supported ? '#fff' : C.mut2} />}
           </View>
-        </Pressable>
+        </Pressable>}
       </View>
     </View>
   );

@@ -7,7 +7,8 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { router } from 'expo-router';
 import { get, patch, post } from './api';
 import { C, F } from './theme';
-import { AIBadge, Btn, Card, Chip, Empty, ErrorCard, List, ListRow, Screen, T, s } from './ui';
+import { AIBadge, Btn, Card, Chip, Empty, ErrorCard, List, ListRow, T, s } from './ui';
+import { Screen } from './Screen';
 
 export type AskChip = {
   n: number; kind: 'bit' | 'idea' | 'note' | 'moment'; source: string; label: string; sub: string; href: string;

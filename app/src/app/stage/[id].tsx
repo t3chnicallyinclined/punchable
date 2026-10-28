@@ -4,18 +4,21 @@
 // (HIG: a confirmation before an upload you can't take back). Saving hands the tape to the upload queue (retried
 // on the backoff schedule if the venue has no signal). The screen stays awake.
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
+import { actionSheet } from '@/lib/actionSheet';
 import { isWeb, micExplained } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
 import { enqueueUpload } from '@/lib/uploads';
 import { Build } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { C, F, fmtMs } from '@/lib/theme';
-import { Btn, Empty, Screen, Sheet, SheetHead, Skeleton, T, TopBar, useUI } from '@/lib/ui';
+import { Btn, Empty, Sheet, SheetHead, Skeleton, T, useUI } from '@/lib/ui';
+import { Screen } from '@/lib/Screen';
+import { TopBar } from '@/lib/TopBar';
 
 export default function Stage() {
   useKeepAwake();
@@ -51,8 +54,14 @@ export default function Stage() {
   const back = () => (router.canGoBack() ? router.back() : router.navigate(`/list/${encodeURIComponent(id)}` as any));
   const stop = () => {
     if (rec !== 'on') return back();
-    haptics.warning();
-    setAsk(true);
+    // no haptic here (lib/feedback stopHaptic): a confirmation is not a warning; saving plays its own success
+    if (Platform.OS === 'web') return setAsk(true);
+    // HIG/action-sheets: choices tied to an intentional action; the destructive one on top, Cancel ("Keep going") at the bottom
+    actionSheet({ title: 'Stop recording?', message: `${fmtMs(ms)} on tape. Save it and it gets reviewed after the show.`, options: [
+      { label: 'Discard the recording', destructive: true, onPress: discard },
+      { label: 'Save the set', onPress: save },
+      { label: 'Keep going', cancel: true },
+    ] });
   };
   const discard = () => {
     setAsk(false);

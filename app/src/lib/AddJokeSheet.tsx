@@ -2,6 +2,8 @@
 // Memos, each result with why it fits, "+" adds (the board's own add op), a joke already in the set is greyed with
 // its position, and "Nothing right? Write a new one here" saves an idea (POST /api/ideas) and adds it.
 // The search is debounced (300 ms) and stale answers are dropped (useApi keeps only the latest).
+// `AddJokeBody` is the content; `AddJokeSheet` wraps it in the Modal sheet (the web); on the phone the route
+// app/add/[board].tsx shows it as a native form sheet at the large detent whose bar carries Cancel (HIG/sheets).
 import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
@@ -25,9 +27,15 @@ function fromSummary(j: JokeSummary): RowT {
   return { joke_id: j.id, title: j.short_title || j.title, short_name: j.short_name || shortNameOf(j.title), sub: j.punch ? `“…${j.punch}”` : line, why: j.sets ? line : null, duration_s: j.duration_s, estimated: j.duration_estimated };
 }
 
-export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, left, mode = 'add' }: {
-  visible: boolean; onClose: () => void; boardId: string; inSet: { joke_id: string; position: number }[]; fits: BitCard[]; onPick: (p: Pick) => void; left: number | null; mode?: 'add' | 'swap';
-}) {
+export type AddJokeProps = {
+  onClose: () => void; boardId: string; inSet: { joke_id: string; position: number }[]; fits: BitCard[]; onPick: (p: Pick) => void; left: number | null; mode?: 'add' | 'swap';
+};
+
+/** The sheet's title (the wrapper's row, or the native sheet's bar). */
+export const addJokeTitle = (mode: 'add' | 'swap', left: number | null) => (mode === 'swap' ? 'Swap it for' : `Add a joke${left != null ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`);
+
+/** The content. `chrome` draws the Cancel · title row (the Modal sheet); the native form sheet owns the bar (chrome={false}). */
+export function AddJokeBody({ onClose, boardId, inSet, fits, onPick, left, mode = 'add', chrome = true }: AddJokeProps & { chrome?: boolean }) {
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
   const [filter, setFilter] = useState<Filter>('fits');
@@ -38,14 +46,11 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
     const t = setTimeout(() => setDq(q.trim()), 300);
     return () => clearTimeout(t);
   }, [q]);
-  useEffect(() => {
-    if (!visible) { setQ(''); setDq(''); setWriting(false); setDraft(''); }
-  }, [visible]);
   const question = dq.length >= 3 && isQuestion(dq);
-  const rel = useApi<Related>(visible && dq.length >= 2 && !question ? `/api/notebook/related?q=${encodeURIComponent(dq)}&cap=12` : null, { cache: false });
-  const kills = useApi<{ items: JokeSummary[] }>(visible && filter === 'kills' && !dq ? '/api/jokes?sort=strongest&limit=30' : null);
-  const never = useApi<{ items: JokeSummary[] }>(visible && filter === 'never' && !dq ? '/api/jokes?sort=written&limit=200' : null);
-  const memos = useApi<MemosResp>(visible && filter === 'memos' && !dq ? '/api/memos' : null, { cache: false });
+  const rel = useApi<Related>(dq.length >= 2 && !question ? `/api/notebook/related?q=${encodeURIComponent(dq)}&cap=12` : null, { cache: false });
+  const kills = useApi<{ items: JokeSummary[] }>(filter === 'kills' && !dq ? '/api/jokes?sort=strongest&limit=30' : null);
+  const never = useApi<{ items: JokeSummary[] }>(filter === 'never' && !dq ? '/api/jokes?sort=written&limit=200' : null);
+  const memos = useApi<MemosResp>(filter === 'memos' && !dq ? '/api/memos' : null, { cache: false });
 
   const rows: RowT[] = useMemo(() => {
     if (dq && !question) return (rel.data?.items || []).map(fromCard);
@@ -94,9 +99,10 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} label={mode === 'swap' ? 'Swap for another joke' : 'Add a joke'} testID="add-sheet">
-      <SheetHead title={mode === 'swap' ? 'Swap it for' : `Add a joke${left != null && mode === 'add' ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`} onCancel={onClose} onDone={onClose} testID="add" />
-      <TextInput testID="add-search" value={q} onChangeText={setQ} placeholder="something about food to close" placeholderTextColor={C.dim} autoFocus
+    <>
+      {chrome && <SheetHead title={addJokeTitle(mode, left)} onCancel={onClose} onDone={onClose} testID="add" />}
+      {/* a plain field here: the system search bar does not apply inside a form sheet (HIG.md §3.5) */}
+      <TextInput testID="add-search" value={q} onChangeText={setQ} placeholder="something about food to close" placeholderTextColor={C.dim} autoFocus clearButtonMode="while-editing" returnKeyType="search"
         style={{ minHeight: 48, borderRadius: 24, paddingHorizontal: 16, backgroundColor: C.card, color: C.text, fontFamily: F.body, fontSize: 16 }} />
       {question && (
         <Pressable testID="add-ask" accessibilityRole="button" onPress={() => { onClose(); router.push({ pathname: '/say', params: { text: dq, board: boardId, screen: 'add-a-joke' } } as any); }}
@@ -129,6 +135,17 @@ export function AddJokeSheet({ visible, onClose, boardId, inSet, fits, onPick, l
           </View>
         )}
       </View>
+    </>
+  );
+}
+
+/** The Modal sheet (the web; also any caller that keeps the in-page sheet). The body remounts on each open. */
+export function AddJokeSheet({ visible, ...p }: AddJokeProps & { visible: boolean }) {
+  return (
+    <Sheet visible={visible} onClose={p.onClose} label={p.mode === 'swap' ? 'Swap for another joke' : 'Add a joke'} testID="add-sheet">
+      {visible && <AddJokeBody {...p} />}
     </Sheet>
   );
 }
+
+export type { Build };
