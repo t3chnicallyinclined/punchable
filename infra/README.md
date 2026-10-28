@@ -30,6 +30,18 @@ Punchable on your own computer; see the top-level README for that.
 `infra/ship.sh dns plan|apply|undo` runs locally against the Cloudflare API (`CF_API_TOKEN` in
 `~/.punchable/cloudflare.env`) and only touches the records it created.
 
+### The login theme
+
+`keycloak/theme/login/` is the realm's login theme (`loginTheme: punchable`): a flat directory (template.ftl, the
+page .ftl files, theme.properties, messages_en.properties; the CSS is inline in template.ftl). It is not a `ship.sh`
+step: the shared Keycloak's Deployment mounts it from a ConfigMap (`keycloak-theme-punchable`, in the Keycloak
+namespace) through its `setup-theme` init container into `/opt/keycloak/themes/punchable/login/` (messages go to
+`login/messages/`). Updating it means recreating that ConfigMap from the directory and restarting the shared Keycloak,
+which signs every realm out for the restart: an explicit go from the owner each time. Before shipping:
+`python infra/keycloak/test_theme_static.py` (and `--red`), `python -m pytest infra/keycloak/test_realm_static.py -q`,
+and `node infra/keycloak/theme_mockups.mjs` (PNGs of every page, phone and desktop, dark and light, no Keycloak needed).
+`apply.sh` imports the realm without `loginTheme` until the Deployment has the `punchable-theme` volume.
+
 ## Online-first
 The database on the server is the source of truth once you cut over; a worker posts results through `/api/worker/*`
 (`api-dev/ingest_api.py`, `worker/online.py`). The order (one last `dbload`, then `db/push_remote.py cutover` in the
