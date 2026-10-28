@@ -46,6 +46,8 @@ export const DARK = {
   statusWorking: '#FFB340',
   statusFresh: '#64D2FF',
   statusResting: '#8E8E93',
+  // the galaxy map's cluster colours (which bits are alike), six slots by size; all >= 4.5:1 on their ground
+  cluster1: '#40CBE0', cluster2: '#8E8CFF', cluster3: '#FF6482', cluster4: '#A8E05F', cluster5: '#D48CFF', cluster6: '#9BB0C8',
   scrim: 'rgba(9,10,11,.8)',
   // prototype .ai chip, .add button, drafts
   aiBorder: '#1e3a52',
@@ -112,6 +114,7 @@ export const LIGHT_TOKENS: Tokens = {
   statusWorking: '#b47a0e',
   statusFresh: '#0a6e9e',
   statusResting: '#6b6f78',
+  cluster1: '#0A7A8C', cluster2: '#4641C9', cluster3: '#B8204A', cluster4: '#4E7A0C', cluster5: '#7B2FB3', cluster6: '#4F6378',
   scrim: 'rgba(17,18,20,.45)',
   aiBorder: '#b9dcf0',
   aiBg: 'rgba(3,105,161,.06)',

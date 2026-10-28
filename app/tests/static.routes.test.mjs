@@ -17,8 +17,8 @@ const rel = (p) => relative(APP, p).replace(/\\/g, '/');
 const fails = [];
 const check = (c, m) => { if (!c) fails.push(m); };
 
-/** Still on `initialRouteName` (2026-10-28). The builder swaps each for `anchor` and deletes the line here. */
-const KNOWN_INITIAL_ROUTE_NAME = new Set(['(tabs)/(tonight)/_layout.tsx', '(tabs)/(bits)/_layout.tsx', '(tabs)/(sets)/_layout.tsx']);
+/** Still on `initialRouteName`: none since 2026-10-28 (the three tab layouts moved to `anchor`). Stays empty. */
+const KNOWN_INITIAL_ROUTE_NAME = new Set([]);
 /** Named component exports that a route file is allowed to keep for now (the builder moves them under src/features). */
 const KNOWN_EXTRA_EXPORTS = new Set(['(tabs)/(tonight)/index.tsx:SetBar', '(tabs)/(bits)/write.tsx:BitRow', '(tabs)/(sets)/sets.tsx:PaperCard']);
 
@@ -39,6 +39,7 @@ for (const p of files) {
   }
   let m;
   while ((m = NAMED_COMPONENT.exec(src))) {
+    if (m[1] === 'ErrorBoundary') continue; // expo-router reads this named export from a route (docs.expo.dev/router/error-handling)
     const key = `${r}:${m[1]}`;
     seenExtra.add(key);
     check(KNOWN_EXTRA_EXPORTS.has(key), `${r}: exports component ${m[1]} from a route file; move it under src/lib (or src/features) and import it`);
