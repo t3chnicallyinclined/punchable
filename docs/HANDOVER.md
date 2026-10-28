@@ -16,12 +16,12 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 
 | Surface | State |
 |---|---|
-| Web | punchable.io, main at `e4c5057` (plus this doc). Tabs Tonight · Bits · Sets. |
-| iPhone | TestFlight **0.1.0 (9)**, built from `e4c5057`, auto-submitted. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7, 8, 9 are good. |
+| Web | punchable.io, main at `2e98603` (web image from `3d4dce9`). Tabs Tonight · Bits · Sets. |
+| iPhone | TestFlight **0.1.0 (10)**, built from `3d4dce9` (search over everything, "In your sets", "Elsewhere"), auto-submitted 2026-10-28. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-10 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
-| Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. |
-| Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). Worker wired 2026-10-28 (`worker/crashreport.py`, the same Secret, release `punchable-worker@…`, tags kind/retry; a budget pause is never reported) and **waits for its first `build worker` + `rollout worker`**. |
+| Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. **Live since 2026-10-28 20:42 UTC**: 159 typed ideas (3 have no text) and all 675 moments embedded; a fused query takes ~0.1 s on the pod; API memory 450 MiB idle, ~560 MiB during a sweep (limit 1 Gi). |
+| Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). Worker wired 2026-10-28 (`worker/crashreport.py`, the same Secret, release `punchable-worker@…`, tags kind/retry; a budget pause is never reported) and live since 2026-10-28 20:35 UTC (`crash reporting on: punchable-worker@…` in its log). |
 | Metrics | Prometheus scrape of API + worker, Grafana dashboard, 13 alert rules. **Two alerts can never fire** (backup missed, certificate expiring): the cluster has no kube-state-metrics and cert-manager is not scraped. Fix needs the owner's go (shared namespace). |
 | DNS | `infra/dns/cf_dns.py plan` / `apply` with a token scoped to this one zone (DNS Write + Zone Read). Records: apex, auth, bugs. |
 
@@ -104,18 +104,16 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
-0. **Ship the search** (code on main): `ship.sh build api && ship.sh rollout api`, `build web && rollout web`, `build worker &&
-   rollout worker`; then the API log should say `vectors: bge-small-en-v1.5 from /opt/punchable/models/...` and, within
-   a minute, `vectors: embedded {'joke': 162, 'performance': 675, 'unit': 0}`; `/api/backend` shows `vectors`. Then a
-   TestFlight build (10) for the two new sections. Watch the API pod's memory (limit raised to 1 Gi for the model).
+0. **Owner checks on build 10**: Bits › type a word you once said on stage › "In your sets" rows (tap one: the set opens at
+   that second and plays); open a bit › "Elsewhere" (on tape / sounds like it). Then tell me which results feel wrong:
+   the ranking fuses words and meaning and has had no human judgment yet.
 
 1. **Owner checks on build 9**: tape a short set from Record, clap near the phone and watch the meter; riff a bit, keep
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.
 2. **"go ksm"**: deploy kube-state-metrics and a cert-manager scrape in the shared observability namespace so the two
    dead alerts work (config reload, no app downtime).
-3. Roll out the worker crash reporting (code is on main): `bash infra/ship.sh build worker && bash infra/ship.sh rollout worker`,
-   then the worker log should say `crash reporting on: punchable-worker@…`; prove it with the worker command under
-   "Verifying a crash lands" in `infra/OBSERVABILITY.md`.
+3. Worker crash reporting is live; still unproven end to end: run the worker command under "Verifying a crash lands" in
+   `infra/OBSERVABILITY.md` once and see the event in Bugsink.
 4. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
 5. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
 6. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
@@ -125,5 +123,5 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 9. Pin the Bugsink image by digest.
 10. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
-Done 2026-10-28 (this list's former items 3 and 7): worker crash reporting wired; `holdToTalk.native.ts` removed (the
-phone's input button now only focuses the field, jots are typed).
+Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
+now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).

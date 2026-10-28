@@ -140,8 +140,10 @@ thread that fills `embedding` + `embedded_sha` on every typed idea (`joke.summar
 moment (`performance.text`), plus any unit without a vector, at start and every `PK_VEC_SWEEP_S` (60 s). Log lines:
 `vectors: bge-small-en-v1.5 from …` at start (or `vectors: no bge-small model here … words alone`), `vectors: embedded
 {…}` after a pass that did work, `vectors: sweep failed (…)` otherwise. `GET /api/backend` → `backends.surreal.vectors`
-shows the embedder, runs, the last counts and the last error. Memory: the model and onnxruntime add roughly 200 MiB
-resident; the Deployment's limit is 1 Gi (was 512 Mi), request 320 Mi. Measure after the first day and tighten.
+shows the embedder, runs, the last counts and the last error. Memory, measured 2026-10-28 on the pod (cgroup `anon`): 450 MiB idle
+with the model loaded, ~560 MiB during a sweep (824 MiB before engine/embed.py turned the onnxruntime arena off and
+capped texts at 2,000 characters). The Deployment's limit is 1 Gi (was 512 Mi), request 320 Mi. A first sweep over
+everything took about 8 minutes on one CPU; a quiet pass is a few queries.
 
 ## Crash reports (Bugsink)
 
