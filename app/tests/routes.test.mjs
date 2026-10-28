@@ -38,6 +38,7 @@ const fileOf = (url) => table.find(([, p]) => matches(url, p))?.[0] || "";
 check(fileOf("/").startsWith("(tabs)/(tonight)/") && fileOf("/bits").startsWith("(tabs)/(bits)/") && fileOf("/sets").startsWith("(tabs)/(sets)/"), "the three tab roots live in their groups");
 check(fileOf("/joke/x").startsWith("(tabs)/(bits)/") && fileOf("/list/x").startsWith("(tabs)/(sets)/") && fileOf("/inbox").startsWith("(tabs)/(tonight)/"), "pushed screens live under their tab (Back goes to it)");
 check(!fileOf("/stage/x").startsWith("(tabs)") && !fileOf("/record").startsWith("(tabs)") && !fileOf("/review").startsWith("(tabs)"), "the stage, the recorder and the review are root-level full-screen modals");
+check(!fileOf("/create").startsWith("(tabs)") && !fileOf("/add/x").startsWith("(tabs)"), "the form sheets (create, add a joke) are root-level routes that cover the tab bar");
 check(!fileOf("/login").startsWith("(tabs)") && !fileOf("/auth/callback").startsWith("(tabs)") && !fileOf("/auth/logout").startsWith("(tabs)"), "login and the auth routes stay at the root, outside the tabs");
 
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");

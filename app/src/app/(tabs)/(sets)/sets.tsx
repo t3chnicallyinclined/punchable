@@ -57,13 +57,14 @@ export default function Sets() {
   const ordered = [...his.filter((x) => x.id === curId), ...his.filter((x) => x.id !== curId)];
   const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
   const native = Platform.OS !== 'web';
+  const openCreate = () => (native ? router.push({ pathname: '/create', params: { start: 'set' } } as any) : setCreate(true));
   return (
     <Screen title="Sets" testID="sets" onRefresh={refresh} largeTitle={native} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={() => setCreate(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
+      <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={openCreate} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
       <Avatar /></View>}>
       {native && (
         <Stack.Toolbar placement="right">
-          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" onPress={() => setCreate(true)}>New set list</Stack.Toolbar.Button>
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" onPress={openCreate}>New set list</Stack.Toolbar.Button>
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
@@ -73,7 +74,7 @@ export default function Sets() {
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
           {b.error && !b.data ? <ErrorCard error={b.error} onRetry={b.reload} /> : null}
           {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
-          {b.data && !his.length && <Empty text="No set list yet. ＋ New, or say “new 7 for Friday”."><Btn small v="add" label="New set list" onPress={() => setCreate(true)} /></Empty>}
+          {b.data && !his.length && <Empty text="No set list yet. ＋ New, or say “new 7 for Friday”."><Btn small v="add" label="New set list" onPress={openCreate} /></Empty>}
           <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 18, paddingVertical: 6 }}>
             {ordered.map((x) => (
               <View key={x.id} style={{ width: wide ? 300 : '100%' }}>
@@ -104,7 +105,7 @@ export default function Sets() {
           </List>
         </View>
       )}
-      <CreateSheet visible={create} onClose={() => setCreate(false)} start="set" />
+      {!native && <CreateSheet visible={create} onClose={() => setCreate(false)} start="set" />}
     </Screen>
   );
 }

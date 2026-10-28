@@ -6,9 +6,9 @@
 // the title and the "…" More button rename; pull to refresh.
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
 import { decide, patch, undo, useApi } from '@/lib/api';
 import { creative } from '@/lib/creative';
@@ -70,6 +70,18 @@ export default function SetListScreen() {
   React.useEffect(() => {
     if (B?.board) boards.setCurrent({ id, title: B.board.title });
   }, [B?.board?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the Add-a-joke sheet is its own route on the phone and writes the op itself: re-read when this screen is back in front
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    b.reload();
+  }, [b.reload])); // eslint-disable-line react-hooks/exhaustive-deps
+  type AddMode = null | { mode: 'add' } | { mode: 'swap'; at: number; old: Step };
+  const openAdd = (m: AddMode) => {
+    if (!native) return setAdd(m);
+    const params = m?.mode === 'swap' ? { board: id, swap: '1', at: String(m.at), old: m.old.joke_id } : { board: id };
+    router.push({ pathname: '/add/[board]', params } as any);
+  };
 
   /** One write, one snackbar, and Undo = the inverse op (also his write). The build is re-read after each. */
   const act = useCallback(async (fn: () => Promise<any>, msg: string, inverse?: () => Promise<any>, tone: 'success' | 'warning' = 'success') => {
@@ -121,7 +133,7 @@ export default function SetListScreen() {
     haptics.light();
     setMenu({ title: nameOf(x), items: [
       { label: 'Open the bit', onPress: () => router.push(`/joke/${enc(x.joke_id)}` as any), testID: `row-openbit-${i}` },
-      { label: 'Swap for another', onPress: () => setAdd({ mode: 'swap', at: i, old: x }), testID: `row-swap-${i}` },
+      { label: 'Swap for another', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swap-${i}` },
       { label: 'Rename the short name', onPress: () => setRename(x), testID: `row-rename-${i}` },
       { label: 'Move to top', onPress: () => reorder(i, 0), disabled: i === 0, testID: `row-top-${i}` },
       { label: 'Move to bottom', onPress: () => reorder(i, steps.length - 1), disabled: i === steps.length - 1, testID: `row-bottom-${i}` },
@@ -174,7 +186,7 @@ export default function SetListScreen() {
 
   return (
     <Screen title={B.board.title} testID="setlist-screen" header={header} backLabel="Sets" onRefresh={b.reload}
-      dock={native ? undefined : <Btn testID="add-joke" v="primary" label={addLabel} onPress={() => setAdd({ mode: 'add' })} />}>
+      dock={native ? undefined : <Btn testID="add-joke" v="primary" label={addLabel} onPress={() => openAdd({ mode: 'add' })} />}>
       {native && (
         <>
           {/* HIG/toolbars: one prominent action (Stage) on the trailing side; the rest in a menu; destructive last */}
@@ -190,7 +202,7 @@ export default function SetListScreen() {
           {/* the dock becomes a bottom toolbar inside the tab's stack, so the tab bar stays visible (HIG/tab-bars) */}
           <Stack.Toolbar placement="bottom">
             <Stack.Toolbar.Spacer />
-            <Stack.Toolbar.Button variant="prominent" accessibilityLabel={addLabel} onPress={() => setAdd({ mode: 'add' })}>{addLabel}</Stack.Toolbar.Button>
+            <Stack.Toolbar.Button variant="prominent" accessibilityLabel={addLabel} onPress={() => openAdd({ mode: 'add' })}>{addLabel}</Stack.Toolbar.Button>
             <Stack.Toolbar.Spacer />
           </Stack.Toolbar>
         </>
@@ -223,7 +235,7 @@ export default function SetListScreen() {
             )}
             <SwipeRow testID={`row-swipe-${i}`}
               trailing={{ label: 'Remove', destructive: true, onPress: () => remove(x, i), testID: `row-swipe-remove-${i}` }}
-              second={{ label: 'Swap', onPress: () => setAdd({ mode: 'swap', at: i, old: x }), testID: `row-swipe-swap-${i}` }}
+              second={{ label: 'Swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swipe-swap-${i}` }}
               onLongPress={() => openMenu(x, i)}>
               <Row x={x} i={i} handle={handle} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} />
             </SwipeRow>
@@ -232,8 +244,8 @@ export default function SetListScreen() {
       {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>{native ? 'Hold the grip to drag · tap a row to open it · hold a row for Swap, Rename, Move, Remove' : 'Hold the grip to drag · tap a row to open it · … or hold for Swap, Rename, Move, Remove'}</T>}
       {B.notes.map((n) => <T key={n.rule} v="small" testID={`note-${n.rule}`}>{n.text}</T>)}
 
-      <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
-        onPick={(pk) => (add?.mode === 'swap' ? swap(add.at, add.old, pk) : addJoke(pk))} />
+      {!native && <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
+        onPick={(pk) => (add?.mode === 'swap' ? swap(add.at, add.old, pk) : addJoke(pk))} />}
       <BridgeSheet key={gap ? `${gap.from}>${gap.to}` : 'none'} gap={gap} boardId={id} titleOf={titleOf} onClose={() => setGap(null)} />
       <Sheet visible={!!rename} onClose={() => setRename(null)} label="Rename short name" testID="rename-sheet">
         <SheetHead title="Short name" onCancel={() => setRename(null)} testID="rename" />

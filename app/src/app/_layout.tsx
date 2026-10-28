@@ -21,9 +21,13 @@ import { SET_MIN_S } from '@/lib/importgroup';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /** The document title on the web; the native header title on the phone. */
-export const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
+const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
 /** A full-screen modal on the phone (slides up, covers the tab bar); a plain route on the web. */
 const fullScreen = Platform.OS === 'web' ? { animation: 'slide_from_bottom' as const } : { animation: 'slide_from_bottom' as const, presentation: 'fullScreenModal' as const, autoHideHomeIndicator: true };
+/** A form sheet on the phone (HIG/sheets: the grabber, swipe anywhere to dismiss, the bar with Cancel leading); a plain route on the web, which draws the Modal sheet itself. */
+const sheet = (detents: number[] | 'fitToContents') => (Platform.OS === 'web' ? {} : {
+  presentation: 'formSheet' as const, sheetAllowedDetents: detents, sheetGrabberVisible: true, sheetInitialDetentIndex: 0, sheetExpandsWhenScrolledToEdge: true, headerShown: true, headerTintColor: C.amber,
+});
 
 /** Native: the Capture badge = set-length videos from the last 14 days (only once he has granted Photos access). */
 function PhotosBadge() {
@@ -116,6 +120,9 @@ export default function RootLayout() {
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
                 <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
+                {/* Short tasks as form sheets: "+" at the medium detent (the menu fits in half; "New set list" expands), Add a joke at the large one */}
+                <Stack.Screen name="create" options={{ ...sheet([0.5, 1]), title: t('New') }} />
+                <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

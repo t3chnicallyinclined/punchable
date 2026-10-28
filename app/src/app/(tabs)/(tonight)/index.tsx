@@ -49,12 +49,13 @@ export default function Tonight() {
   // the "N to sort" pill, which stacks under the title at text sizes >= 1.3x. No Ask button: the input bar IS Ask.
   const titleRow = tonightTitleRow(PixelRatio.getFontScale());
   const native = Platform.OS !== 'web';
+  const openCreate = () => (native ? router.push('/create' as any) : setCreate(true));
   const dateLine = `${DAYS[now.getDay()]}${d?.latest_set?.date === d?.date ? ' · set tonight' : ''}`;
   const header = (
     <View testID="tonight-header" style={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 4, paddingBottom: 4, gap: 2 }}>
       <View testID="tonight-bar" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
         <T v="eb" testID="tonight-date" numberOfLines={1} style={{ flex: 1, minWidth: 0, color: C.mut2 }}>{DAYS[now.getDay()]}{d?.latest_set?.date === d?.date ? ' · set tonight' : ''}</T>
-        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={() => setCreate(true)} hitSlop={4}
+        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={openCreate} hitSlop={4}
           style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon name="plus" size={20} color={C.amber} sw={2.4} />
         </Pressable>
@@ -76,7 +77,7 @@ export default function Tonight() {
       {native && (
         // HIG/toolbars: "+" and the face in the bar; the title stays short so there is room for them
         <Stack.Toolbar placement="right">
-          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New" onPress={() => setCreate(true)}>New</Stack.Toolbar.Button>
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New" onPress={openCreate}>New</Stack.Toolbar.Button>
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
@@ -96,7 +97,7 @@ export default function Tonight() {
       {s.rawError && !d && <T v="mut" testID="tonight-error">Can’t reach Punchable: {s.rawError}</T>}
       {!d && !s.rawError && <Skeleton lines={3} height={20} testID="tonight-skeleton" />}
       <Pressable testID="tonight-set" accessibilityRole="button" accessibilityLabel={b ? `${b.title}, ${b.runtime}. Open the set list` : 'No set list yet. Make one'}
-        onPress={() => (b ? router.push(`/list/${encodeURIComponent(b.id)}` as any) : setCreate(true))}
+        onPress={() => (b ? router.push(`/list/${encodeURIComponent(b.id)}` as any) : openCreate())}
         style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <Text numberOfLines={1} style={{ flex: 1, fontFamily: F.bold, fontSize: 15, color: C.text }}>{b ? `Your ${Math.round(b.target_s / 60)} for tonight` : 'No set list yet'}</Text>
@@ -126,7 +127,7 @@ export default function Tonight() {
           <T style={{ color: C.amber }}>Open ›</T>
         </Pressable>
       )}
-      <CreateSheet visible={create} onClose={() => setCreate(false)} />
+      {!native && <CreateSheet visible={create} onClose={() => setCreate(false)} />}
     </Screen>
   );
 }
