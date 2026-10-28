@@ -26,6 +26,15 @@
         "EXPO_PUBLIC_AUTH": "1",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
       }
+    },
+    "dev-device": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://punchable.io/api",
+        "EXPO_PUBLIC_AUTH": "1",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true"
+      }
     }
   },
   "submit": {

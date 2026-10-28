@@ -11,6 +11,7 @@
     "expo-auth-session": "~58.0.14",
     "expo-constants": "58.0.13",
     "expo-crypto": "~58.0.7",
+    "expo-dev-client": "~58.0.16",
     "expo-device": "58.0.5",
     "expo-document-picker": "58.0.4",
     "expo-font": "58.0.10",
