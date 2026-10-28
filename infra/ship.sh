@@ -2,7 +2,7 @@
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
 #   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker
 #                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
-#                 | legal-rules | cutover [--undo] | ai-secret | worker-secret
+#                 | legal-rules | cutover [--undo] | keycloak-theme [--dry-run]   (mounts the login theme: RESTARTS the shared Keycloak) | ai-secret | worker-secret
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
 #   ai-secret sends the ANTHROPIC_API_KEY= line of ~/.punchable/secrets.env over ssh STDIN into the Secret

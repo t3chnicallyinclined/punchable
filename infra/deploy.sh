@@ -68,6 +68,7 @@ case "$STEP" in
     unset ENVF
     echo "punchable-google-idp applied (values not shown). Next: infra/ship.sh keycloak" ;;
   keycloak) bash infra/keycloak/apply.sh ;;
+  keycloak-theme) bash infra/keycloak/apply-theme.sh "${1:-}" ;;   # RESTARTS the shared Keycloak: owner's go only; --dry-run is safe
   keycloak-ingress) bash infra/keycloak/apply.sh ingress ;;
   build)
     WHAT="${1:?build api|web|worker}"; SHA="${SHA:?SHA}"; TAG="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:12}"
