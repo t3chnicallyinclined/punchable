@@ -3,7 +3,7 @@
 // a board (/list/<id>); "New set list" is the create sheet.
 import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { BoardListItem, creative, useCreative } from '@/lib/creative';
 import { fmtDur, fmtShortDate } from '@/lib/laughs';
 import { useSets } from '@/lib/sets';
@@ -56,10 +56,17 @@ export default function Sets() {
   const curId = cur.current?.id || his[0]?.id || null;
   const ordered = [...his.filter((x) => x.id === curId), ...his.filter((x) => x.id !== curId)];
   const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
+  const native = Platform.OS !== 'web';
   return (
-    <Screen title="Sets" testID="sets" onRefresh={refresh} right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+    <Screen title="Sets" testID="sets" onRefresh={refresh} largeTitle={native} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={() => setCreate(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
       <Avatar /></View>}>
+      {native && (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" onPress={() => setCreate(true)}>New set list</Stack.Toolbar.Button>
+          <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
+        </Stack.Toolbar>
+      )}
       <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', `Performed · ${sets.list.length}`]]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
       {seg === 'lists' ? (
         <>

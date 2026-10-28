@@ -4,8 +4,8 @@
 // N bits (nights, laughs) are laid out first; tap a bit to light its links and bring its neighbours in; tap it
 // again (or Open) for the bit page. Zoom/pan: lib/PanZoom (pointer + wheel on the web, pan + pinch on the phone).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Stack, router } from 'expo-router';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { useApi } from '@/lib/api';
 import { Layout, MapEdge, MapNode, Placed, layout, placeNear, topNodes, visible } from '@/lib/allmap';
@@ -14,7 +14,7 @@ import { GROUP_COLOR } from '@/lib/jokemap';
 import { PanZoom, View_, zoomAt } from '@/lib/PanZoom';
 import { MapGroupKey } from '@/lib/simple';
 import { C, F } from '@/lib/theme';
-import { Btn, Chip, Chips, Empty, ErrorCard, Skeleton, T, useReduceMotion, useWide } from '@/lib/ui';
+import { Btn, Chip, Chips, Empty, ErrorCard, SafeBottom, Skeleton, T, useReduceMotion, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
 type AllMap = { rev: string | null; cap: number; nodes: MapNode[]; edges: MapEdge[]; counts: { jokes: number; nodes: number; edges: number; by_kind: Record<string, number> }; groups: { key: MapGroupKey; title: string }[] };
@@ -73,6 +73,10 @@ export default function AllBitsMap() {
     if (m.data && placed) setPlaced(placeNear(placed, m.data.nodes, m.data.edges, n.id));
   }, [sel, m.data, placed]);
   const selected = sel ? byId.get(sel) || null : null;
+  const fit = useCallback(() => {
+    if (canvas) setView(zoomAt({ x: 0, y: 0, scale: 1 }, Math.min(1, Math.min(W / (canvas.width + 80), H / (canvas.height + 80))), 0, 0));
+  }, [canvas, W, H]);
+  const native = Platform.OS !== 'web';
   const total = m.data?.counts.jokes || 0;
   const offscreen = m.data && placed ? m.data.nodes.length - placed.length : 0;
 
@@ -81,6 +85,11 @@ export default function AllBitsMap() {
       {m.rawError && !m.data ? <View style={{ padding: 16 }}><ErrorCard error={m.rawError} onRetry={m.reload} /></View> : null}
       {!m.data && !m.rawError && <View style={{ padding: 16 }}><Skeleton lines={5} height={18} testID="allmap-skeleton" /></View>}
       {m.data && !m.data.nodes.length && <Empty text="No bits to map yet." />}
+      {native && (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button icon="arrow.down.left.and.arrow.up.right" accessibilityLabel="Fit the map to the screen" onPress={fit}>Fit</Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      )}
       {m.data && placed && canvas && (
         <View style={{ flex: 1 }}>
           <View style={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }}>
@@ -121,10 +130,10 @@ export default function AllBitsMap() {
             </View>
           )}
           {!reduce && null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
+          <SafeBottom style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
             {Object.entries(DOT).map(([k, c]) => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} /><T v="small">{k[0].toUpperCase() + k.slice(1)}</T></View>)}
-            <Pressable accessibilityRole="button" accessibilityLabel="Fit the map to the screen" onPress={() => setView(zoomAt({ x: 0, y: 0, scale: 1 }, Math.min(1, Math.min(W / (canvas.width + 80), H / (canvas.height + 80))), 0, 0))} style={{ minHeight: 24, justifyContent: 'center' }}><T v="small" style={{ color: C.amber }}>Fit</T></Pressable>
-          </View>
+            {!native && <Pressable accessibilityRole="button" accessibilityLabel="Fit the map to the screen" onPress={fit} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}><T v="small" style={{ color: C.amber }}>Fit</T></Pressable>}
+          </SafeBottom>
         </View>
       )}
     </Screen>

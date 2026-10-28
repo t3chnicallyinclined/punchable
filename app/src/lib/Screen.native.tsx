@@ -1,12 +1,15 @@
-// The screen shell on the phone. The tab bar is the system's (NativeTabs in app/(tabs)/_layout.tsx) and lives outside
-// this component; the input bar and a task's dock float above it. The insets are read from a SafeAreaProvider nested
-// inside the tab's content, so `bottom` includes the tab bar (and shrinks as it minimises on iOS 26) and `top` the
-// status bar: no fixed device number anywhere (docs/design/HIG.md §12). The web shell is Screen.tsx.
+// The screen shell on the phone. The header is the system's (the native stack header: large title that collapses,
+// the standard Back carrying the previous title, the search field, Dynamic Type and Bold Text for free), set from
+// here with Stack.Screen; a full-screen task (`task`) or a screen with its own `header` keeps a custom bar under
+// the safe-area inset. The tab bar is the system's too (app/(tabs)/_layout.tsx). The insets come from a
+// SafeAreaProvider nested inside the tab's content, so `bottom` includes the tab bar (and shrinks as it minimises on
+// iOS 26): no fixed device number anywhere (docs/design/HIG.md §12). The web shell is Screen.tsx.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
+import { Stack } from 'expo-router';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, F } from './theme';
-import type { ScreenProps } from './screenTypes';
+import { C } from './theme';
+import type { NativeHeaderOptions, ScreenProps } from './screenTypes';
 import { OfflineStrip, TopBar } from './TopBar';
 import { useUI, useWide } from './ui';
 
@@ -20,7 +23,7 @@ export function Screen(p: ScreenProps) {
   );
 }
 
-function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle }: ScreenProps) {
+function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, search, nativeHeader }: ScreenProps) {
   const wide = useWide();
   const ui = useUI();
   const ins = useSafeAreaInsets();
@@ -45,28 +48,39 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
       setRefreshing(false);
     }
   }, [onRefresh]);
-  const [collapsed, setCollapsed] = useState(false);
-  const barTitle = largeTitle && !collapsed ? '' : title;
   const ground = deep ? C.bgDeep : C.bg;
   const mw = maxWidth || (wide ? 1120 : 720);
+  const custom = !!header || !!task;
+  // HIG/toolbars: the system header. The tint colours the buttons only; title styles stay default so SF Pro, Dynamic
+  // Type and Bold Text apply. No bar background (the scroll-edge effect does the work).
+  const options: NativeHeaderOptions = custom
+    ? { headerShown: false }
+    : {
+        headerShown: true, title, headerLargeTitle: !!largeTitle, headerLargeTitleShadowVisible: false, headerBackButtonDisplayMode: 'default',
+        headerBackTitle: backLabel, headerTintColor: C.amber, headerSearchBarOptions: search, contentStyle: { backgroundColor: ground },
+        headerRight: right ? () => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{right}</View> : undefined,
+        ...nativeHeader,
+      };
   const kav = (node: React.ReactNode) => (Platform.OS === 'ios' ? <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>{node}</KeyboardAvoidingView> : <>{node}</>);
   return (
     <View testID={testID} style={{ flex: 1, backgroundColor: ground }}>
+      <Stack.Screen options={options} />
       {kav(
       <View style={{ flex: 1, minWidth: 0 }}>
-        {/* HIG/layout: every header starts below the status bar and the Dynamic Island; the inset is the system's */}
-        <View testID="header-inset" style={{ zIndex: 4, paddingTop: ins.top, backgroundColor: task || deep ? C.bgDeep : C.bg }}>
-          {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
-        </View>
+        {custom && (
+          // HIG/layout: a custom header starts below the status bar and the Dynamic Island; the inset is the system's
+          <View testID="header-inset" style={{ zIndex: 4, paddingTop: ins.top, backgroundColor: task || deep ? C.bgDeep : C.bg }}>
+            {header || <TopBar title={title} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
+          </View>
+        )}
         <OfflineStrip />
         {scroll ? (
+          // the automatic inset lets the large title collapse and the content scroll under the Liquid Glass bars
           <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic"
             keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 24 + barH + dockH }}
-            scrollEventThrottle={32} onScroll={largeTitle ? (e) => setCollapsed(e.nativeEvent.contentOffset.y > 36) : undefined}
             refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
             <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>
-              {largeTitle && <Text maxFontSizeMultiplier={1.3} accessibilityRole="header" style={{ fontFamily: F.black, fontSize: 34, letterSpacing: -0.7, color: C.text }}>{title}</Text>}
               {children}
             </View>
           </ScrollView>

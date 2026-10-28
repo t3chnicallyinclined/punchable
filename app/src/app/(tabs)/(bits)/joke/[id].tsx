@@ -3,8 +3,8 @@
 // the joke (/api/jokes/<id>) and its map (/api/jokes/<id>/map). The old joke map stays at /map/<id>, the old
 // workspace (stage, numbers, brainstorm) at /bit/<id>.
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Platform, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
 import { MergeHint } from '@/lib/MergeHint';
@@ -16,7 +16,6 @@ import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, StageWord, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
-import { TopBar } from '@/lib/TopBar';
 
 type Version = { key: string; label: string; date: string | null; text: string; doc?: string | null };
 
@@ -51,6 +50,17 @@ export default function BitPage() {
   const title = (J?.title || '').split(' (')[0] || J?.title || 'Bit';
   const shortName = shortNameOf(J?.title || '', J?.short_name);
   const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, joke: id, screen: 'bit' } } as any), [id]);
+  const native = Platform.OS !== 'web';
+  const edit = () => router.push(`/bit/${encodeURIComponent(id)}` as any);
+  const retire = async () => {
+    try {
+      const w = await decide({ target: 'node', action: 'edit', id, after: { stage: 'retired' } });
+      d.reload();
+      ui.snack('Retired: resting, not gone', async () => { await undo(w.indexes); d.reload(); });
+    } catch (e: any) {
+      ui.snack(`Couldn't retire: ${e.message}`);
+    }
+  };
 
   const saveShort = async (v: string) => {
     setRename(false);
@@ -69,11 +79,26 @@ export default function BitPage() {
   const mapW = Math.min(width - (wide ? 64 : 32), 720);
 
   return (
-    <Screen title={title} back testID="bitpage" maxWidth={760}
-      header={<TopBar title={shortName} back right={<TextBtn testID="bit-edit" label="Edit" onPress={() => router.push(`/bit/${encodeURIComponent(id)}` as any)} />} />}
+    <Screen title={shortName} back testID="bitpage" maxWidth={760}
+      right={native ? undefined : <TextBtn testID="bit-edit" label="Edit" onPress={edit} />}
       bar={<SayBar onSay={onSay} placeholder={`Ask about ${shortName}, or add a line`} hint={null} testID="bit-say" />}>
+      {native && (
+        // HIG/toolbars: "Edit" as text (not well represented by a symbol); the rest in a menu, Retire last and destructive
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button accessibilityLabel="Edit the bit" onPress={edit}>Edit</Stack.Toolbar.Button>
+          <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setRename(true)}>Rename short name…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="plus" disabled={!boards.current} onPress={() => boards.add(id, title)}>{`Add to ${boards.current?.title || "tonight's set"}`}</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="list.bullet" onPress={() => boards.pick(id, title)}>Pick a set list…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="arrow.triangle.merge" onPress={() => router.push('/merge' as any)}>Merge with…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={() => Share.share({ message: [title, v?.text || ''].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'))}>Share…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="archivebox" destructive onPress={retire}>Retire</Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
+      )}
       <View style={{ gap: 6 }}>
-        <Text testID="bit-title" style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.6, color: C.text }}>{title}</Text>
+        {/* HIG/typography Title 1 (28 pt) for the full title; the bar carries the short name */}
+        <Text testID="bit-title" accessibilityRole="header" style={{ fontFamily: F.black, fontSize: 28, letterSpacing: -0.5, color: C.text }}>{title}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <StageWord stage={J?.stage} ai={!!d.data?.ai?.stage_ai && !d.data?.ai?.stage_confirmed} />
           <Pressable testID="bit-shortname" accessibilityRole="button" accessibilityLabel={`On set lists: ${shortName}. Rename`} onPress={() => setRename(true)} hitSlop={6} style={{ minHeight: 44, justifyContent: 'center' }}>

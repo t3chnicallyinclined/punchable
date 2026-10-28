@@ -7,8 +7,9 @@
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { actionSheet } from '@/lib/actionSheet';
 import { decide, patch, undo, useApi } from '@/lib/api';
 import { creative } from '@/lib/creative';
 import { AddJokeSheet, Pick } from '@/lib/AddJokeSheet';
@@ -28,6 +29,8 @@ import { TopBar } from '@/lib/TopBar';
 const enc = encodeURIComponent;
 const boardPatch = (id: string, body: any) => patch<any>(`/api/boards/${enc(id)}`, body);
 
+const native = Platform.OS !== 'web';
+
 function Row({ x, i, handle, onOpen, onMenu }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void }) {
   const name = x.short_name || shortNameOf(x.title);
   return (
@@ -42,9 +45,10 @@ function Row({ x, i, handle, onOpen, onMenu }: { x: Step; i: number; handle: Rea
           {!!x.stage_line && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: x.proven ? C.green : C.mut2 }}>{x.stage_line}</Text>}
         </View>
         <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{fmtDur(x.duration_s)}</Text>
-        <Pressable testID={`row-more-${i}`} accessibilityRole="button" accessibilityLabel={`More for ${name}`} onPress={onMenu} hitSlop={6} style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
+        {/* HIG/context-menus: one of a context menu or an edit menu, not both; the phone has the long press (and the row's VoiceOver actions) */}
+        {!native && <Pressable testID={`row-more-${i}`} accessibilityRole="button" accessibilityLabel={`More for ${name}`} onPress={onMenu} hitSlop={6} style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           <Text style={{ color: C.mut2, fontSize: 18, fontFamily: F.g7 }}>…</Text>
-        </Pressable>
+        </Pressable>}
       </Pressable>
     </View>
   );
@@ -61,6 +65,7 @@ export default function SetListScreen() {
   const [rename, setRename] = useState<Step | null>(null);
   const [title, setTitle] = useState(false);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
+  const [listMenu, setListMenu] = useState(false);
   const B = b.data;
   React.useEffect(() => {
     if (B?.board) boards.setCurrent({ id, title: B.board.title });
@@ -129,22 +134,71 @@ export default function SetListScreen() {
   const target = B.board.target_s;
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
+  const addLabel = `Add a joke${left != null ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`;
+  const stage = () => router.push(`/stage/${enc(id)}` as any);
 
-  const header = (
+  // the list's own menu: Rename… · Duplicate · Share… (the plain-text list, HIG/activity-views) · Delete (not undoable: an action sheet confirms)
+  const share = async () => {
+    const text = [B.board.title, ...steps.map((x, i) => `${i + 1}. ${nameOf(x)}`)].join('\n');
+    try { await Share.share({ message: text, title: B.board.title }); } catch { ui.snack('Sharing is not available here'); }
+  };
+  const duplicate = async () => {
+    try {
+      const v = await creative.createBoard({ title: `${B.board.title} (copy)`, joke_ids: steps.map((x) => x.joke_id), target_s: target || undefined });
+      boards.setCurrent({ id: v.board.id, title: v.board.title });
+      ui.snack(`Duplicated as ${v.board.title}`);
+      router.push(`/list/${enc(v.board.id)}` as any);
+    } catch (e: any) { ui.snack(`Couldn't duplicate: ${e.message}`); }
+  };
+  const del = () => actionSheet({ title: `Delete ${B.board.title}?`, message: 'The bits stay; only this list goes.', options: [
+    { label: 'Delete the set list', destructive: true, onPress: async () => {
+      try { await boardPatch(id, { delete: true }); ui.snack(`Deleted ${B.board.title}`); if (router.canGoBack()) router.back(); else router.navigate('/sets' as any); }
+      catch (e: any) { ui.snack(`Couldn't delete: ${e.message}`); }
+    } },
+    { label: 'Cancel', cancel: true },
+  ] });
+  const listItems: MenuItem[] = [
+    { label: 'Rename…', onPress: () => setTitle(true), testID: 'list-rename' },
+    { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
+    { label: 'Share…', onPress: share, testID: 'list-share' },
+    { label: 'Delete', onPress: del, destructive: true, testID: 'list-delete' },
+  ];
+
+  const header = native ? undefined : (
     <TopBar title={B.board.title} back backLabel="Sets" onBack={() => (router.canGoBack() ? router.back() : router.navigate('/sets' as any))}
       right={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename the set list" onPress={() => setTitle(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
-        <TextBtn testID="stage" label="Stage" onPress={() => router.push(`/stage/${enc(id)}` as any)} />
+        <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename, duplicate, share or delete the set list" onPress={() => setListMenu(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
+        <TextBtn testID="stage" label="Stage" onPress={stage} />
       </View>} />
   );
 
   return (
-    <Screen title={B.board.title} testID="setlist-screen" header={header} onRefresh={b.reload}
-      dock={<Btn testID="add-joke" v="primary" label={`Add a joke${left != null ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`} onPress={() => setAdd({ mode: 'add' })} />}>
+    <Screen title={B.board.title} testID="setlist-screen" header={header} backLabel="Sets" onRefresh={b.reload}
+      dock={native ? undefined : <Btn testID="add-joke" v="primary" label={addLabel} onPress={() => setAdd({ mode: 'add' })} />}>
+      {native && (
+        <>
+          {/* HIG/toolbars: one prominent action (Stage) on the trailing side; the rest in a menu; destructive last */}
+          <Stack.Toolbar placement="right">
+            <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+              <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setTitle(true)}>Rename…</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
+            </Stack.Toolbar.Menu>
+            <Stack.Toolbar.Button icon="play.fill" variant="prominent" accessibilityLabel="Go on stage" onPress={stage}>Stage</Stack.Toolbar.Button>
+          </Stack.Toolbar>
+          {/* the dock becomes a bottom toolbar inside the tab's stack, so the tab bar stays visible (HIG/tab-bars) */}
+          <Stack.Toolbar placement="bottom">
+            <Stack.Toolbar.Spacer />
+            <Stack.Toolbar.Button variant="prominent" accessibilityLabel={addLabel} onPress={() => setAdd({ mode: 'add' })}>{addLabel}</Stack.Toolbar.Button>
+            <Stack.Toolbar.Spacer />
+          </Stack.Toolbar>
+        </>
+      )}
       <View style={{ gap: 6 }}>
-        <Pressable testID="list-title" accessibilityRole="button" accessibilityLabel={`${B.board.title}. Rename the set list`} onPress={() => setTitle(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
+        {!native && <Pressable testID="list-title" accessibilityRole="button" accessibilityLabel={`${B.board.title}. Rename the set list`} onPress={() => setTitle(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.black, fontSize: 24, letterSpacing: -0.4, color: C.text }}>{B.board.title} <Text style={{ color: C.amber, fontSize: 16, fontFamily: F.medium }}>Rename</Text></Text>
-        </Pressable>
+        </Pressable>}
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
           <Text testID="list-runtime" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.5, color: C.text, fontVariant: ['tabular-nums'] }}>{fmtDur(B.runtime_s)}</Text>
           {!!target && <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 16, color: C.mut2 }}>/ {fmtDur(target)}</Text>}
@@ -175,7 +229,7 @@ export default function SetListScreen() {
             </SwipeRow>
           </View>
         )} />
-      {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>Hold the grip to drag · tap a row to open it · … or hold for Swap, Rename, Move, Remove</T>}
+      {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>{native ? 'Hold the grip to drag · tap a row to open it · hold a row for Swap, Rename, Move, Remove' : 'Hold the grip to drag · tap a row to open it · … or hold for Swap, Rename, Move, Remove'}</T>}
       {B.notes.map((n) => <T key={n.rule} v="small" testID={`note-${n.rule}`}>{n.text}</T>)}
 
       <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
@@ -190,6 +244,7 @@ export default function SetListScreen() {
         <TitleForm title={B.board.title} onSave={(t) => { setTitle(false); const old = B.board.title; act(() => boardPatch(id, { title: t }), `Renamed to ${t}`, () => boardPatch(id, { title: old })); }} />
       </Sheet>
       <MenuSheet visible={!!menu} title={menu?.title} items={menu?.items || []} onClose={() => setMenu(null)} testID="row-menu" />
+      <MenuSheet visible={listMenu} title={B.board.title} items={listItems} onClose={() => setListMenu(false)} testID="list-menu" />
     </Screen>
   );
 }

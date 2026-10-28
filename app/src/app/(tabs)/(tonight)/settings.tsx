@@ -224,8 +224,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <Screen title="Settings" back testID="settings">
-      <T v="h1">Settings & privacy</T>
+    <Screen title="Settings" back testID="settings" largeTitle>
       {local && <T v="small" testID="settings-local">Saved on this device. The server doesn’t store settings yet.</T>}
       <DeviceCard />
       <ConnectionsCard />

@@ -2,8 +2,8 @@
 // sheet), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap), three questions
 // to ask his material, and the one input bar. One request: GET /api/tonight/screen; changes arrive over /api/live.
 import React, { useCallback, useState } from 'react';
-import { PixelRatio, Pressable, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { PixelRatio, Platform, Pressable, Text, View } from 'react-native';
+import { Stack, router } from 'expo-router';
 import { useApi } from '@/lib/api';
 import { fmtDur } from '@/lib/laughs';
 import { TonightScreen, useOutbox } from '@/lib/say';
@@ -48,6 +48,8 @@ export default function Tonight() {
   // HIG large-title shape (docs/design/HIG.md §0): row 1 is the bar (the date, "+", the face); row 2 is the title with
   // the "N to sort" pill, which stacks under the title at text sizes >= 1.3x. No Ask button: the input bar IS Ask.
   const titleRow = tonightTitleRow(PixelRatio.getFontScale());
+  const native = Platform.OS !== 'web';
+  const dateLine = `${DAYS[now.getDay()]}${d?.latest_set?.date === d?.date ? ' · set tonight' : ''}`;
   const header = (
     <View testID="tonight-header" style={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 4, paddingBottom: 4, gap: 2 }}>
       <View testID="tonight-bar" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
@@ -70,7 +72,26 @@ export default function Tonight() {
   );
 
   return (
-    <Screen title="Tonight" testID="tonight" header={header} bar={<SayBar onSay={onSay} worker={d?.worker} testID="say" />} onRefresh={s.reload}>
+    <Screen title="Tonight" testID="tonight" header={native ? undefined : header} largeTitle={native} bar={<SayBar onSay={onSay} worker={d?.worker} testID="say" />} onRefresh={s.reload}>
+      {native && (
+        // HIG/toolbars: "+" and the face in the bar; the title stays short so there is room for them
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New" onPress={() => setCreate(true)}>New</Stack.Toolbar.Button>
+          <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
+        </Stack.Toolbar>
+      )}
+      {native && (
+        <View style={{ gap: 2 }}>
+          <T v="eb" testID="tonight-date" style={{ color: C.mut2 }}>{dateLine}</T>
+          {/* HIG/lists-and-tables: a disclosure indicator reveals the next level (the inbox), not a pill in the bar */}
+          <Pressable testID="to-sort" accessibilityRole="button" accessibilityLabel={`${d?.to_sort || 0} to sort. Open the inbox`} onPress={() => router.push('/inbox' as any)}
+            style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d?.to_sort ? C.amber : C.borderStrong }} />
+            {d ? <Text maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>{d.to_sort} to sort</Text> : <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: C.surface2 }} accessibilityLabel="Loading" />}
+            <Icon name="chevron" size={18} color={C.dim} />
+          </Pressable>
+        </View>
+      )}
       {!!queued.length && <T v="small" testID="say-queued" style={{ color: C.amber }}>{queued.length} saved on this phone, sending when Punchable is back…</T>}
       {s.rawError && !d && <T v="mut" testID="tonight-error">Can’t reach Punchable: {s.rawError}</T>}
       {!d && !s.rawError && <Skeleton lines={3} height={20} testID="tonight-skeleton" />}

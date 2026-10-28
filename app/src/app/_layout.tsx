@@ -2,7 +2,7 @@ import { Stack, router, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Appearance, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { GestureRoot } from '@/lib/GestureRoot';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
@@ -86,6 +86,10 @@ function useAppearance() {
   }, []);
   const scheme = resolveScheme(pref, system);
   setScheme(scheme); // during render on purpose: the children read C.* in this same pass
+  useEffect(() => {
+    // the override reaches UIKit too (native headers, the tab bar, form sheets, menus, action sheets); System = follow the OS
+    if (Platform.OS !== 'web' && typeof Appearance.setColorScheme === 'function') Appearance.setColorScheme(pref === 'system' ? 'unspecified' : pref);
+  }, [pref]);
   return { scheme, prefsReady };
 }
 

@@ -2,18 +2,20 @@
 // long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Notes · Map;
 // "N pairs look like the same idea → Review" when the merge judge found some. One list request, virtualized.
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, PixelRatio, Pressable, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Stack, router } from 'expo-router';
+import type { SearchBarProps } from 'react-native-screens';
 import { ApiError, JokeSummary, get, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { fmtDur } from '@/lib/laughs';
 import { VoiceMemos } from '@/lib/memos';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
-import { Avatar, Empty, ErrorCard, Icon, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
+import { Avatar, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
-type View_ = 'bits' | 'notes' | 'map';
+type View_ = 'bits' | 'notes';
+const native = Platform.OS !== 'web';
 type Status = 'kills' | 'working' | 'fresh' | 'resting';
 const DOT: Record<Status, string> = { kills: '#30D158', working: C.amber, fresh: '#64D2FF', resting: C.tabOff };
 const WORD: Record<Status, string> = { kills: 'Kills', working: 'Working', fresh: 'Fresh', resting: 'Resting' };
@@ -81,10 +83,28 @@ export default function Bits() {
   }, [items]);
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
   const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
+  // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types
+  const search: SearchBarProps | undefined = native ? {
+    placeholder: 'Search your bits, or ask', placement: 'automatic', hideWhenScrolling: false, autoCapitalize: 'none', tintColor: C.amber,
+    onChangeText: (e) => setQ(e.nativeEvent.text), onSearchButtonPress: () => { if (question) askIt(); }, onCancelButtonPress: () => setQ(''),
+  } : undefined;
+  // HIG/segmented-controls: Map is a navigation, not a view, so it is a header button, not a third segment
+  const mapBtn = native ? (
+    <Stack.Toolbar placement="right">
+      <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
+      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
+    </Stack.Toolbar>
+  ) : null;
+  const right = native ? undefined : (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <IconBtn testID="bits-map" label="Map of all your bits" onPress={() => router.push('/map' as any)}><Icon name="map" size={22} color={C.amber} /></IconBtn>
+      <Avatar />
+    </View>
+  );
 
   const header = (
     <View style={{ gap: 10, paddingBottom: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      {!native && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderRadius: 24, backgroundColor: C.card, paddingHorizontal: 14 }}>
           <Icon name="search" size={18} color={C.mut2} />
           <TextInput ref={input} testID="bits-search" value={q} onChangeText={setQ} placeholder="Search your bits, or ask" placeholderTextColor={C.dim} returnKeyType="search"
@@ -94,13 +114,13 @@ export default function Bits() {
           {!!q && <Pressable accessibilityRole="button" accessibilityLabel="Clear the search" onPress={() => setQ('')} hitSlop={8} style={{ width: 44, height: 44, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.mut2, fontSize: 18 }}>×</Text></Pressable>}
         </View>
         {(focused || !!q) && <TextBtn testID="bits-search-cancel" label="Cancel" onPress={() => { setQ(''); setFocused(false); input.current?.blur?.(); }} />}
-      </View>
+      </View>}
       {question && (
         <Pressable testID="bits-ask" accessibilityRole="button" onPress={askIt} style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Icon name="chat" size={18} color={C.amber} /><T style={{ flex: 1 }}>Ask your material: “{dq}”</T><T style={{ color: C.amber }}>Ask ›</T>
         </Pressable>
       )}
-      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes'], ['map', 'Map']]} value={view} onChange={(v) => { haptics.selection(); v === 'map' ? router.push('/map' as any) : setView(v); }} />
+      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
       {view === 'bits' && !!pairs && (
         <Pressable testID="merge-banner" accessibilityRole="button" onPress={() => router.push('/merge' as any)}
           style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -113,15 +133,17 @@ export default function Bits() {
 
   if (view === 'notes') {
     return (
-      <Screen title="Bits" testID="bits" right={<Avatar />} onRefresh={list.reload}>
+      <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} onRefresh={list.reload}>
+        {mapBtn}
         {header}
         <VoiceMemos />
       </Screen>
     );
   }
   return (
-    <Screen title="Bits" testID="bits" right={<Avatar />} scroll={false}>
-      <FlatList
+    <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} scroll={false}>
+      {mapBtn}
+      <FlatList contentInsetAdjustmentBehavior="automatic"
         data={items} keyExtractor={(j) => j.id} renderItem={({ item }) => <Row j={item} />}
         getItemLayout={(_, i) => ({ length: ROW_H, offset: ROW_H * i, index: i })} initialNumToRender={16} windowSize={9} removeClippedSubviews
         keyboardShouldPersistTaps="handled" refreshControl={refreshControl}

@@ -329,6 +329,7 @@ const P: Record<string, string> = {
   sets: 'M5 6h14M5 12h14M5 18h9',
   plus: 'M12 5v14M5 12h14',
   chat: 'M4 5h16v11H9l-5 4V5z',
+  chevron: 'M9 6l6 6-6 6',
 };
 export function Icon({ name, size = 22, color = C.text, sw = 2 }: { name: keyof typeof P | string; size?: number; color?: string; sw?: number }) {
   return (
@@ -661,6 +662,13 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       </Sheet>
     </Ctx.Provider>
   );
+}
+
+/** Pads its content by the bottom inset the screen's shell measures (the system tab bar on the phone, 0 on the web).
+ *  For a screen that owns its layout (`scroll={false}`) and puts a row at the very bottom. */
+export function SafeBottom({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const ins = useSafeAreaInsets();
+  return <View style={[{ paddingBottom: ins.bottom }, style]}>{children}</View>;
 }
 
 // small shared glyphs
