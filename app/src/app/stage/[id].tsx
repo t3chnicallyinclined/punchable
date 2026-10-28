@@ -2,7 +2,8 @@
 // the current one lit, Next bit (tap anywhere), and the recording: the web recorder or, on the phone, expo-audio
 // (lib/recorder; background audio, locked screen). The bottom Stop asks "Save the set / Discard / Keep going"
 // (HIG: a confirmation before an upload you can't take back). Saving hands the tape to the upload queue (retried
-// on the backoff schedule if the venue has no signal). The screen stays awake.
+// on the backoff schedule if the venue has no signal). The screen stays awake. A thin bar under the clock's bar is the room
+// (lib/recorder level()); a phone call reads "Paused by a call" and Next bit becomes Resume recording until the tape runs.
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -30,6 +31,8 @@ export default function Stage() {
   const [ms, setMs] = useState(0);
   const [rec, setRec] = useState<'off' | 'on' | 'saving' | 'none'>('none');
   const [ask, setAsk] = useState(false);
+  const [lvl, setLvl] = useState(0); // the room, 0..1 (lib/recorder level())
+  const [intr, setIntr] = useState(false); // the system paused the tape (a call)
   const recorder = useRecorder();
   const started = useRef(false);
   const t0 = useRef(Date.now());
@@ -38,7 +41,10 @@ export default function Stage() {
   const light = Math.max(0, target - 60); // the light comes on a minute before time
 
   useEffect(() => {
-    const t = setInterval(() => setMs(rec === 'on' || rec === 'saving' ? recorder.elapsedMs() : Date.now() - t0.current), 500);
+    const t = setInterval(() => {
+      setMs(rec === 'on' || rec === 'saving' ? recorder.elapsedMs() : Date.now() - t0.current);
+      if (rec === 'on') { setLvl(recorder.level()); setIntr(recorder.interrupted()); }
+    }, 250);
     return () => clearInterval(t);
   }, [rec, recorder]);
   useEffect(() => {
@@ -86,7 +92,7 @@ export default function Stage() {
   };
   const pct = target ? Math.min(100, (ms / (target * 1000)) * 100) : 0;
   const lit = ms >= light * 1000 && target > 0;
-  const status = rec === 'on' ? '● REC' : rec === 'saving' ? 'Saving…' : rec === 'off' ? 'Not recording' : 'Clock only';
+  const status = rec === 'on' ? (intr ? 'Paused by a call' : '● REC') : rec === 'saving' ? 'Saving…' : rec === 'off' ? 'Not recording' : 'Clock only';
 
   return (
     <Screen title="On stage" task deep testID="stage"
@@ -94,7 +100,9 @@ export default function Stage() {
       dock={
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Btn testID="stage-end" label={rec === 'on' ? 'Stop' : 'Done'} v={rec === 'on' ? 'danger' : 'plain'} style={{ flex: 1, minHeight: 60 }} onPress={stop} accessibilityLabel={rec === 'on' ? 'Stop recording' : 'Leave the stage'} />
-          <Btn testID="stage-next" label={cur >= steps.length - 1 ? 'Last bit' : 'Next bit'} v="primary" style={{ flex: 2, minHeight: 60 }} onPress={next} disabled={!steps.length || cur >= steps.length - 1} />
+          {rec === 'on' && intr
+            ? <Btn testID="stage-resume" label="Resume recording" v="primary" style={{ flex: 2, minHeight: 60 }} onPress={() => { recorder.resume(); setIntr(recorder.interrupted()); }} />
+            : <Btn testID="stage-next" label={cur >= steps.length - 1 ? 'Last bit' : 'Next bit'} v="primary" style={{ flex: 2, minHeight: 60 }} onPress={next} disabled={!steps.length || cur >= steps.length - 1} />}
         </View>
       }>
       {!B ? (b.rawError ? <Empty text={`Can’t open the set list: ${b.rawError}`} /> : <Skeleton lines={5} height={28} />) : (
@@ -107,6 +115,11 @@ export default function Stage() {
             <View style={{ width: `${pct}%`, height: '100%', backgroundColor: lit ? C.rec : C.amber }} />
             {!!target && <View style={{ position: 'absolute', left: `${(light / target) * 100}%`, top: 0, bottom: 0, width: 2, backgroundColor: C.text }} />}
           </View>
+          {rec === 'on' && (
+            <View testID="stage-level" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }}>
+              <View style={{ width: `${Math.round(lvl * 100)}%`, height: '100%', backgroundColor: intr ? C.tabOff : lvl > 0.55 ? C.amber : C.border }} />
+            </View>
+          )}
           <View style={{ gap: 6, paddingTop: 10 }}>
             {steps.map((x, i) => (
               <Text key={x.joke_id} testID={`stage-row-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.2}

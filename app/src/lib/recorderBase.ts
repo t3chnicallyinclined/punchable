@@ -15,7 +15,10 @@ export type Rec = {
   stop: () => Promise<Recording>;
   cancel: () => void;
   elapsedMs: () => number;
+  /** 0..1 for a bar meter (lib/recorderLogic meterLevel on the phone). */
   level: () => number;
+  /** The system paused the tape (a phone call) and he did not: the clock holds; Resume restarts it. Never on the web. */
+  interrupted: () => boolean;
 };
 
 export function useRecorder(): Rec {
@@ -41,5 +44,6 @@ export function useRecorder(): Rec {
     cancel: () => inner.current?.cancel(),
     elapsedMs: () => inner.current?.elapsedMs() || 0,
     level: () => inner.current?.level() || 0,
+    interrupted: () => false,
   }), []);
 }
