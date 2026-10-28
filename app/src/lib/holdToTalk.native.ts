@@ -6,9 +6,9 @@ import { useCallback, useRef, useState } from 'react';
 import { haptics } from './haptics';
 import { useRecorder } from './recorder';
 import { enqueueUpload } from './uploads';
-import type { HoldToTalk } from './holdToTalk';
+import type { HoldToTalk } from './holdToTalkBase';
 
-export type { HoldToTalk } from './holdToTalk';
+export type { HoldToTalk } from './holdToTalkBase';
 export const canListen = () => false;
 const MIN_MS = 700;
 
