@@ -151,7 +151,8 @@ Every route in the contract, serving creative/'s JSON as-is. Additions the contr
   also a `creative_event` row (written first), pushed on `/api/live` as `{table:"creative_event", store, op, item}`.
   `?backend=files` reads the jsonl; db/tests/test_creative.py diffs the two.
 - Worker only (`worker` role when auth is on): `POST /api/worker/claim`, `POST /api/worker/jobs/{id}/result`,
-  `GET /api/worker/jobs/{id}/file`, `GET /api/worker/decisions?after=N`, `GET /api/worker/creative?store=`.
+  `GET /api/worker/jobs/{id}/file`, `GET /api/worker/decisions?after=N`, `GET /api/worker/creative?store=`,
+  `GET|PUT /api/worker/profile/voice` ("Voice profile" below).
   The claim body is `{kinds, worker, hosted, model?, paused?}`: a hosted worker must list its kinds and never a
   transcriber kind (400 otherwise); `paused` (the day's AI budget is spent, with the reason) is recorded as the
   worker's status and answered 204 so the jobs stay queued with the reason visible.
@@ -241,6 +242,31 @@ Every row of the contract's "Requested by app" table. Both backends serve them; 
     responses (`ask_api.worker_status`).
   - `transcriber`: how many queued jobs wait for a transcript from the phone (`waiting`), and the note shown.
   - Hosted, gsync runs on his PC, so the pod has no gsync files until the worker reports them (not built).
+
+## Voice profile (2026-10-28, `profile_api.py`)
+His voice profile is **data in the database**, the single source of truth for every writing prompt (riff, punch-up,
+bridge, Ask): never a file in the repo or in an image. Store `profile` (`comedy/kb/creative/profile.jsonl` +
+snapshot; on SurrealDB also `creative_event` rows, reconciled like every creative store), one document `profile:voice`,
+one op `put {kind, text}`; the document keeps its `previous` version.
+- **`GET /api/profile/voice`** (app token): `{kind: "voice", text, updated_at, by, chars, previous: {text, updated_at, by} | null}`
+  (`text: null` until it is written).
+- **`PUT /api/profile/voice {text}`** (app token; `by` = the owner): at most 60,000 characters; **legal-checked like
+  every ingest** (`gsync/rules.py content_is_legal`): a hit is `422 That reads like court material; ...` and nothing
+  is kept. Undo in the app = PUT the `previous.text` again (his own write; the document moves back, with the undone
+  version as its `previous`).
+- **`GET /api/worker/profile/voice`** (worker token): `{kind, text, updated_at, by}` (no history). The hosted worker
+  fetches it per job and caches it by `updated_at` (`creative/voice.py`); the text is never logged (length, sha,
+  `updated_at` only).
+- **`PUT /api/worker/profile/voice {text, actor}`** (worker token; the one-off loader `tools/profile/put_voice.py`):
+  `actor` must be `import:<what>` (`import:profile`); the same legal check and 422.
+- Local dev with `--jobs inproc`: the API loads its own copy into `creative.voice` before running the job.
+
+## Legal rules on the request path (2026-10-28)
+`creative_api.refuse_legal`: the same `content_is_legal` runs on the texts a request would send to a model, **before
+anything is queued**: `POST /api/riff` (idea + lines), `POST /api/facts` (text), the two punch-up routes (the bit's
+latest-night lines and its written setup, `creative.workingset.punch_text`), and an Ask question (`ask_api.ask`,
+so `POST /api/say` too). A hit is `422 That reads like court material; Punchable won't send it to the AI.`, the same
+shape as an ingest refusal; no job, no event.
 
 ## Merge (2026-10-26, docs/API_CONTRACT.md "Merge", `merge_api.py`)
 `GET /api/merge/candidates[?joke=]` (`?jokes=a,b,…`, up to 50: `{items: {joke_id: {group, others (the closest one), attached_to}}}` in ONE pass, the inbox's one call), `GET /api/merge/history?joke=`, `GET /api/merge/{id}`, `POST /api/merge`, `POST /api/merge/undo`, `POST /api/merge/dismiss`. Shapes are in the contract. Registered from `Handler.creative_route` (needs the creative layer; `--no-creative` turns them off).

@@ -67,6 +67,19 @@ class HttpError(Exception):
         self.status = status
 
 
+LEGAL_MSG = "That reads like court material; Punchable won't send it to the AI."
+
+
+def refuse_legal(*texts: str) -> None:
+    """The legal rules (gsync/rules.py content_is_legal, the ones every ingest route applies) on a request-path
+    text before it is queued for a model: his riff idea and lines, the text to fact-check, the bit a punch-up would
+    show, an Ask question (ask_api). A hit is 422 with the same shape as an ingest refusal; nothing is queued."""
+    import ingest_api as IG
+    for t in texts:
+        if isinstance(t, str) and t and IG.is_legal(t):
+            raise HttpError(422, LEGAL_MSG)
+
+
 # ====================================================================== stores
 def venue_apply(items: dict, ev: dict) -> None:
     """the comic moves or renames a map pin. Ops: pin {lat, lon} · rename {name} · reset."""
@@ -501,6 +514,11 @@ class Creative:
             st = self.stores(kb)
             st["jobs"].append("claim", jid, {"worker": "inproc"}, by="worker:inproc")
             job = st["jobs"].get(jid)
+            try:  # the voice profile from this API's own store (the hosted worker fetches it over HTTP instead)
+                import profile_api as PF
+                PF.load_into_voice(self, kb)
+            except Exception as e:  # noqa: BLE001  the draft runs without it; never silently though
+                sys.stderr.write(f"voice profile not loaded for the in-process job: {type(e).__name__}: {e}\n")
         try:
             res, err = execute.run(job, inbox=Path(kb.inbox)), None
         except Exception as e:  # noqa: BLE001
@@ -909,6 +927,7 @@ class Routes:
         text = self.b.get("text")
         if not isinstance(text, str) or not text.strip() or len(text) > 2000:
             raise HttpError(400, "text is required (at most 2000 characters)")
+        refuse_legal(text)
         key = "facts|" + hashlib.sha1(" ".join(text.lower().split()).encode()).hexdigest()[:16]
         return self.cr.enqueue(self.st(), "facts", key, {"text": text.strip()}, fresh=bool(self.b.get("fresh")), kb=self.kb)
 
@@ -919,6 +938,7 @@ class Routes:
             raise HttpError(400, "idea is required (at most 2000 characters)")
         if not isinstance(lines, list) or len(lines) > 40 or not all(isinstance(x, str) and len(x) <= 2000 for x in lines):
             raise HttpError(400, "lines must be a list of text (at most 40)")
+        refuse_legal(idea, *lines)
         inp = {"idea": idea.strip(), "lines": [x.strip() for x in lines if x.strip()]}
         key = "riff|" + hashlib.sha1(json.dumps(inp, sort_keys=True).lower().encode()).hexdigest()[:16]
         return self.cr.enqueue(self.st(), "riff", key, inp, fresh=bool(self.b.get("fresh")), kb=self.kb)
@@ -1175,6 +1195,7 @@ class Routes:
         _joke(c, jid)
         if W.bit_locked(ws, jid):  # the lock rule, answered here without queueing anything
             return 200, W.punch_up(c, ws, jid, complete=_no_model)
+        refuse_legal(W.punch_text(c, jid))
         locks = json.dumps(ws.get("locks", {}).get(jid) or {}, sort_keys=True)
         key = f"punchup|{wid}|{jid}|v{ws['current']}|{hashlib.sha1(locks.encode()).hexdigest()[:10]}"
         return self.cr.enqueue(st, "punchup", key, {"working_set": ws, "joke_id": jid}, fresh=bool(self.b.get("fresh")), kb=self.kb)
@@ -1202,6 +1223,7 @@ class Routes:
         ws = {"id": None, "title": None, "current": 0, "locks": {jid: lk}}
         if lk["bit"] or not c.perfs.get(jid):  # locked, or no tape: answered here, no model, no job
             return 200, W.punch_up(c, ws, jid, complete=_no_model)
+        refuse_legal(W.punch_text(c, jid))
         key = f"punchup|joke|{jid}|{hashlib.sha1(json.dumps(lk, sort_keys=True).encode()).hexdigest()[:10]}"
         return self.cr.enqueue(st, "punchup", key, {"working_set": ws, "joke_id": jid}, fresh=bool(self.b.get("fresh")),
                                kb=self.kb)

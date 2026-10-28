@@ -1,0 +1,192 @@
+"""His voice profile as data (api-dev/profile_api.py) and the legal rules on the request path (creative_api.refuse_legal,
+ask_api.ask). Pure unit tests over the store and the handlers with a fake request: no API process, no knowledge base,
+no network. Invented text only. The owner/worker token separation itself is `Handler.authorize` (test_auth.py, the
+NEW_ROUTES rows); here: the worker's view, the worker's actor rule, and the 422 that keeps court text out.
+
+    python -m pytest api-dev/tests/test_profile_api.py -q
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+DESK = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(DESK / "api-dev"))
+sys.path.insert(0, str(DESK / "tools" / "explorer"))
+sys.path.insert(0, str(DESK))
+import ask_api as AK  # noqa: E402
+import creative_api as CR  # noqa: E402
+import kb as K  # noqa: E402
+import profile_api as PF  # noqa: E402
+from creative import voice  # noqa: E402
+from creative.store import Store  # noqa: E402
+
+LEGAL_TEXT = ("The petitioner and the respondent appeared before the court; index no 123 was read into the record, "
+              "sworn to before me.")
+PROFILE_V1 = "# Voice\n\nHe talks fast and sits on the punch word. The parrot bit is his closer.\n"
+PROFILE_V2 = "# Voice\n\nHe talks slower now. The parrot bit is retired; the dentist bit closes.\n"
+
+
+class FakeHandler:
+    """The slice of server.Handler the route uses: kb, send_json, err, actor (the owner for an app token; a worker
+    token must name import:/ai: in the body, as server.Handler.actor does with auth on)."""
+
+    def __init__(self, worker: bool = False):
+        self.kb = SimpleNamespace(backend="files")
+        self.worker = worker
+        self.out = None
+
+    def send_json(self, obj, status=200):
+        self.out = (status, obj)
+
+    def err(self, status, msg):
+        self.out = (status, {"error": msg})
+
+    def actor(self, b=None):
+        want = (b or {}).get("actor")
+        if self.worker:
+            if not isinstance(want, str) or ":" not in want:
+                raise K.DecisionError("a worker write must name its actor: import:<source> or ai:<what>", 400)
+            return want
+        return "owner"
+
+
+@pytest.fixture
+def cr(tmp_path):
+    voice.clear()
+    yield CR.Creative(tmp_path / "creative", None)
+    voice.clear()
+
+
+def call(cr, method, path, body=None, worker=False):
+    h = FakeHandler(worker)
+    assert PF.handle(cr, h, method, path, {}, lambda: body if body is not None else {}) is True
+    return h.out
+
+
+def test_store_keeps_the_previous_version_and_refuses_other_ops(tmp_path):
+    st = Store(tmp_path, "profile", PF.profile_apply)
+    a = st.append("put", PF.VOICE_ID, {"kind": "voice", "text": PROFILE_V1}, by="owner", ts="2026-10-28T10:00:00+00:00")
+    assert a["text"] == PROFILE_V1 and a["updated_at"] == "2026-10-28T10:00:00+00:00" and a["by"] == "owner" and a["previous"] is None
+    b = st.append("put", PF.VOICE_ID, {"kind": "voice", "text": PROFILE_V2}, by="owner", ts="2026-10-29T10:00:00+00:00")
+    assert b["text"] == PROFILE_V2 and b["previous"] == {"text": PROFILE_V1, "updated_at": "2026-10-28T10:00:00+00:00", "by": "owner"}
+    for op, i, d in (("delete", PF.VOICE_ID, {}), ("put", "profile:other", {"text": "x"}), ("put", PF.VOICE_ID, {"text": 3})):
+        with pytest.raises(ValueError):
+            st.append(op, i, d)
+    # a replay of the log derives the same document
+    assert Store(tmp_path, "profile", PF.profile_apply).get(PF.VOICE_ID) == b
+    assert "profile" in CR.APPLY and CR.APPLY["profile"] is PF.profile_apply
+
+
+def test_owner_puts_reads_and_undoes_by_the_previous_version(cr):
+    assert call(cr, "GET", "/api/profile/voice") == (200, {"kind": "voice", "text": None, "updated_at": None, "by": None,
+                                                           "chars": 0, "previous": None})
+    s, v1 = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
+    assert s == 200 and v1["text"] == PROFILE_V1 and v1["by"] == "owner" and v1["previous"] is None and v1["chars"] == len(PROFILE_V1)
+    s, v2 = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V2.rstrip("\n")})  # the trailing newline is normalised
+    assert s == 200 and v2["text"] == PROFILE_V2 and v2["previous"]["text"] == PROFILE_V1 and v2["updated_at"] >= v1["updated_at"]
+    assert call(cr, "GET", "/api/profile/voice")[1] == v2
+    # Undo = the app saves the previous text again (by him): the document moves back, with v2 as ITS previous
+    s, v3 = call(cr, "PUT", "/api/profile/voice", {"text": v2["previous"]["text"]})
+    assert s == 200 and v3["text"] == PROFILE_V1 and v3["previous"]["text"] == PROFILE_V2
+    # shape and size
+    assert call(cr, "PUT", "/api/profile/voice", {"text": "   "})[0] == 400
+    assert call(cr, "PUT", "/api/profile/voice", {})[0] == 400
+    assert call(cr, "PUT", "/api/profile/voice", {"text": "x" * (PF.MAX_CHARS + 1)})[0] == 413
+    assert call(cr, "PATCH", "/api/profile/voice", {"text": "x"})[0] == 405
+    assert PF.handle(cr, FakeHandler(), "GET", "/api/profile/other", {}, lambda: {}) is False
+
+
+def test_worker_reads_its_copy_without_history_and_must_name_an_import_actor(cr):
+    call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
+    s, w = call(cr, "GET", "/api/worker/profile/voice", worker=True)
+    assert s == 200 and w == {"kind": "voice", "text": PROFILE_V1, "updated_at": w["updated_at"], "by": "owner", "chars": len(PROFILE_V1)}
+    assert "previous" not in w
+    # the loader: a worker write names import:<what>; without it, 400 and nothing changes
+    s, _ = call(cr, "PUT", "/api/worker/profile/voice", {"text": PROFILE_V2}, worker=True)
+    assert s == 400 and call(cr, "GET", "/api/profile/voice")[1]["text"] == PROFILE_V1
+    s, v = call(cr, "PUT", "/api/worker/profile/voice", {"text": PROFILE_V2, "actor": "import:profile"}, worker=True)
+    assert s == 200 and v["by"] == "import:profile" and v["text"] == PROFILE_V2
+    assert call(cr, "GET", "/api/profile/voice")[1]["previous"]["by"] == "owner"
+
+
+def test_court_text_is_refused_on_both_puts_and_nothing_is_kept(cr):
+    """The legal rules (gsync/rules.py) on the profile, the same way every ingest route applies them. Red-proof: with
+    the check removed from profile_api.put the first assert fails (the PUT would be 200)."""
+    call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
+    s, body = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1 + "\n" + LEGAL_TEXT})
+    assert s == 422 and "court material" in body["error"], (s, body)
+    s, _ = call(cr, "PUT", "/api/worker/profile/voice", {"text": LEGAL_TEXT, "actor": "import:profile"}, worker=True)
+    assert s == 422
+    doc = call(cr, "GET", "/api/profile/voice")[1]
+    assert doc["text"] == PROFILE_V1 and doc["previous"] is None, "nothing of the refused text was written"
+    log = (cr.dir / "profile.jsonl").read_text(encoding="utf-8")
+    assert "petitioner" not in log and "index no" not in log
+
+
+def test_the_api_loads_its_own_copy_for_an_in_process_job(cr):
+    assert PF.load_into_voice(cr, SimpleNamespace(backend="files")) is False and not voice.loaded()
+    call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
+    assert PF.load_into_voice(cr, SimpleNamespace(backend="files")) is True
+    assert voice.profile()["text"] == PROFILE_V1.strip() and voice.profile()["source"] == "store"
+
+
+# ---------------------------------------------------------------- the legal rules on the request path
+def test_refuse_legal_is_the_ingest_refusal_shape():
+    with pytest.raises(CR.HttpError) as e:
+        CR.refuse_legal("a plain idea about parrots", LEGAL_TEXT)
+    assert e.value.status == 422 and str(e.value) == CR.LEGAL_MSG
+    CR.refuse_legal("a plain idea about parrots", "", None)  # nothing to refuse
+
+
+class NeverEnqueue:
+    """A Creative stand-in whose enqueue must not be reached when the text is refused."""
+
+    def __init__(self, corpus=None):
+        self.calls = []
+        self._c = corpus
+
+    def enqueue(self, *a, **k):
+        self.calls.append((a, k))
+        return 202, {"job": {"id": "job:x"}}
+
+    def stores(self, kb):
+        return {"workingsets": SimpleNamespace(items={})}
+
+    def corpus(self, kb):
+        return self._c
+
+
+def routes(cr, body):
+    return CR.Routes(cr, SimpleNamespace(kb=None), None, {}, body)
+
+
+def test_riff_facts_punchup_and_ask_refuse_court_text_before_any_job_is_queued(tmp_path):
+    cr = NeverEnqueue()
+    for name, body in (("riff", {"idea": LEGAL_TEXT, "lines": []}), ("riff", {"idea": "parrots", "lines": ["ok", LEGAL_TEXT]}),
+                       ("facts", {"text": LEGAL_TEXT})):
+        with pytest.raises(CR.HttpError) as e:
+            getattr(routes(cr, body), name)()
+        assert e.value.status == 422 and str(e.value) == CR.LEGAL_MSG, name
+    assert cr.calls == []
+    assert routes(cr, {"idea": "parrots that file taxes", "lines": ["one line"]}).riff()[0] == 202  # plain text queues
+    # a punch-up shows the bit's own latest-night lines: those are what is checked (creative.workingset.punch_text)
+    from creative.data import Corpus
+    from creative.tests.conftest import make_analyses, make_graph
+    an = make_analyses()
+    an["2024-03-01_z"]["jokes"][0]["transcript"] = "Bravo setup about the dog. " + LEGAL_TEXT
+    cr2 = NeverEnqueue(Corpus(make_graph(), an))
+    with pytest.raises(CR.HttpError) as e:
+        routes(cr2, {}).joke_punchup("joke:b")
+    assert e.value.status == 422 and cr2.calls == []
+    assert routes(NeverEnqueue(Corpus(make_graph(), make_analyses())), {}).joke_punchup("joke:b")[0] == 202
+    # Ask: the question itself, before retrieval
+    st = Store(tmp_path, "chats", AK.chat_apply)
+    st.append("new", "chat:abcdef12", {"title": "x"})
+    cr3 = NeverEnqueue()
+    with pytest.raises(CR.HttpError) as e:
+        AK.ask(cr3, None, st, "chat:abcdef12", LEGAL_TEXT)
+    assert e.value.status == 422 and st.get("chat:abcdef12")["turns"] == [] and cr3.calls == []

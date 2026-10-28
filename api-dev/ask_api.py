@@ -178,6 +178,7 @@ def ask(cr, kb, st: Store, chat_id: str, question: str) -> dict:
         raise HttpError(400, f"a conversation holds at most {MAX_TURNS} questions; start a new one")
     if any(t["status"] == "thinking" for t in ch["turns"]):
         raise HttpError(409, "still thinking about the last question")
+    CR.refuse_legal(question)  # the legal rules on the question itself, before any source is retrieved or queued
     c = cr.corpus(kb)
     hist = _history(ch)
     turn = f"t{len(ch['turns']) + 1}"

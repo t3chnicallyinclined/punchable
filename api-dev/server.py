@@ -1171,8 +1171,10 @@ class Handler(BaseHTTPRequestHandler):
         import mysets_api as MS  # /api/mysets* (docs/API_CONTRACT.md "Your sets")
         import suggest_api as SG  # /api/suggestions/not-a-joke ("not a joke?" voice memos; hide is his tap)
         import say_api as SY  # /api/say + /api/tonight/screen (docs/UX_2026-10.md)
+        import profile_api as PF  # /api/profile/voice + /api/worker/profile/voice (his voice profile, as data)
         limit = 8 * 1024 * 1024 if path.startswith("/api/worker/") else MAX_BODY
-        return (SY.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+        return (PF.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
+                or SY.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or SG.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or MS.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
                 or AK.handle(self.creative, self, method, path, q, lambda: self.body_json(limit))
@@ -1657,6 +1659,26 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.pick(parse_qs(u.query))
             if self.creative_route("PATCH", path, parse_qs(u.query)):
+                return
+            return self.err(404, "not found")
+        except K.DecisionError as e:
+            return self.err(e.status, str(e))
+        except Exception as e:  # noqa: BLE001
+            self.log_message("ERROR %r", e)
+            CRASH.report(e, route=M.route_pattern(self.path), status=500)
+            return self.err(500, f"{type(e).__name__}: {e}")
+
+    def do_PUT(self):
+        """PUT replaces one whole document (today: his voice profile, api-dev/profile_api.py)."""
+        u = urlparse(self.path)
+        path = u.path
+        if not self.authorize(path):
+            return
+        if not self.kbs:
+            return self.booting(path)
+        try:
+            self.pick(parse_qs(u.query))
+            if self.creative_route("PUT", path, parse_qs(u.query)):
                 return
             return self.err(404, "not found")
         except K.DecisionError as e:
