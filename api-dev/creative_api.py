@@ -570,6 +570,34 @@ def job_brief(j: dict) -> dict:
     return out
 
 
+def can_drop(j: dict, body: dict) -> bool:
+    """A worker's "result" may end a QUEUED job only as a final failure of a kind no worker runs (an upload waiting
+    for a transcriber since 2026-10-27, a YouTube import): ok=false, retry=false. Anything else on an unclaimed job
+    is a 409, as before."""
+    return (j.get("status") == "queued" and j.get("kind") in TRANSCRIBER_KINDS
+            and not body.get("ok") and not body.get("retry"))
+
+
+def recent_duplicate(jobs: dict, meta: dict, now: float, window_s: float = 120.0) -> dict | None:
+    """The queued process_set job of an identical upload (same bytes, duration, recorded_at and title) enqueued within
+    `window_s`: the phone posted the same recording twice (two jobs for one file were found 2026-10-29, same second).
+    None when there is no such job."""
+    keys = ("bytes", "duration_s", "recorded_at", "title")
+    want = tuple(meta.get(k) for k in keys)
+    if not any(want):
+        return None
+    for j in jobs.values():
+        if j.get("kind") != "process_set" or j.get("status") != "queued":
+            continue
+        m = (j.get("input") or {}).get("meta") or {}
+        if tuple(m.get(k) for k in keys) != want:
+            continue
+        t = _ts(j.get("created_at"))
+        if t and 0 <= now - t <= window_s:
+            return j
+    return None
+
+
 def _queued(j: dict) -> dict:
     """The 202 body: the job, where to poll, and -- for a kind no worker runs now -- what it is waiting for."""
     out = {"status": "queued", "job": job_brief(j), "poll": f"/api/jobs/{j['id']}"}
@@ -809,6 +837,7 @@ POST_ROUTES = [
     (re.compile(r"^/api/facts$"), "facts"),
     (re.compile(r"^/api/riff$"), "riff"),
     (re.compile(r"^/api/sets/transcript$"), "set_transcript"),
+    (re.compile(r"^/api/jobs/([^/]+)/drop$"), "job_drop"),
 ]
 PATCH_ROUTES = [
     (re.compile(r"^/api/boards/([^/]+)$"), "board_patch"),
@@ -1010,6 +1039,20 @@ class Routes:
         if not j:
             raise HttpError(404, "no such job")
         return 200, {**job_brief(j), "result": j.get("result")}
+
+    def job_drop(self, jid):
+        """POST /api/jobs/<id>/drop {reason?}: his call to stop waiting for a queued job (an upload nothing will
+        transcribe, a YouTube import). The job ends `failed` with the reason; the uploaded file stays in the inbox
+        (nothing of his is deleted by a drop). 409 if the job is running or already over."""
+        st = self.st()
+        j = st["jobs"].get(jid)
+        if not j:
+            raise HttpError(404, "no such job")
+        if j["status"] != "queued":
+            raise HttpError(409, f"job is {j['status']}")
+        reason = str(self.b.get("reason") or "dropped by the owner")[:300]
+        st["jobs"].append("fail", jid, {"error": reason, "retry": False}, by=self.h.actor(self.b) if hasattr(self.h, "actor") else OWNER_ID)
+        return 200, {"ok": True, "job": job_brief(st["jobs"].get(jid))}
 
     # ---------------------------------------------------------------- writes (his actions)
     def _jokes_list(self, c, xs) -> list[str]:
@@ -1363,7 +1406,7 @@ class Routes:
         j = st["jobs"].get(jid)
         if not j:
             raise HttpError(404, "no such job")
-        if j["status"] != "claimed":
+        if j["status"] != "claimed" and not can_drop(j, self.b):
             raise HttpError(409, f"job is {j['status']}")
         res = self.b.get("result")
         if self.b.get("ok"):

@@ -2019,6 +2019,15 @@ class Handler(BaseHTTPRequestHandler):
             # hosted: queued as process_set. No worker transcribes any more (the PC is retired; transcription
             # happens on the phone), so the job says so: waiting_for "transcriber" and the note, never a silent drop.
             st = self.creative.stores(kb)
+            import creative_api as CA
+            dup = CA.recent_duplicate(st["jobs"].items, meta, time.time())
+            if dup is not None:   # the same recording posted twice within two minutes: one job, the first file
+                dest.unlink(missing_ok=True)
+                dest.with_name(dest.name + ".meta.json").unlink(missing_ok=True)
+                out.update(file=(dup.get("input") or {}).get("file"), job=CA.job_brief(dup), duplicate=True)
+                if dup.get("waiting_for"):
+                    out["waiting_for"], out["note"] = dup["waiting_for"], CA.WAITING_NOTE.get(dup["waiting_for"])
+                return self.send_json(out)
             _, q = self.creative.enqueue(st, "process_set", f"process|{dest.name}", {"file": dest.name, "meta": meta})
             out["job"] = q["job"]
             if q.get("waiting_for"):

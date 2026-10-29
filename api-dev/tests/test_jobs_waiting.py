@@ -109,3 +109,31 @@ def test_paused_claim_reports_the_budget_and_the_worker_line_says_the_server():
 def test_set_text_is_a_job_kind_the_worker_may_run():
     assert "set_text" in CR.JOB_KINDS and "set_text" not in CR.TRANSCRIBER_KINDS and "set_text" not in CR.WORKER_ONLY
     assert CR.TRANSCRIBER_KINDS == {"process_set", "import_youtube"}
+
+
+def test_a_queued_transcriber_job_can_be_dropped_and_only_as_a_final_failure(tmp_path):
+    st = jobs_store(tmp_path)
+    j = enqueue(st, "process_set", "job:ps")
+    assert CR.can_drop(j, {"ok": False, "retry": False})
+    assert not CR.can_drop(j, {"ok": False, "retry": True})      # a retry keeps it waiting; that is not a drop
+    assert not CR.can_drop(j, {"ok": True, "result": {}})         # nothing can finish what nobody ran
+    r = enqueue(st, "riff", "job:r")
+    assert not CR.can_drop(r, {"ok": False, "retry": False})      # a kind the worker runs must be claimed first
+    st.append("fail", "job:ps", {"error": "test tape, dropped", "retry": False}, by="owner")
+    j = st.get("job:ps")
+    assert j["status"] == "failed" and j["waiting_for"] is None and j["error"] == "test tape, dropped"
+    with pytest.raises(ValueError):
+        st.append("fail", "job:ps", {"error": "again", "retry": False}, by="owner")   # over is over
+
+
+def test_the_same_upload_twice_within_two_minutes_is_one_job(tmp_path):
+    st = jobs_store(tmp_path)
+    meta = {"bytes": 1234, "duration_s": 34.0, "recorded_at": "2026-10-28T19:03:30Z", "title": "Set"}
+    st.append("enqueue", "job:a", {"kind": "process_set", "key": "process|a.m4a", "input": {"file": "a.m4a", "meta": meta}})
+    now = CR._ts(st.get("job:a")["created_at"])
+    assert CR.recent_duplicate(st.items, dict(meta), now + 1)["id"] == "job:a"
+    assert CR.recent_duplicate(st.items, {**meta, "title": "Other"}, now + 1) is None
+    assert CR.recent_duplicate(st.items, dict(meta), now + 500) is None          # two minutes later it is a new take
+    assert CR.recent_duplicate(st.items, {}, now + 1) is None                      # nothing to match on: never a dup
+    st.append("fail", "job:a", {"error": "dropped", "retry": False}, by="owner")
+    assert CR.recent_duplicate(st.items, dict(meta), now + 1) is None            # only a QUEUED job counts
