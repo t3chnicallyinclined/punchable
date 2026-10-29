@@ -20,6 +20,7 @@ import type { SearchResult } from '@/lib/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
 import { Avatar, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
+import { getPrefs, setPrefs } from '@/lib/prefs';
 import { Screen } from '@/lib/Screen';
 
 type View_ = 'bits' | 'notes';
@@ -72,7 +73,8 @@ const Row = memo(function Row({ j }: { j: JokeSummary }) {
 export default function Bits() {
   const wide = useWide();
   const [view, setView] = useState<View_>('bits');
-  const [sort, setSort] = useState<Sort>('recent');
+  const [sort, setSortState] = useState<Sort>(() => getPrefs().bitsSort);
+  const setSort = useCallback((k: Sort) => { setSortState(k); setPrefs({ bitsSort: k }); }, []);
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
   const [focused, setFocused] = useState(false);
@@ -100,7 +102,7 @@ export default function Bits() {
     return c;
   }, [items]);
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
-  const newBit = useCallback(() => router.push({ pathname: '/say', params: { focus: '1', screen: 'bits' } } as any), []);
+  const newBit = useCallback(() => router.push('/new-bit' as any), []);
   const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
   // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types
   const search: SearchBarProps | undefined = native ? {
@@ -110,12 +112,12 @@ export default function Bits() {
   // HIG/segmented-controls: Map is a navigation, not a view, so it is a header button, not a third segment
   const mapBtn = native ? (
     <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" onPress={newBit}>New bit</Stack.Toolbar.Button>
-      <Stack.Toolbar.Menu icon="arrow.up.arrow.down" accessibilityLabel={`Sort: ${SORT_WORD[sort]}`}>
+      {/* HIG/toolbars: the primary action ("+") at the trailing end; a pop-up for the sort, labelled with the current choice */}
+      <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
+      <Stack.Toolbar.Menu icon="arrow.up.arrow.down" accessibilityLabel={`Sorted by ${SORT_WORD[sort]}. Change the order`}>
         {SORTS.map((k) => <Stack.Toolbar.MenuAction key={k} icon={k === sort ? 'checkmark' : undefined} onPress={() => { haptics.selection(); setSort(k); }}>{SORT_WORD[k]}</Stack.Toolbar.MenuAction>)}
       </Stack.Toolbar.Menu>
-      <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
-      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
+      <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" onPress={newBit}>New bit</Stack.Toolbar.Button>
     </Stack.Toolbar>
   ) : null;
   const right = native ? undefined : (
@@ -154,9 +156,9 @@ export default function Bits() {
         </View>
       )}
       <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
-      {view === 'bits' && !dq && (
+      {view === 'bits' && !dq && !native && (
         <View testID="bits-sort" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Sort">
-          <T v="small" style={{ marginRight: 4 }}>{native ? 'Sorted by' : 'Sort'}</T>
+          <T v="small" style={{ marginRight: 4 }}>Sort</T>
           {SORTS.map((k) => (
             <Pressable key={k} testID={`bits-sort-${k}`} accessibilityRole="radio" accessibilityState={{ selected: k === sort }} onPress={() => { haptics.selection(); setSort(k); }} hitSlop={6}
               style={{ minHeight: 32, paddingHorizontal: 10, borderRadius: 16, justifyContent: 'center', backgroundColor: k === sort ? C.card2 : 'transparent' }}>

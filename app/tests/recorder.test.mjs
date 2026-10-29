@@ -61,5 +61,15 @@ check(R.pickInput([], null) === null, "no inputs: null");
 check(R.pickInput([builtIn, { uid: "x", type: { rawValue: "UsbAudio" } }], builtIn)?.uid === "x", "the struct shape of the port type (getAvailableInputs) is read too");
 check(R.pickInput([{ uid: "q", type: 42 }, builtIn], null)?.uid === "b", "an unknown type ranks below the built-in mic");
 
+// the record control's state machine (2026-10-29): nothing records until start; stop from recording OR paused saves
+check(R.nextRecordState("idle", "start") === "recording" && R.nextRecordState("recording", "start") === "recording", "start only from idle");
+check(R.nextRecordState("recording", "pause") === "paused" && R.nextRecordState("idle", "pause") === "idle", "pause only while recording");
+check(R.nextRecordState("paused", "resume") === "recording" && R.nextRecordState("recording", "resume") === "recording", "resume only from paused");
+check(R.nextRecordState("recording", "stop") === "saving" && R.nextRecordState("paused", "stop") === "saving" && R.nextRecordState("idle", "stop") === "idle", "stop saves from recording or paused, never from idle");
+check(R.nextRecordState("saving", "start") === "saving" && R.nextRecordState("saving", "stop") === "saving", "nothing moves out of saving but the upload");
+check(R.statusWord("idle", false, false) === "Ready" && R.statusWord("idle", false, true) === "Clock only", "idle reads Ready, or Clock only after Next bit");
+check(R.statusWord("recording", false, false) === "Recording" && R.statusWord("recording", true, false) === "Paused by a call", "a call reads as such");
+check(R.statusWord("paused", false, false) === "Paused" && R.statusWord("saving", false, false) === "Saving…", "paused and saving");
+
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");
 process.exit(fails.length ? 1 : 0);

@@ -103,7 +103,7 @@ export default function Sets() {
   };
   const cardItems = (x: BoardListItem): MenuItem[] => [
     { label: 'Open', icon: 'doc.text', onPress: () => open(x), testID: `card-open-${x.id}` },
-    { label: 'Go on stage', icon: 'play.fill', onPress: () => router.push(`/stage/${enc(x.id)}` as any), testID: `card-stage-${x.id}` },
+    { label: 'Record', icon: 'record.circle', onPress: () => router.push(`/stage/${enc(x.id)}` as any), testID: `card-stage-${x.id}` },
     { label: 'Rename…', icon: 'pencil', onPress: () => setRename(x), testID: `card-rename-${x.id}` },
     { label: 'Duplicate', icon: 'plus.square.on.square', onPress: () => duplicate(x), testID: `card-duplicate-${x.id}` },
     { label: 'Delete', icon: 'trash', onPress: () => del(x), destructive: true, testID: `card-delete-${x.id}` },
@@ -118,7 +118,9 @@ export default function Sets() {
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
-      <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', `Performed · ${sets.list.length}`]]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
+      {/* a set list is what he is working on; a set exists once it is recorded (owner, 2026-10-29). Equal-width nouns
+          (HIG/segmented-controls); the count lives in the header row below, not in the segment. */}
+      <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', 'Recorded']]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
       {seg === 'lists' ? (
         <>
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
@@ -146,9 +148,10 @@ export default function Sets() {
           )}
         </>
       ) : (
-        <View>
+        <View style={{ gap: 6 }}>
+          {!!sets.list.length && <T v="small" testID="sets-count">{sets.list.length} {sets.list.length === 1 ? 'set' : 'sets'} on tape</T>}
           {sets.error && !sets.list.length ? <ErrorCard error={sets.error} /> : null}
-          {!sets.list.length && !sets.error && <Empty text="No recorded sets yet. Record one from ＋, or import a YouTube link." />}
+          {!sets.list.length && !sets.error && <Empty text="No recorded sets yet. Open a set list and tap Record, or record one from ＋." />}
           <List>
             {sets.list.map((x) => (
               <ListRow key={x.id} testID={`performed-${x.id}`} title={<T v="semi" numberOfLines={1}>{x.venue.name}</T>}

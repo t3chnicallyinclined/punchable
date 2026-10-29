@@ -99,3 +99,25 @@ export function pickInput(inputs: InputLike[], current?: InputLike | null): Inpu
   if (current && (current.uid === best.uid || rank(current) <= rank(best))) return null;
   return best;
 }
+
+// ---- the record control's states (lib/RecordControl; docs/design/HIG.md §3.9, 2026-10-29)
+/** idle: nothing taped yet · recording · paused (his pause; a call shows as recording + interrupted) · saving: stopped, uploading. */
+export type RecordState = 'idle' | 'recording' | 'paused' | 'saving';
+export type RecordAction = 'start' | 'pause' | 'resume' | 'stop';
+
+/** The only moves the control makes. Anything else is a no-op (a second tap during saving, a pause while idle). */
+export function nextRecordState(s: RecordState, a: RecordAction): RecordState {
+  if (a === 'start') return s === 'idle' ? 'recording' : s;
+  if (a === 'pause') return s === 'recording' ? 'paused' : s;
+  if (a === 'resume') return s === 'paused' ? 'recording' : s;
+  if (a === 'stop') return s === 'recording' || s === 'paused' ? 'saving' : s;
+  return s;
+}
+
+/** The word beside the clock. */
+export function statusWord(s: RecordState, interrupted: boolean, clockOnly: boolean): string {
+  if (s === 'saving') return 'Saving…';
+  if (s === 'recording') return interrupted ? 'Paused by a call' : 'Recording';
+  if (s === 'paused') return 'Paused';
+  return clockOnly ? 'Clock only' : 'Ready';
+}

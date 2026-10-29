@@ -185,7 +185,7 @@ export default function SetListScreen() {
     <TopBar title={B.board.title} back backLabel="Sets" onBack={() => (router.canGoBack() ? router.back() : router.navigate('/sets' as any))}
       right={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename, duplicate, share or delete the set list" onPress={() => setListMenu(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
-        <TextBtn testID="stage" label="Stage" onPress={stage} />
+        <TextBtn testID="stage" label="Record" onPress={stage} />
       </View>} />
   );
 
@@ -194,7 +194,7 @@ export default function SetListScreen() {
       dock={native ? undefined : <Btn testID="add-joke" v="primary" label={addLabel} onPress={() => openAdd({ mode: 'add' })} />}>
       {native && (
         <>
-          {/* HIG/toolbars: one prominent action (Stage) on the trailing side; the rest in a menu; destructive last */}
+          {/* HIG/toolbars: one prominent action (Record: the record glyph, never play, which means playback) on the trailing side; the rest in a menu; destructive last */}
           <Stack.Toolbar placement="right">
             <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
               <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setTitle(true)}>Rename…</Stack.Toolbar.MenuAction>
@@ -202,7 +202,7 @@ export default function SetListScreen() {
               <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
             </Stack.Toolbar.Menu>
-            <Stack.Toolbar.Button icon="play.fill" variant="prominent" accessibilityLabel="Go on stage" onPress={stage}>Stage</Stack.Toolbar.Button>
+            <Stack.Toolbar.Button icon="record.circle" variant="prominent" accessibilityLabel="Record this set" onPress={stage}>Record</Stack.Toolbar.Button>
           </Stack.Toolbar>
           {/* the dock becomes a bottom toolbar inside the tab's stack, so the tab bar stays visible (HIG/tab-bars) */}
           <Stack.Toolbar placement="bottom">

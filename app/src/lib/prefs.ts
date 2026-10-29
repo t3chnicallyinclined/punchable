@@ -4,8 +4,14 @@
 import { Platform } from 'react-native';
 
 export type SchemePref = 'system' | 'dark' | 'light';
-export type Prefs = { appearance: SchemePref; haptics: boolean; /** the galaxy map's legend strip open */ mapLegend: boolean };
-export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true };
+export type BitsSort = 'recent' | 'performed' | 'strongest';
+export type MapMode = 'cloud' | 'links';
+export type Prefs = {
+  appearance: SchemePref; haptics: boolean; /** the galaxy map's legend strip open */ mapLegend: boolean;
+  /** the Bits list's order (2026-10-29: Recent by default, like a Docs list) */ bitsSort: BitsSort;
+  /** Bits › Map: the cloud (bits placed by meaning) or the links map */ mapMode: MapMode;
+};
+export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud' };
 
 const KEY = 'pk.prefs.v1';
 let cache: Prefs = { ...DEFAULT_PREFS };
@@ -18,6 +24,8 @@ function clean(raw: any): Prefs {
     if (raw.appearance === 'system' || raw.appearance === 'dark' || raw.appearance === 'light') p.appearance = raw.appearance;
     if (typeof raw.haptics === 'boolean') p.haptics = raw.haptics;
     if (typeof raw.mapLegend === 'boolean') p.mapLegend = raw.mapLegend;
+    if (raw.bitsSort === 'recent' || raw.bitsSort === 'performed' || raw.bitsSort === 'strongest') p.bitsSort = raw.bitsSort;
+    if (raw.mapMode === 'cloud' || raw.mapMode === 'links') p.mapMode = raw.mapMode;
   }
   return p;
 }

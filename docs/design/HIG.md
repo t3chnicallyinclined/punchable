@@ -251,22 +251,25 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Audio: the memo player plays under the playback category; recording a set uses `doNotMix` (HIG/playing-audio: "don't
   make people stop listening to music from another app if you don't need to" applies to playback, not to recording).
 
-### 3.9 Stage (`/stage/{id}`, full-screen modal)
-- No navigation bar; `statusBarStyle: 'light'`, `autoHideHomeIndicator: true`, `gestureEnabled: false` (a stray edge
-  swipe never leaves the stage), `useKeepAwake` (kept).
-- The clock (84 pt, tabular), the bar with the light mark, the short names (40 pt current, 30 pt others), "Tap anywhere
-  for next". Bottom: Stop (danger) and Next bit (prominent, 60 pt) as now. Reduce Motion: no scale on the light.
-- Stop → **action sheet**: title "Stop recording?", message "6:12 on tape. Save it and it gets reviewed after the show.",
-  buttons "Discard the recording" (destructive, first), "Save the set", "Keep going" (cancel, last). HIG/action-sheets:
-  destructive buttons "at the top of the action sheet where they tend to be most noticeable"; "Place the Cancel button at
-  the bottom".
-- Haptics: `selection` on Next bit (kept). Remove `haptics.warning()` on tapping Stop (`stage/[id].tsx:55`): Warning
-  "Indicates that a task or action has produced a warning of some kind" (HIG/playing-haptics); a confirmation sheet is
-  not a warning. `success` on save (kept).
-- Audio session: record category, `doNotMix`, background recording (kept, `lib/recorder.native`). Interruptions (a
-  call): HIG/playing-audio "if your app supports recording or other audio-related tasks that people don't want
-  interrupted, you can tell the system to avoid interrupting the currently playing audio for an incoming call unless
-  people choose to accept it." Not visible in the screen; check `lib/recorder.native.ts` (not read for this spec).
+### 3.9 Stage (`/stage/{id}`, full-screen modal) and Record (`/record`): the record control (2026-10-29)
+- `autoHideHomeIndicator: true`, `gestureEnabled: false`, `useKeepAwake` (kept). Title "Record"; Close top-leading.
+- **Nothing records until he taps the red disc** (`lib/RecordControl`): on open the clock reads 0:00, status "Ready",
+  the set list in marker text. Next bit before the disc runs the clock alone ("Clock only").
+- The control: an 80 pt red disc (systemRed, `C.rec` fallback) in a 92 pt ring, centred in the dock, above the home
+  indicator (HIG/buttons: 44 pt minimum; one-handed in the dark). Tap → recording, `haptics.medium()` (impact).
+  While recording the disc is a 30 pt red square: **tap = stop AND save**, no sheet (HIG/feedback: do not warn when
+  the result is expected; Voice Memos does the same). Pause is the 60 pt plain control on the left ("Paused" while
+  paused or during a call; the disc then reads Resume); Next bit (Stage) / Mark (Record) is the 60 pt control on the
+  right, prominent on Stage. `success` after the upload is queued.
+- Discard is the hard path: Close while taping → action sheet "Leave the stage?" · "Discard the recording"
+  (destructive, first) · "Save the set" · "Keep going" (cancel, last) (HIG/modality: closing a view that could lose
+  user content presents an action sheet with a save option). On the web the same as a sheet.
+- One clock (`RecordClock`): 84 pt tabular, `maxFontSizeMultiplier 1.2`, the status word beside it ("Recording" in
+  red, "Paused by a call" during an interruption), the target bar with the light mark, the room's level while taping.
+- The state machine is pure (`recorderLogic.nextRecordState`, tested): idle → recording → paused ⇄ recording → saving.
+- Sets tab: segments **Set lists · Recorded** (equal-width nouns, HIG/segmented-controls; the count in a header row);
+  the list screen's prominent action is **Record** with `record.circle`, never `play.fill` (play means playback).
+- Audio session: record category, `doNotMix`, background recording (kept, `lib/recorder.native`).
 
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
 - Push, inline title "Map"; `Stack.Toolbar` right: Shuffle (`shuffle`), Centre (`scope`, "Centre on the selected
@@ -299,10 +302,16 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   type of content people are editing"); `returnKeyType="go"` on the link field ("Consider customizing the Return key
   type if it helps clarify the text-entry experience").
 
-### 3.13 The conversation (`/say`)
-- Push, inline title "Asking"; the thread as now; the input bar as the bottom accessory with `autoFocus` when opened
-  from "+ Bit". The spinner with "Reading your material…" is an acceptable indeterminate indicator for a short wait
-  (HIG/progress-indicators); the "The writer is offline" card stays (HIG/feedback: status near the item it describes).
+### 3.13 The conversation (`/say`) and New bit (`/new-bit`)
+- `/say`: push, inline title "Asking"; the thread as now; the input bar as the bottom accessory. The spinner with
+  "Reading your material…" is an acceptable indeterminate indicator for a short wait (HIG/progress-indicators); the
+  "The writer is offline" card stays (HIG/feedback: status near the item it describes).
+- Bits "+" (2026-10-29) opens **`/new-bit`**, a form sheet at `fitToContents`: "Premise" (the short name he'd write on
+  a set list, autoFocus) and an optional "First line"; Cancel leading, **Add** trailing (`variant: 'done'`; HIG/sheets:
+  a Done button is always paired with Cancel). Not the conversation: the agreed unit is a named premise
+  (docs/HANDOVER.md "organizing ideas"). Tonight's "+ Bit" still opens the composer.
+- Bits sort (Recent · Performed · Strongest, default Recent) is a toolbar pop-up labelled with the current choice
+  (HIG/pop-up-buttons), not a segmented control (segments are for views: Bits · Notes).
 
 ---
 

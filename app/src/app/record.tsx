@@ -1,16 +1,19 @@
-// Record a set (full-screen task). Web: MediaRecorder; phone: expo-audio in the background (lib/recorder). The
-// timer, the light warning, level bars (lib/recorder level(): 0..1 over a -60 dBFS floor), Mark / Pause / Done; a phone
-// call shows "Paused by a call" and Pause reads Resume (expo-audio resumes on its own when the call ends; the tap covers the
-// case it does not). Then the tape goes to the upload queue (lib/uploads:
-// retried on the backoff schedule when there is no signal) as a set for the tapes inbox.
+// Record a set with no set list (full-screen task; the record control per docs/design/HIG.md §3.9, 2026-10-29). Web:
+// MediaRecorder; phone: expo-audio in the background (lib/recorder). Nothing records until he taps the red disc; the
+// clock, the light warning and the level bars; Mark while taping; the square stops AND saves (Voice Memos). Discard is
+// behind Close. A phone call shows "Paused by a call" and the disc reads Resume. Then the tape goes to the upload queue
+// (lib/uploads: retried on the backoff schedule when there is no signal) as a set for the tapes inbox.
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { haptics } from '@/lib/haptics';
+import { actionSheet } from '@/lib/actionSheet';
 import { useRecorder } from '@/lib/recorder';
+import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordControl';
+import { type RecordState, nextRecordState, statusWord } from '@/lib/recorderLogic';
 import { enqueueUpload, usePendingUploads } from '@/lib/uploads';
-import { C, F, fmtMs } from '@/lib/theme';
-import { Badge, Btn, Card, Chip, Sheet, SheetHead, T, TextBtn, s, useUI } from '@/lib/ui';
+import { C, fmtMs } from '@/lib/theme';
+import { Btn, Card, Chip, Sheet, SheetHead, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
 import { isWeb } from '@/lib/media';
@@ -20,95 +23,90 @@ const TARGETS = [5, 7, 10, 15, 20];
 export default function RecordScreen() {
   const ui = useUI();
   const rec = useRecorder();
-  const [state, setState] = useState<'idle' | 'recording' | 'paused' | 'saving' | 'error'>('idle');
+  const [state, setState] = useState<RecordState>('idle');
   const [ms, setMs] = useState(0);
   const [marks, setMarks] = useState<number[]>([]);
   const [levels, setLevels] = useState<number[]>(Array(28).fill(0));
-  const [intr, setIntr] = useState(false); // the system paused the tape (a call); lib/recorder interrupted()
+  const [intr, setIntr] = useState(false);
   const [target, setTarget] = useState(7);
   const [err, setErr] = useState<string | null>(null);
   const [ask, setAsk] = useState(false);
   const pending = usePendingUploads();
-  const started = useRef(false);
-  const light = (target - 1) * 60000;
+  const native = Platform.OS !== 'web';
+  const taping = state === 'recording' || state === 'paused' || state === 'saving';
+  const tapingRef = useRef(taping);
+  tapingRef.current = taping;
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    if (!rec.supported) {
-      setState('error');
-      setErr('This browser can’t record audio.');
-      return;
-    }
-    rec.start().then(() => setState('recording')).catch((e) => { setState('error'); setErr(e?.message || 'Microphone not available'); });
     const t = setInterval(() => {
+      if (!tapingRef.current) return;
       setMs(rec.elapsedMs());
       setLevels((xs) => [...xs.slice(1), rec.level()]);
       setIntr(rec.interrupted());
     }, 200);
-    return () => {
-      clearInterval(t);
-      if (rec.state() === 'recording' || rec.state() === 'paused') rec.cancel();
-    };
+    return () => { clearInterval(t); if (rec.state() === 'recording' || rec.state() === 'paused') rec.cancel(); };
   }, [rec]);
 
   const leave = () => (router.canGoBack() ? router.back() : router.navigate('/' as any));
-  const cancel = () => {
-    if (state === 'recording' || state === 'paused') { haptics.warning(); setAsk(true); return; }
-    leave();
+  const start = async () => {
+    if (!rec.supported) { setErr(isWeb ? 'This browser can’t record audio.' : 'No microphone available'); return; }
+    try {
+      await rec.start();
+      haptics.medium();
+      setErr(null);
+      setState(nextRecordState('idle', 'start'));
+    } catch (e: any) {
+      setErr(e?.message || 'Microphone not available');
+    }
   };
-  const discard = () => { setAsk(false); rec.cancel(); leave(); };
-  const done = async () => {
+  const pause = () => { rec.pause(); setState(nextRecordState(state, 'pause')); };
+  const resume = () => { rec.resume(); setIntr(rec.interrupted()); setState(nextRecordState(state, 'resume')); };
+  const discard = () => { setAsk(false); rec.cancel(); setState('idle'); setMs(0); leave(); };
+  const save = async () => {
     setAsk(false);
-    setState('saving');
+    setState(nextRecordState(state, 'stop'));
     try {
       const r = await rec.stop();
-      const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: `Set ${new Date().toLocaleString()}`, durationS: r.durationMs / 1000, marksMs: marks, recordedAt: new Date().toISOString() });
+      const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: `Set ${new Date().toLocaleString()}`, durationS: r.durationMs / 1000, marksMs: marks, recordedAt: new Date(Date.now() - r.durationMs).toISOString() });
       haptics.success();
-      ui.snack(res.queued ? `Set saved on this ${isWeb ? 'tab' : 'phone'} (${fmtMs(r.durationMs)}) · it goes up when Punchable is back` : `Set saved (${fmtMs(r.durationMs)}) · queued for processing`);
+      ui.snack(res.queued ? `Saved · ${fmtMs(r.durationMs)} · it goes up when Punchable is back` : `Saved · ${fmtMs(r.durationMs)}`);
       leave();
       (globalThis as any).__punchableLastUpload = res;
     } catch (e: any) {
-      setState('error');
+      setState('paused');
       setErr(`Couldn’t save: ${e.message}.`);
     }
   };
-  const pct = Math.min(100, (ms / (target * 60000)) * 100);
-  const toLight = light - ms;
+  const close = () => {
+    if (!taping) return leave();
+    if (!native) return setAsk(true);
+    actionSheet({ title: 'Leave the recorder?', message: `${fmtMs(ms)} on tape.`, options: [
+      { label: 'Discard the recording', destructive: true, onPress: discard },
+      { label: 'Save the set', onPress: save },
+      { label: 'Keep going', cancel: true },
+    ] });
+  };
+  const status = statusWord(state, intr, false);
 
   return (
     <Screen title="Record" task deep testID="screen-record"
-      header={<TopBar task title="" left={<TextBtn testID="record-cancel" label="Cancel" onPress={cancel} />}
-        right={<View style={{ width: 66 }} />} />}
+      header={<TopBar task title="" left={<TextBtn testID="record-cancel" label="Close" onPress={close} />} right={<View style={{ width: 66 }} />} />}
       dock={
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Btn testID="record-mark" label="Mark" style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording'} onPress={() => { haptics.light(); setMarks((m) => [...m, ms]); ui.snack(`Marked at ${fmtMs(ms)}`); }} />
-          <Btn testID="record-pause" label={state === 'paused' || intr ? 'Resume' : 'Pause'} style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording' && state !== 'paused'}
-            onPress={() => { if (state === 'paused') { rec.resume(); setState('recording'); } else if (intr) { rec.resume(); setIntr(rec.interrupted()); } else { rec.pause(); setState('paused'); } }} />
-          <Btn testID="record-done" v="primary" label={state === 'saving' ? 'Saving…' : 'Done'} style={{ flex: 1, minHeight: 60 }} disabled={state !== 'recording' && state !== 'paused'} onPress={done} />
-        </View>
+        <RecordDock
+          left={<SideButton testID="record-pause" label={state === 'paused' || (state === 'recording' && intr) ? 'Paused' : 'Pause'} disabled={state !== 'recording' || intr} onPress={pause} />}
+          right={<SideButton testID="record-mark" label="Mark" tone="amber" disabled={state !== 'recording'} onPress={() => { haptics.light(); setMarks((m) => [...m, ms]); ui.snack(`Marked at ${fmtMs(ms)}`); }} />}>
+          <RecordButton testID="record-rec" state={state} interrupted={intr} onStart={start} onStop={save} onResume={resume} />
+        </RecordDock>
       }>
-      <View style={{ alignItems: 'center' }}>
-        <Badge label={state === 'paused' ? 'Paused' : intr ? 'Paused by a call' : state === 'recording' ? '● REC' : state === 'saving' ? 'Saving' : 'Ready'} fg={state === 'recording' && !intr ? C.redSoft : C.text} style={{ borderWidth: 2, borderColor: C.amber, minHeight: 28 }} />
-      </View>
-      <Card style={{ alignItems: 'center' }}>
-        <T v="eb">On stage</T>
-        <Text testID="record-timer" maxFontSizeMultiplier={1.2} style={{ fontFamily: F.g7, fontSize: 72, lineHeight: 76, color: C.text, marginTop: 6, fontVariant: ['tabular-nums'] }}>{fmtMs(ms)}</Text>
-        <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.g7, fontSize: 18, color: toLight > 0 ? C.amber : C.redSoft }}>{toLight > 0 ? `Light in ${fmtMs(toLight)}` : ms > target * 60000 ? `Over by ${fmtMs(ms - target * 60000)}` : 'Light’s on: wrap it up'}</Text>
-        <View style={{ alignSelf: 'stretch', height: 8, borderRadius: 4, backgroundColor: C.surface2, marginTop: 16, overflow: 'hidden' }}>
-          <View style={{ width: `${pct}%`, height: '100%', backgroundColor: toLight > 0 ? C.amber : C.red }} />
-          <View style={{ position: 'absolute', left: `${((target - 1) / target) * 100}%`, top: 0, bottom: 0, width: 2, backgroundColor: C.text }} />
-        </View>
-        <View style={[s.row, { alignSelf: 'stretch', justifyContent: 'space-between', marginTop: 6 }]}>
-          <T v="mut">0:00</T><T v="mut">light {target - 1}:00</T><T v="mut">{target}:00</T>
-        </View>
-      </Card>
+      <RecordClock testID="record" ms={ms} status={status} targetS={target * 60} level={taping ? levels[levels.length - 1] : null} interrupted={intr} />
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 56 }} aria-hidden>
         {levels.map((l, k) => <View key={k} style={{ flex: 1, height: `${Math.max(6, l * 100)}%`, borderRadius: 2, backgroundColor: l > 0.55 ? C.amber : C.border }} />)}
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-        {TARGETS.map((t) => <Chip key={t} label={`${t} min`} on={t === target} onPress={() => setTarget(t)} />)}
-      </View>
+      {!taping && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+          {TARGETS.map((t) => <Chip key={t} label={`${t} min`} on={t === target} onPress={() => setTarget(t)} />)}
+        </View>
+      )}
       {marks.length > 0 && (
         <Card>
           <T v="eb">Marks</T>
@@ -117,12 +115,12 @@ export default function RecordScreen() {
       )}
       {pending.length > 0 && <T v="small" testID="record-pending">{pending.length} recording{pending.length === 1 ? '' : 's'} waiting to go up (no connection). They send on their own.</T>}
       {err && <Card style={{ borderColor: C.dangerBorder }}><T>{err}</T></Card>}
-      <T v="mut" style={{ textAlign: 'center' }}>{isWeb ? 'Phone face-down at the stage edge, mic toward the crowd. Keep this tab open while you’re on.' : 'Phone face-down at the stage edge, mic toward the crowd. Lock the screen if you like: it keeps recording.'}</T>
+      <T v="mut" style={{ textAlign: 'center' }}>{state === 'idle' ? 'Tap the red button when you’re on. ' : ''}{isWeb ? 'Phone face-down at the stage edge, mic toward the crowd. Keep this tab open while you’re on.' : 'Phone face-down at the stage edge, mic toward the crowd. Lock the screen if you like: it keeps recording.'}</T>
       <Sheet visible={ask} onClose={() => setAsk(false)} label="Leave the recorder" testID="record-leave-sheet">
-        <SheetHead title="Stop recording?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="record-leave" />
+        <SheetHead title="Leave the recorder?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="record-leave" />
         <T v="mut" style={{ marginBottom: 12 }}>{fmtMs(ms)} on tape.</T>
         <View style={{ gap: 8 }}>
-          <Btn testID="record-save" v="primary" label="Save the set" onPress={done} />
+          <Btn testID="record-save" v="primary" label="Save the set" onPress={save} />
           <Btn testID="record-discard" v="danger" label="Discard the recording" onPress={discard} />
         </View>
       </Sheet>

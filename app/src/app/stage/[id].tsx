@@ -1,23 +1,26 @@
-// On stage (MixStage, docs/UX_2026-10.md): the big clock, the bar with the light, the short names in marker text with
-// the current one lit, Next bit (tap anywhere), and the recording: the web recorder or, on the phone, expo-audio
-// (lib/recorder; background audio, locked screen). The bottom Stop asks "Save the set / Discard / Keep going"
-// (HIG: a confirmation before an upload you can't take back). Saving hands the tape to the upload queue (retried
-// on the backoff schedule if the venue has no signal). The screen stays awake. A thin bar under the clock's bar is the room
-// (lib/recorder level()); a phone call reads "Paused by a call" and Next bit becomes Resume recording until the tape runs.
+// On stage (MixStage, docs/UX_2026-10.md; the record control per docs/design/HIG.md §3.9, 2026-10-29): the set list in
+// marker text with the current bit lit, the big clock, the bar with the light, and the recorder (web MediaRecorder or,
+// on the phone, expo-audio in the background with the screen locked). NOTHING RECORDS UNTIL HE TAPS THE RED DISC
+// (lib/RecordControl): before that the clock reads 0:00 and Next bit runs the clock alone. While taping, the disc is a
+// red square: tap = stop AND save (Voice Memos; stopping is not loss). Discard is behind Close (top-leading): an action
+// sheet Discard / Save the set / Keep going. Saving hands the tape to the upload queue (retried if the venue has no
+// signal). A phone call reads "Paused by a call" and the disc reads Resume. The screen stays awake.
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { actionSheet } from '@/lib/actionSheet';
-import { isWeb, micExplained } from '@/lib/media';
+import { isWeb } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
+import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordControl';
+import { type RecordState, nextRecordState, statusWord } from '@/lib/recorderLogic';
 import { enqueueUpload } from '@/lib/uploads';
 import { Build } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { C, F, fmtMs } from '@/lib/theme';
-import { Btn, Empty, Sheet, SheetHead, Skeleton, T, useUI } from '@/lib/ui';
+import { Btn, Empty, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
 
@@ -29,98 +32,96 @@ export default function Stage() {
   const b = useApi<Build>(`/api/boards/${encodeURIComponent(id)}/build`);
   const [cur, setCur] = useState(0);
   const [ms, setMs] = useState(0);
-  const [rec, setRec] = useState<'off' | 'on' | 'saving' | 'none'>('none');
-  const [ask, setAsk] = useState(false);
-  const [lvl, setLvl] = useState(0); // the room, 0..1 (lib/recorder level())
-  const [intr, setIntr] = useState(false); // the system paused the tape (a call)
+  const [rec, setRec] = useState<RecordState>('idle');
+  const [clockOnly, setClockOnly] = useState<number | null>(null); // Next bit before the disc: the clock runs, nothing tapes
+  const [ask, setAsk] = useState(false);                             // the web's Close sheet (the phone uses an action sheet)
+  const [lvl, setLvl] = useState(0);
+  const [intr, setIntr] = useState(false);
   const recorder = useRecorder();
-  const started = useRef(false);
-  const t0 = useRef(Date.now());
+  const native = Platform.OS !== 'web';
   const B = b.data;
   const target = B?.board.target_s || 0;
-  const light = Math.max(0, target - 60); // the light comes on a minute before time
+  const taping = rec === 'recording' || rec === 'paused' || rec === 'saving';
 
   useEffect(() => {
     const t = setInterval(() => {
-      setMs(rec === 'on' || rec === 'saving' ? recorder.elapsedMs() : Date.now() - t0.current);
-      if (rec === 'on') { setLvl(recorder.level()); setIntr(recorder.interrupted()); }
+      if (taping) { setMs(recorder.elapsedMs()); setLvl(recorder.level()); setIntr(recorder.interrupted()); }
+      else if (clockOnly != null) setMs(Date.now() - clockOnly);
     }, 250);
     return () => clearInterval(t);
-  }, [rec, recorder]);
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    if (!recorder.supported || (isWeb && !micExplained())) { setRec('none'); return; }
-    recorder.start().then(() => setRec('on')).catch(() => setRec('none'));
-    return () => { if (recorder.state() === 'recording' || recorder.state() === 'paused') recorder.cancel(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [taping, clockOnly, recorder]);
+  useEffect(() => () => { if (recorder.state() === 'recording' || recorder.state() === 'paused') recorder.cancel(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const steps = B?.steps || [];
-  const next = () => { haptics.selection(); setCur((c) => Math.min(steps.length - 1, c + 1)); };
+  const next = () => {
+    haptics.selection();
+    if (!taping && clockOnly == null) setClockOnly(Date.now());
+    setCur((c) => Math.min(steps.length - 1, c + 1));
+  };
   const back = () => (router.canGoBack() ? router.back() : router.navigate(`/list/${encodeURIComponent(id)}` as any));
-  const stop = () => {
-    if (rec !== 'on') return back();
-    // no haptic here (lib/feedback stopHaptic): a confirmation is not a warning; saving plays its own success
-    if (Platform.OS === 'web') return setAsk(true);
-    // HIG/action-sheets: choices tied to an intentional action; the destructive one on top, Cancel ("Keep going") at the bottom
-    actionSheet({ title: 'Stop recording?', message: `${fmtMs(ms)} on tape. Save it and it gets reviewed after the show.`, options: [
+  const start = async () => {
+    if (!recorder.supported) return ui.snack(isWeb ? 'This browser can’t record audio.' : 'No microphone available');
+    try {
+      await recorder.start();
+      haptics.medium();
+      setClockOnly(null);
+      setRec(nextRecordState('idle', 'start'));
+    } catch (e: any) {
+      ui.snack(e?.message || 'Microphone not available');
+    }
+  };
+  const pause = () => { recorder.pause(); setRec(nextRecordState(rec, 'pause')); };
+  const resume = () => { recorder.resume(); setIntr(recorder.interrupted()); setRec(nextRecordState(rec, 'resume')); };
+  const save = async () => {
+    setAsk(false);
+    setRec(nextRecordState(rec, 'stop'));
+    try {
+      const r = await recorder.stop();
+      const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt: new Date(Date.now() - r.durationMs).toISOString(), showGroup: id });
+      haptics.success();
+      ui.snack(res.queued ? `Saved · ${fmtMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${fmtMs(r.durationMs)}`);
+      back();
+    } catch (e: any) {
+      setRec('paused');
+      ui.snack(`Couldn’t save the set: ${e.message}`);
+    }
+  };
+  const discard = () => {
+    setAsk(false);
+    recorder.cancel();
+    setRec('idle');
+    ui.snack('Recording discarded');
+    back();
+  };
+  // Close while taping: the loss is the discard, so that is what the sheet is about (HIG/modality)
+  const close = () => {
+    if (!taping) return back();
+    if (!native) return setAsk(true);
+    actionSheet({ title: 'Leave the stage?', message: `${fmtMs(ms)} on tape.`, options: [
       { label: 'Discard the recording', destructive: true, onPress: discard },
       { label: 'Save the set', onPress: save },
       { label: 'Keep going', cancel: true },
     ] });
   };
-  const discard = () => {
-    setAsk(false);
-    recorder.cancel();
-    setRec('off');
-    ui.snack('Recording discarded');
-    back();
-  };
-  const save = async () => {
-    setAsk(false);
-    setRec('saving');
-    try {
-      const r = await recorder.stop();
-      const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt: new Date(t0.current).toISOString(), showGroup: id });
-      haptics.success();
-      ui.snack(res.queued ? `Set saved on this phone (${fmtMs(r.durationMs)}) · it goes up when there’s signal` : `Set saved (${fmtMs(r.durationMs)}) · it gets reviewed after`);
-      back();
-    } catch (e: any) {
-      setRec('off');
-      ui.snack(`Couldn’t save the set: ${e.message}`);
-    }
-  };
-  const pct = target ? Math.min(100, (ms / (target * 1000)) * 100) : 0;
-  const lit = ms >= light * 1000 && target > 0;
-  const status = rec === 'on' ? (intr ? 'Paused by a call' : '● REC') : rec === 'saving' ? 'Saving…' : rec === 'off' ? 'Not recording' : 'Clock only';
+  const light = Math.max(0, target - 60);
+  const lit = target > 0 && ms >= light * 1000;
+  const status = statusWord(rec, intr, clockOnly != null);
 
   return (
-    <Screen title="On stage" task deep testID="stage"
-      header={<TopBar task title={status} left={<View style={{ width: 44 }} />} right={<View style={{ width: 44 }} />} />}
+    <Screen title="Record" task deep testID="stage"
+      header={<TopBar task title={B?.board.title || ''} left={<TextBtn testID="stage-close" label="Close" onPress={close} />} right={<View style={{ width: 66 }} />} />}
       dock={
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Btn testID="stage-end" label={rec === 'on' ? 'Stop' : 'Done'} v={rec === 'on' ? 'danger' : 'plain'} style={{ flex: 1, minHeight: 60 }} onPress={stop} accessibilityLabel={rec === 'on' ? 'Stop recording' : 'Leave the stage'} />
-          {rec === 'on' && intr
-            ? <Btn testID="stage-resume" label="Resume recording" v="primary" style={{ flex: 2, minHeight: 60 }} onPress={() => { recorder.resume(); setIntr(recorder.interrupted()); }} />
-            : <Btn testID="stage-next" label={cur >= steps.length - 1 ? 'Last bit' : 'Next bit'} v="primary" style={{ flex: 2, minHeight: 60 }} onPress={next} disabled={!steps.length || cur >= steps.length - 1} />}
-        </View>
+        <RecordDock
+          left={<SideButton testID="stage-pause" label={rec === 'paused' || (rec === 'recording' && intr) ? 'Paused' : 'Pause'} disabled={rec !== 'recording' || intr} onPress={pause} />}
+          right={<SideButton testID="stage-next" prominent label={cur >= steps.length - 1 ? 'Last bit' : 'Next bit'} disabled={!steps.length || cur >= steps.length - 1} onPress={next} />}>
+          <RecordButton testID="stage-rec" state={rec} interrupted={intr} onStart={start} onStop={save} onResume={resume} />
+        </RecordDock>
       }>
+      {native && <Stack.Screen options={{ title: 'Record' }} />}
       {!B ? (b.rawError ? <Empty text={`Can’t open the set list: ${b.rawError}`} /> : <Skeleton lines={5} height={28} />) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Next bit" onPress={next} style={{ gap: 18 }}>
-          <View style={{ alignItems: 'center', gap: 2 }}>
-            <Text testID="stage-clock" maxFontSizeMultiplier={1.2} style={{ fontFamily: F.black, fontSize: 84, lineHeight: 90, letterSpacing: -2, color: lit ? C.gapText : C.text, fontVariant: ['tabular-nums'] }}>{fmtMs(ms)}</Text>
-            {!!target && <T v="mut">of {fmtMs(target * 1000)} · light at {fmtMs(light * 1000)}</T>}
-          </View>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: C.card, overflow: 'hidden' }}>
-            <View style={{ width: `${pct}%`, height: '100%', backgroundColor: lit ? C.rec : C.amber }} />
-            {!!target && <View style={{ position: 'absolute', left: `${(light / target) * 100}%`, top: 0, bottom: 0, width: 2, backgroundColor: C.text }} />}
-          </View>
-          {rec === 'on' && (
-            <View testID="stage-level" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }}>
-              <View style={{ width: `${Math.round(lvl * 100)}%`, height: '100%', backgroundColor: intr ? C.tabOff : lvl > 0.55 ? C.amber : C.border }} />
-            </View>
-          )}
-          <View style={{ gap: 6, paddingTop: 10 }}>
+          <RecordClock testID="stage" ms={ms} status={status} targetS={target} level={taping ? lvl : null} interrupted={intr} />
+          <View style={{ gap: 6, paddingTop: 4 }}>
             {steps.map((x, i) => (
               <Text key={x.joke_id} testID={`stage-row-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.2}
                 style={{ fontFamily: F.black, fontSize: i === cur ? 40 : 30, lineHeight: i === cur ? 46 : 36, letterSpacing: -0.8, color: i === cur ? C.amber : i < cur ? C.tabOff : C.text, textDecorationLine: i < cur ? 'line-through' : 'none' }}>
@@ -128,12 +129,12 @@ export default function Stage() {
               </Text>
             ))}
           </View>
-          <T v="small" style={{ textAlign: 'center' }}>Tap anywhere for next{rec === 'on' ? ' · the recording gets reviewed after' : rec === 'none' ? ' · no recording on this device' : ''}</T>
+          <T v="small" style={{ textAlign: 'center' }}>{rec === 'idle' ? 'Tap the red button to tape the set · tap anywhere for next' : rec === 'recording' ? 'Tap anywhere for next · the square stops and saves' : 'Tap anywhere for next'}{lit ? ' · the light is on' : ''}</T>
         </Pressable>
       )}
-      <Sheet visible={ask} onClose={() => setAsk(false)} label="Stop recording" testID="stage-stop-sheet">
-        <SheetHead title="Stop recording?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="stage-stop" />
-        <T v="mut" style={{ marginBottom: 12 }}>{fmtMs(ms)} on tape. Save it and it gets reviewed after the show.</T>
+      <Sheet visible={ask} onClose={() => setAsk(false)} label="Leave the stage" testID="stage-stop-sheet">
+        <SheetHead title="Leave the stage?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="stage-stop" />
+        <T v="mut" style={{ marginBottom: 12 }}>{fmtMs(ms)} on tape.</T>
         <View style={{ gap: 8 }}>
           <Btn testID="stage-save" v="primary" label="Save the set" onPress={save} />
           <Btn testID="stage-discard" v="danger" label="Discard the recording" onPress={discard} />
