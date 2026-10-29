@@ -16,8 +16,8 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 
 | Surface | State |
 |---|---|
-| Web | punchable.io, main at `2e98603` (web image from `3d4dce9`). Tabs Tonight · Bits · Sets. |
-| iPhone | TestFlight **0.1.0 (10)**, built from `3d4dce9` (search over everything, "In your sets", "Elsewhere"), auto-submitted 2026-10-28. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-10 are good. |
+| Web | punchable.io, main at `4b15982` (API and web images from it, rolled out 2026-10-29). Tabs Tonight · Bits · Sets. The cloud map computes in ~4 s on first request (1,576 bits, 14 groups), then from a 5-minute cache. |
+| iPhone | TestFlight **0.1.0 (11)**, built from `4b15982` (the record control, Set lists · Recorded, Bits Recent / + / sort, the cloud map), auto-submitted 2026-10-29; 10 had search over everything. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-11 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
 | Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. **Live since 2026-10-28 20:42 UTC**: 159 typed ideas (3 have no text) and all 675 moments embedded; a fused query takes ~0.1 s on the pod; API memory 450 MiB idle, ~560 MiB during a sweep (limit 1 Gi). |
