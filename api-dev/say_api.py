@@ -266,7 +266,9 @@ def say(cr, h, kb, b: dict) -> tuple[int, dict]:
         chats = AK.store(cr, kb)
         cid = "chat:" + sha8({"q": text, "at": now_iso(), "n": len(chats.items)})
         title = text if len(text) <= 60 else text[:59].rstrip() + "…"
-        chats.append("new", cid, {"title": title}, by=by)
+        jk = (ctx or {}).get("joke_id")   # asked from a bit's page: the conversation is about that bit
+        jk = jk if isinstance(jk, str) and jk in cr.corpus(kb).jokes else None
+        chats.append("new", cid, {"title": title, **({"joke": jk} if jk else {})}, by=by)
         ch = AK.ask(cr, kb, chats, cid, text[:AK.MAX_Q])
         st.append("acted", iid, {"ref": cid}, by=by)
         out["chat"] = AK.chat_view(ch, cr)

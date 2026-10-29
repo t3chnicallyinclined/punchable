@@ -787,7 +787,25 @@ class KB:
                 rec = {"type": "joke", "title": title, "stage": stage, "summary": (after.get("summary") or "").strip(),
                        "first_seen": now_iso()[:10], "last_seen": now_iso()[:10]}
                 return {"target": "node", "id": nid, "action": "add", "before": None, "after": rec}
-            raise DecisionError("you can add a label or a joke/idea")
+            if t == "unit":
+                # a line of his: a version written in the app (POST /api/jokes/<id>/versions), a kept draft
+                # (Brainstorm "Use as mine"), or a typed idea folded into a bit by a merge (merge_api). The part_of edge
+                # to its joke is the next decision; until then the unit stands alone.
+                text = (after.get("text") or "").strip() if isinstance(after.get("text"), str) else ""
+                if not text or len(text) > 4000:
+                    raise DecisionError("a line needs its text (up to 4000 characters)")
+                nid = after.get("id")
+                if not (isinstance(nid, str) and re.match(r"^unit:[A-Za-z0-9._-]{1,80}$", nid)):
+                    nid = "unit:" + hashlib.sha1(f"{text}|{now_iso()}|{len(v.nodes)}".encode("utf-8")).hexdigest()[:12]
+                if nid in v.nodes:
+                    raise DecisionError(f"{nid} already exists", 409)
+                date = after.get("date") if isinstance(after.get("date"), str) and DATE_RE.match(after["date"]) else now_iso()[:10]
+                rec = {"type": "unit", "text": text, "kind": str(after.get("kind") or "tag")[:40],
+                       "source": str(after.get("source") or "app")[:40], "date": date}
+                if isinstance(after.get("doc_title"), str) and after["doc_title"].strip():
+                    rec["doc_title"] = after["doc_title"].strip()[:200]
+                return {"target": "node", "id": nid, "action": "add", "before": None, "after": rec}
+            raise DecisionError("you can add a label, a joke/idea or a line (unit)")
         nid = req.get("id")
         n = need_node(nid)
         snap = public(n)

@@ -29,7 +29,7 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 
 - **Tonight**: tonight's set list as one bar, "N to sort" inbox, three questions to ask the material, a system search
   field ("Ask your material", typed only). "+" opens the create sheet. No input bar in the tab bar (owner decision).
-- **Bits**: opens on what he touched last (Recent; Performed / Strongest in the toolbar's sort menu), "+" makes a new bit from a premise and a first line (`/new-bit`); a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page has **Elsewhere**: the tapes it is on, taped moments that sound like it but are not linked, and bits that sound like it; **Map** is the **cloud** by default (`/api/map/cloud`, `lib/Cloud`: every bit placed by its vector, 3-axis PCA, named k-means groups, a slow turn, depth as size) with the older links **galaxy map** (`/map`: clusters by likeness, edge kinds by
+- **Bits**: opens on what he touched last (Recent; Performed / Strongest in the toolbar's sort menu), "+" makes a new bit from a premise and a first line (`/new-bit`); a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page is the **workbench** (2026-10-29): tap the text to edit (Save = a NEW version, the old ones stay, undoable; `POST /api/jokes/<id>/versions`), the input bar talks to a conversation pinned to this bit (`lib/BitTalk`; `POST /api/ask/chats {question, joke}`: the bit's versions, idea and tapes lead every turn's sources) with **Keep as a line** and **Merge “X” into this** under each answer, or adds a typed line as a version; **Elsewhere** lists the tapes it is on, taped moments that sound like it (**link it**) and bits that sound like it (**merge it in**); a Bits search has **Select → Make these one bit** (`pickMain`: most versions, then nights); **Map** is the **cloud** by default (`/api/map/cloud`, `lib/Cloud`: every bit placed by its vector, 3-axis PCA, named k-means groups, a slow turn, depth as size) with the older links **galaxy map** (`/map`: clusters by likeness, edge kinds by
   colour and dash, status by shape, shuffle / centre / find / legend isolate); write + riff; merge same-idea notes.
 - **Sets**: segments **Set lists · Recorded** (a set exists once it is taped); set lists (boards) with timing, gaps, bridges; **Record** (`/stage/[id]`, the list's prominent action) and the free recorder (`/record`) share the Voice Memos control (`lib/RecordControl`, 2026-10-29): nothing tapes until the red disc, the square stops and saves, Discard behind Close.
 - **Recorder** (sets only; jots and questions are text): 48 kHz stereo AAC .m4a, keep-awake while taping, real dBFS
@@ -44,7 +44,7 @@ Before today the voice profile was a static document and nothing he did with dra
 
 | Signal | Where it is recorded | How it reaches the model |
 |---|---|---|
-| Riff / punch-up line he keeps ("Use as mine", including one he edited first) | `profile:voice.learned.kept_lines` (cap 25) via the `draft: true` flag on the save | second cached system block after the profile, writing tasks only |
+| Riff / punch-up line he keeps ("Use as mine", including one he edited first), an answer kept as a line on the bit page (`draft: true` on `POST /api/jokes/<id>/versions`) | `profile:voice.learned.kept_lines` (cap 25) via the `draft: true` flag on the save | second cached system block after the profile, writing tasks only |
 | Line he dismisses | `.dropped_lines` (cap 25) via `POST /api/profile/voice/learn` | same block ("lines he passed over") |
 | Laugh marks from tapes | `.laugh_lines` (cap 15) | same block; **empty until audio processing runs on the hosted worker** |
 | Locks on a set | board state | already in the set-analysis prompt |
@@ -55,10 +55,16 @@ cached as a prefix together with the profile (alone it is under the 512-token ca
 
 ## Where this is going (owner, 2026-10-28): organizing ideas
 
-The unit he thinks in is the **premise** (a handle like "raccoons"), not the note. Agreed direction, not yet built:
-a bit is a named premise; notes **attach** to bits (one tap, undoable, a note may sit under several), merge stays for
-true duplicates; a typed word anywhere opens everything on it (notes, versions, tapes) with "add to this bit";
-after a jot, a quiet "goes with X?" suggestion. Search over everything (above) is step one of that.
+The unit he thinks in is the **premise** (a handle like "raccoons"), not the note. Built so far: search over
+everything, the workbench on a bit (edit as versions, a conversation about the bit, merge and link from its page),
+"make these one bit" off a search list, his own attach (`POST /api/merge/attach {note, into}`, undoable; not yet in
+the UI). Still to build: a note under several premises (attach is one-to-one today), "add to this bit" from the
+search panel, the quiet "goes with X?" suggestion after a jot.
+
+Found 2026-10-29 while building it: the decision builder refused `type: unit` adds, so Brainstorm's "Use as mine"
+(`bit/[id].tsx`) had been failing with "you can add a label or a joke/idea"; fixed (units can be added, with a
+`part_of` edge as the next decision). Also a merge used to lose a typed idea's words (no unit to re-point); it now
+writes them as a version of the main first.
 
 ## Standing owner decisions (do not re-open)
 
@@ -104,10 +110,11 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
-0. **Owner checks on build 11** (2026-10-29): Bits opens on Recent, "+" → New bit; Bits › Map is the cloud (turn it,
-   tap a dot, a group chip turns it to the front; "Links" is the old map); Sets › a set list › **Record**: the clock at
-   0:00 until the red disc, the square stops and saves, Close while taping asks Discard / Save / Keep going. Still owed
-   from build 10: which search results feel wrong.
+0. **Owner checks on build 12** (2026-10-29): open a bit › tap the text › change a word › Save (a new version tab
+   appears; Undo in the snack); type "what else do I have like this?" in the bar (the answer lands under the text;
+   Keep as a line; Merge “X” into this); Bits › search a word › Select › pick two › Make them one bit. From 11: Bits
+   opens on Recent, "+" → New bit, Map is the cloud, Sets › Record (0:00 until the red disc). From 10: which search
+   results feel wrong.
 
 1. **Owner checks on build 9**: tape a short set from Record, clap near the phone and watch the meter; riff a bit, keep
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.
@@ -130,5 +137,5 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 10. Pin the Bugsink image by digest.
 11. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
-Done 2026-10-29: the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
+Done 2026-10-29: the bit workbench (edit as versions, the bit's conversation, merge/link from its page, Select → one bit), the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
 now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).

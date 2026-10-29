@@ -309,6 +309,22 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   type of content people are editing"); `returnKeyType="go"` on the link field ("Consider customizing the Return key
   type if it helps clarify the text-entry experience").
 
+### 3.12b The bit page as a workbench (`/joke/{id}`, 2026-10-29)
+- The text card is a button: tap → an inline editor (multiline, autoFocus) with Cancel · Save; Save writes a NEW
+  version and the old ones stay as tabs (HIG/undo-redo: every write here is undoable from the snack, nothing is
+  overwritten). The card's trailing word "Edit" says what a tap does (never a control that leads nowhere).
+- The input bar: a question (lib/say isQuestion) goes to the conversation pinned to this bit, shown UNDER the text
+  on the same page (no separate screen; the thread grows down); a line becomes the newest version. The bar is busy
+  while an answer is being made.
+- Under each answer: "Keep as a line" (a version, learned as a kept draft) and, for each other bit the answer cites,
+  "Merge “X” into this" (undo in the snack). Merges from Elsewhere confirm with an action sheet on the phone
+  (HIG/action-sheets) because they move another bit's versions and tapes.
+- Elsewhere rows: a taped moment that is not linked → "That's this bit · link it" (a performed_as edge, undoable); a
+  like bit → "Same bit · merge it in".
+- Bits search: "Select" turns the rows into checkboxes (accessibilityRole checkbox, checked state), "Make N one
+  bit" (prominent, appears at two picked) confirms on the phone, then opens the merged bit. The main is the bit with
+  the most versions, then nights; the copy says so.
+
 ### 3.13 The conversation (`/say`) and New bit (`/new-bit`)
 - `/say`: push, inline title "Asking"; the thread as now; the input bar as the bottom accessory. The spinner with
   "Reading your material…" is an acceptable indeterminate indicator for a short wait (HIG/progress-indicators); the

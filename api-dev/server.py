@@ -1620,6 +1620,42 @@ class Handler(BaseHTTPRequestHandler):
                 left -= len(chunk)
 
     # ---- POST -------------------------------------------------------------
+    def add_version(self, kb, jid: str, b: dict):
+        """POST /api/jokes/<id>/versions {text, reason?, source?, draft?}: his new version of a bit: a unit (kind
+        tag, source app) + its part_of edge, two decisions by him, both undone together ({indexes}). The old versions
+        stay (the bit page shows them as v1, v2, …). `draft: true` = the text came from an AI answer or draft he kept:
+        the voice profile learns it (profile_api.learn_kept). The legal rules run on the text first."""
+        by = self.actor(b)
+        text = (b.get("text") or "").strip() if isinstance(b.get("text"), str) else ""
+        if not text or len(text) > 4000:
+            raise K.DecisionError("text is required (up to 4000 characters)")
+        import creative_api as CA
+        try:
+            CA.refuse_legal(text)
+        except CA.HttpError as e:
+            return self.err(e.status, str(e))
+        reason = (b.get("reason") or "").strip()[:300] if isinstance(b.get("reason"), str) else ""
+        reason = reason or "a new version written in the app"
+        source = b.get("source") if isinstance(b.get("source"), str) and re.match(r"^[a-z_]{1,24}$", b.get("source")) else "app"
+        with kb.lock:
+            v = kb.view()
+            if v.ntype(jid) != "joke":
+                raise K.DecisionError("no such joke", 404)
+            r1 = kb.decide({"target": "node", "action": "add", "reason": reason,
+                            "after": {"type": "unit", "text": text, "kind": "tag", "source": source, "date": K.now_iso()[:10]}}, by=by)
+            uid = r1["decision"]["id"]
+            try:
+                r2 = kb.decide({"target": "edge", "action": "add", "reason": reason,
+                                "after": {"src": uid, "dst": jid, "kind": "part_of"}}, by=by)
+            except Exception:
+                kb.undo(r1["index"], by=by)   # never a line that belongs to nothing
+                raise
+        out = {"ok": True, "unit": uid, "joke": jid, "indexes": [r1["index"], r2["index"]]}
+        if self.creative is not None and by == OWNER_ID and b.get("draft"):
+            import profile_api as PF
+            out["learned"] = PF.learn_kept(self.creative, kb, text, jid, by, draft=True)
+        return self.send_json(out)
+
     def do_POST(self):
         u = urlparse(self.path)
         path = u.path
@@ -1637,6 +1673,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.creative_route("POST", path, parse_qs(u.query)):
                 return
             b = self.body_json()
+            m = re.match(r"^/api/jokes/(.+)/versions$", path)
+            if m:   # a new version of a bit, written in the app (the workbench's edit, a kept answer, a typed line)
+                return self.add_version(kb, unquote(m.group(1)), b)
             if path == "/api/decision":
                 if b.get("id") is not None and (not isinstance(b["id"], str) or not ID_RE.match(b["id"])):
                     raise K.DecisionError("bad id")

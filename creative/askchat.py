@@ -208,16 +208,36 @@ def rooms_named(c: Corpus, question: str) -> set[str]:
     return out
 
 
-def retrieve(c: Corpus, question: str, history: list[dict] | None = None, cap: int = MAX_SOURCES) -> list[str]:
-    """The source ids for one turn, best first. `history` = earlier turns [{q, cited: [source ids]}], oldest first."""
+def pinned(c: Corpus, jid: str | None) -> set[str]:
+    """A conversation about ONE bit (the bit page's workbench): every source that is that bit's: its versions, its
+    typed idea, the taped moments linked to it. Always in the sources, ahead of the rest."""
+    if not jid:
+        return set()
+    return {sid for sid, s in sources(c).items() if s.get("joke_id") == jid}
+
+
+def scope_line(c: Corpus, jid: str | None) -> str | None:
+    if not jid or jid not in c.jokes:
+        return None
+    return short_title(c.title(jid)) or "Untitled"
+
+
+def retrieve(c: Corpus, question: str, history: list[dict] | None = None, cap: int = MAX_SOURCES,
+             pin: set[str] | None = None) -> list[str]:
+    """The source ids for one turn, best first. `history` = earlier turns [{q, cited: [source ids]}], oldest first.
+    `pin` = source ids that are always in (a conversation about one bit): they lead and never count against the
+    per-joke cap, so "what else do I have like this?" still brings the rest of the notebook."""
     S = sources(c)
     history = (history or [])[-HISTORY_TURNS:]
     score: dict[str, float] = {}
+    pin = {p for p in (pin or set()) if p in S}
 
     def add(sid, v):
         if sid in S:
             score[sid] = score.get(sid, 0.0) + v
 
+    for sid in pin:
+        add(sid, 12.0)
     for sid, v in _bm25(c, question).items():
         add(sid, v)
     if history:  # a follow-up's subject is usually in the questions before it
@@ -251,7 +271,7 @@ def retrieve(c: Corpus, question: str, history: list[dict] | None = None, cap: i
     for sid in sorted(score, key=lambda k: (-score[k], k)):
         s = S[sid]
         j = s.get("joke_id") or sid
-        if per[(j, s["kind"] == "moment")] >= PER_JOKE and sid not in carried:
+        if per[(j, s["kind"] == "moment")] >= PER_JOKE and sid not in carried and sid not in pin:
             continue
         per[(j, s["kind"] == "moment")] += 1
         picked.append(sid)
@@ -311,7 +331,8 @@ RULES = ("Rules:\n"
          "- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty.")
 
 
-def prompt(c: Corpus, question: str, history: list[dict] | None, ids: list[str]) -> list[dict]:
+def prompt(c: Corpus, question: str, history: list[dict] | None, ids: list[str], scope: str | None = None) -> list[dict]:
+    """`scope` = the bit this conversation is about (its short title): the question is read in that light."""
     S = sources(c)
     terms = {w for w in tokens(question) if w not in QSTOP}
     # the rules sit in the system block with the task line (stable: cached), not after the volatile sources
@@ -324,7 +345,8 @@ def prompt(c: Corpus, question: str, history: list[dict] | None, ids: list[str])
     for i, sid in enumerate(ids, 1):
         s = S[sid]
         blocks.append(f"[S{i}] {header(s)}\nTEXT: {_snippet(s['text'], terms)}")
-    msgs.append({"role": "user", "content": f"QUESTION: {question}\n\nSOURCES:\n\n" + "\n\n".join(blocks)
+    about = f"THIS CONVERSATION IS ABOUT HIS BIT: {scope}. 'This bit', 'it' and 'the joke' mean that one.\n\n" if scope else ""
+    msgs.append({"role": "user", "content": about + f"QUESTION: {question}\n\nSOURCES:\n\n" + "\n\n".join(blocks)
                  + "\n\nAnswer by the rules above."})
     return msgs
 

@@ -20,13 +20,15 @@ export type AskTurn = {
 };
 /** The AI worker (the server since 2026-10-27): online = a heartbeat in the last 2 minutes; `paused` = over the day's AI budget, with the reason. */
 export type Worker = { online: boolean; last_seen: string | null; where: string; name?: string | null; hosted?: boolean; model?: string | null; paused?: string | null; online_window_s?: number };
-export type Chat = { id: string; title: string; created_at: string; updated_at: string; turns: AskTurn[]; worker: Worker };
+export type Chat = { id: string; title: string; created_at: string; updated_at: string; turns: AskTurn[]; worker: Worker; /** the bit this conversation is about (the bit page's workbench), if any */ joke?: string | null };
 export type ChatListItem = { id: string; title: string; updated_at: string; questions: number; last_q: string | null; thinking: boolean };
 
 const enc = encodeURIComponent;
 export const ask = {
   list: () => get<{ chats: ChatListItem[]; worker: Worker }>('/api/ask/chats'),
   start: (question: string) => post<Chat>('/api/ask/chats', { question }),
+  /** a conversation about ONE bit: its versions, idea and tapes lead every turn's sources (lib/BitTalk) */
+  startAbout: (question: string, joke: string) => post<Chat>('/api/ask/chats', { question, joke }),
   get: (id: string) => get<Chat>(`/api/ask/chats/${enc(id)}`),
   follow: (id: string, question: string) => post<Chat>(`/api/ask/chats/${enc(id)}`, { question }),
   hide: (id: string) => patch<Chat>(`/api/ask/chats/${enc(id)}`, { deleted: true }),

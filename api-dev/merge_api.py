@@ -5,6 +5,7 @@
     GET  /api/merge/history?joke=<id>     what was folded into a joke: merges (verbatim, dated) and attached notes
     GET  /api/merge/<merge_id>            one merge or attach record, with its Google Docs status
     POST /api/merge {main, others[], reason?, group?}    the comic taps Merge
+    POST /api/merge/attach {note, into, reason?}          his call: a note belongs under a bit (no judge, undoable)
     POST /api/merge/undo {merge_id}                       undo a merge (mg:) or detach an auto-attached note (at:)
     POST /api/merge/dismiss {jokes[]}                     "not the same": never suggested together again
 
@@ -191,6 +192,52 @@ def plan(v: K.View, main: str, others: list[str], mid: str) -> list[dict]:
     return reqs
 
 
+def typed_notes(v: K.View, others: list[str]) -> list[tuple[str, str, str | None]]:
+    """(joke id, text, date) for each `other` that is a typed idea with no written version: its words live only in
+    `summary`, which a merge would otherwise hide with the joke (found 2026-10-29: a merged jot never showed as a
+    version). Only his own words (summary_is_his), never a catalog summary."""
+    out = []
+    for o in others:
+        snap = _snapshot(v, o)
+        if snap["units"] or not snap["summary_is_his"]:
+            continue
+        text = (snap.get("summary") or "").strip()
+        if text:
+            out.append((o, text, (snap.get("first_seen") or "")[:10] or None))
+    return out
+
+
+def do_attach(cr, kb, body: dict) -> dict:
+    """He says a note belongs under a bit. The note leaves the Bits list (desk_filter) and shows under the bit's
+    history, exactly like an AI attach, but by him and with no judge; undo = POST /api/merge/undo {merge_id}."""
+    note, into = body.get("note"), body.get("into")
+    for x in (note, into):
+        if not isinstance(x, str) or not ID_RE.match(x):
+            raise HttpError(400, "note and into must be joke ids")
+    if note == into:
+        raise HttpError(400, "a note can't be attached to itself")
+    reason = (body.get("reason") or "").strip()[:300] if isinstance(body.get("reason"), str) else ""
+    with kb.lock:
+        v = kb.view()
+        for j in (note, into):
+            if v.ntype(j) != "joke":
+                raise HttpError(404, f"unknown joke {j}")
+        st = store(cr, kb)
+        if MG.attached(st.items).get(note):
+            raise HttpError(409, "that note is already attached to a bit")
+        n = v.nodes[note]
+        text = (n.get("summary") or "").strip()
+        if not text:
+            for u, eid in sorted(v.joke_units.get(note, []), key=lambda x: (v.nodes.get(x[0]) or {}).get("date") or "", reverse=True):
+                if K.bucket(v.edges[eid].get("status")) != "rejected" and (v.nodes.get(u) or {}).get("text"):
+                    text = v.nodes[u]["text"].strip()
+                    break
+        aid = "at:" + sha8([note, into, now_iso(), st.n_events])
+        rec = st.append("attach", aid, {"joke": note, "into": into, "text": text[:2000], "date": now_iso()[:10], "score": None,
+                                        "reasons": [reason] if reason else ["his call"], "source": "owner"}, by=OWNER_ID)
+    return {"ok": True, "merge_id": aid, "merge": brief(rec), "undo": {"POST": "/api/merge/undo", "merge_id": aid}}
+
+
 def do_merge(cr, kb, body: dict) -> dict:
     main, others = body.get("main"), body.get("others")
     if not isinstance(main, str) or not ID_RE.match(main):
@@ -210,13 +257,28 @@ def do_merge(cr, kb, body: dict) -> dict:
         st = store(cr, kb)
         mid = "mg:" + sha8([main, sorted(others), now_iso(), st.n_events])
         snapshot = {j: _snapshot(v, j) for j in [main] + others}
-        built = []
-        for req in plan(v, main, others, mid):
-            d = kb._build(v, req)
-            d["reason"] = req["reason"] + (f" ({reason})" if reason else "")
-            built.append(d)
         idx = []
         try:
+            # a typed idea with no version: its words become a version of the main FIRST (a unit + part_of), so the
+            # merge keeps them where the bit page shows versions; then the plan hides the note like any other
+            for o, text, date in typed_notes(v, others):
+                why = f"{TAG} {mid}: the idea typed as '{v.nodes[o].get('title')}' kept as a version of '{v.nodes[main].get('title')}'"
+                full = why + (f" ({reason})" if reason else "")
+                d = kb._build(v, {"target": "node", "action": "add", "reason": full,
+                                  "after": {"type": "unit", "text": text, "kind": "tag", "source": "idea", "date": date}})
+                d["reason"] = full
+                idx += kb.append_lines([d])
+                v = kb.view()
+                e = kb._build(v, {"target": "edge", "action": "add", "reason": full,
+                                  "after": {"src": d["id"], "dst": main, "kind": "part_of"}})
+                e["reason"] = full
+                idx += kb.append_lines([e])
+                v = kb.view()
+            built = []
+            for req in plan(v, main, others, mid):
+                d = kb._build(v, req)
+                d["reason"] = req["reason"] + (f" ({reason})" if reason else "")
+                built.append(d)
             for d in built:
                 idx += kb.append_lines([d])
         except Exception:
@@ -418,6 +480,8 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
             return _send(h, 200, do_merge(cr, kb, body_fn()))
         if method == "POST" and path == "/api/merge/undo":
             return _send(h, 200, do_undo(cr, kb, body_fn()))
+        if method == "POST" and path == "/api/merge/attach":
+            return _send(h, 200, do_attach(cr, kb, body_fn()))
         if method == "POST" and path == "/api/merge/dismiss":
             return _send(h, 200, do_dismiss(cr, kb, body_fn()))
         raise HttpError(404, "not found")

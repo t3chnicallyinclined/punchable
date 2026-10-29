@@ -49,7 +49,7 @@ def chat_apply(items: dict, ev: dict) -> None:
         if i in items:
             raise ValueError(f"chat {i} exists")
         items[i] = {"id": i, "title": str(d.get("title") or "")[:120], "created_at": ev["ts"], "updated_at": ev["ts"],
-                    "deleted": False, "turns": []}
+                    "deleted": False, "turns": [], "joke": d.get("joke") if isinstance(d.get("joke"), str) else None}
         return
     ch = items.get(i)
     if ch is None:
@@ -136,7 +136,22 @@ def turn_view(t: dict) -> dict:
 
 def chat_view(ch: dict, cr) -> dict:
     return {"id": ch["id"], "title": ch["title"], "created_at": ch["created_at"], "updated_at": ch["updated_at"],
-            "turns": [turn_view(t) for t in ch["turns"]], "worker": worker_status(cr)}
+            "joke": ch.get("joke"), "turns": [turn_view(t) for t in ch["turns"]], "worker": worker_status(cr)}
+
+
+JOKE_RE = re.compile(r"^joke:[A-Za-z0-9._:-]{1,120}$")
+
+
+def joke_scope(cr, kb, body: dict) -> str | None:
+    """`joke` in the body of a new conversation: the bit it is about (the bit page's workbench). Must exist."""
+    j = body.get("joke")
+    if j is None:
+        return None
+    if not isinstance(j, str) or not JOKE_RE.match(j):
+        raise HttpError(400, "joke must be a joke id")
+    if j not in cr.corpus(kb).jokes:
+        raise HttpError(404, f"no such joke {j}")
+    return j
 
 
 def _plain_error(err: str) -> str:
@@ -182,12 +197,13 @@ def ask(cr, kb, st: Store, chat_id: str, question: str) -> dict:
     c = cr.corpus(kb)
     hist = _history(ch)
     turn = f"t{len(ch['turns']) + 1}"
-    ids = AC.retrieve(c, question, hist)
+    jid = ch.get("joke")
+    ids = AC.retrieve(c, question, hist, pin=AC.pinned(c, jid))
     if not ids:
         st.append("ask", chat_id, {"turn": turn, "q": question, "job": None, "sources": []}, by=OWNER_ID)
         st.append("answer", chat_id, {"turn": turn, "result": AC.refusal()}, by="ai:ask")
         return st.get(chat_id)
-    msgs = AC.prompt(c, question, hist, ids)
+    msgs = AC.prompt(c, question, hist, ids, scope=AC.scope_line(c, jid))
     _, q = cr.enqueue(cr.stores(kb), "ask_chat", f"ask_chat|{chat_id}|{turn}", {"messages": msgs}, kb=kb)
     st.append("ask", chat_id, {"turn": turn, "q": question, "job": q["job"]["id"], "sources": ids}, by=OWNER_ID)
     return st.get(chat_id)
@@ -230,9 +246,10 @@ def handle(cr, h, method: str, path: str, q: dict, body_fn) -> bool:
                 return _send(h, 200, {"chats": out, "worker": worker_status(cr)})
             if cid is None and method == "POST":
                 question = _question(body)
+                jscope = joke_scope(cr, kb, body)
                 cid = "chat:" + sha8({"q": question, "at": now_iso(), "n": len(st.items)})
                 title = question if len(question) <= 60 else question[:59].rstrip() + "…"
-                st.append("new", cid, {"title": title}, by=OWNER_ID)
+                st.append("new", cid, {"title": title, **({"joke": jscope} if jscope else {})}, by=OWNER_ID)
                 ch = ask(cr, kb, st, cid, question)
                 return _send(h, 201, chat_view(ch, cr))
             ch = st.get(cid)

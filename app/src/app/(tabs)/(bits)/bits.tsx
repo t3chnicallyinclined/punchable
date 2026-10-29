@@ -19,8 +19,11 @@ import { MomentRow } from '@/lib/MomentRow';
 import type { SearchResult } from '@/lib/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
-import { Avatar, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
+import { Avatar, Btn, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
 import { getPrefs, setPrefs } from '@/lib/prefs';
+import { mergeInto, pickMain, undoMerge } from '@/lib/bitWork';
+import { actionSheet } from '@/lib/actionSheet';
+import { useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
 type View_ = 'bits' | 'notes';
@@ -53,13 +56,17 @@ function subOf(j: JokeSummary, st: Status) {
   return bits.join(' · ');
 }
 
-const Row = memo(function Row({ j }: { j: JokeSummary }) {
+const Row = memo(function Row({ j, selecting, selected, onToggle }: { j: JokeSummary; selecting?: boolean; selected?: boolean; onToggle?: (id: string) => void }) {
   const st = statusOf(j);
+  const open = () => (selecting && onToggle ? onToggle(j.id) : router.push(`/joke/${encodeURIComponent(j.id)}` as any));
   return (
-    <Pressable testID={`bit-${j.id}`} accessibilityRole="button" accessibilityLabel={`${j.short_title || j.title}. ${subOf(j, st)}. Open`} onPress={() => router.push(`/joke/${encodeURIComponent(j.id)}` as any)}
-      style={(s: any) => ({ height: ROW_H, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: C.hairline, backgroundColor: s.hovered ? C.card2 : 'transparent' })}>
-      <View style={{ width: 18, alignItems: 'center' }} accessibilityLabel={WORD[st]}>
-        <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 12, color: dotOf(st), fontFamily: F.g7 }}>{GLYPH[st]}</Text>
+    <Pressable testID={`bit-${j.id}`} accessibilityRole={selecting ? 'checkbox' : 'button'} accessibilityState={selecting ? { checked: !!selected } : undefined}
+      accessibilityLabel={`${j.short_title || j.title}. ${subOf(j, st)}. ${selecting ? (selected ? 'Selected' : 'Select') : 'Open'}`} onPress={open}
+      style={(s: any) => ({ height: ROW_H, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: C.hairline, backgroundColor: selected ? C.card2 : s.hovered ? C.card2 : 'transparent' })}>
+      <View style={{ width: 18, alignItems: 'center' }} accessibilityLabel={selecting ? undefined : WORD[st]}>
+        {selecting
+          ? <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: selected ? C.amber : C.border, backgroundColor: selected ? C.amber : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{selected && <Text style={{ color: C.bg, fontSize: 12, fontFamily: F.g7 }}>✓</Text>}</View>
+          : <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 12, color: dotOf(st), fontFamily: F.g7 }}>{GLYPH[st]}</Text>}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.semi, fontSize: 16, color: C.text }}>{j.short_title || shortNameOf(j.title)}</Text>
@@ -78,6 +85,9 @@ export default function Bits() {
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
   const [focused, setFocused] = useState(false);
+  const [selecting, setSelecting] = useState(false);            // work off a search list: pick bits, make them one
+  const [picked, setPicked] = useState<string[]>([]);
+  const ui = useUI();
   const input = useRef<any>(null);
   useEffect(() => {
     const t = setTimeout(() => setDq(q.trim()), 300);
@@ -96,6 +106,28 @@ export default function Bits() {
     return () => { alive = false; };
   }, []);
   const items = list.data?.items || [];
+  useEffect(() => { if (!dq) { setSelecting(false); setPicked([]); } }, [dq]);
+  const toggle = useCallback((jid: string) => setPicked((p) => (p.includes(jid) ? p.filter((x) => x !== jid) : [...p, jid])), []);
+  const makeOne = () => {
+    const chosen = picked.map((jid) => items.find((x) => x.id === jid)).filter(Boolean) as JokeSummary[];
+    const main = pickMain(chosen);
+    if (!main || chosen.length < 2) return;
+    const others = chosen.filter((x) => x.id !== main.id).map((x) => x.id);
+    const go = async () => {
+      try {
+        const r = await mergeInto(main.id, others, `made one bit from the search “${dq}”`);
+        haptics.success();
+        setSelecting(false); setPicked([]);
+        list.reload();
+        ui.snack(`${chosen.length} bits are now “${main.short_name || shortNameOf(main.title)}”`, async () => { await undoMerge(r.merge_id); list.reload(); });
+        router.push(`/joke/${encodeURIComponent(main.id)}` as any);
+      } catch (e: any) {
+        ui.snack(`Couldn’t merge: ${e.message}`);
+      }
+    };
+    if (native) actionSheet({ title: `Make ${chosen.length} bits one?`, message: `They become “${main.short_name || shortNameOf(main.title)}” (the one with the most versions). Every line and tape stays. You can undo it.`, options: [{ label: 'Make them one bit', onPress: go }, { label: 'Cancel', cancel: true }] });
+    else go();
+  };
   const counts = useMemo(() => {
     const c: Record<Status, number> = { kills: 0, working: 0, fresh: 0, resting: 0 };
     for (const j of items) c[statusOf(j)]++;
@@ -146,6 +178,13 @@ export default function Bits() {
           <Icon name="chat" size={18} color={C.amber} /><T style={{ flex: 1 }}>Ask your material: “{dq}”</T><T style={{ color: C.amber }}>Ask ›</T>
         </Pressable>
       )}
+      {!!dq && !question && items.length > 1 && (
+        <View testID="bits-select-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <T v="small" style={{ flex: 1 }}>{selecting ? (picked.length ? `${picked.length} picked` : 'Tap the bits that are one idea') : `${items.length} bits match`}</T>
+          {selecting && picked.length >= 2 && <Btn small v="primary" testID="bits-make-one" label={`Make ${picked.length} one bit`} onPress={makeOne} />}
+          <TextBtn testID="bits-select" label={selecting ? 'Done' : 'Select'} onPress={() => { haptics.selection(); setSelecting((s) => !s); setPicked([]); }} />
+        </View>
+      )}
       {!!moments.length && (
         <View testID="bits-moments" style={{ gap: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
@@ -190,7 +229,8 @@ export default function Bits() {
     <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} scroll={false}>
       {mapBtn}
       <FlatList contentInsetAdjustmentBehavior="automatic"
-        data={items} keyExtractor={(j) => j.id} renderItem={({ item }) => <Row j={item} />}
+        data={items} keyExtractor={(j) => j.id} renderItem={({ item }) => <Row j={item} selecting={selecting} selected={picked.includes(item.id)} onToggle={toggle} />}
+        extraData={`${selecting}|${picked.join(',')}`}
         getItemLayout={(_, i) => ({ length: ROW_H, offset: ROW_H * i, index: i })} initialNumToRender={16} windowSize={9} removeClippedSubviews
         keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
         contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 140, maxWidth: wide ? 1120 : 720, width: '100%', alignSelf: 'center' }}

@@ -1,7 +1,11 @@
 // A bit (MixBit, docs/UX_2026-10.md): the versions as tabs (newest first), the text, the bird's-eye map, Punch up ·
 // Riff · Merge · To a set, and its own input bar (a question about this bit, or a new line for it). Two requests:
 // the joke (/api/jokes/<id>) and its map (/api/jokes/<id>/map). The old joke map stays at /map/<id>, the old
-// workspace (stage, numbers, brainstorm) at /bit/<id>. "Elsewhere" (a third request, /api/jokes/<id>/similar) answers
+// workspace (stage, numbers, brainstorm) at /bit/<id>. The WORKBENCH (2026-10-29, owner: "open a bit, edit and speak
+// to my material, brainstorm, then organize the joke live"): Edit writes a NEW version (the old ones stay, undoable;
+// POST /api/jokes/<id>/versions); the input bar talks to a conversation pinned to this bit (lib/BitTalk) or, for a
+// line, adds it as a version; "Elsewhere" rows merge a like bit into this one or link a taped moment to it.
+// "Elsewhere" (a third request, /api/jokes/<id>/similar) answers
 // "did I ever do this, and is it like anything?": the tapes it is on, the taped moments that sound like it but are
 // not linked, and the bits that sound like it (api-dev/search_api.py; lib/MomentRow).
 import React, { useCallback, useMemo, useState } from 'react';
@@ -10,6 +14,9 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
 import { MergeHint } from '@/lib/MergeHint';
+import { BitTalk, useBitTalk } from '@/lib/BitTalk';
+import { addVersion, mergeInto, undoMerge } from '@/lib/bitWork';
+import { isQuestion } from '@/lib/say';
 import { MomentRow } from '@/lib/MomentRow';
 import { SimilarResult, closeness, oneLine } from '@/lib/searchRows';
 import { GROUP_COLOR, Radial } from '@/lib/jokemap';
@@ -52,13 +59,74 @@ export default function BitPage() {
   const [rename, setRename] = useState(false);
   const [why, setWhy] = useState<{ title: string; why?: string; g: MapGroupKey } | null>(null);
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);   // the text being edited (a new version on Save)
+  const [saving, setSaving] = useState(false);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
+  const reloadAll = useCallback(() => { d.reload(); sim.reload(); }, [d.reload, sim.reload]);
+  const talk = useBitTalk(id, reloadAll);
   const J = d.data?.joke;
   const title = (J?.title || '').split(' (')[0] || J?.title || 'Bit';
   const shortName = shortNameOf(J?.title || '', J?.short_name);
-  const onSay = useCallback((text: string) => router.push({ pathname: '/say', params: { text, joke: id, screen: 'bit' } } as any), [id]);
+  // the bar: a question goes to the conversation about this bit; a line becomes its newest version
+  const onSay = useCallback(async (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    if (isQuestion(t)) return talk.askIt(t);
+    try {
+      const r = await addVersion(id, t, 'a line said on the bit page');
+      haptics.success();
+      setVi(0);
+      reloadAll();
+      ui.snack('Added as the newest version', async () => { await undo(r.indexes); reloadAll(); });
+    } catch (e: any) {
+      ui.snack(`Couldn’t add it: ${e.message}`);
+    }
+  }, [id, talk, reloadAll, ui]);
+  const saveEdit = async () => {
+    const t = (editing || '').trim();
+    if (!t || saving) return;
+    if (t === (v?.text || '').trim()) { setEditing(null); return; }
+    setSaving(true);
+    try {
+      const r = await addVersion(id, t, 'edited on the bit page');
+      haptics.success();
+      setEditing(null);
+      setVi(0);
+      reloadAll();
+      ui.snack('Saved as a new version · the old one stays', async () => { await undo(r.indexes); reloadAll(); });
+    } catch (e: any) {
+      ui.snack(`Couldn’t save: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const mergeLike = (b: { id: string; title: string; short_name?: string | null }) => {
+    const name = shortNameOf(b.title, b.short_name);
+    const go = async () => {
+      try {
+        const r = await mergeInto(id, [b.id], `merged from Elsewhere on ${shortName}`);
+        haptics.success();
+        reloadAll();
+        ui.snack(`${name} is now part of this bit`, async () => { await undoMerge(r.merge_id); reloadAll(); });
+      } catch (e: any) {
+        ui.snack(`Couldn’t merge: ${e.message}`);
+      }
+    };
+    if (native) actionSheet({ title: `Merge “${name}” into ${shortName}?`, message: 'Its versions and tapes move under this bit. You can undo it.', options: [{ label: 'Merge', onPress: go }, { label: 'Cancel', cancel: true }] });
+    else go();
+  };
+  const linkMoment = async (pid: string) => {
+    try {
+      const w = await decide({ target: 'edge', action: 'add', after: { src: pid, dst: id, kind: 'performed_as' }, reason: 'linked from Elsewhere on the bit page' });
+      haptics.success();
+      reloadAll();
+      ui.snack('Linked: that tape is this bit', async () => { await undo(w.indexes); reloadAll(); });
+    } catch (e: any) {
+      ui.snack(`Couldn’t link it: ${e.message}`);
+    }
+  };
   const native = Platform.OS !== 'web';
-  const bar = useSayBar({ onSay, placeholder: `Ask about ${shortName}, or add a line`, hint: null, testID: 'bit-say' });
+  const bar = useSayBar({ onSay, placeholder: `Ask about ${shortName}, or add a line`, hint: null, testID: 'bit-say', busy: talk.sending || talk.thinking });
   const edit = () => router.push(`/bit/${encodeURIComponent(id)}` as any);
   const retire = async () => {
     try {
@@ -126,10 +194,27 @@ export default function BitPage() {
           ))}
         </ScrollView>
       )}
-      <View testID="bit-text" style={{ padding: 16, borderRadius: 16, backgroundColor: C.card, gap: 6 }}>
-        {v ? <Text selectable style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text }}>{v.text}</Text> : <T v="mut">No written version yet. Say a line below and it lands here.</T>}
-        {!!v?.doc && <T v="small">{v.doc}{v.date ? ` · ${monthYear(v.date)}` : ''}</T>}
-      </View>
+      {editing != null ? (
+        <View testID="bit-edit" style={{ padding: 12, borderRadius: 16, backgroundColor: C.card, gap: 10, borderWidth: 1, borderColor: C.amber }}>
+          <TextInput testID="bit-edit-input" value={editing} onChangeText={setEditing} multiline autoFocus textAlignVertical="top" accessibilityLabel="The bit's text"
+            style={{ minHeight: 160, fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text }} />
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <T v="small" style={{ flex: 1 }}>Saves as a new version · the old one stays</T>
+            <Btn small v="ghost" testID="bit-edit-cancel" label="Cancel" onPress={() => setEditing(null)} />
+            <Btn small v="primary" testID="bit-edit-save" label={saving ? 'Saving…' : 'Save'} disabled={saving || !(editing || '').trim()} onPress={saveEdit} />
+          </View>
+        </View>
+      ) : (
+        <Pressable testID="bit-text" accessibilityRole="button" accessibilityLabel={v ? 'The bit’s text. Tap to edit' : 'No written version yet. Tap to write one'} onPress={() => setEditing(v?.text || '')}
+          style={({ pressed }) => ({ padding: 16, borderRadius: 16, backgroundColor: pressed ? C.card2 : C.card, gap: 6 })}>
+          {v ? <Text selectable style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text }}>{v.text}</Text> : <T v="mut">No written version yet. Tap here to write one, or say a line below.</T>}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {!!v?.doc && <T v="small" style={{ flex: 1 }}>{v.doc}{v.date ? ` · ${monthYear(v.date)}` : ''}</T>}
+            {!v?.doc && <View style={{ flex: 1 }} />}
+            <T v="small" style={{ color: C.amber }}>Edit</T>
+          </View>
+        </Pressable>
+      )}
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Btn small testID="bit-punchup" label="Punch up" onPress={() => router.push({ pathname: `/bit/${encodeURIComponent(id)}`, params: { tab: 'brainstorm' } } as any)} />
@@ -145,6 +230,8 @@ export default function BitPage() {
           }} />
       </View>
       <MergeHint jokeId={id} onMerged={(main) => (main === id ? d.reload() : router.replace(`/joke/${encodeURIComponent(main)}` as any))} />
+      <BitTalk jokeId={id} shortName={shortName} talk={talk} />
+      {!talk.chat && <T v="small">Ask anything about this bit below: “did I ever do this?”, “what else do I have like it?”, “tighten the second line”. Answers come with Keep as a line.</T>}
 
       <View style={{ gap: 8 }} testID="bit-elsewhere">
         <T v="eb">Elsewhere</T>
@@ -160,7 +247,12 @@ export default function BitPage() {
             {!!sim.data.like.moments.length && (
               <View style={{ gap: 6 }}>
                 <T v="small">Sounds like it, on tape (not linked to this bit)</T>
-                {sim.data.like.moments.map((x, i) => <MomentRow key={x.id} m={x} testID={`bit-echo-${i}`} />)}
+                {sim.data.like.moments.map((x, i) => (
+                  <View key={x.id} style={{ gap: 4 }}>
+                    <MomentRow m={x} testID={`bit-echo-${i}`} />
+                    {!x.joke && <Btn small v="ghost" testID={`bit-echo-link-${i}`} label="That’s this bit · link it" onPress={() => linkMoment(x.id)} />}
+                  </View>
+                ))}
               </View>
             )}
             {!!sim.data.like.bits.length && (
@@ -175,6 +267,9 @@ export default function BitPage() {
                       <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: C.mut2 }}>{closeness(b.distance) || 'shares its words'}</Text>
                     </View>
                     {!!b.why && <Text numberOfLines={2} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 14, lineHeight: 20, color: C.mut2 }}>{oneLine(b.why)}</Text>}
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                      <Btn small v="ghost" testID={`bit-like-merge-${i}`} label="Same bit · merge it in" onPress={() => mergeLike(b)} />
+                    </View>
                   </Pressable>
                 ))}
               </View>
