@@ -34,6 +34,7 @@ license. It holds no one's material: the examples and test data are invented.
 | Part | What it is |
 |---|---|
 | `app/` | The app: React Native + Expo (Expo Router, TypeScript). Runs on the web today via react-native-web. |
+| `docs/RUST.md` | The services are being ported to Rust (standing decision 2026-10-29): the workspace, the gates, the order. |
 | `api-dev/` | The Python API (standard library HTTP server). Same code runs locally and hosted (`api/entry.py`, `api/Dockerfile`). |
 | `db/` | SurrealDB schema, loader and tools. The database is rebuilt from append-only files (`decisions.jsonl` and friends). |
 | `creative/` | Notebook search, related bits, riffs, set builder, working sets, merges and the Ask chat. |

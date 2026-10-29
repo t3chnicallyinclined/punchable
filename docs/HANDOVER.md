@@ -134,14 +134,17 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    alert; dropped (`POST /api/jobs/<id>/drop`). Owner decision needed: on-device transcription in the production build
    (ios-dev-expert; the standing decision) or a cloud speech API from the hosted worker (audio leaves the box). Until
    then the Record screen should say so.
-5. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
-6. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
-7. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
-8. Move the Google Docs sync off the PC (last PC dependency). Its tests (`gsync/tests/test_auth.py`) need the
+5. **Rust port, step 0 and 1** (`docs/RUST.md` "First ticket"): record the baseline, measure the Python API's
+   memory under load, then `rust/` with `pk-py` (json.dumps / isspace goldens from CPython) and `pk-kb` (the replay,
+   a three-way differential against `kb.py` and `fn::apply_decision`). Nothing ships until the worker (step 3).
+6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
+7. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
+8. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
+9. Move the Google Docs sync off the PC (last PC dependency). Its tests (`gsync/tests/test_auth.py`) need the
    google-auth library, which this PC's Python no longer has: four of them fail locally for that reason alone.
-9. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
-10. Pin the Bugsink image by digest.
-11. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
+10. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
+11. Pin the Bugsink image by digest.
+12. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
 Done 2026-10-29: the bit workbench (edit as versions, the bit's conversation, merge/link from its page, Select → one bit), the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
 now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).
