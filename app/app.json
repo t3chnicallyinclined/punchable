@@ -107,7 +107,9 @@
           "project": "punchable",
           "note": "Self-hosted Bugsink (infra/k8s/70-bugsink.yaml). Source maps upload at build time only with the EAS secret SENTRY_AUTH_TOKEN and SENTRY_DISABLE_AUTO_UPLOAD removed from eas.json; see infra/OBSERVABILITY.md."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": false,
