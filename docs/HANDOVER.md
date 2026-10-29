@@ -71,7 +71,7 @@ writes them as a version of the main first.
 
 - **The services are Rust from here (2026-10-29).** New services in Rust; the Python API, worker and engine are
   ported in the order in `docs/RUST.md` (worker first, then API reads by route group, then every write at once,
-  then retire Python), each step gated by a byte-level differential against the Python it replaces. The app stays
+  then retire Python), each step gated by a differential against the Python it replaces (parsed JSON, not bytes). Owner's rule: popular crates (the official `surrealdb` crate, `jsonwebtoken`, `prometheus`, `sentry`, `jsonschema`, `ort`), never hand-rolled clients or codecs. The app stays
   TypeScript (React Native); Rust goes on the phone only as a library when a feature needs it.
 
 - Phone + frontier models only. The home PC / GPU worker is retired, never proposed.
