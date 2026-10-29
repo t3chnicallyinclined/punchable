@@ -5,9 +5,14 @@
 // Open · To a set), cluster names floating at their centres, and a legend of clusters that turns one to the front.
 // Drawn with react-native-svg as one path per cluster × depth band (lib/cloudMath), so 1,600 dots are ~40 elements.
 // "Links" switches to the older map (lib/Galaxy), where nearness means a stored link, not meaning.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// The turn (2026-10-29, build 12 "the map isn't working"): one re-projection every ~33 ms (cloudMath.SPIN_FRAME_MS),
+// not one per animation frame, and only once the cloud and the canvas exist and the screen is in front; a frame is
+// 1,600 sin/cos and ~40 path strings, so at 60 fps the JS thread had no room left for his tap. The first request
+// takes the API a few seconds (it places every bit and names the groups, then caches): the skeleton says so after
+// 5 s and the links map is one tap away from every state (loading, empty, failed).
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { useApi } from './api';
 import { useBoards } from './boards';
@@ -22,7 +27,7 @@ import { Screen } from './Screen';
 
 const native = Platform.OS !== 'web';
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-const raf = (f: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : setTimeout(f, 16));
+const SLOW_AFTER_MS = 5000;
 
 export function Cloud({ onLinks }: { onLinks: () => void }) {
   const wide = useWide();
@@ -34,24 +39,34 @@ export function Cloud({ onLinks }: { onLinks: () => void }) {
   const [theta, setTheta] = useState(0);
   const [spinning, setSpinning] = useState(!reduce);
   const [focus, setFocus] = useState<string | null>(null);
-  const thetaRef = useRef(theta);
-  thetaRef.current = theta;
+  const [inFront, setInFront] = useState(true);
+  const [slow, setSlow] = useState(false);
   const W = size.w, H = size.h;
+  const nodeCount = m.data?.nodes.length || 0;
 
-  // the slow turn, until he touches something
+  // the screen in front: a pushed bit page or another tab stops the turn (it would otherwise keep re-projecting
+  // 1,600 dots underneath the screen he is reading)
+  useFocusEffect(useCallback(() => { setInFront(true); return () => setInFront(false); }, []));
+  // the first answer can take a few seconds (the API places every bit, then caches for five minutes)
   useEffect(() => {
-    if (!spinning || reduce) return;
-    let alive = true, last = now();
-    const tick = () => {
-      if (!alive) return;
-      const t = now();
-      setTheta((th) => th + M.spinStep(false, t - last));
-      last = t;
-      raf(tick);
-    };
-    raf(tick);
-    return () => { alive = false; };
-  }, [spinning, reduce]);
+    if (m.data || m.rawError) { setSlow(false); return; }
+    const t = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [m.data, m.rawError]);
+
+  // the slow turn, until he touches something: ~30 steps a second, each from the real elapsed time
+  const turning = M.shouldSpin({ spinning, reduceMotion: reduce, nodes: nodeCount, w: W, h: H, focused: inFront });
+  useEffect(() => {
+    if (!turning) return;
+    let last = now();
+    const t = setInterval(() => {
+      const n = now();
+      const step = M.spinStep(false, n - last);
+      last = n;
+      setTheta((th) => M.wrapAngle(th + step));
+    }, M.SPIN_FRAME_MS);
+    return () => clearInterval(t);
+  }, [turning]);
 
   const dots = useMemo(() => (m.data && W && H ? M.projectAll(m.data.nodes, W, H, theta) : []), [m.data, W, H, theta]);
   const byId = useMemo(() => new Map((m.data?.nodes || []).map((n) => [n.id, n])), [m.data]);
@@ -91,10 +106,12 @@ export function Cloud({ onLinks }: { onLinks: () => void }) {
   const face = useCallback((c: M.CloudCluster) => { setSpinning(false); setTheta(M.faceAngle(c.cx, c.cz)); setView({ x: 0, y: 0, scale: 1 }); }, []);
   const turnBy = (d: number) => { setSpinning(false); setTheta((t) => t + d); };
 
+  // SF Symbols that exist since iOS 13 (`pause`, `rotate.3d`, `link`); an unknown name would draw nothing, not throw
+  // (RNSBarButtonItem.mm: `[UIImage systemImageNamed:]`), but a blank button is a dead end for him all the same
   const toolbar = native ? (
     <Stack.Toolbar placement="right">
       <Stack.Toolbar.Button icon={spinning ? 'pause' : 'rotate.3d'} accessibilityLabel={spinning ? 'Stop turning' : 'Turn the cloud'} onPress={() => setSpinning((v) => !v && !reduce)}>{spinning ? 'Still' : 'Turn'}</Stack.Toolbar.Button>
-      <Stack.Toolbar.Button icon="point.3.connected.trianglepath.dotted" accessibilityLabel="The links map instead" onPress={onLinks}>Links</Stack.Toolbar.Button>
+      <Stack.Toolbar.Button icon="link" accessibilityLabel="The links map instead" onPress={onLinks}>Links</Stack.Toolbar.Button>
     </Stack.Toolbar>
   ) : null;
   const webRight = !native ? (
@@ -108,9 +125,25 @@ export function Cloud({ onLinks }: { onLinks: () => void }) {
   return (
     <Screen title="Map" back backLabel="Bits" testID="cloud" scroll={false} right={webRight}>
       {toolbar}
-      {m.rawError && !m.data ? <View style={{ padding: 16, gap: 10 }}><ErrorCard error={m.rawError} onRetry={m.reload} /><Btn small label="Show the links map" onPress={onLinks} /></View> : null}
-      {!m.data && !m.rawError && <View style={{ padding: 16 }}><Skeleton lines={5} height={18} testID="cloud-skeleton" /></View>}
-      {m.data && !m.data.nodes.length && <Empty text="Nothing placed yet: the vectors are still being made. Try again in a minute." />}
+      {m.rawError && !m.data ? <View style={{ padding: 16, gap: 10 }}><ErrorCard error={m.rawError} onRetry={m.reload} /><Btn small testID="cloud-links-fallback" label="Show the links map" onPress={onLinks} /></View> : null}
+      {!m.data && !m.rawError && (
+        <View style={{ padding: 16, gap: 12 }}>
+          <Skeleton lines={5} height={18} testID="cloud-skeleton" />
+          <T v="small" testID="cloud-wait">{slow ? 'Still placing every bit by what it says: the first time takes a few seconds, then it is instant for five minutes.' : 'Placing your bits by what they say…'}</T>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {slow && <Btn small label="Try again" onPress={m.reload} />}
+            <Btn small testID="cloud-links-fallback" label="Show the links map" onPress={onLinks} />
+          </View>
+        </View>
+      )}
+      {m.data && !m.data.nodes.length && (
+        <Empty text="Nothing placed yet: the vectors are still being made. Try again in a minute.">
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Btn small label="Try again" onPress={m.reload} />
+            <Btn small testID="cloud-links-fallback" label="Show the links map" onPress={onLinks} />
+          </View>
+        </Empty>
+      )}
       {m.data && m.data.nodes.length > 0 && (
         <View style={{ flex: 1 }}>
           <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 6 }}>

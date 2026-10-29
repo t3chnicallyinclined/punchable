@@ -31,11 +31,15 @@ export default function RecordScreen() {
   const [target, setTarget] = useState(7);
   const [err, setErr] = useState<string | null>(null);
   const [ask, setAsk] = useState(false);
+  const [starting, setStarting] = useState(false);                   // the disc was tapped; the microphone is opening
   const pending = usePendingUploads();
   const native = Platform.OS !== 'web';
   const taping = state === 'recording' || state === 'paused' || state === 'saving';
   const tapingRef = useRef(taping);
   tapingRef.current = taping;
+  const stateRef = useRef(state);                                    // the action sheet's Save reads the live state
+  stateRef.current = state;
+  const saving = useRef(false);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -50,6 +54,8 @@ export default function RecordScreen() {
   const leave = () => (router.canGoBack() ? router.back() : router.navigate('/' as any));
   const start = async () => {
     if (!rec.supported) { setErr(isWeb ? 'This browser can’t record audio.' : 'No microphone available'); return; }
+    if (starting || stateRef.current !== 'idle') return;
+    setStarting(true);
     try {
       await rec.start();
       haptics.medium();
@@ -57,6 +63,8 @@ export default function RecordScreen() {
       setState(nextRecordState('idle', 'start'));
     } catch (e: any) {
       setErr(e?.message || 'Microphone not available');
+    } finally {
+      setStarting(false);
     }
   };
   const pause = () => { rec.pause(); setState(nextRecordState(state, 'pause')); };
@@ -64,17 +72,25 @@ export default function RecordScreen() {
   const discard = () => { setAsk(false); rec.cancel(); setState('idle'); setMs(0); leave(); };
   const save = async () => {
     setAsk(false);
-    setState(nextRecordState(state, 'stop'));
+    // one save per take (the square and the sheet's Save can both land; a second stop() has no file to hand back)
+    if (saving.current || nextRecordState(stateRef.current, 'stop') !== 'saving') return;
+    saving.current = true;
+    setState(nextRecordState(stateRef.current, 'stop'));
     try {
       const r = await rec.stop();
       const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: `Set ${new Date().toLocaleString()}`, durationS: r.durationMs / 1000, marksMs: marks, recordedAt: new Date(Date.now() - r.durationMs).toISOString() });
       haptics.success();
       ui.snack(res.queued ? `Saved · ${fmtMs(r.durationMs)} · it goes up when Punchable is back` : `Saved · ${fmtMs(r.durationMs)}`);
+      setState(nextRecordState('saving', 'saved'));
       leave();
       (globalThis as any).__punchableLastUpload = res;
     } catch (e: any) {
-      setState('paused');
-      setErr(`Couldn’t save: ${e.message}.`);
+      // the recorder has stopped either way; a fresh take, not a Resume that cannot resume
+      setState(nextRecordState('saving', 'failed'));
+      setMs(0);
+      setErr(`Couldn’t save: ${e?.message || e}. The tape is still on this phone.`);
+    } finally {
+      saving.current = false;
     }
   };
   const close = () => {
@@ -86,7 +102,7 @@ export default function RecordScreen() {
       { label: 'Keep going', cancel: true },
     ] });
   };
-  const status = statusWord(state, intr, false);
+  const status = statusWord(state, intr, false, starting);
 
   return (
     <Screen title="Record" task deep testID="screen-record"
@@ -95,7 +111,7 @@ export default function RecordScreen() {
         <RecordDock
           left={<SideButton testID="record-pause" label={state === 'paused' || (state === 'recording' && intr) ? 'Paused' : 'Pause'} disabled={state !== 'recording' || intr} onPress={pause} />}
           right={<SideButton testID="record-mark" label="Mark" tone="amber" disabled={state !== 'recording'} onPress={() => { haptics.light(); setMarks((m) => [...m, ms]); ui.snack(`Marked at ${fmtMs(ms)}`); }} />}>
-          <RecordButton testID="record-rec" state={state} interrupted={intr} onStart={start} onStop={save} onResume={resume} />
+          <RecordButton testID="record-rec" state={state} interrupted={intr} busy={starting} onStart={start} onStop={save} onResume={resume} />
         </RecordDock>
       }>
       <RecordClock testID="record" ms={ms} status={status} targetS={target * 60} level={taping ? levels[levels.length - 1] : null} interrupted={intr} />

@@ -37,11 +37,15 @@ export default function Stage() {
   const [ask, setAsk] = useState(false);                             // the web's Close sheet (the phone uses an action sheet)
   const [lvl, setLvl] = useState(0);
   const [intr, setIntr] = useState(false);
+  const [starting, setStarting] = useState(false);                   // the disc was tapped; the microphone is opening
   const recorder = useRecorder();
   const native = Platform.OS !== 'web';
   const B = b.data;
   const target = B?.board.target_s || 0;
   const taping = rec === 'recording' || rec === 'paused' || rec === 'saving';
+  const recRef = useRef(rec);                                        // the action sheet's Save reads the live state, not the one it was opened with
+  recRef.current = rec;
+  const saving = useRef(false);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -61,6 +65,8 @@ export default function Stage() {
   const back = () => (router.canGoBack() ? router.back() : router.navigate(`/list/${encodeURIComponent(id)}` as any));
   const start = async () => {
     if (!recorder.supported) return ui.snack(isWeb ? 'This browser can’t record audio.' : 'No microphone available');
+    if (starting || recRef.current !== 'idle') return;
+    setStarting(true);
     try {
       await recorder.start();
       haptics.medium();
@@ -68,22 +74,34 @@ export default function Stage() {
       setRec(nextRecordState('idle', 'start'));
     } catch (e: any) {
       ui.snack(e?.message || 'Microphone not available');
+    } finally {
+      setStarting(false);
     }
   };
   const pause = () => { recorder.pause(); setRec(nextRecordState(rec, 'pause')); };
   const resume = () => { recorder.resume(); setIntr(recorder.interrupted()); setRec(nextRecordState(rec, 'resume')); };
   const save = async () => {
     setAsk(false);
-    setRec(nextRecordState(rec, 'stop'));
+    // one save per take: the square and the sheet's "Save the set" can both land, and a second stop() would hand back
+    // a file the first one has already moved
+    if (saving.current || nextRecordState(recRef.current, 'stop') !== 'saving') return;
+    saving.current = true;
+    setRec(nextRecordState(recRef.current, 'stop'));
     try {
       const r = await recorder.stop();
       const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt: new Date(Date.now() - r.durationMs).toISOString(), showGroup: id });
       haptics.success();
       ui.snack(res.queued ? `Saved · ${fmtMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${fmtMs(r.durationMs)}`);
+      setRec(nextRecordState('saving', 'saved'));
       back();
     } catch (e: any) {
-      setRec('paused');
-      ui.snack(`Couldn’t save the set: ${e.message}`);
+      // the native recorder has stopped either way (the file is still on this phone); "paused" would offer a Resume
+      // that cannot resume, so the disc goes back to a fresh take
+      setRec(nextRecordState('saving', 'failed'));
+      setMs(0);
+      ui.snack(`Couldn’t save the set: ${e?.message || e}. The tape is still on this phone.`);
+    } finally {
+      saving.current = false;
     }
   };
   const discard = () => {
@@ -105,7 +123,7 @@ export default function Stage() {
   };
   const light = Math.max(0, target - 60);
   const lit = target > 0 && ms >= light * 1000;
-  const status = statusWord(rec, intr, clockOnly != null);
+  const status = statusWord(rec, intr, clockOnly != null, starting);
 
   return (
     <Screen title="Record" task deep testID="stage"
@@ -114,7 +132,7 @@ export default function Stage() {
         <RecordDock
           left={<SideButton testID="stage-pause" label={rec === 'paused' || (rec === 'recording' && intr) ? 'Paused' : 'Pause'} disabled={rec !== 'recording' || intr} onPress={pause} />}
           right={<SideButton testID="stage-next" prominent label={cur >= steps.length - 1 ? 'Last bit' : 'Next bit'} disabled={!steps.length || cur >= steps.length - 1} onPress={next} />}>
-          <RecordButton testID="stage-rec" state={rec} interrupted={intr} onStart={start} onStop={save} onResume={resume} />
+          <RecordButton testID="stage-rec" state={rec} interrupted={intr} busy={starting} onStart={start} onStop={save} onResume={resume} />
         </RecordDock>
       }>
       {native && <Stack.Screen options={{ title: 'Record' }} />}

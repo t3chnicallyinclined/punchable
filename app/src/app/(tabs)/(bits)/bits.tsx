@@ -136,9 +136,14 @@ export default function Bits() {
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
   const newBit = useCallback(() => router.push('/new-bit' as any), []);
   const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
-  // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types
+  // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types.
+  // `stacked`, not `automatic`: the field stays under the title while the list scrolls (it never goes to the trailing
+  // edge or the toolbar, which iOS 26 may do for `automatic`; react-native-screens then also turns toolbar integration
+  // off, its own workaround for a stacked bar that fails to appear on a root screen, RNSScreenStackHeaderConfig.mm).
+  // The bar is not see-through on this screen (lib/Screen.native: scroll={false} → headerTransparent false), so the
+  // bits' text cannot roll under the field (build 12, 2026-10-29).
   const search: SearchBarProps | undefined = native ? {
-    placeholder: 'Search your bits, or ask', placement: 'automatic', hideWhenScrolling: false, autoCapitalize: 'none', tintColor: C.amber,
+    placeholder: 'Search your bits, or ask', placement: 'stacked', hideWhenScrolling: false, autoCapitalize: 'none', tintColor: C.amber,
     onChangeText: (e) => setQ(e.nativeEvent.text), onSearchButtonPress: () => { if (question) askIt(); }, onCancelButtonPress: () => setQ(''),
   } : undefined;
   // HIG/segmented-controls: Map is a navigation, not a view, so it is a header button, not a third segment

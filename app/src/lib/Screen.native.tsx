@@ -53,11 +53,22 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
   const custom = !!header || !!task;
   // HIG/toolbars: the system header. The tint colours the buttons only; title styles stay default so SF Pro, Dynamic
   // Type and Bold Text apply. No bar background (the scroll-edge effect does the work).
+  // On iOS 26 (Liquid Glass) expo-router's header is see-through unless something sets its background
+  // (react-navigation/native-stack/views/useHeaderConfigProps.js: usesSystemBackground → headerTransparent, a
+  // 'transparent' bar, translucent), and react-native-screens then lays the content out UNDER the bar with no inset
+  // (ScreenStackItem getSafeAreaEdges: translucent → no top edge). That is right for the shell's own ScrollView
+  // (contentInsetAdjustmentBehavior="automatic" pushes it down and the scroll-edge effect blurs it under the bar).
+  // A screen that brings its own body (`scroll={false}`: Bits' FlatList with the pinned search field, the maps, the
+  // notebook) gets no inset, so its list ran under the search field (2026-10-29, build 12). For those the bar is not
+  // transparent: the content starts below it (RNS insets it with a SafeAreaView), the bar keeps the screen's
+  // background and the large title still collapses. expo-router's own rule: "If you don't have a ScrollView, specify
+  // headerTransparent: false" (docs.expo.dev/router/advanced/stack, headerSearchBarOptions).
   const options: NativeHeaderOptions = custom
     ? { headerShown: false }
     : {
         headerShown: true, title, headerLargeTitle: !!largeTitle, headerLargeTitleShadowVisible: false, headerBackButtonDisplayMode: 'default',
         headerBackTitle: backLabel, headerTintColor: C.amber, headerSearchBarOptions: search, contentStyle: { backgroundColor: ground },
+        ...(scroll ? {} : { headerTransparent: false }),
         headerRight: right ? () => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{right}</View> : undefined,
         ...nativeHeader,
       };

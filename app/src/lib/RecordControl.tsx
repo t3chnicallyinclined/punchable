@@ -14,21 +14,25 @@ const RING = 92;
 const DISC = 80;
 const SQUARE = 30;
 
-export function RecordButton({ state, interrupted, onStart, onStop, onResume, testID = 'rec' }: {
-  state: RecordState; interrupted?: boolean; onStart: () => void; onStop: () => void; onResume: () => void; testID?: string;
+/** `busy`: the microphone is being opened (the tap landed; nothing to do but wait). The disc dims and ignores taps
+ *  until the recorder answers, so a second tap cannot start a second take over the first. */
+export function RecordButton({ state, interrupted, busy, onStart, onStop, onResume, testID = 'rec' }: {
+  state: RecordState; interrupted?: boolean; busy?: boolean; onStart: () => void; onStop: () => void; onResume: () => void; testID?: string;
 }) {
   const recording = state === 'recording' && !interrupted;
   const paused = state === 'paused' || (state === 'recording' && !!interrupted);
   const saving = state === 'saving';
-  const label = saving ? 'Saving' : recording ? 'Stop and save the recording' : paused ? 'Resume recording' : 'Start recording';
-  const press = () => { if (saving) return; if (recording) onStop(); else if (paused) onResume(); else onStart(); };
+  const starting = !!busy && state === 'idle';
+  const held = saving || starting;
+  const label = saving ? 'Saving' : starting ? 'Starting' : recording ? 'Stop and save the recording' : paused ? 'Resume recording' : 'Start recording';
+  const press = () => { if (held) return; if (recording) onStop(); else if (paused) onResume(); else onStart(); };
   return (
-    <Pressable testID={`${testID}-main`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={press}
+    <Pressable testID={`${testID}-main`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: held, busy: held }} disabled={held} onPress={press}
       style={({ pressed }) => ({ width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
       {recording ? (
         <View style={{ width: SQUARE, height: SQUARE, borderRadius: 7, backgroundColor: RED }} />
       ) : (
-        <View style={{ width: DISC, height: DISC, borderRadius: DISC / 2, backgroundColor: saving ? C.border : RED, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: DISC, height: DISC, borderRadius: DISC / 2, backgroundColor: saving ? C.border : RED, opacity: starting ? 0.6 : 1, alignItems: 'center', justifyContent: 'center' }}>
           {paused && <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 15, color: '#fff' }}>Resume</Text>}
         </View>
       )}

@@ -104,6 +104,8 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 | Trap | Rule |
 |---|---|
+| iOS 26 header is transparent by default (expo-router ≥ 58.0.20 with Liquid Glass) | A screen that brings its own body (`scroll={false}`: Bits, the maps) sets `headerTransparent: false` or the list runs under the bar and the search field floats over the rows (`lib/Screen.native.tsx`, 2026-10-29). Search fields: `placement: 'stacked'`. |
+| A `requestAnimationFrame` loop re-rendering 1,600 SVG dots every frame | Starves the JS thread: taps and toolbar buttons stop landing, the screen reads as dead. Throttle to ~30 fps, round path numbers, stop under a pushed screen (`lib/Cloud.tsx`). |
 | `*.native.tsx` importing its own basename | Base + shim + `.native`; never import `./<own name>` (ENGINEERING.md §1; static tests pin it). |
 | Worktree with an `app/node_modules` junction | Delete the junction FIRST (PowerShell `(Get-Item <path> -Force).Delete()`), then `git worktree remove`, then `git branch -d`. Both `Remove-Item -Recurse` and `git worktree remove --force` follow the junction into the real `node_modules` (restore: `npm ci`). |
 | `ship.sh rollout <svc>` on the same image digest | Does not restart pods. After a Secret change run `kubectl rollout restart deploy/<name>`. |
@@ -116,11 +118,12 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
-0. **Owner checks on build 12** (2026-10-29): open a bit › tap the text › change a word › Save (a new version tab
-   appears; Undo in the snack); type "what else do I have like this?" in the bar (the answer lands under the text;
-   Keep as a line; Merge “X” into this); Bits › search a word › Select › pick two › Make them one bit. From 11: Bits
-   opens on Recent, "+" → New bit, Map is the cloud, Sets › Record (0:00 until the red disc). From 10: which search
-   results feel wrong.
+0. **Owner checks on build 13** (2026-10-29, the build-12 fixes): Bits › scroll (the search field stays put, nothing
+   passes under it); Bits › Map (dots turn, a tap selects within a second, Links from the skeleton); Sets › Record ›
+   the disc ("Starting…" then "Recording", the meter moves on a clap, the square saves). Still from 12: edit a bit's
+   text › Save; ask "what else do I have like this?" in a bit's bar; search › Select › Make them one bit. From 10:
+   which search results feel wrong. **Two answers wanted**: on 12, did the map show a spinner, an error, or dead dots?
+   Did recording's clock run after the disc, or did a snack say it couldn't save?
 
 1. **Owner checks on build 9**: tape a short set from Record, clap near the phone and watch the meter; riff a bit, keep
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.

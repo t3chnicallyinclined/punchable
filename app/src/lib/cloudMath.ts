@@ -41,12 +41,16 @@ export function nearest(dots: Dot[], px: number, py: number, slop = 18): Dot | n
   return best;
 }
 
-/** One SVG path for many circles (one element per colour × depth band keeps 1,600 dots cheap). */
+const r1 = (n: number) => Math.round(n * 10) / 10;
+/** One SVG path for many circles (one element per colour × depth band keeps 1,600 dots cheap). Every number is
+ *  rounded to 0.1 (a difference like 150.1 - 2.6 otherwise prints as 147.49999999999997: the string the native parser
+ *  reads each frame would be half again as long). */
 export function circlesPath(dots: Dot[]): string {
   let s = '';
   for (const d of dots) {
-    const r = Math.round(d.r * 10) / 10, x = Math.round(d.sx * 10) / 10, y = Math.round(d.sy * 10) / 10;
-    s += `M${x - r} ${y}a${r} ${r} 0 1 0 ${r * 2} 0a${r} ${r} 0 1 0 ${-r * 2} 0`;
+    const r = r1(d.r), x = r1(d.sx), y = r1(d.sy);
+    const dia = r1(r * 2);
+    s += `M${r1(x - r)} ${y}a${r} ${r} 0 1 0 ${dia} 0a${r} ${r} 0 1 0 -${dia} 0`;
   }
   return s;
 }
@@ -66,4 +70,18 @@ export function faceAngle(cx: number, cz: number): number {
 /** A short steady spin: radians per second, zero under Reduce Motion. */
 export function spinStep(reduceMotion: boolean, dtMs: number, radPerS = 0.12): number {
   return reduceMotion ? 0 : (radPerS * dtMs) / 1000;
+}
+
+/** How often the turn re-projects: ~30 frames a second is smooth for a 0.12 rad/s drift and half the work of 60. */
+export const SPIN_FRAME_MS = 33;
+
+/** Keep the angle in [0, 2π) so a long spin never grows the float (and a memo on theta stays meaningful). */
+export function wrapAngle(theta: number): number {
+  const t = theta % (2 * Math.PI);
+  return t < 0 ? t + 2 * Math.PI : t;
+}
+
+/** Whether the turn should run at all: a cloud to turn, a canvas to draw on, the screen in front, his hand off it. */
+export function shouldSpin(a: { spinning: boolean; reduceMotion: boolean; nodes: number; w: number; h: number; focused: boolean }): boolean {
+  return a.spinning && !a.reduceMotion && a.nodes > 0 && a.w > 0 && a.h > 0 && a.focused;
 }

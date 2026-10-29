@@ -42,6 +42,7 @@ export function useRecorder(): Rec {
   const onStatus = useCallback((s: RecordingStatus) => { lastStatus.current = s; }, []);
   const recorder = useAudioRecorder(SET_RECORDING, onStatus);
   const st = useRef<'idle' | 'recording' | 'paused' | 'stopped'>('idle');
+  const starting = useRef(false);
   const clock = useRef<Clock>(clockStart(0));
   const firstUri = useRef<string | null>(null);
 
@@ -56,19 +57,35 @@ export function useRecorder(): Rec {
       supported: true,
       state: () => st.current,
       async start() {
-        await prepareSession();
-        lastStatus.current = null;
-        await recorder.prepareToRecordAsync();
+        // A second tap while the first start is still opening the microphone would run prepare() again, which stops
+        // the take that just began (ios/AudioRecorder.swift prepare: `if currentState == .recording { ref.stop() }`).
+        if (starting.current || st.current === 'recording' || st.current === 'paused') return;
+        starting.current = true;
         try {
-          // prepared-only API (AudioModule.types.d.ts getAvailableInputs/setInput); a failure here is not a failure to tape
-          const want = pickInput(recorder.getAvailableInputs(), await recorder.getCurrentInput().catch(() => null));
-          if (want) recorder.setInput(want.uid);
-        } catch {}
-        recorder.record();
-        firstUri.current = recorder.uri;
-        clock.current = clockStart(Date.now());
-        st.current = 'recording';
-        void awake(true);
+          await prepareSession();
+          lastStatus.current = null;
+          await recorder.prepareToRecordAsync();
+          try {
+            // prepared-only API (AudioModule.types.d.ts getAvailableInputs/setInput); a failure here is not a failure to tape
+            const want = pickInput(recorder.getAvailableInputs(), await recorder.getCurrentInput().catch(() => null));
+            if (want) recorder.setInput(want.uid);
+          } catch {}
+          recorder.record();
+          // expo-audio reports "recording" from its own state and ignores what AVAudioRecorder.record() returned
+          // (ios/AudioRecorder.swift startRecording: `ref.record()` unchecked, status isRecording = currentState ==
+          // .recording). The `isRecording` property is the real AVAudioRecorder flag (AudioModule.swift Property
+          // "isRecording" → ref.isRecording): if it is false the clock would run over an empty file, so say so now.
+          if (!recorder.isRecording) {
+            recorder.stop().catch(() => {});
+            throw new Error('The microphone didn’t start. Close other audio apps and try again.');
+          }
+          firstUri.current = recorder.uri;
+          clock.current = clockStart(Date.now());
+          st.current = 'recording';
+          void awake(true);
+        } finally {
+          starting.current = false;
+        }
       },
       pause() {
         if (st.current !== 'recording') return;

@@ -103,7 +103,10 @@ export function pickInput(inputs: InputLike[], current?: InputLike | null): Inpu
 // ---- the record control's states (lib/RecordControl; docs/design/HIG.md §3.9, 2026-10-29)
 /** idle: nothing taped yet · recording · paused (his pause; a call shows as recording + interrupted) · saving: stopped, uploading. */
 export type RecordState = 'idle' | 'recording' | 'paused' | 'saving';
-export type RecordAction = 'start' | 'pause' | 'resume' | 'stop';
+/** start · pause · resume · stop (= save) · saved (the tape left the screen) · failed (the save did not go through:
+ *  the native recorder has already stopped, so the only honest next state is idle; "paused" would offer a Resume
+ *  that cannot resume, 2026-10-29). */
+export type RecordAction = 'start' | 'pause' | 'resume' | 'stop' | 'saved' | 'failed';
 
 /** The only moves the control makes. Anything else is a no-op (a second tap during saving, a pause while idle). */
 export function nextRecordState(s: RecordState, a: RecordAction): RecordState {
@@ -111,13 +114,16 @@ export function nextRecordState(s: RecordState, a: RecordAction): RecordState {
   if (a === 'pause') return s === 'recording' ? 'paused' : s;
   if (a === 'resume') return s === 'paused' ? 'recording' : s;
   if (a === 'stop') return s === 'recording' || s === 'paused' ? 'saving' : s;
+  if (a === 'saved' || a === 'failed') return s === 'saving' ? 'idle' : s;
   return s;
 }
 
-/** The word beside the clock. */
-export function statusWord(s: RecordState, interrupted: boolean, clockOnly: boolean): string {
+/** The word beside the clock. `starting`: the disc was tapped and the microphone is being opened (half a second or,
+ *  the first time, the permission prompt); the disc is busy meanwhile so a second tap cannot start a second take. */
+export function statusWord(s: RecordState, interrupted: boolean, clockOnly: boolean, starting = false): string {
   if (s === 'saving') return 'Saving…';
   if (s === 'recording') return interrupted ? 'Paused by a call' : 'Recording';
   if (s === 'paused') return 'Paused';
+  if (starting) return 'Starting…';
   return clockOnly ? 'Clock only' : 'Ready';
 }

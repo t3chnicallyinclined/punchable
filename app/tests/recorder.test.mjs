@@ -70,6 +70,12 @@ check(R.nextRecordState("saving", "start") === "saving" && R.nextRecordState("sa
 check(R.statusWord("idle", false, false) === "Ready" && R.statusWord("idle", false, true) === "Clock only", "idle reads Ready, or Clock only after Next bit");
 check(R.statusWord("recording", false, false) === "Recording" && R.statusWord("recording", true, false) === "Paused by a call", "a call reads as such");
 check(R.statusWord("paused", false, false) === "Paused" && R.statusWord("saving", false, false) === "Saving…", "paused and saving");
+// 2026-10-29 (build 12 "recording didn't work properly"): a save that fails leaves the native recorder stopped, so the
+// control returns to idle (a fresh take), never to paused (a Resume that cannot resume); a save that lands leaves too
+check(R.nextRecordState("saving", "failed") === "idle" && R.nextRecordState("saving", "saved") === "idle", "a failed or finished save ends in idle");
+check(R.nextRecordState("recording", "failed") === "recording" && R.nextRecordState("paused", "saved") === "paused" && R.nextRecordState("idle", "failed") === "idle", "saved/failed mean nothing outside saving");
+check(R.statusWord("idle", false, false, true) === "Starting…" && R.statusWord("idle", false, true, true) === "Starting…", "the disc tapped, the microphone opening: Starting…");
+check(R.statusWord("recording", false, false, true) === "Recording" && R.statusWord("idle", false, false) === "Ready", "starting only shows while idle; the default is still Ready");
 
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");
 process.exit(fails.length ? 1 : 0);

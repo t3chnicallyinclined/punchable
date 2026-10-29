@@ -34,6 +34,16 @@ const path = M.circlesPath(dots);
 check(path.split("M").length - 1 === 3 && path.includes("a"), "one path, one circle per dot");
 check(M.band(0.1) === 0 && M.band(0.5) === 1 && M.band(0.9) === 2 && M.BAND_ALPHA[2] === 1, "three depth bands");
 check(M.spinStep(true, 1000) === 0 && near(M.spinStep(false, 1000), 0.12), "the spin stops under Reduce Motion");
+check(!/\d\.\d{2,}/.test(path), "every number in the path is rounded to one decimal (no 147.49999999999997)");
+check(path.includes("a") && !path.includes(" -0 ") && path.split("a").length - 1 === 6, "two arcs per circle, the second one back by the diameter");
+check(M.SPIN_FRAME_MS >= 30 && M.SPIN_FRAME_MS <= 40, `the turn re-projects at ~30 fps (${M.SPIN_FRAME_MS} ms), not every frame`);
+check(near(M.wrapAngle(2 * Math.PI + 0.5), 0.5) && near(M.wrapAngle(-0.5), 2 * Math.PI - 0.5) && M.wrapAngle(1) === 1, "the angle wraps into [0, 2π)");
+const base = { spinning: true, reduceMotion: false, nodes: 10, w: 300, h: 300, focused: true };
+check(M.shouldSpin(base) === true, "the turn runs when there is a cloud, a canvas and the screen is in front");
+check(M.shouldSpin({ ...base, nodes: 0 }) === false, "nothing to turn before the cloud arrives (no frames burnt on the skeleton)");
+check(M.shouldSpin({ ...base, w: 0 }) === false && M.shouldSpin({ ...base, h: 0 }) === false, "no canvas yet (onLayout not in): no turn");
+check(M.shouldSpin({ ...base, focused: false }) === false, "a pushed bit page or another tab stops the turn");
+check(M.shouldSpin({ ...base, reduceMotion: true }) === false && M.shouldSpin({ ...base, spinning: false }) === false, "Reduce Motion and his own Still both stop it");
 
 if (fails.length) { console.log(`${fails.length} FAILED`); process.exit(1); }
 console.log("ALL PASS");
