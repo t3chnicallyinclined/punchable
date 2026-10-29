@@ -104,6 +104,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 | Trap | Rule |
 |---|---|
+| SurrealDB: selecting a database before `DEFINE DATABASE … STRICT` | Creates it lax, and `IF NOT EXISTS` then leaves it lax for good: an unknown table becomes a silent create instead of an error. `db/load.py` and `pk-store`'s `Store::connect` define first, then select. |
 | EAS packs the repository root under `EAS_NO_VCS=1` | `rust/target` (GBs) went into the tarball and filled the disk (ENOSPC); builds 13-15 died uploading. `.easignore` at the root keeps everything but `app/` out. |
 | A plain function called inside a Reanimated / gesture worklet | Crashes the app on the UI thread ("[Worklets] Tried to synchronously call a Remote Function"): the map's crash on build 16 was `clampScale` in the pinch gesture (Bugsink). Every function a worklet calls carries the `'worklet'` directive, or is inlined. |
 | Two uploads of one recording in the same second | Shared `<dest>.part` and the loser's `os.replace` raised FileNotFoundError (Bugsink 2026-10-29). The upload route reserves the name with an exclusive create and writes to a private temp. |
@@ -140,9 +141,12 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    alert; dropped (`POST /api/jobs/<id>/drop`). Owner decision needed: on-device transcription in the production build
    (ios-dev-expert; the standing decision) or a cloud speech API from the hosted worker (audio leaves the box). Until
    then the Record screen should say so.
-5. **Rust port, step 1** (`docs/RUST.md` "Progress"): `rust/` exists and `pk-kb` passes its Python goldens. Next:
-   `pk-creative` and `pk-store` (a scratch SurrealDB), then the server measurement (step 0) and `pk-llm` / `pk-embed`
-   (step 2). Gate: `cd rust && cargo xtask gate`. Nothing ships until the worker swap (step 3).
+5. **Rust port** (`docs/RUST.md` "Progress", the board `docs/RUST_WORKSTREAM.md`): six of nine crates are in and
+   golden against the Python they replace: `pk-kb`, `pk-creative` (the store + reducers + verbatim), `pk-llm`,
+   `pk-embed`, `pk-obs`, `pk-store` (the typed SurrealDB layer; its tests need a `surreal` binary at
+   `~/.punchable/bin/` and skip without one). Open: T4 (`askchat` retrieve / prompt / finish into `pk-creative`),
+   T8 (`pk-worker`: the loop and the kinds, the offline differential, the k8s swap), T9/T10 (`pk-api`), T11
+   (retire Python). Gate: `cd rust && cargo xtask gate`. Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
 7. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
 8. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
