@@ -1,0 +1,1648 @@
+{
+ "store": "storyboards",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "create",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "title": "Tonight",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": "1200",
+     "notes": null,
+     "seed": {
+      "from": "ask"
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 1200,
+     "notes": "",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "create",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "title": "Again"
+    }
+   },
+   "error": "storyboard sb:1 exists",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 1200,
+     "notes": "",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "create",
+    "id": "sb:2",
+    "by": "ai:story",
+    "data": {
+     "target_s": 0
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 1200,
+     "notes": "",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "update",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "title": "Tonight v2",
+     "target_s": 600.7,
+     "notes": "tighter"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "update",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "target_s": "abc"
+    }
+   },
+   "error": "invalid literal for int() with base 10: 'abc'",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "update",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "target_s": null
+    }
+   },
+   "error": "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
+   "type": "TypeError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:b"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "set_jokes",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_ids": [
+      "joke:c",
+      "joke:a"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "set_jokes",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "'joke_ids'",
+   "type": "KeyError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "set_jokes",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_ids": "ab"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "a",
+      "b"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "set_jokes",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_ids": [
+      "joke:c",
+      "joke:a"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:09+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:d"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a",
+      "joke:d"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:d"
+    }
+   },
+   "error": "joke:d already on the board",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a",
+      "joke:d"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:e",
+     "at": -5
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:c",
+      "joke:a",
+      "joke:d"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:12+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:f",
+     "at": 99
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:g",
+     "at": "1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:g",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:15+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "'joke_id'",
+   "type": "KeyError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:g",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:16+00:00",
+    "op": "add",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:h",
+     "at": 1.9
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:h",
+      "joke:g",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:16+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:17+00:00",
+    "op": "remove",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:zz"
+    }
+   },
+   "error": "joke:zz not on the board",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:h",
+      "joke:g",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:16+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:18+00:00",
+    "op": "remove",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:g"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:h",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:18+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:19+00:00",
+    "op": "remove",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:h"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:e",
+      "joke:c",
+      "joke:a",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:20+00:00",
+    "op": "move",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "from": 0,
+     "to": 2
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:20+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:21+00:00",
+    "op": "move",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "from": 0,
+     "to": 9
+    }
+   },
+   "error": "move out of range",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:c",
+      "joke:a",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:20+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:22+00:00",
+    "op": "move",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "from": "1",
+     "to": 0
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:23+00:00",
+    "op": "move",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "to": 0
+    }
+   },
+   "error": "'from'",
+   "type": "KeyError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:24+00:00",
+    "op": "move",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "from": -1,
+     "to": 0
+    }
+   },
+   "error": "move out of range",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:25+00:00",
+    "op": "update",
+    "id": "sb:2",
+    "by": "ai:story",
+    "data": {
+     "notes": "the model's note"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "the model's note",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:25+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:26+00:00",
+    "op": "update",
+    "id": "sb:2",
+    "by": "owner",
+    "data": {
+     "notes": "his note"
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:26+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:27+00:00",
+    "op": "delete",
+    "id": "sb:2",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:28+00:00",
+    "op": "update",
+    "id": "sb:2",
+    "by": "owner",
+    "data": {
+     "title": "gone"
+    }
+   },
+   "error": "no storyboard sb:2",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:29+00:00",
+    "op": "update",
+    "id": "sb:nope",
+    "by": "owner",
+    "data": {
+     "title": "x"
+    }
+   },
+   "error": "no storyboard sb:nope",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:30+00:00",
+    "op": "flip",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op flip",
+   "type": "ValueError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": "Tonight v2",
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:31+00:00",
+    "op": "update",
+    "id": "sb:1",
+    "by": "owner",
+    "data": {
+     "title": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": null,
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:31+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:32+00:00",
+    "op": "create",
+    "id": "sb:3",
+    "by": "ai:story",
+    "data": {
+     "title": "Keys",
+     "joke_ids": {
+      "joke:k": 1
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": null,
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:31+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    },
+    "sb:3": {
+     "id": "sb:3",
+     "title": "Keys",
+     "joke_ids": [
+      "joke:k"
+     ],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:32+00:00",
+     "updated_at": "2026-10-29T12:00:32+00:00",
+     "deleted": false
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:33+00:00",
+    "op": "create",
+    "id": "sb:4",
+    "by": "owner",
+    "data": {
+     "title": "Bad ids",
+     "joke_ids": 5
+    }
+   },
+   "error": "'int' object is not iterable",
+   "type": "TypeError",
+   "items": {
+    "sb:1": {
+     "id": "sb:1",
+     "title": null,
+     "joke_ids": [
+      "joke:a",
+      "joke:c",
+      "joke:e",
+      "joke:d",
+      "joke:f"
+     ],
+     "target_s": 600,
+     "notes": "tighter",
+     "source": "his",
+     "by": "owner",
+     "seed": {
+      "from": "ask"
+     },
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:31+00:00",
+     "deleted": false
+    },
+    "sb:2": {
+     "id": "sb:2",
+     "title": "Untitled",
+     "joke_ids": [],
+     "target_s": 900,
+     "notes": "his note",
+     "source": "his",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:27+00:00",
+     "deleted": true
+    },
+    "sb:3": {
+     "id": "sb:3",
+     "title": "Keys",
+     "joke_ids": [
+      "joke:k"
+     ],
+     "target_s": 900,
+     "notes": "",
+     "source": "inferred",
+     "by": "ai:story",
+     "seed": null,
+     "created_at": "2026-10-29T12:00:32+00:00",
+     "updated_at": "2026-10-29T12:00:32+00:00",
+     "deleted": false
+    }
+   }
+  }
+ ]
+}

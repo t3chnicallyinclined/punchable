@@ -1,0 +1,1991 @@
+{
+ "store": "jobs",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "enqueue",
+    "id": "job:1",
+    "by": "owner",
+    "data": {
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "enqueue",
+    "id": "job:1",
+    "by": "owner",
+    "data": {
+     "kind": "riff"
+    }
+   },
+   "error": "job job:1 exists",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "enqueue",
+    "id": "job:2",
+    "by": "owner",
+    "data": {
+     "kind": "whisper"
+    }
+   },
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text')",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "enqueue",
+    "id": "job:3",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text')",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "enqueue",
+    "id": "job:ps",
+    "by": "owner",
+    "data": {
+     "kind": "process_set",
+     "key": "set:s1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "claim",
+    "id": "job:nope",
+    "by": "owner",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "error": "no job job:nope",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "claim",
+    "id": "job:1",
+    "by": "worker:w1",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:06+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "claim",
+    "id": "job:1",
+    "by": "worker:w2",
+    "data": {
+     "worker": "w2"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "done",
+    "id": "job:ps",
+    "by": "owner",
+    "data": {
+     "result": {}
+    }
+   },
+   "error": "job job:ps is queued, not claimed",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "done",
+    "id": "job:1",
+    "by": "worker:w2",
+    "data": {
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "claim",
+    "id": "job:1",
+    "by": "owner",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "error": "job job:1 is done",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "fail",
+    "id": "job:1",
+    "by": "owner",
+    "data": {
+     "error": "late"
+    }
+   },
+   "error": "job job:1 is done",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "enqueue",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "kind": "bridge",
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "claim",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:13+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "fail",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "error": "boom",
+     "retry": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:13+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": "boom",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:15+00:00",
+    "op": "claim",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:15+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": "boom",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:16+00:00",
+    "op": "fail",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "error": {
+      "code": 7
+     },
+     "retry": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:15+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": "{'code': 7}",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:17+00:00",
+    "op": "claim",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "worker": "w1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": null,
+     "result": null,
+     "error": "{'code': 7}",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:18+00:00",
+    "op": "fail",
+    "id": "job:4",
+    "by": "owner",
+    "data": {
+     "error": "third strike",
+     "retry": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:19+00:00",
+    "op": "fail",
+    "id": "job:ps",
+    "by": "owner",
+    "data": {
+     "retry": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": "failed",
+     "waiting_for": "transcriber"
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:20+00:00",
+    "op": "fail",
+    "id": "job:ps",
+    "by": "owner",
+    "data": {
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "retry": false
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:21+00:00",
+    "op": "poke",
+    "id": "job:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op poke",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:22+00:00",
+    "op": "enqueue",
+    "id": "job:5",
+    "by": "owner",
+    "data": {
+     "kind": "facts",
+     "input": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:23+00:00",
+    "op": "enqueue",
+    "id": "job:6",
+    "by": "ai:ask",
+    "data": {
+     "kind": "ask",
+     "input": [
+      1,
+      2
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:6": {
+     "id": "job:6",
+     "kind": "ask",
+     "key": null,
+     "input": [
+      1,
+      2
+     ],
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:23+00:00",
+     "by": "ai:ask",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:24+00:00",
+    "op": "enqueue",
+    "id": "job:7",
+    "by": "owner",
+    "data": {
+     "kind": "import_youtube",
+     "key": "yt:abc"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:6": {
+     "id": "job:6",
+     "kind": "ask",
+     "key": null,
+     "input": [
+      1,
+      2
+     ],
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:23+00:00",
+     "by": "ai:ask",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:7": {
+     "id": "job:7",
+     "kind": "import_youtube",
+     "key": "yt:abc",
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:24+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": "transcriber"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:25+00:00",
+    "op": "claim",
+    "id": "job:7",
+    "by": "owner",
+    "data": {
+     "worker": "phone"
+    }
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:6": {
+     "id": "job:6",
+     "kind": "ask",
+     "key": null,
+     "input": [
+      1,
+      2
+     ],
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:23+00:00",
+     "by": "ai:ask",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:7": {
+     "id": "job:7",
+     "kind": "import_youtube",
+     "key": "yt:abc",
+     "input": {},
+     "status": "claimed",
+     "created_at": "2026-10-29T12:00:24+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:25+00:00",
+     "worker": "phone",
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:26+00:00",
+    "op": "done",
+    "id": "job:7",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:6": {
+     "id": "job:6",
+     "kind": "ask",
+     "key": null,
+     "input": [
+      1,
+      2
+     ],
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:23+00:00",
+     "by": "ai:ask",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:7": {
+     "id": "job:7",
+     "kind": "import_youtube",
+     "key": "yt:abc",
+     "input": {},
+     "status": "done",
+     "created_at": "2026-10-29T12:00:24+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:25+00:00",
+     "worker": "phone",
+     "done_at": "2026-10-29T12:00:26+00:00",
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:27+00:00",
+    "op": "enqueue",
+    "id": "job:8",
+    "by": "owner",
+    "data": {
+     "kind": [
+      "riff"
+     ]
+    }
+   },
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text')",
+   "type": "ValueError",
+   "items": {
+    "job:1": {
+     "id": "job:1",
+     "kind": "riff",
+     "key": "joke:a",
+     "input": {
+      "idea": "a tight five about meters"
+     },
+     "status": "done",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "by": "owner",
+     "attempts": 2,
+     "claimed_at": "2026-10-29T12:00:07+00:00",
+     "worker": "w2",
+     "done_at": "2026-10-29T12:00:09+00:00",
+     "result": {
+      "ideas": [
+       {
+        "text": "a line"
+       }
+      ]
+     },
+     "error": null,
+     "waiting_for": null
+    },
+    "job:ps": {
+     "id": "job:ps",
+     "kind": "process_set",
+     "key": "set:s1",
+     "input": {},
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": "2026-10-29T12:00:20+00:00",
+     "result": null,
+     "error": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "waiting_for": null
+    },
+    "job:4": {
+     "id": "job:4",
+     "kind": "bridge",
+     "key": null,
+     "input": {
+      "a": "joke:a",
+      "b": "joke:b"
+     },
+     "status": "failed",
+     "created_at": "2026-10-29T12:00:12+00:00",
+     "by": "owner",
+     "attempts": 3,
+     "claimed_at": "2026-10-29T12:00:17+00:00",
+     "worker": "w1",
+     "done_at": "2026-10-29T12:00:18+00:00",
+     "result": null,
+     "error": "third strike",
+     "waiting_for": null
+    },
+    "job:5": {
+     "id": "job:5",
+     "kind": "facts",
+     "key": null,
+     "input": {},
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "by": "owner",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:6": {
+     "id": "job:6",
+     "kind": "ask",
+     "key": null,
+     "input": [
+      1,
+      2
+     ],
+     "status": "queued",
+     "created_at": "2026-10-29T12:00:23+00:00",
+     "by": "ai:ask",
+     "attempts": 0,
+     "claimed_at": null,
+     "worker": null,
+     "done_at": null,
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    },
+    "job:7": {
+     "id": "job:7",
+     "kind": "import_youtube",
+     "key": "yt:abc",
+     "input": {},
+     "status": "done",
+     "created_at": "2026-10-29T12:00:24+00:00",
+     "by": "owner",
+     "attempts": 1,
+     "claimed_at": "2026-10-29T12:00:25+00:00",
+     "worker": "phone",
+     "done_at": "2026-10-29T12:00:26+00:00",
+     "result": null,
+     "error": null,
+     "waiting_for": null
+    }
+   }
+  }
+ ]
+}

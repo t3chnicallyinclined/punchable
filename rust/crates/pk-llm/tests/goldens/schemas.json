@@ -1,0 +1,164 @@
+{
+ "plan": {
+  "type": "object",
+  "properties": {
+   "search_queries": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   }
+  },
+  "additionalProperties": false,
+  "required": [
+   "search_queries"
+  ]
+ },
+ "rich": {
+  "$defs": {
+   "Turn": {
+    "type": "object",
+    "properties": {
+     "text": {
+      "type": "string",
+      "description": "{minLength: 1, maxLength: 280}"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "tag",
+       "act_out",
+       "callback"
+      ]
+     },
+     "score": {
+      "type": "number",
+      "description": "{minimum: 0, maximum: 1, default: 0.5}"
+     }
+    },
+    "additionalProperties": false,
+    "required": [
+     "text",
+     "kind"
+    ]
+   }
+  },
+  "type": "object",
+  "description": "Three turns on the bit",
+  "title": "Riff",
+  "properties": {
+   "turns": {
+    "type": "array",
+    "items": {
+     "$ref": "#/$defs/Turn"
+    },
+    "minItems": 1,
+    "description": "{maxItems: 3}"
+   },
+   "tags": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "description": "{pattern: ^[a-z-]+$}"
+    },
+    "description": "{minItems: 2}"
+   },
+   "single": {
+    "type": "array",
+    "items": {
+     "type": "integer"
+    },
+    "minItems": 0
+   },
+   "email": {
+    "type": "string",
+    "format": "email"
+   },
+   "slug": {
+    "type": "string",
+    "description": "lowercase\n\n{format: slug}"
+   },
+   "when": {
+    "type": "string",
+    "format": "date-time"
+   },
+   "count": {
+    "type": "integer",
+    "description": "A number\n\n{minimum: 1, maximum: 10}"
+   },
+   "keep": {
+    "type": "boolean",
+    "description": "{default: True}"
+   },
+   "nothing": {
+    "type": "null"
+   },
+   "maybe": {
+    "anyOf": [
+     {
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "optional words"
+   },
+   "either": {
+    "anyOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "boolean"
+     }
+    ]
+   },
+   "both": {
+    "allOf": [
+     {
+      "type": "object",
+      "properties": {
+       "a": {
+        "type": "string"
+       }
+      },
+      "additionalProperties": false
+     }
+    ]
+   },
+   "extra": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false,
+    "description": "{x-extra: {'k': 1, 'list': ['a', 'b']}, const: fixed, examples: ['one', 'two'], nullable: None, ratio: 1.5}"
+   }
+  },
+  "additionalProperties": false,
+  "required": [
+   "turns"
+  ]
+ },
+ "judge": {
+  "type": "object",
+  "properties": {
+   "same": {
+    "type": "boolean"
+   },
+   "why": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false,
+  "required": [
+   "same",
+   "why"
+  ]
+ },
+ "ref_only": {
+  "$ref": "#/$defs/X"
+ },
+ "string_plain": {
+  "type": "string"
+ }
+}

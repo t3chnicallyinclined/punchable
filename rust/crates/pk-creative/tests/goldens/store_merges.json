@@ -1,0 +1,1947 @@
+{
+ "store": "merges",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "merge",
+    "id": "mg:1",
+    "by": "owner",
+    "data": {
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "merge",
+    "id": "mg:1",
+    "by": "owner",
+    "data": {
+     "main": "joke:a",
+     "others": [
+      "joke:b"
+     ]
+    }
+   },
+   "error": "merge mg:1 exists",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "merge",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "main": "joke:a",
+     "others": []
+    }
+   },
+   "error": "a merge needs a main and other jokes (not the main)",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "merge",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "others": [
+      "joke:b"
+     ]
+    }
+   },
+   "error": "a merge needs a main and other jokes (not the main)",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "merge",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "main": "joke:a",
+     "others": [
+      "joke:a",
+      "joke:b"
+     ]
+    }
+   },
+   "error": "a merge needs a main and other jokes (not the main)",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "merge",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:b"
+     ]
+    }
+   },
+   "error": "a merge needs a main and other jokes (not the main)",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "merge",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "snapshot": null,
+     "reasons": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "undo",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {
+     "indexes": [
+      7
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "undo",
+    "id": "mg:2",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "no merge mg:2 to undo",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "undo",
+    "id": "mg:9",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "no merge mg:9 to undo",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "attach",
+    "id": "at:1",
+    "by": "ai:attach",
+    "data": {
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo"
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "attach",
+    "id": "at:1",
+    "by": "ai:attach",
+    "data": {
+     "joke": "joke:n",
+     "into": "joke:a"
+    }
+   },
+   "error": "attach at:1 exists",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "attach",
+    "id": "at:2",
+    "by": "ai:attach",
+    "data": {
+     "joke": "joke:n",
+     "into": "joke:n"
+    }
+   },
+   "error": "an attach needs the new joke and the joke it belongs to",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "attach",
+    "id": "at:2",
+    "by": "ai:attach",
+    "data": {
+     "joke": "joke:n"
+    }
+   },
+   "error": "an attach needs the new joke and the joke it belongs to",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "attach",
+    "id": "at:2",
+    "by": "ai:attach",
+    "data": {
+     "joke": "joke:m",
+     "into": "joke:a"
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:15+00:00",
+    "op": "detach",
+    "id": "at:1",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:16+00:00",
+    "op": "detach",
+    "id": "at:1",
+    "by": "owner"
+   },
+   "error": "no attached note at:1",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:17+00:00",
+    "op": "detach",
+    "id": "mg:1",
+    "by": "owner"
+   },
+   "error": "no attached note mg:1",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:18+00:00",
+    "op": "undo",
+    "id": "at:2",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "no merge at:2 to undo",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:19+00:00",
+    "op": "dismiss",
+    "id": "ds:1",
+    "by": "owner",
+    "data": {
+     "jokes": [
+      "joke:c",
+      "joke:b",
+      "joke:c"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:b",
+      "joke:c"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:19+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:20+00:00",
+    "op": "dismiss",
+    "id": "ds:2",
+    "by": "owner",
+    "data": {
+     "jokes": [
+      "joke:a"
+     ]
+    }
+   },
+   "error": "dismiss needs two or more jokes",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:b",
+      "joke:c"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:19+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:21+00:00",
+    "op": "dismiss",
+    "id": "ds:2",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "dismiss needs two or more jokes",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:b",
+      "joke:c"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:19+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:22+00:00",
+    "op": "dismiss",
+    "id": "ds:1",
+    "by": "owner",
+    "data": {
+     "jokes": [
+      "joke:z",
+      "joke:y",
+      "joke:x"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "merged",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:x",
+      "joke:y",
+      "joke:z"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:23+00:00",
+    "op": "undo",
+    "id": "mg:1",
+    "by": "owner",
+    "data": {
+     "indexes": []
+    }
+   },
+   "ok": true,
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:23+00:00",
+     "undo_indexes": [],
+     "undone_at": "2026-10-29T12:00:23+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:x",
+      "joke:y",
+      "joke:z"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:24+00:00",
+    "op": "split",
+    "id": "mg:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op split",
+   "type": "ValueError",
+   "items": {
+    "mg:1": {
+     "id": "mg:1",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:a",
+     "others": [
+      "joke:b",
+      "joke:c"
+     ],
+     "indexes": [
+      3,
+      4
+     ],
+     "snapshot": {
+      "joke:b": {
+       "title": "B"
+      }
+     },
+     "group": "g1",
+     "reasons": [
+      "same premise"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:23+00:00",
+     "undo_indexes": [],
+     "undone_at": "2026-10-29T12:00:23+00:00"
+    },
+    "mg:2": {
+     "id": "mg:2",
+     "kind": "merge",
+     "status": "undone",
+     "main": "joke:x",
+     "others": [
+      "joke:y"
+     ],
+     "indexes": [],
+     "snapshot": {},
+     "group": null,
+     "reasons": [],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "undo_indexes": [
+      7
+     ],
+     "undone_at": "2026-10-29T12:00:07+00:00"
+    },
+    "at:1": {
+     "id": "at:1",
+     "kind": "attach",
+     "status": "detached",
+     "joke": "joke:n",
+     "into": "joke:a",
+     "text": "a new note",
+     "date": "2026-01-01",
+     "score": 0.83,
+     "reasons": [
+      "reads like your bit"
+     ],
+     "source": "memo",
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:10+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "detached_at": "2026-10-29T12:00:15+00:00"
+    },
+    "at:2": {
+     "id": "at:2",
+     "kind": "attach",
+     "status": "attached",
+     "joke": "joke:m",
+     "into": "joke:a",
+     "text": null,
+     "date": null,
+     "score": null,
+     "reasons": [],
+     "source": null,
+     "by": "ai:attach",
+     "created_at": "2026-10-29T12:00:14+00:00",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    },
+    "ds:1": {
+     "id": "ds:1",
+     "kind": "dismiss",
+     "status": "dismissed",
+     "jokes": [
+      "joke:x",
+      "joke:y",
+      "joke:z"
+     ],
+     "by": "owner",
+     "created_at": "2026-10-29T12:00:22+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00"
+    }
+   }
+  }
+ ]
+}

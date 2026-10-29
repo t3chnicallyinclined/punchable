@@ -1,0 +1,414 @@
+{
+ "route_pattern": [
+  [
+   "/api/health",
+   "/api/health"
+  ],
+  [
+   "/api/health?ready=1",
+   "/api/health"
+  ],
+  [
+   "/api/joke/x:ab12cd",
+   "/api/joke/{id}"
+  ],
+  [
+   "/api/joke/Something%20Private",
+   "/api/joke/{id}"
+  ],
+  [
+   "/api/sets/20261027_up0123abcde",
+   "/api/sets/{id}"
+  ],
+  [
+   "/api/worker/jobs/job:riff-0a1b2c3d4e5f/result",
+   "/api/worker/jobs/{id}/result"
+  ],
+  [
+   "/api/search?q=my%20secret%20bit",
+   "/api/search"
+  ],
+  [
+   "/api/audio/ABC",
+   "/api/audio/{id}"
+  ],
+  [
+   "/api/memos/2026-10-27_deadbeef/transcript",
+   "/api/memos/{id}/transcript"
+  ],
+  [
+   "/",
+   "/"
+  ],
+  [
+   "",
+   "/"
+  ],
+  [
+   "/a/b/c/d/e/f/g/h",
+   "/a/b/c/d/e/f/..."
+  ],
+  [
+   "/a/b/c/d/e/f",
+   "/a/b/c/d/e/f"
+  ],
+  [
+   "/a/b/c/d/e/f/g",
+   "/a/b/c/d/e/f/..."
+  ],
+  [
+   "/api/x1",
+   "/api/{id}"
+  ],
+  [
+   "/api/X",
+   "/api/{id}"
+  ],
+  [
+   "/api/a.b",
+   "/api/{id}"
+  ],
+  [
+   "/api/a:b",
+   "/api/{id}"
+  ],
+  [
+   "/api/zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqz",
+   "/api/{id}"
+  ],
+  [
+   "/api/zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq",
+   "/api/zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq"
+  ],
+  [
+   "/api/%20",
+   "/api/{id}"
+  ],
+  [
+   "/api/Bit",
+   "/api/{id}"
+  ],
+  [
+   "//api//health//",
+   "/api/health"
+  ],
+  [
+   "/api/health#frag",
+   "/api/health"
+  ],
+  [
+   "/api/health?q=1#frag",
+   "/api/health"
+  ],
+  [
+   "/api/a-b_c",
+   "/api/a-b_c"
+  ],
+  [
+   "/api/-x",
+   "/api/{id}"
+  ],
+  [
+   "/api/_x",
+   "/api/{id}"
+  ],
+  [
+   "/api/ünï",
+   "/api/{id}"
+  ],
+  [
+   "api/health",
+   "/api/health"
+  ],
+  [
+   "/api/health/",
+   "/api/health"
+  ],
+  [
+   "?q=1",
+   "/"
+  ],
+  [
+   "/api/joke/x:ab12cd/edit",
+   "/api/joke/{id}/edit"
+  ]
+ ],
+ "status_class": [
+  [
+   200,
+   "200"
+  ],
+  [
+   "200",
+   "200"
+  ],
+  [
+   201,
+   "201"
+  ],
+  [
+   404,
+   "404"
+  ],
+  [
+   503,
+   "503"
+  ],
+  [
+   99,
+   "unknown"
+  ],
+  [
+   100,
+   "100"
+  ],
+  [
+   599,
+   "599"
+  ],
+  [
+   600,
+   "unknown"
+  ],
+  [
+   0,
+   "unknown"
+  ],
+  [
+   -1,
+   "unknown"
+  ],
+  [
+   "abc",
+   "unknown"
+  ],
+  [
+   null,
+   "unknown"
+  ],
+  [
+   "",
+   "unknown"
+  ],
+  [
+   "  404 ",
+   "404"
+  ],
+  [
+   200.0,
+   "200"
+  ],
+  [
+   200.9,
+   "200"
+  ],
+  [
+   true,
+   "unknown"
+  ],
+  [
+   "0x1F",
+   "unknown"
+  ]
+ ],
+ "methods": [
+  "GET",
+  "HEAD",
+  "POST",
+  "PATCH",
+  "DELETE",
+  "OPTIONS"
+ ],
+ "kind_label": [
+  [
+   "riff",
+   "riff"
+  ],
+  [
+   "ask_chat",
+   "ask_chat"
+  ],
+  [
+   "process_set",
+   "process_set"
+  ],
+  [
+   "weird kind!",
+   "other"
+  ],
+  [
+   null,
+   "unknown"
+  ],
+  [
+   "",
+   "unknown"
+  ],
+  [
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq",
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq"
+  ],
+  [
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqz",
+   "other"
+  ],
+  [
+   "Riff",
+   "Riff"
+  ],
+  [
+   "ri-ff",
+   "other"
+  ],
+  [
+   "r1ff",
+   "r1ff"
+  ],
+  [
+   "_",
+   "other"
+  ],
+  [
+   "ünï",
+   "ünï"
+  ]
+ ],
+ "model_label": [
+  [
+   "claude-sonnet-4-5",
+   "claude-sonnet-4-5"
+  ],
+  [
+   "Claude-Sonnet-4-5 ",
+   "claude-sonnet-4-5"
+  ],
+  [
+   "bad model/id",
+   "unknown"
+  ],
+  [
+   null,
+   "unknown"
+  ],
+  [
+   "",
+   "unknown"
+  ],
+  [
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq",
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq"
+  ],
+  [
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqz",
+   "unknown"
+  ],
+  [
+   "m:1.0_x",
+   "m:1.0_x"
+  ],
+  [
+   "ünï",
+   "ünï"
+  ],
+  [
+   "m+1",
+   "unknown"
+  ]
+ ],
+ "job_stats": [
+  [
+   [
+    {
+     "status": "queued",
+     "kind": "riff",
+     "waiting_for": null,
+     "created_at": "2026-10-27T10:00:00+00:00"
+    },
+    {
+     "status": "queued",
+     "kind": "riff",
+     "waiting_for": null,
+     "created_at": "2026-10-27T10:00:00+00:00"
+    },
+    {
+     "status": "queued",
+     "kind": "process_set",
+     "waiting_for": "transcriber",
+     "created_at": "2026-10-20T10:00:00+00:00"
+    },
+    {
+     "status": "queued",
+     "waiting_for": "transcriber",
+     "created_at": "not a date"
+    },
+    {
+     "status": "claimed",
+     "kind": "ask_chat"
+    },
+    {
+     "status": "done",
+     "kind": "process_set",
+     "waiting_for": null
+    },
+    "junk",
+    7
+   ],
+   {
+    "queued": {
+     "riff": 2,
+     "process_set": 1,
+     "unknown": 1
+    },
+    "waiting": 2
+   }
+  ],
+  [
+   [],
+   {
+    "queued": {},
+    "waiting": 0,
+    "oldest_waiting_s": 0.0
+   }
+  ],
+  [
+   null,
+   {
+    "queued": {},
+    "waiting": 0,
+    "oldest_waiting_s": 0.0
+   }
+  ]
+ ],
+ "job_buckets": [
+  1,
+  2.5,
+  5,
+  10,
+  20,
+  30,
+  60,
+  120,
+  300,
+  600,
+  900,
+  1800
+ ],
+ "default_buckets": [
+  0.005,
+  0.01,
+  0.025,
+  0.05,
+  0.1,
+  0.25,
+  0.5,
+  1.0,
+  2.5,
+  5.0,
+  10.0,
+  30.0,
+  60.0
+ ],
+ "max_series": 200,
+ "overflow": "other",
+ "content_type": "text/plain; version=0.0.4; charset=utf-8"
+}

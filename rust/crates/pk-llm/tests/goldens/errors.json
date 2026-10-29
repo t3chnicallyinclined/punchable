@@ -1,0 +1,113 @@
+{
+ "refusal": [
+  {
+   "category": null,
+   "explanation": null,
+   "plain": "Claude declined this one. Try rewording."
+  },
+  {
+   "category": "general_harms",
+   "explanation": null,
+   "plain": "Claude declined this one (general_harms). Try rewording."
+  },
+  {
+   "category": "general_harms",
+   "explanation": "the request names a real person",
+   "plain": "Claude declined this one: the request names a real person. Try rewording."
+  },
+  {
+   "category": "cyber",
+   "explanation": "  trailing dot.  ",
+   "plain": "Claude declined this one: trailing dot. Try rewording."
+  },
+  {
+   "category": null,
+   "explanation": "no category",
+   "plain": "Claude declined this one: no category. Try rewording."
+  },
+  {
+   "category": "x",
+   "explanation": "",
+   "plain": "Claude declined this one (x). Try rewording."
+  },
+  {
+   "category": "x",
+   "explanation": "   ",
+   "plain": "Claude declined this one (x). Try rewording."
+  }
+ ],
+ "cut_short": [
+  {
+   "max_tokens": 16000,
+   "plain": "Claude ran out of room on this one (max_tokens 16000): the answer was cut short. Try a shorter idea."
+  },
+  {
+   "max_tokens": 4096,
+   "plain": "Claude ran out of room on this one (max_tokens 4096): the answer was cut short. Try a shorter idea."
+  }
+ ],
+ "no_provider": [
+  {
+   "task": "creative_riff",
+   "message": "no available provider for task 'creative_riff'"
+  },
+  {
+   "task": "it's",
+   "message": "no available provider for task \"it's\""
+  }
+ ],
+ "parse_json": [
+  {
+   "text": "{\"a\": 1}",
+   "ok": true,
+   "data": {
+    "a": 1
+   }
+  },
+  {
+   "text": "  {\"a\": 1}  ",
+   "ok": true,
+   "data": {
+    "a": 1
+   }
+  },
+  {
+   "text": "```json\n{\"a\": [1, 2]}\n```",
+   "ok": true,
+   "data": {
+    "a": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "text": "```\n{\"a\": \"b\"}```",
+   "ok": true,
+   "data": {
+    "a": "b"
+   }
+  },
+  {
+   "text": "Sure! Here it is: {\"a\": {\"b\": 2}} hope that helps",
+   "ok": true,
+   "data": {
+    "a": {
+     "b": 2
+    }
+   }
+  },
+  {
+   "text": "{\"a\": 1} trailing {\"b\": 2}",
+   "ok": false
+  },
+  {
+   "text": "no braces here",
+   "ok": false
+  },
+  {
+   "text": "```json\nnot json```",
+   "ok": false
+  }
+ ]
+}

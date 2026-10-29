@@ -1,0 +1,3619 @@
+{
+ "private": {
+  "text": "sample bit text about pigeons",
+  "quote": "sample punchline text",
+  "transcript": "sample transcript line",
+  "query": "sample search words",
+  "title": "Sample Title",
+  "Authorization": "Bearer eyJhbGciOi.secret.sig",
+  "Cookie": "session=abc"
+ },
+ "redacted": "[scrubbed]",
+ "max_message": 300,
+ "sensitive_keys": [
+  "answer",
+  "api_key",
+  "apikey",
+  "authorization",
+  "body",
+  "content",
+  "cookie",
+  "cookies",
+  "data",
+  "email",
+  "filename",
+  "idea",
+  "ip_address",
+  "key",
+  "lines",
+  "name",
+  "note",
+  "notes",
+  "original_name",
+  "password",
+  "payload",
+  "prompt",
+  "q",
+  "query",
+  "quote",
+  "reason",
+  "secret",
+  "set-cookie",
+  "sub",
+  "summary",
+  "text",
+  "title",
+  "token",
+  "transcript",
+  "user",
+  "username",
+  "vars",
+  "venue"
+ ],
+ "header_allow": [
+  "accept",
+  "content-length",
+  "content-type",
+  "host",
+  "user-agent",
+  "x-request-id"
+ ],
+ "key_hint": "(text|quote|transcript|query|title|secret|token|password|cookie|auth)",
+ "events": [
+  {
+   "name": "everything",
+   "event": {
+    "event_id": "e1",
+    "timestamp": 1.0,
+    "platform": "python",
+    "level": "error",
+    "release": "punchable-api@0.1.0+abc",
+    "environment": "production",
+    "logger": "x",
+    "message": "boom: 'sample bit text about pigeons' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "request": {
+     "method": "POST",
+     "url": "https://example.test/api/decision?q=sample search words",
+     "query_string": "q=sample search words",
+     "data": {
+      "text": "sample bit text about pigeons",
+      "after": {
+       "title": "Sample Title"
+      }
+     },
+     "headers": {
+      "Authorization": "Bearer eyJhbGciOi.secret.sig",
+      "Cookie": "session=abc",
+      "Content-Type": "application/json",
+      "X-Title": "Sample Title"
+     },
+     "cookies": {
+      "session": "abc"
+     },
+     "env": {
+      "REMOTE_ADDR": "203.0.113.9"
+     }
+    },
+    "exception": {
+     "values": [
+      {
+       "type": "SurrealError",
+       "value": "statement 0 failed: \"sample punchline text\"\n--- SELECT * FROM unit WHERE text @@ 'sample search words'",
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "server.py",
+          "function": "do_POST",
+          "lineno": 1,
+          "context_line": "sample transcript line",
+          "pre_context": [
+           "sample bit text about pigeons"
+          ],
+          "vars": {
+           "b": {
+            "text": "sample bit text about pigeons"
+           },
+           "transcript": "sample transcript line"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "breadcrumbs": {
+     "values": [
+      {
+       "category": "http",
+       "message": "sample bit text about pigeons",
+       "data": {
+        "route": "/api/joke/{id}",
+        "status": 500,
+        "body": "sample bit text about pigeons",
+        "query": "sample search words"
+       }
+      }
+     ]
+    },
+    "tags": {
+     "route": "/api/decision",
+     "transcript": "sample transcript line"
+    },
+    "extra": {
+     "nested": {
+      "deep": {
+       "quote": "sample punchline text",
+       "n": 3
+      }
+     },
+     "QUERY_STRING": "sample search words",
+     "ok": "fine",
+     "job": {
+      "kind": "riff",
+      "text": "sample bit text about pigeons"
+     }
+    },
+    "user": {
+     "id": "owner",
+     "email": "owner@example.test",
+     "ip_address": "203.0.113.9",
+     "username": "x"
+    },
+    "contexts": {
+     "runtime": {
+      "name": "CPython"
+     },
+     "custom": {
+      "text": "sample bit text about pigeons"
+     }
+    },
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": true,
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "f",
+          "vars": {
+           "text": "sample bit text about pigeons"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "scrubbed": {
+    "event_id": "e1",
+    "timestamp": 1.0,
+    "platform": "python",
+    "level": "error",
+    "logger": "x",
+    "release": "punchable-api@0.1.0+abc",
+    "environment": "production",
+    "message": "boom: '...' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "exception": {
+     "values": [
+      {
+       "type": "SurrealError",
+       "value": "statement 0 failed: '...'",
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "server.py",
+          "function": "do_POST",
+          "lineno": 1
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "request": {
+     "method": "POST",
+     "url": "https://example.test/api/decision",
+     "headers": {
+      "Content-Type": "application/json"
+     }
+    },
+    "breadcrumbs": {
+     "values": [
+      {
+       "category": "http",
+       "data": {
+        "route": "/api/joke/{id}",
+        "status": 500
+       }
+      }
+     ]
+    },
+    "tags": {
+     "route": "/api/decision"
+    },
+    "contexts": {
+     "runtime": {
+      "name": "[scrubbed]"
+     }
+    },
+    "extra": {
+     "nested": {
+      "deep": {
+       "quote": "[scrubbed]",
+       "n": 3
+      }
+     },
+     "QUERY_STRING": "[scrubbed]",
+     "ok": "fine",
+     "job": {
+      "kind": "riff",
+      "text": "[scrubbed]"
+     }
+    },
+    "user": {
+     "id": "owner"
+    },
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": true,
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "f"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "scrub_value": {
+    "event_id": "e1",
+    "timestamp": 1.0,
+    "platform": "python",
+    "level": "error",
+    "release": "punchable-api@0.1.0+abc",
+    "environment": "production",
+    "logger": "x",
+    "message": "boom: 'sample bit text about pigeons' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "request": {
+     "method": "POST",
+     "url": "https://example.test/api/decision?q=sample search words",
+     "query_string": "[scrubbed]",
+     "data": "[scrubbed]",
+     "headers": {
+      "Authorization": "[scrubbed]",
+      "Cookie": "[scrubbed]",
+      "Content-Type": "application/json",
+      "X-Title": "[scrubbed]"
+     },
+     "cookies": "[scrubbed]",
+     "env": {
+      "REMOTE_ADDR": "203.0.113.9"
+     }
+    },
+    "exception": {
+     "values": [
+      {
+       "type": "SurrealError",
+       "value": "statement 0 failed: \"sample punchline text\"\n--- SELECT * FROM unit WHERE text @@ 'sample search words'",
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "[scrubbed]",
+          "function": "do_POST",
+          "lineno": 1,
+          "context_line": "[scrubbed]",
+          "pre_context": "[scrubbed]",
+          "vars": "[scrubbed]"
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "breadcrumbs": {
+     "values": [
+      {
+       "category": "http",
+       "message": "sample bit text about pigeons",
+       "data": "[scrubbed]"
+      }
+     ]
+    },
+    "tags": {
+     "route": "/api/decision",
+     "transcript": "[scrubbed]"
+    },
+    "extra": {
+     "nested": {
+      "deep": {
+       "quote": "[scrubbed]",
+       "n": 3
+      }
+     },
+     "QUERY_STRING": "[scrubbed]",
+     "ok": "fine",
+     "job": {
+      "kind": "riff",
+      "text": "[scrubbed]"
+     }
+    },
+    "user": "[scrubbed]",
+    "contexts": "[scrubbed]",
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": true,
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "f",
+          "vars": "[scrubbed]"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "flat_keys": [
+    "Content-Type",
+    "QUERY_STRING",
+    "breadcrumbs",
+    "category",
+    "contexts",
+    "crashed",
+    "data",
+    "deep",
+    "environment",
+    "event_id",
+    "exception",
+    "extra",
+    "filename",
+    "frames",
+    "function",
+    "headers",
+    "id",
+    "job",
+    "kind",
+    "level",
+    "lineno",
+    "logger",
+    "message",
+    "method",
+    "n",
+    "name",
+    "nested",
+    "ok",
+    "platform",
+    "quote",
+    "release",
+    "request",
+    "route",
+    "runtime",
+    "stacktrace",
+    "status",
+    "tags",
+    "text",
+    "threads",
+    "timestamp",
+    "type",
+    "url",
+    "user",
+    "value",
+    "values"
+   ]
+  },
+  {
+   "name": "edge_cases",
+   "event": {
+    "event_id": "e2",
+    "timestamp": 2,
+    "type": "event",
+    "sdk": {
+     "name": "sentry.python",
+     "version": "2.0"
+    },
+    "dist": "d",
+    "server_name": "api-0",
+    "transaction": "/api/decision",
+    "message": {
+     "formatted": "KeyError: 'the bit'\n--- SELECT 1",
+     "message": "KeyError: %s",
+     "params": [
+      "the bit"
+     ]
+    },
+    "logentry": {
+     "message": "warn \"quoted\" and 'single'",
+     "params": []
+    },
+    "exception": {
+     "values": [
+      {
+       "type": "ValueError",
+       "value": null,
+       "mechanism": {
+        "type": "generic",
+        "handled": false,
+        "data": {
+         "text": "x"
+        }
+       },
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "f0.py",
+          "lineno": 0,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 0
+          }
+         },
+         {
+          "filename": "f1.py",
+          "lineno": 1,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 1
+          }
+         },
+         {
+          "filename": "f2.py",
+          "lineno": 2,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 2
+          }
+         },
+         {
+          "filename": "f3.py",
+          "lineno": 3,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 3
+          }
+         },
+         {
+          "filename": "f4.py",
+          "lineno": 4,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 4
+          }
+         },
+         {
+          "filename": "f5.py",
+          "lineno": 5,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 5
+          }
+         },
+         {
+          "filename": "f6.py",
+          "lineno": 6,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 6
+          }
+         },
+         {
+          "filename": "f7.py",
+          "lineno": 7,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 7
+          }
+         },
+         {
+          "filename": "f8.py",
+          "lineno": 8,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 8
+          }
+         },
+         {
+          "filename": "f9.py",
+          "lineno": 9,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 9
+          }
+         },
+         {
+          "filename": "f10.py",
+          "lineno": 10,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 10
+          }
+         },
+         {
+          "filename": "f11.py",
+          "lineno": 11,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 11
+          }
+         },
+         {
+          "filename": "f12.py",
+          "lineno": 12,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 12
+          }
+         },
+         {
+          "filename": "f13.py",
+          "lineno": 13,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 13
+          }
+         },
+         {
+          "filename": "f14.py",
+          "lineno": 14,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 14
+          }
+         },
+         {
+          "filename": "f15.py",
+          "lineno": 15,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 15
+          }
+         },
+         {
+          "filename": "f16.py",
+          "lineno": 16,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 16
+          }
+         },
+         {
+          "filename": "f17.py",
+          "lineno": 17,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 17
+          }
+         },
+         {
+          "filename": "f18.py",
+          "lineno": 18,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 18
+          }
+         },
+         {
+          "filename": "f19.py",
+          "lineno": 19,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 19
+          }
+         },
+         {
+          "filename": "f20.py",
+          "lineno": 20,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 20
+          }
+         },
+         {
+          "filename": "f21.py",
+          "lineno": 21,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 21
+          }
+         },
+         {
+          "filename": "f22.py",
+          "lineno": 22,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 22
+          }
+         },
+         {
+          "filename": "f23.py",
+          "lineno": 23,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 23
+          }
+         },
+         {
+          "filename": "f24.py",
+          "lineno": 24,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 24
+          }
+         },
+         {
+          "filename": "f25.py",
+          "lineno": 25,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 25
+          }
+         },
+         {
+          "filename": "f26.py",
+          "lineno": 26,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 26
+          }
+         },
+         {
+          "filename": "f27.py",
+          "lineno": 27,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 27
+          }
+         },
+         {
+          "filename": "f28.py",
+          "lineno": 28,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 28
+          }
+         },
+         {
+          "filename": "f29.py",
+          "lineno": 29,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 29
+          }
+         },
+         {
+          "filename": "f30.py",
+          "lineno": 30,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 30
+          }
+         },
+         {
+          "filename": "f31.py",
+          "lineno": 31,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 31
+          }
+         },
+         {
+          "filename": "f32.py",
+          "lineno": 32,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 32
+          }
+         },
+         {
+          "filename": "f33.py",
+          "lineno": 33,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 33
+          }
+         },
+         {
+          "filename": "f34.py",
+          "lineno": 34,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 34
+          }
+         },
+         {
+          "filename": "f35.py",
+          "lineno": 35,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 35
+          }
+         },
+         {
+          "filename": "f36.py",
+          "lineno": 36,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 36
+          }
+         },
+         {
+          "filename": "f37.py",
+          "lineno": 37,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 37
+          }
+         },
+         {
+          "filename": "f38.py",
+          "lineno": 38,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 38
+          }
+         },
+         {
+          "filename": "f39.py",
+          "lineno": 39,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 39
+          }
+         },
+         {
+          "filename": "f40.py",
+          "lineno": 40,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 40
+          }
+         },
+         {
+          "filename": "f41.py",
+          "lineno": 41,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 41
+          }
+         },
+         {
+          "filename": "f42.py",
+          "lineno": 42,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 42
+          }
+         },
+         {
+          "filename": "f43.py",
+          "lineno": 43,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 43
+          }
+         },
+         {
+          "filename": "f44.py",
+          "lineno": 44,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 44
+          }
+         },
+         {
+          "filename": "f45.py",
+          "lineno": 45,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 45
+          }
+         },
+         {
+          "filename": "f46.py",
+          "lineno": 46,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 46
+          }
+         },
+         {
+          "filename": "f47.py",
+          "lineno": 47,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 47
+          }
+         },
+         {
+          "filename": "f48.py",
+          "lineno": 48,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 48
+          }
+         },
+         {
+          "filename": "f49.py",
+          "lineno": 49,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 49
+          }
+         },
+         {
+          "filename": "f50.py",
+          "lineno": 50,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 50
+          }
+         },
+         {
+          "filename": "f51.py",
+          "lineno": 51,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 51
+          }
+         },
+         {
+          "filename": "f52.py",
+          "lineno": 52,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 52
+          }
+         },
+         {
+          "filename": "f53.py",
+          "lineno": 53,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 53
+          }
+         },
+         {
+          "filename": "f54.py",
+          "lineno": 54,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 54
+          }
+         },
+         {
+          "filename": "f55.py",
+          "lineno": 55,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 55
+          }
+         },
+         {
+          "filename": "f56.py",
+          "lineno": 56,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 56
+          }
+         },
+         {
+          "filename": "f57.py",
+          "lineno": 57,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 57
+          }
+         },
+         {
+          "filename": "f58.py",
+          "lineno": 58,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 58
+          }
+         },
+         {
+          "filename": "f59.py",
+          "lineno": 59,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": {
+           "q": 59
+          }
+         }
+        ]
+       }
+      },
+      "not a dict",
+      {
+       "type": 42,
+       "value": 7.5
+      },
+      {
+       "type": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+       "value": "",
+       "stacktrace": "not a dict"
+      },
+      {
+       "type": "Over0",
+       "value": "x"
+      },
+      {
+       "type": "Over1",
+       "value": "x"
+      },
+      {
+       "type": "Over2",
+       "value": "x"
+      },
+      {
+       "type": "Over3",
+       "value": "x"
+      },
+      {
+       "type": "Over4",
+       "value": "x"
+      },
+      {
+       "type": "Over5",
+       "value": "x"
+      },
+      {
+       "type": "Over6",
+       "value": "x"
+      },
+      {
+       "type": "Over7",
+       "value": "x"
+      }
+     ]
+    },
+    "breadcrumbs": [
+     {
+      "timestamp": 1.5,
+      "type": "default",
+      "category": "http",
+      "level": "info",
+      "message": "words",
+      "data": {
+       "route": "/api/x",
+       "status_code": 500,
+       "method": "GET",
+       "reason_class": "Timeout",
+       "duration_ms": 12.5,
+       "ok": true,
+       "body": "words",
+       "nested": {
+        "route": "x"
+       }
+      }
+     },
+     {
+      "category": "db",
+      "data": {
+       "statement": "SELECT 1"
+      }
+     },
+     {
+      "category": "none",
+      "data": "not a dict"
+     },
+     "junk",
+     {
+      "category": "c0"
+     },
+     {
+      "category": "c1"
+     },
+     {
+      "category": "c2"
+     },
+     {
+      "category": "c3"
+     },
+     {
+      "category": "c4"
+     },
+     {
+      "category": "c5"
+     },
+     {
+      "category": "c6"
+     },
+     {
+      "category": "c7"
+     },
+     {
+      "category": "c8"
+     },
+     {
+      "category": "c9"
+     },
+     {
+      "category": "c10"
+     },
+     {
+      "category": "c11"
+     },
+     {
+      "category": "c12"
+     },
+     {
+      "category": "c13"
+     },
+     {
+      "category": "c14"
+     },
+     {
+      "category": "c15"
+     },
+     {
+      "category": "c16"
+     },
+     {
+      "category": "c17"
+     },
+     {
+      "category": "c18"
+     },
+     {
+      "category": "c19"
+     },
+     {
+      "category": "c20"
+     },
+     {
+      "category": "c21"
+     },
+     {
+      "category": "c22"
+     },
+     {
+      "category": "c23"
+     },
+     {
+      "category": "c24"
+     },
+     {
+      "category": "c25"
+     },
+     {
+      "category": "c26"
+     },
+     {
+      "category": "c27"
+     },
+     {
+      "category": "c28"
+     },
+     {
+      "category": "c29"
+     },
+     {
+      "category": "c30"
+     },
+     {
+      "category": "c31"
+     },
+     {
+      "category": "c32"
+     },
+     {
+      "category": "c33"
+     },
+     {
+      "category": "c34"
+     },
+     {
+      "category": "c35"
+     },
+     {
+      "category": "c36"
+     },
+     {
+      "category": "c37"
+     },
+     {
+      "category": "c38"
+     },
+     {
+      "category": "c39"
+     }
+    ],
+    "tags": {
+     "kind": "riff",
+     "retry": "False",
+     "n": 3,
+     "cookie": "x",
+     "api_key": "k",
+     "set-cookie": "y",
+     "nested": {
+      "text": "t",
+      "ok": [
+       1,
+       2
+      ]
+     }
+    },
+    "extra": {
+     "deep": {
+      "d": {
+       "d": {
+        "d": {
+         "d": {
+          "d": {
+           "d": {
+            "d": {
+             "d": {
+              "d": {
+               "d": {
+                "d": {
+                 "d": {
+                  "text": "x",
+                  "n": 1
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "wide": {
+      "k000": 0,
+      "k001": 1,
+      "k002": 2,
+      "k003": 3,
+      "k004": 4,
+      "k005": 5,
+      "k006": 6,
+      "k007": 7,
+      "k008": 8,
+      "k009": 9,
+      "k010": 10,
+      "k011": 11,
+      "k012": 12,
+      "k013": 13,
+      "k014": 14,
+      "k015": 15,
+      "k016": 16,
+      "k017": 17,
+      "k018": 18,
+      "k019": 19,
+      "k020": 20,
+      "k021": 21,
+      "k022": 22,
+      "k023": 23,
+      "k024": 24,
+      "k025": 25,
+      "k026": 26,
+      "k027": 27,
+      "k028": 28,
+      "k029": 29,
+      "k030": 30,
+      "k031": 31,
+      "k032": 32,
+      "k033": 33,
+      "k034": 34,
+      "k035": 35,
+      "k036": 36,
+      "k037": 37,
+      "k038": 38,
+      "k039": 39,
+      "k040": 40,
+      "k041": 41,
+      "k042": 42,
+      "k043": 43,
+      "k044": 44,
+      "k045": 45,
+      "k046": 46,
+      "k047": 47,
+      "k048": 48,
+      "k049": 49,
+      "k050": 50,
+      "k051": 51,
+      "k052": 52,
+      "k053": 53,
+      "k054": 54,
+      "k055": 55,
+      "k056": 56,
+      "k057": 57,
+      "k058": 58,
+      "k059": 59,
+      "k060": 60,
+      "k061": 61,
+      "k062": 62,
+      "k063": 63,
+      "k064": 64,
+      "k065": 65,
+      "k066": 66,
+      "k067": 67,
+      "k068": 68,
+      "k069": 69
+     },
+     "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+     "list": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+     ],
+     "joke_text": "x",
+     "HTTP_AUTHORIZATION": "x",
+     "x-title": "x",
+     "search_query": "x",
+     "ip-address": "x",
+     "route": "/api/x",
+     "lineno": 3,
+     "function": "f",
+     "none": null,
+     "bool": true,
+     "float": 1.5
+    },
+    "user": {
+     "email": "owner@example.test"
+    },
+    "contexts": {
+     "runtime": {
+      "name": "CPython",
+      "text": "x"
+     },
+     "os": {
+      "name": "Linux"
+     },
+     "device": "not a dict",
+     "app": {
+      "app_name": "api"
+     },
+     "trace": {
+      "trace_id": "t"
+     },
+     "custom": {
+      "ok": 1
+     }
+    },
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": false
+      },
+      {
+       "crashed": true,
+       "stacktrace": {
+        "frames": "not a list"
+       }
+      },
+      "junk",
+      {
+       "id": "main",
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "g",
+          "context_line": "x"
+         },
+         "junk"
+        ]
+       }
+      }
+     ]
+    },
+    "modules": {
+     "x": "1"
+    },
+    "culprit": "c",
+    "fingerprint": [
+     "x"
+    ],
+    "stacktrace": {
+     "frames": []
+    }
+   },
+   "scrubbed": {
+    "event_id": "e2",
+    "timestamp": 2,
+    "server_name": "api-0",
+    "transaction": "/api/decision",
+    "sdk": {
+     "name": "sentry.python",
+     "version": "2.0"
+    },
+    "dist": "d",
+    "type": "event",
+    "message": "KeyError: '...'",
+    "logentry": {
+     "message": "warn '...' and '...'"
+    },
+    "exception": {
+     "values": [
+      {
+       "type": "ValueError",
+       "value": "",
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "f10.py",
+          "abs_path": "/x/f.py",
+          "lineno": 10,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f11.py",
+          "abs_path": "/x/f.py",
+          "lineno": 11,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f12.py",
+          "abs_path": "/x/f.py",
+          "lineno": 12,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f13.py",
+          "abs_path": "/x/f.py",
+          "lineno": 13,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f14.py",
+          "abs_path": "/x/f.py",
+          "lineno": 14,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f15.py",
+          "abs_path": "/x/f.py",
+          "lineno": 15,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f16.py",
+          "abs_path": "/x/f.py",
+          "lineno": 16,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f17.py",
+          "abs_path": "/x/f.py",
+          "lineno": 17,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f18.py",
+          "abs_path": "/x/f.py",
+          "lineno": 18,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f19.py",
+          "abs_path": "/x/f.py",
+          "lineno": 19,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f20.py",
+          "abs_path": "/x/f.py",
+          "lineno": 20,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f21.py",
+          "abs_path": "/x/f.py",
+          "lineno": 21,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f22.py",
+          "abs_path": "/x/f.py",
+          "lineno": 22,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f23.py",
+          "abs_path": "/x/f.py",
+          "lineno": 23,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f24.py",
+          "abs_path": "/x/f.py",
+          "lineno": 24,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f25.py",
+          "abs_path": "/x/f.py",
+          "lineno": 25,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f26.py",
+          "abs_path": "/x/f.py",
+          "lineno": 26,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f27.py",
+          "abs_path": "/x/f.py",
+          "lineno": 27,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f28.py",
+          "abs_path": "/x/f.py",
+          "lineno": 28,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f29.py",
+          "abs_path": "/x/f.py",
+          "lineno": 29,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f30.py",
+          "abs_path": "/x/f.py",
+          "lineno": 30,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f31.py",
+          "abs_path": "/x/f.py",
+          "lineno": 31,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f32.py",
+          "abs_path": "/x/f.py",
+          "lineno": 32,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f33.py",
+          "abs_path": "/x/f.py",
+          "lineno": 33,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f34.py",
+          "abs_path": "/x/f.py",
+          "lineno": 34,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f35.py",
+          "abs_path": "/x/f.py",
+          "lineno": 35,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f36.py",
+          "abs_path": "/x/f.py",
+          "lineno": 36,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f37.py",
+          "abs_path": "/x/f.py",
+          "lineno": 37,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f38.py",
+          "abs_path": "/x/f.py",
+          "lineno": 38,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f39.py",
+          "abs_path": "/x/f.py",
+          "lineno": 39,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f40.py",
+          "abs_path": "/x/f.py",
+          "lineno": 40,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f41.py",
+          "abs_path": "/x/f.py",
+          "lineno": 41,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f42.py",
+          "abs_path": "/x/f.py",
+          "lineno": 42,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f43.py",
+          "abs_path": "/x/f.py",
+          "lineno": 43,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f44.py",
+          "abs_path": "/x/f.py",
+          "lineno": 44,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f45.py",
+          "abs_path": "/x/f.py",
+          "lineno": 45,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f46.py",
+          "abs_path": "/x/f.py",
+          "lineno": 46,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f47.py",
+          "abs_path": "/x/f.py",
+          "lineno": 47,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f48.py",
+          "abs_path": "/x/f.py",
+          "lineno": 48,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f49.py",
+          "abs_path": "/x/f.py",
+          "lineno": 49,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f50.py",
+          "abs_path": "/x/f.py",
+          "lineno": 50,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f51.py",
+          "abs_path": "/x/f.py",
+          "lineno": 51,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f52.py",
+          "abs_path": "/x/f.py",
+          "lineno": 52,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f53.py",
+          "abs_path": "/x/f.py",
+          "lineno": 53,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f54.py",
+          "abs_path": "/x/f.py",
+          "lineno": 54,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f55.py",
+          "abs_path": "/x/f.py",
+          "lineno": 55,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f56.py",
+          "abs_path": "/x/f.py",
+          "lineno": 56,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f57.py",
+          "abs_path": "/x/f.py",
+          "lineno": 57,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f58.py",
+          "abs_path": "/x/f.py",
+          "lineno": 58,
+          "module": "m",
+          "in_app": true
+         },
+         {
+          "filename": "f59.py",
+          "abs_path": "/x/f.py",
+          "lineno": 59,
+          "module": "m",
+          "in_app": true
+         }
+        ]
+       },
+       "mechanism": {
+        "type": "generic",
+        "handled": false
+       }
+      },
+      {
+       "type": "42",
+       "value": "7.5"
+      },
+      {
+       "type": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+       "value": ""
+      },
+      {
+       "type": "Over0",
+       "value": "x"
+      },
+      {
+       "type": "Over1",
+       "value": "x"
+      },
+      {
+       "type": "Over2",
+       "value": "x"
+      },
+      {
+       "type": "Over3",
+       "value": "x"
+      }
+     ]
+    },
+    "breadcrumbs": [
+     {
+      "category": "c10"
+     },
+     {
+      "category": "c11"
+     },
+     {
+      "category": "c12"
+     },
+     {
+      "category": "c13"
+     },
+     {
+      "category": "c14"
+     },
+     {
+      "category": "c15"
+     },
+     {
+      "category": "c16"
+     },
+     {
+      "category": "c17"
+     },
+     {
+      "category": "c18"
+     },
+     {
+      "category": "c19"
+     },
+     {
+      "category": "c20"
+     },
+     {
+      "category": "c21"
+     },
+     {
+      "category": "c22"
+     },
+     {
+      "category": "c23"
+     },
+     {
+      "category": "c24"
+     },
+     {
+      "category": "c25"
+     },
+     {
+      "category": "c26"
+     },
+     {
+      "category": "c27"
+     },
+     {
+      "category": "c28"
+     },
+     {
+      "category": "c29"
+     },
+     {
+      "category": "c30"
+     },
+     {
+      "category": "c31"
+     },
+     {
+      "category": "c32"
+     },
+     {
+      "category": "c33"
+     },
+     {
+      "category": "c34"
+     },
+     {
+      "category": "c35"
+     },
+     {
+      "category": "c36"
+     },
+     {
+      "category": "c37"
+     },
+     {
+      "category": "c38"
+     },
+     {
+      "category": "c39"
+     }
+    ],
+    "tags": {
+     "kind": "riff",
+     "retry": "False",
+     "n": 3,
+     "nested": {
+      "text": "[scrubbed]",
+      "ok": [
+       1,
+       2
+      ]
+     }
+    },
+    "contexts": {
+     "runtime": {
+      "name": "[scrubbed]",
+      "text": "[scrubbed]"
+     },
+     "os": {
+      "name": "[scrubbed]"
+     },
+     "app": {
+      "app_name": "api"
+     },
+     "trace": {
+      "trace_id": "t"
+     }
+    },
+    "extra": {
+     "deep": {
+      "d": {
+       "d": {
+        "d": {
+         "d": {
+          "d": {
+           "d": {
+            "d": {
+             "d": "[scrubbed]"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "wide": {
+      "k000": 0,
+      "k001": 1,
+      "k002": 2,
+      "k003": 3,
+      "k004": 4,
+      "k005": 5,
+      "k006": 6,
+      "k007": 7,
+      "k008": 8,
+      "k009": 9,
+      "k010": 10,
+      "k011": 11,
+      "k012": 12,
+      "k013": 13,
+      "k014": 14,
+      "k015": 15,
+      "k016": 16,
+      "k017": 17,
+      "k018": 18,
+      "k019": 19,
+      "k020": 20,
+      "k021": 21,
+      "k022": 22,
+      "k023": 23,
+      "k024": 24,
+      "k025": 25,
+      "k026": 26,
+      "k027": 27,
+      "k028": 28,
+      "k029": 29,
+      "k030": 30,
+      "k031": 31,
+      "k032": 32,
+      "k033": 33,
+      "k034": 34,
+      "k035": 35,
+      "k036": 36,
+      "k037": 37,
+      "k038": 38,
+      "k039": 39,
+      "k040": 40,
+      "k041": 41,
+      "k042": 42,
+      "k043": 43,
+      "k044": 44,
+      "k045": 45,
+      "k046": 46,
+      "k047": 47,
+      "k048": 48,
+      "k049": 49,
+      "k050": 50,
+      "k051": 51,
+      "k052": 52,
+      "k053": 53,
+      "k054": 54,
+      "k055": 55,
+      "k056": 56,
+      "k057": 57,
+      "k058": 58,
+      "k059": 59,
+      "k060": 60,
+      "k061": 61,
+      "k062": 62,
+      "k063": 63
+     },
+     "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy...",
+     "list": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+     ],
+     "joke_text": "[scrubbed]",
+     "HTTP_AUTHORIZATION": "[scrubbed]",
+     "x-title": "[scrubbed]",
+     "search_query": "[scrubbed]",
+     "ip-address": "[scrubbed]",
+     "route": "/api/x",
+     "lineno": 3,
+     "function": "f",
+     "none": null,
+     "bool": true,
+     "float": 1.5
+    },
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": false,
+       "stacktrace": null
+      },
+      {
+       "id": null,
+       "crashed": true,
+       "stacktrace": {
+        "frames": []
+       }
+      },
+      {
+       "id": "main",
+       "crashed": null,
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "g"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "scrub_value": {
+    "event_id": "e2",
+    "timestamp": 2,
+    "type": "event",
+    "sdk": {
+     "name": "[scrubbed]",
+     "version": "2.0"
+    },
+    "dist": "d",
+    "server_name": "api-0",
+    "transaction": "/api/decision",
+    "message": {
+     "formatted": "KeyError: 'the bit'\n--- SELECT 1",
+     "message": "KeyError: %s",
+     "params": [
+      "the bit"
+     ]
+    },
+    "logentry": {
+     "message": "warn \"quoted\" and 'single'",
+     "params": []
+    },
+    "exception": {
+     "values": [
+      {
+       "type": "ValueError",
+       "value": null,
+       "mechanism": {
+        "type": "generic",
+        "handled": false,
+        "data": "[scrubbed]"
+       },
+       "stacktrace": {
+        "frames": [
+         {
+          "filename": "[scrubbed]",
+          "lineno": 0,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 1,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 2,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 3,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 4,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 5,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 6,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 7,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 8,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 9,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 10,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 11,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 12,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 13,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 14,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 15,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 16,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 17,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 18,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 19,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 20,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 21,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 22,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 23,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 24,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 25,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 26,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 27,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 28,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 29,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 30,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 31,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 32,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 33,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 34,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 35,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 36,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 37,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 38,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 39,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 40,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 41,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 42,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 43,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 44,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 45,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 46,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 47,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 48,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 49,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 50,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 51,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 52,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 53,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 54,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 55,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 56,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 57,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 58,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         },
+         {
+          "filename": "[scrubbed]",
+          "lineno": 59,
+          "module": "m",
+          "abs_path": "/x/f.py",
+          "in_app": true,
+          "vars": "[scrubbed]"
+         }
+        ]
+       }
+      },
+      "not a dict",
+      {
+       "type": 42,
+       "value": 7.5
+      },
+      {
+       "type": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+       "value": "",
+       "stacktrace": "not a dict"
+      },
+      {
+       "type": "Over0",
+       "value": "x"
+      },
+      {
+       "type": "Over1",
+       "value": "x"
+      },
+      {
+       "type": "Over2",
+       "value": "x"
+      },
+      {
+       "type": "Over3",
+       "value": "x"
+      },
+      {
+       "type": "Over4",
+       "value": "x"
+      },
+      {
+       "type": "Over5",
+       "value": "x"
+      },
+      {
+       "type": "Over6",
+       "value": "x"
+      },
+      {
+       "type": "Over7",
+       "value": "x"
+      }
+     ]
+    },
+    "breadcrumbs": [
+     {
+      "timestamp": 1.5,
+      "type": "default",
+      "category": "http",
+      "level": "info",
+      "message": "words",
+      "data": "[scrubbed]"
+     },
+     {
+      "category": "db",
+      "data": "[scrubbed]"
+     },
+     {
+      "category": "none",
+      "data": "[scrubbed]"
+     },
+     "junk",
+     {
+      "category": "c0"
+     },
+     {
+      "category": "c1"
+     },
+     {
+      "category": "c2"
+     },
+     {
+      "category": "c3"
+     },
+     {
+      "category": "c4"
+     },
+     {
+      "category": "c5"
+     },
+     {
+      "category": "c6"
+     },
+     {
+      "category": "c7"
+     },
+     {
+      "category": "c8"
+     },
+     {
+      "category": "c9"
+     },
+     {
+      "category": "c10"
+     },
+     {
+      "category": "c11"
+     },
+     {
+      "category": "c12"
+     },
+     {
+      "category": "c13"
+     },
+     {
+      "category": "c14"
+     },
+     {
+      "category": "c15"
+     },
+     {
+      "category": "c16"
+     },
+     {
+      "category": "c17"
+     },
+     {
+      "category": "c18"
+     },
+     {
+      "category": "c19"
+     },
+     {
+      "category": "c20"
+     },
+     {
+      "category": "c21"
+     },
+     {
+      "category": "c22"
+     },
+     {
+      "category": "c23"
+     },
+     {
+      "category": "c24"
+     },
+     {
+      "category": "c25"
+     },
+     {
+      "category": "c26"
+     },
+     {
+      "category": "c27"
+     },
+     {
+      "category": "c28"
+     },
+     {
+      "category": "c29"
+     },
+     {
+      "category": "c30"
+     },
+     {
+      "category": "c31"
+     },
+     {
+      "category": "c32"
+     },
+     {
+      "category": "c33"
+     },
+     {
+      "category": "c34"
+     },
+     {
+      "category": "c35"
+     },
+     {
+      "category": "c36"
+     },
+     {
+      "category": "c37"
+     },
+     {
+      "category": "c38"
+     },
+     {
+      "category": "c39"
+     }
+    ],
+    "tags": {
+     "kind": "riff",
+     "retry": "False",
+     "n": 3,
+     "cookie": "[scrubbed]",
+     "api_key": "[scrubbed]",
+     "set-cookie": "[scrubbed]",
+     "nested": {
+      "text": "[scrubbed]",
+      "ok": [
+       1,
+       2
+      ]
+     }
+    },
+    "extra": {
+     "deep": {
+      "d": {
+       "d": {
+        "d": {
+         "d": {
+          "d": {
+           "d": {
+            "d": "[scrubbed]"
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "wide": {
+      "k000": 0,
+      "k001": 1,
+      "k002": 2,
+      "k003": 3,
+      "k004": 4,
+      "k005": 5,
+      "k006": 6,
+      "k007": 7,
+      "k008": 8,
+      "k009": 9,
+      "k010": 10,
+      "k011": 11,
+      "k012": 12,
+      "k013": 13,
+      "k014": 14,
+      "k015": 15,
+      "k016": 16,
+      "k017": 17,
+      "k018": 18,
+      "k019": 19,
+      "k020": 20,
+      "k021": 21,
+      "k022": 22,
+      "k023": 23,
+      "k024": 24,
+      "k025": 25,
+      "k026": 26,
+      "k027": 27,
+      "k028": 28,
+      "k029": 29,
+      "k030": 30,
+      "k031": 31,
+      "k032": 32,
+      "k033": 33,
+      "k034": 34,
+      "k035": 35,
+      "k036": 36,
+      "k037": 37,
+      "k038": 38,
+      "k039": 39,
+      "k040": 40,
+      "k041": 41,
+      "k042": 42,
+      "k043": 43,
+      "k044": 44,
+      "k045": 45,
+      "k046": 46,
+      "k047": 47,
+      "k048": 48,
+      "k049": 49,
+      "k050": 50,
+      "k051": 51,
+      "k052": 52,
+      "k053": 53,
+      "k054": 54,
+      "k055": 55,
+      "k056": 56,
+      "k057": 57,
+      "k058": 58,
+      "k059": 59,
+      "k060": 60,
+      "k061": 61,
+      "k062": 62,
+      "k063": 63
+     },
+     "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy...",
+     "list": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+     ],
+     "joke_text": "[scrubbed]",
+     "HTTP_AUTHORIZATION": "[scrubbed]",
+     "x-title": "[scrubbed]",
+     "search_query": "[scrubbed]",
+     "ip-address": "[scrubbed]",
+     "route": "/api/x",
+     "lineno": 3,
+     "function": "f",
+     "none": null,
+     "bool": true,
+     "float": 1.5
+    },
+    "user": "[scrubbed]",
+    "contexts": "[scrubbed]",
+    "threads": {
+     "values": [
+      {
+       "id": 1,
+       "crashed": false
+      },
+      {
+       "crashed": true,
+       "stacktrace": {
+        "frames": "not a list"
+       }
+      },
+      "junk",
+      {
+       "id": "main",
+       "stacktrace": {
+        "frames": [
+         {
+          "function": "g",
+          "context_line": "[scrubbed]"
+         },
+         "junk"
+        ]
+       }
+      }
+     ]
+    },
+    "modules": {
+     "x": "1"
+    },
+    "culprit": "c",
+    "fingerprint": [
+     "x"
+    ],
+    "stacktrace": {
+     "frames": []
+    }
+   },
+   "flat_keys": [
+    "HTTP_AUTHORIZATION",
+    "abs_path",
+    "app",
+    "app_name",
+    "bool",
+    "breadcrumbs",
+    "category",
+    "contexts",
+    "crashed",
+    "d",
+    "deep",
+    "dist",
+    "event_id",
+    "exception",
+    "extra",
+    "filename",
+    "float",
+    "frames",
+    "function",
+    "handled",
+    "id",
+    "in_app",
+    "ip-address",
+    "joke_text",
+    "k000",
+    "k001",
+    "k002",
+    "k003",
+    "k004",
+    "k005",
+    "k006",
+    "k007",
+    "k008",
+    "k009",
+    "k010",
+    "k011",
+    "k012",
+    "k013",
+    "k014",
+    "k015",
+    "k016",
+    "k017",
+    "k018",
+    "k019",
+    "k020",
+    "k021",
+    "k022",
+    "k023",
+    "k024",
+    "k025",
+    "k026",
+    "k027",
+    "k028",
+    "k029",
+    "k030",
+    "k031",
+    "k032",
+    "k033",
+    "k034",
+    "k035",
+    "k036",
+    "k037",
+    "k038",
+    "k039",
+    "k040",
+    "k041",
+    "k042",
+    "k043",
+    "k044",
+    "k045",
+    "k046",
+    "k047",
+    "k048",
+    "k049",
+    "k050",
+    "k051",
+    "k052",
+    "k053",
+    "k054",
+    "k055",
+    "k056",
+    "k057",
+    "k058",
+    "k059",
+    "k060",
+    "k061",
+    "k062",
+    "k063",
+    "kind",
+    "lineno",
+    "list",
+    "logentry",
+    "long",
+    "mechanism",
+    "message",
+    "module",
+    "n",
+    "name",
+    "nested",
+    "none",
+    "ok",
+    "os",
+    "retry",
+    "route",
+    "runtime",
+    "sdk",
+    "search_query",
+    "server_name",
+    "stacktrace",
+    "tags",
+    "text",
+    "threads",
+    "timestamp",
+    "trace",
+    "trace_id",
+    "transaction",
+    "type",
+    "value",
+    "values",
+    "version",
+    "wide",
+    "x-title"
+   ]
+  }
+ ],
+ "scrub_event_passthrough": [
+  [
+   "not a dict",
+   "not a dict"
+  ],
+  [
+   3,
+   3
+  ],
+  [
+   null,
+   null
+  ],
+  [
+   [
+    1,
+    2
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  [
+   {},
+   {}
+  ]
+ ],
+ "scrub_text": [
+  [
+   "KeyError: 'the bit'\n--- SELECT 1",
+   "KeyError: '...'"
+  ],
+  [
+   "statement 0 failed: \"quoted words\"",
+   "statement 0 failed: '...'"
+  ],
+  [
+   "a 'b' c \"d\" e 'unterminated",
+   "a '...' c '...' e 'unterminated"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   null,
+   ""
+  ],
+  [
+   0,
+   ""
+  ],
+  [
+   false,
+   ""
+  ],
+  [
+   12.5,
+   "12.5"
+  ],
+  [
+   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ],
+  [
+   "'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' tail",
+   "'...' tail"
+  ],
+  [
+   "ünïcödé 'wörds' and emoji 😀 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+   "ünïcödé '...' and emoji 😀 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+  ],
+  [
+   "line one 'a'\nline two 'b'",
+   "line one '...'"
+  ]
+ ],
+ "sensitive_key": [
+  [
+   "text",
+   true
+  ],
+  [
+   "TEXT",
+   true
+  ],
+  [
+   "Transcript",
+   true
+  ],
+  [
+   "set-cookie",
+   true
+  ],
+  [
+   "set_cookie",
+   true
+  ],
+  [
+   "joke_text",
+   true
+  ],
+  [
+   "search_query",
+   true
+  ],
+  [
+   "x-title",
+   true
+  ],
+  [
+   "HTTP_AUTHORIZATION",
+   true
+  ],
+  [
+   "route",
+   false
+  ],
+  [
+   "status",
+   false
+  ],
+  [
+   "method",
+   false
+  ],
+  [
+   "lineno",
+   false
+  ],
+  [
+   "release",
+   false
+  ],
+  [
+   "function",
+   false
+  ],
+  [
+   "ip-address",
+   true
+  ],
+  [
+   "ip_address",
+   true
+  ],
+  [
+   "api-key",
+   true
+  ],
+  [
+   "apikey",
+   true
+  ],
+  [
+   "key",
+   true
+  ],
+  [
+   "keys",
+   false
+  ],
+  [
+   "context",
+   true
+  ],
+  [
+   "textual",
+   true
+  ],
+  [
+   "q",
+   true
+  ],
+  [
+   "Q",
+   true
+  ],
+  [
+   " name ",
+   true
+  ],
+  [
+   "user",
+   true
+  ],
+  [
+   "users",
+   false
+  ],
+  [
+   "sub",
+   true
+  ],
+  [
+   "subject",
+   false
+  ],
+  [
+   "authentic",
+   true
+  ],
+  [
+   "token_count",
+   true
+  ],
+  [
+   "",
+   false
+  ],
+  [
+   "-",
+   false
+  ],
+  [
+   "_",
+   false
+  ],
+  [
+   "original-name",
+   true
+  ],
+  [
+   "original_name",
+   true
+  ],
+  [
+   "set-cookie-x",
+   true
+  ]
+ ],
+ "scrub_request": [
+  [
+   {
+    "method": "GET",
+    "url": "https://x/api?q=1",
+    "headers": {
+     "Content-Type": "a",
+     "content-length": "1",
+     "X-Title": "t",
+     "USER-AGENT": "ua",
+     "Host": "h",
+     "x-request-id": "r",
+     "Accept": "*/*"
+    }
+   },
+   {
+    "method": "GET",
+    "url": "https://x/api",
+    "headers": {
+     "Content-Type": "a",
+     "content-length": "1",
+     "USER-AGENT": "ua",
+     "Host": "h",
+     "x-request-id": "r",
+     "Accept": "*/*"
+    }
+   }
+  ],
+  [
+   {
+    "method": 1,
+    "url": null,
+    "headers": "not a dict",
+    "data": "x"
+   },
+   {}
+  ],
+  [
+   "not a dict",
+   {}
+  ],
+  [
+   {},
+   {}
+  ]
+ ],
+ "scrub_breadcrumb": [
+  [
+   {
+    "timestamp": 1,
+    "type": "http",
+    "category": "c",
+    "level": "info",
+    "message": "m",
+    "data": {
+     "route": "/x",
+     "status": 200
+    }
+   },
+   {
+    "timestamp": 1,
+    "type": "http",
+    "category": "c",
+    "level": "info",
+    "data": {
+     "route": "/x",
+     "status": 200
+    }
+   }
+  ],
+  [
+   {
+    "data": {
+     "route": [
+      "not",
+      "scalar"
+     ],
+     "status": null,
+     "method": true,
+     "duration_ms": 1.5
+    }
+   },
+   {
+    "data": {
+     "method": true,
+     "duration_ms": 1.5
+    }
+   }
+  ],
+  [
+   {
+    "data": {}
+   },
+   {}
+  ],
+  [
+   {},
+   {}
+  ],
+  [
+   "junk",
+   {}
+  ],
+  [
+   null,
+   {}
+  ]
+ ]
+}

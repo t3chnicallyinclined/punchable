@@ -1,0 +1,935 @@
+{
+ "sha": "0123456789abcdef0123",
+ "version": "0.1.0",
+ "worker_version": "0.1.0",
+ "api": {
+  "requests": [
+   [
+    "GET",
+    "/api/health",
+    200,
+    0.01
+   ],
+   [
+    "GET",
+    "/api/health?ready=1",
+    200,
+    0.012
+   ],
+   [
+    "GET",
+    "/api/joke/joke:abc123",
+    200,
+    0.02
+   ],
+   [
+    "GET",
+    "/api/joke/joke:def456",
+    404,
+    0.004
+   ],
+   [
+    "POST",
+    "/api/decision",
+    201,
+    0.1
+   ],
+   [
+    "HEAD",
+    "/api/health",
+    503,
+    0.0
+   ],
+   [
+    "BREW",
+    "/api/x",
+    999,
+    0.01
+   ],
+   [
+    "GET",
+    "/api/worker/jobs/job:riff-0a1b2c3d4e5f/result",
+    200,
+    0.3
+   ],
+   [
+    "DELETE",
+    "/a/b/c/d/e/f/g/h",
+    204,
+    -1.0
+   ],
+   [
+    "GET",
+    "/api/search?q=words",
+    "200",
+    0.05
+   ]
+  ],
+  "jobs": [
+   {
+    "status": "queued",
+    "kind": "riff",
+    "waiting_for": null,
+    "created_at": "2026-10-27T10:00:00+00:00"
+   },
+   {
+    "status": "queued",
+    "kind": "riff",
+    "waiting_for": null,
+    "created_at": "2026-10-27T10:00:00+00:00"
+   },
+   {
+    "status": "queued",
+    "kind": "process_set",
+    "waiting_for": "transcriber",
+    "created_at": "2026-10-20T10:00:00+00:00"
+   },
+   {
+    "status": "queued",
+    "waiting_for": "transcriber",
+    "created_at": "not a date"
+   },
+   {
+    "status": "claimed",
+    "kind": "ask_chat"
+   },
+   {
+    "status": "done",
+    "kind": "process_set",
+    "waiting_for": null
+   },
+   "junk",
+   7
+  ],
+  "metrics": {
+   "pk_http_requests_total": {
+    "labels": [
+     "method",
+     "route",
+     "status"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "method",
+       "DELETE"
+      ],
+      [
+       "route",
+       "/a/b/c/d/e/f/..."
+      ],
+      [
+       "status",
+       "204"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/health"
+      ],
+      [
+       "status",
+       "200"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/joke/{id}"
+      ],
+      [
+       "status",
+       "200"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/joke/{id}"
+      ],
+      [
+       "status",
+       "404"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/search"
+      ],
+      [
+       "status",
+       "200"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/worker/jobs/{id}/result"
+      ],
+      [
+       "status",
+       "200"
+      ]
+     ],
+     [
+      [
+       "method",
+       "HEAD"
+      ],
+      [
+       "route",
+       "/api/health"
+      ],
+      [
+       "status",
+       "503"
+      ]
+     ],
+     [
+      [
+       "method",
+       "OTHER"
+      ],
+      [
+       "route",
+       "/api/x"
+      ],
+      [
+       "status",
+       "unknown"
+      ]
+     ],
+     [
+      [
+       "method",
+       "POST"
+      ],
+      [
+       "route",
+       "/api/decision"
+      ],
+      [
+       "status",
+       "201"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"method\",\"DELETE\"],[\"route\",\"/a/b/c/d/e/f/...\"],[\"status\",\"204\"]]": 1.0,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/health\"],[\"status\",\"200\"]]": 2.0,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/joke/{id}\"],[\"status\",\"200\"]]": 1.0,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/joke/{id}\"],[\"status\",\"404\"]]": 1.0,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/search\"],[\"status\",\"200\"]]": 1.0,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/worker/jobs/{id}/result\"],[\"status\",\"200\"]]": 1.0,
+     "[[\"method\",\"HEAD\"],[\"route\",\"/api/health\"],[\"status\",\"503\"]]": 1.0,
+     "[[\"method\",\"OTHER\"],[\"route\",\"/api/x\"],[\"status\",\"unknown\"]]": 1.0,
+     "[[\"method\",\"POST\"],[\"route\",\"/api/decision\"],[\"status\",\"201\"]]": 1.0
+    },
+    "counts": {},
+    "help": "HTTP requests by method, route pattern and status",
+    "type": "counter"
+   },
+   "pk_http_request_duration_seconds": {
+    "labels": [
+     "method",
+     "route"
+    ],
+    "buckets": [
+     0.005,
+     0.01,
+     0.025,
+     0.05,
+     0.1,
+     0.25,
+     0.5,
+     1.0,
+     2.5,
+     5.0,
+     10.0,
+     30.0,
+     60.0
+    ],
+    "series": [
+     [
+      [
+       "method",
+       "DELETE"
+      ],
+      [
+       "route",
+       "/a/b/c/d/e/f/..."
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/health"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/joke/{id}"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/search"
+      ]
+     ],
+     [
+      [
+       "method",
+       "GET"
+      ],
+      [
+       "route",
+       "/api/worker/jobs/{id}/result"
+      ]
+     ],
+     [
+      [
+       "method",
+       "HEAD"
+      ],
+      [
+       "route",
+       "/api/health"
+      ]
+     ],
+     [
+      [
+       "method",
+       "OTHER"
+      ],
+      [
+       "route",
+       "/api/x"
+      ]
+     ],
+     [
+      [
+       "method",
+       "POST"
+      ],
+      [
+       "route",
+       "/api/decision"
+      ]
+     ]
+    ],
+    "values": {},
+    "counts": {
+     "[[\"method\",\"DELETE\"],[\"route\",\"/a/b/c/d/e/f/...\"]]": 1,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/health\"]]": 2,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/joke/{id}\"]]": 2,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/search\"]]": 1,
+     "[[\"method\",\"GET\"],[\"route\",\"/api/worker/jobs/{id}/result\"]]": 1,
+     "[[\"method\",\"HEAD\"],[\"route\",\"/api/health\"]]": 1,
+     "[[\"method\",\"OTHER\"],[\"route\",\"/api/x\"]]": 1,
+     "[[\"method\",\"POST\"],[\"route\",\"/api/decision\"]]": 1
+    },
+    "help": "HTTP request latency by route pattern",
+    "type": "histogram"
+   },
+   "pk_http_requests_in_flight": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 1.0
+    },
+    "counts": {},
+    "help": "Requests being served right now (not /api/live)",
+    "type": "gauge"
+   },
+   "pk_live_clients": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 2.0
+    },
+    "counts": {},
+    "help": "Open /api/live WebSocket clients",
+    "type": "gauge"
+   },
+   "pk_db_query_duration_seconds": {
+    "labels": [],
+    "buckets": [
+     0.001,
+     0.0025,
+     0.005,
+     0.01,
+     0.025,
+     0.05,
+     0.1,
+     0.25,
+     0.5,
+     1.0,
+     2.5,
+     5.0,
+     10.0
+    ],
+    "series": [
+     []
+    ],
+    "values": {},
+    "counts": {
+     "[]": 2
+    },
+    "help": "SurrealDB round trips (Rpc.query)",
+    "type": "histogram"
+   },
+   "pk_build_info": {
+    "labels": [
+     "sha",
+     "version"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "sha",
+       "0123456789ab"
+      ],
+      [
+       "version",
+       "0.1.0"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"sha\",\"0123456789ab\"],[\"version\",\"0.1.0\"]]": 1.0
+    },
+    "counts": {},
+    "help": "1, labelled with the version and the git sha of this image",
+    "type": "gauge"
+   },
+   "pk_jobs_queued": {
+    "labels": [
+     "kind"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "kind",
+       "process_set"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "riff"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "unknown"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"kind\",\"process_set\"]]": 1.0,
+     "[[\"kind\",\"riff\"]]": 2.0,
+     "[[\"kind\",\"unknown\"]]": 1.0
+    },
+    "counts": {},
+    "help": "Queued jobs by kind",
+    "type": "gauge"
+   },
+   "pk_jobs_waiting_transcriber": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 2.0
+    },
+    "counts": {},
+    "help": "Queued jobs waiting for a transcriber (the phone)",
+    "type": "gauge"
+   },
+   "pk_jobs_waiting_transcriber_oldest_seconds": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {},
+    "counts": {},
+    "help": "Age of the oldest job waiting for a transcriber",
+    "type": "gauge"
+   }
+  }
+ },
+ "worker": {
+  "charges": [
+   [
+    "claude-sonnet-4-5",
+    {
+     "input_tokens": 100,
+     "output_tokens": 20,
+     "cache_read_input_tokens": 5,
+     "cache_creation_input_tokens": 0
+    },
+    0.0123,
+    "riff"
+   ],
+   [
+    "Claude-Sonnet-4-5 ",
+    {
+     "input_tokens": 10,
+     "output_tokens": "7",
+     "cache_creation_input_tokens": 300
+    },
+    0.002,
+    "ask_chat"
+   ],
+   [
+    "bad model/id",
+    {
+     "input_tokens": null
+    },
+    -1.0,
+    ""
+   ],
+   [
+    null,
+    {},
+    0.5,
+    "ttttttttttttttttttttttttttttttttttttttttt"
+   ]
+  ],
+  "budget": {
+   "daily_usd": 5.0,
+   "spent_usd": 1.25,
+   "calls": 3,
+   "tasks": {
+    "riff": 1.25
+   },
+   "over": false
+  },
+  "metrics": {
+   "pk_worker_jobs_claimed_total": {
+    "labels": [
+     "kind"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "kind",
+       "ask_chat"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "other"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "riff"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "unknown"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"kind\",\"ask_chat\"]]": 1.0,
+     "[[\"kind\",\"other\"]]": 1.0,
+     "[[\"kind\",\"riff\"]]": 1.0,
+     "[[\"kind\",\"unknown\"]]": 1.0
+    },
+    "counts": {},
+    "help": "Jobs claimed, by kind",
+    "type": "counter"
+   },
+   "pk_worker_jobs_done_total": {
+    "labels": [
+     "kind"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "kind",
+       "riff"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "unknown"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"kind\",\"riff\"]]": 1.0,
+     "[[\"kind\",\"unknown\"]]": 1.0
+    },
+    "counts": {},
+    "help": "Jobs finished with a result, by kind",
+    "type": "counter"
+   },
+   "pk_worker_jobs_failed_total": {
+    "labels": [
+     "kind",
+     "retry"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "kind",
+       "ask_chat"
+      ],
+      [
+       "retry",
+       "true"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "other"
+      ],
+      [
+       "retry",
+       "false"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"kind\",\"ask_chat\"],[\"retry\",\"true\"]]": 1.0,
+     "[[\"kind\",\"other\"],[\"retry\",\"false\"]]": 1.0
+    },
+    "counts": {},
+    "help": "Jobs that failed (retry=true went back to the queue)",
+    "type": "counter"
+   },
+   "pk_worker_job_duration_seconds": {
+    "labels": [
+     "kind"
+    ],
+    "buckets": [
+     1.0,
+     2.5,
+     5.0,
+     10.0,
+     20.0,
+     30.0,
+     60.0,
+     120.0,
+     300.0,
+     600.0,
+     900.0,
+     1800.0
+    ],
+    "series": [
+     [
+      [
+       "kind",
+       "ask_chat"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "other"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "riff"
+      ]
+     ],
+     [
+      [
+       "kind",
+       "unknown"
+      ]
+     ]
+    ],
+    "values": {},
+    "counts": {
+     "[[\"kind\",\"ask_chat\"]]": 1,
+     "[[\"kind\",\"other\"]]": 1,
+     "[[\"kind\",\"riff\"]]": 1,
+     "[[\"kind\",\"unknown\"]]": 1
+    },
+    "help": "Job wall time by kind",
+    "type": "histogram"
+   },
+   "pk_ai_calls_total": {
+    "labels": [
+     "model"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ]
+     ],
+     [
+      [
+       "model",
+       "unknown"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"model\",\"claude-sonnet-4-5\"]]": 2.0,
+     "[[\"model\",\"unknown\"]]": 2.0
+    },
+    "counts": {},
+    "help": "Model calls by model",
+    "type": "counter"
+   },
+   "pk_ai_tokens_total": {
+    "labels": [
+     "direction",
+     "model"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "direction",
+       "cache_read"
+      ],
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ]
+     ],
+     [
+      [
+       "direction",
+       "cache_write"
+      ],
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ]
+     ],
+     [
+      [
+       "direction",
+       "input"
+      ],
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ]
+     ],
+     [
+      [
+       "direction",
+       "output"
+      ],
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"direction\",\"cache_read\"],[\"model\",\"claude-sonnet-4-5\"]]": 5.0,
+     "[[\"direction\",\"cache_write\"],[\"model\",\"claude-sonnet-4-5\"]]": 300.0,
+     "[[\"direction\",\"input\"],[\"model\",\"claude-sonnet-4-5\"]]": 110.0,
+     "[[\"direction\",\"output\"],[\"model\",\"claude-sonnet-4-5\"]]": 27.0
+    },
+    "counts": {},
+    "help": "Tokens by model and direction",
+    "type": "counter"
+   },
+   "pk_ai_spend_usd_total": {
+    "labels": [
+     "model",
+     "task"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ],
+      [
+       "task",
+       "ask_chat"
+      ]
+     ],
+     [
+      [
+       "model",
+       "claude-sonnet-4-5"
+      ],
+      [
+       "task",
+       "riff"
+      ]
+     ],
+     [
+      [
+       "model",
+       "unknown"
+      ],
+      [
+       "task",
+       "?"
+      ]
+     ],
+     [
+      [
+       "model",
+       "unknown"
+      ],
+      [
+       "task",
+       "other"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"model\",\"claude-sonnet-4-5\"],[\"task\",\"ask_chat\"]]": 0.002,
+     "[[\"model\",\"claude-sonnet-4-5\"],[\"task\",\"riff\"]]": 0.0123,
+     "[[\"model\",\"unknown\"],[\"task\",\"?\"]]": 0.0,
+     "[[\"model\",\"unknown\"],[\"task\",\"other\"]]": 0.5
+    },
+    "counts": {},
+    "help": "USD charged since this process started",
+    "type": "counter"
+   },
+   "pk_worker_build_info": {
+    "labels": [
+     "sha",
+     "version"
+    ],
+    "buckets": [],
+    "series": [
+     [
+      [
+       "sha",
+       "0123456789ab"
+      ],
+      [
+       "version",
+       "0.1.0"
+      ]
+     ]
+    ],
+    "values": {
+     "[[\"sha\",\"0123456789ab\"],[\"version\",\"0.1.0\"]]": 1.0
+    },
+    "counts": {},
+    "help": "1, labelled with the version and git sha of this image",
+    "type": "gauge"
+   },
+   "pk_ai_spend_usd_today": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 1.25
+    },
+    "counts": {},
+    "help": "USD spent today (UTC) per engine/budget.py",
+    "type": "gauge"
+   },
+   "pk_ai_budget_usd": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 5.0
+    },
+    "counts": {},
+    "help": "Today's cap, PK_AI_DAILY_USD",
+    "type": "gauge"
+   },
+   "pk_ai_paused": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {
+     "[]": 0.0
+    },
+    "counts": {},
+    "help": "1 while the worker takes no job because today's cap is spent",
+    "type": "gauge"
+   },
+   "pk_worker_heartbeat_age_seconds": {
+    "labels": [],
+    "buckets": [],
+    "series": [
+     []
+    ],
+    "values": {},
+    "counts": {},
+    "help": "Seconds since the loop last touched its heartbeat",
+    "type": "gauge"
+   }
+  }
+ }
+}

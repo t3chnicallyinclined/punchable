@@ -1,0 +1,32 @@
+# EAS Build packs the repository ROOT when EAS_NO_VCS=1 (the phone build runs from app/, but the archive starts here).
+# Everything the iOS build does not need stays out: the Rust workspace and its multi-GB target/, the Python
+# services, the data tools, the infra. Found 2026-10-29: the copy of rust/target filled the disk and the upload failed
+# with ENOSPC. With this file present EAS ignores .gitignore, so the usual ignores are repeated below.
+rust/
+api/
+api-dev/
+creative/
+engine/
+worker/
+db/
+infer/
+gsync/
+tools/
+infra/
+docs/
+.github/
+*.py
+# the usual
+.git/
+**/node_modules/
+**/.expo/
+**/.expo-shared/
+**/ios/build/
+**/android/build/
+**/android/.gradle/
+**/dist/
+**/web-build/
+**/.DS_Store
+**/*.log
+**/__pycache__/
+**/.pytest_cache/

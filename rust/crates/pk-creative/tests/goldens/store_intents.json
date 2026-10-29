@@ -1,0 +1,580 @@
+{
+ "store": "intents",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "classify",
+    "id": "in:1",
+    "by": "ai:intent",
+    "data": {
+     "text": "what killed last night",
+     "kind": "question",
+     "rule": "leading_wh_or_aux",
+     "context": "tonight"
+    }
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "classify",
+    "id": "in:1",
+    "by": "ai:intent",
+    "data": {
+     "kind": "bit"
+    }
+   },
+   "error": "intent in:1 exists",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "classify",
+    "id": "in:2",
+    "by": "ai:intent",
+    "data": {
+     "kind": "poem"
+    }
+   },
+   "error": "kind must be question, bit or command",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "classify",
+    "id": "in:2",
+    "by": "owner",
+    "data": {
+     "kind": "bit"
+    }
+   },
+   "error": "a classification is the app's judgment: by must be ai:*",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "classify",
+    "id": "in:2",
+    "by": "ai:intent",
+    "data": {
+     "kind": "command",
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "context": ""
+    }
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "classify",
+    "id": "in:3",
+    "by": null,
+    "data": {
+     "kind": "bit"
+    }
+   },
+   "error": "a classification is the app's judgment: by must be ai:*",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "question",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "override",
+    "id": "in:1",
+    "by": "owner",
+    "data": {
+     "kind": "bit"
+    }
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "bit",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "owner",
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "override",
+    "id": "in:1",
+    "by": "owner",
+    "data": {
+     "kind": "x"
+    }
+   },
+   "error": "kind must be question, bit or command",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "bit",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "owner",
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "override",
+    "id": "in:1",
+    "by": "ai:intent",
+    "data": {
+     "kind": "bit"
+    }
+   },
+   "error": "an override is his tap, never the app's",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "bit",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "owner",
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "override",
+    "id": "in:1",
+    "by": "import:x",
+    "data": {
+     "kind": "command"
+    }
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "command",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "import:x",
+     "ref": null
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "acted",
+    "id": "in:1",
+    "by": "owner",
+    "data": {
+     "ref": "joke:new"
+    }
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "command",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "import:x",
+     "ref": "joke:new"
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "acted",
+    "id": "in:2",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "command",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "import:x",
+     "ref": "joke:new"
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "acted",
+    "id": "in:9",
+    "by": "owner",
+    "data": {
+     "ref": "x"
+    }
+   },
+   "error": "no intent in:9",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "command",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "import:x",
+     "ref": "joke:new"
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "retract",
+    "id": "in:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op retract",
+   "type": "ValueError",
+   "items": {
+    "in:1": {
+     "id": "in:1",
+     "text": "what killed last night",
+     "guess": "question",
+     "rule": "leading_wh_or_aux",
+     "kind": "command",
+     "context": "tonight",
+     "command": null,
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:00+00:00",
+     "overridden": true,
+     "override_by": "import:x",
+     "ref": "joke:new"
+    },
+    "in:2": {
+     "id": "in:2",
+     "text": "",
+     "guess": "command",
+     "rule": null,
+     "kind": "command",
+     "context": null,
+     "command": {
+      "op": "new_set",
+      "minutes": 7
+     },
+     "by": "ai:intent",
+     "at": "2026-10-29T12:00:04+00:00",
+     "overridden": false,
+     "override_by": null,
+     "ref": null
+    }
+   }
+  }
+ ]
+}

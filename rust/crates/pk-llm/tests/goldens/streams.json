@@ -1,0 +1,55 @@
+[
+ {
+  "name": "normal",
+  "model": "claude-sonnet-5-5",
+  "sse": "event: message_start\ndata: {\"type\": \"message_start\", \"message\": {\"id\": \"msg_golden\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"claude-sonnet-5-5\", \"content\": [], \"stop_reason\": null, \"stop_sequence\": null, \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 1, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"service_tier\": \"standard\"}}}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 0, \"content_block\": {\"type\": \"thinking\", \"thinking\": \"\", \"signature\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"thinking_delta\", \"thinking\": \"hmm\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"signature_delta\", \"signature\": \"sig==\"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 0}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 1, \"content_block\": {\"type\": \"text\", \"text\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 1, \"delta\": {\"type\": \"text_delta\", \"text\": \"Three \"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 1, \"delta\": {\"type\": \"text_delta\", \"text\": \"turns: \"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 1}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 2, \"content_block\": {\"type\": \"text\", \"text\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 2, \"delta\": {\"type\": \"text_delta\", \"text\": \"one, two\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 2, \"delta\": {\"type\": \"text_delta\", \"text\": \", three.\"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 2}\n\nevent: message_delta\ndata: {\"type\": \"message_delta\", \"delta\": {\"stop_reason\": \"end_turn\", \"stop_sequence\": null}, \"usage\": {\"output_tokens\": 90}}\n\nevent: message_stop\ndata: {\"type\": \"message_stop\"}\n\n",
+  "ok": true,
+  "text": "Three turns: one, two, three.",
+  "tokens_in": 1200,
+  "tokens_out": 90,
+  "cache_read": 0,
+  "cache_write": 0,
+  "usd": 0.0033,
+  "charged_usd": 0.0033
+ },
+ {
+  "name": "cache_hit",
+  "model": "claude-opus-5-5",
+  "sse": "event: message_start\ndata: {\"type\": \"message_start\", \"message\": {\"id\": \"msg_golden\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"claude-opus-5-5\", \"content\": [], \"stop_reason\": null, \"stop_sequence\": null, \"usage\": {\"input_tokens\": 40, \"output_tokens\": 1, \"cache_creation_input_tokens\": 700, \"cache_read_input_tokens\": 3000, \"service_tier\": \"standard\"}}}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 0, \"content_block\": {\"type\": \"text\", \"text\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"text_delta\", \"text\": \"{\\\"same\\\": true\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"text_delta\", \"text\": \", \\\"why\\\": \\\"x\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 0}\n\nevent: message_delta\ndata: {\"type\": \"message_delta\", \"delta\": {\"stop_reason\": \"end_turn\", \"stop_sequence\": null}, \"usage\": {\"output_tokens\": 12}}\n\nevent: message_stop\ndata: {\"type\": \"message_stop\"}\n\n",
+  "ok": true,
+  "text": "{\"same\": true, \"why\": \"x\"}",
+  "tokens_in": 40,
+  "tokens_out": 12,
+  "cache_read": 3000,
+  "cache_write": 700,
+  "usd": 0.0045,
+  "charged_usd": 0.0045
+ },
+ {
+  "name": "refusal",
+  "model": "claude-sonnet-5-5",
+  "sse": "event: message_start\ndata: {\"type\": \"message_start\", \"message\": {\"id\": \"msg_golden\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"claude-sonnet-5-5\", \"content\": [], \"stop_reason\": null, \"stop_sequence\": null, \"usage\": {\"input_tokens\": 5, \"output_tokens\": 1, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"service_tier\": \"standard\"}}}\n\nevent: message_delta\ndata: {\"type\": \"message_delta\", \"delta\": {\"stop_reason\": \"refusal\", \"stop_sequence\": null, \"stop_details\": {\"type\": \"refusal\", \"category\": \"general_harms\", \"explanation\": \"the request names a real person\"}}, \"usage\": {\"output_tokens\": 1}}\n\nevent: message_stop\ndata: {\"type\": \"message_stop\"}\n\n",
+  "ok": false,
+  "error": "Refusal",
+  "plain": "Claude declined this one: the request names a real person. Try rewording.",
+  "charged_usd": 2e-05
+ },
+ {
+  "name": "refusal_bare",
+  "model": "claude-sonnet-5-5",
+  "sse": "event: message_start\ndata: {\"type\": \"message_start\", \"message\": {\"id\": \"msg_golden\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"claude-sonnet-5-5\", \"content\": [], \"stop_reason\": null, \"stop_sequence\": null, \"usage\": {\"input_tokens\": 5, \"output_tokens\": 1, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"service_tier\": \"standard\"}}}\n\nevent: message_delta\ndata: {\"type\": \"message_delta\", \"delta\": {\"stop_reason\": \"refusal\", \"stop_sequence\": null, \"stop_details\": {\"type\": \"refusal\", \"category\": \"cyber\", \"explanation\": null}}, \"usage\": {\"output_tokens\": 1}}\n\nevent: message_stop\ndata: {\"type\": \"message_stop\"}\n\n",
+  "ok": false,
+  "error": "Refusal",
+  "plain": "Claude declined this one (cyber). Try rewording.",
+  "charged_usd": 2e-05
+ },
+ {
+  "name": "max_tokens",
+  "model": "claude-sonnet-5-5",
+  "sse": "event: message_start\ndata: {\"type\": \"message_start\", \"message\": {\"id\": \"msg_golden\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"claude-sonnet-5-5\", \"content\": [], \"stop_reason\": null, \"stop_sequence\": null, \"usage\": {\"input_tokens\": 11, \"output_tokens\": 1, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"service_tier\": \"standard\"}}}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 0, \"content_block\": {\"type\": \"thinking\", \"thinking\": \"\", \"signature\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"thinking_delta\", \"thinking\": \"hmm\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 0, \"delta\": {\"type\": \"signature_delta\", \"signature\": \"sig==\"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 0}\n\nevent: content_block_start\ndata: {\"type\": \"content_block_start\", \"index\": 1, \"content_block\": {\"type\": \"text\", \"text\": \"\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 1, \"delta\": {\"type\": \"text_delta\", \"text\": \"and then th\"}}\n\nevent: content_block_delta\ndata: {\"type\": \"content_block_delta\", \"index\": 1, \"delta\": {\"type\": \"text_delta\", \"text\": \"e meter said\"}}\n\nevent: content_block_stop\ndata: {\"type\": \"content_block_stop\", \"index\": 1}\n\nevent: message_delta\ndata: {\"type\": \"message_delta\", \"delta\": {\"stop_reason\": \"max_tokens\", \"stop_sequence\": null}, \"usage\": {\"output_tokens\": 16000}}\n\nevent: message_stop\ndata: {\"type\": \"message_stop\"}\n\n",
+  "ok": false,
+  "error": "CutShort",
+  "plain": "Claude ran out of room on this one (max_tokens 16000): the answer was cut short. Try a shorter idea.",
+  "charged_usd": 0.160022
+ }
+]

@@ -1,0 +1,1879 @@
+{
+ "store": "chats",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "new",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "joke": "joke:a"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": "joke:a"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "new",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": "again"
+    }
+   },
+   "error": "chat chat:1 exists",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": "joke:a"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "new",
+    "id": "chat:2",
+    "by": "owner",
+    "data": {
+     "joke": 5
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t1",
+     "q": "what killed on tuesday?",
+     "job": "job:9",
+     "sources": [
+      "unit:1",
+      "seg:s1#2"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t2",
+     "q": "   "
+    }
+   },
+   "error": "q is required",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t2"
+    }
+   },
+   "error": "q is required",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t2",
+     "q": 7
+    }
+   },
+   "error": "q is required",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t1",
+     "q": "again"
+    }
+   },
+   "error": "turn t1 exists",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "q": "no turn"
+    }
+   },
+   "error": "'turn'",
+   "type": "KeyError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "answer",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t9",
+     "result": {}
+    }
+   },
+   "error": "no turn t9",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:03+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "answer",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t1",
+     "result": {
+      "answer": "the meter bit",
+      "found": true,
+      "citations": []
+     }
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "answer",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t1",
+     "result": {}
+    }
+   },
+   "error": "turn t1 is done",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t2",
+     "q": "more?"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:12+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "fail",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t2",
+     "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "fail",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t2"
+    }
+   },
+   "error": "turn t2 is failed",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:15+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t3",
+     "q": "third"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:16+00:00",
+    "op": "fail",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t3"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:16+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:17+00:00",
+    "op": "ask",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "turn": "t4",
+     "q": "fourth",
+     "sources": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:17+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "thinking",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:18+00:00",
+    "op": "answer",
+    "id": "chat:1",
+    "by": "ai:ask",
+    "data": {
+     "turn": "t4"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:18+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:19+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": "  Renamed  "
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "Renamed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:20+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": ""
+    }
+   },
+   "error": "title must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "Renamed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:21+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   },
+   "error": "title must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "Renamed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:22+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "title": null
+    }
+   },
+   "error": "title must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "Renamed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:23+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "deleted": 1
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "Renamed",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:23+00:00",
+     "deleted": true,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:24+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {
+     "deleted": 0,
+     "title": "ok"
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "ok",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:25+00:00",
+    "op": "patch",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "ok",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:25+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:26+00:00",
+    "op": "ask",
+    "id": "chat:nope",
+    "by": "owner",
+    "data": {
+     "turn": "t1",
+     "q": "?"
+    }
+   },
+   "error": "no chat chat:nope",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "ok",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:25+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:27+00:00",
+    "op": "close",
+    "id": "chat:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op close",
+   "type": "ValueError",
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "ok",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:25+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:02+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:28+00:00",
+    "op": "patch",
+    "id": "chat:2",
+    "by": "owner",
+    "data": {
+     "title": 42
+    }
+   },
+   "ok": true,
+   "items": {
+    "chat:1": {
+     "id": "chat:1",
+     "title": "ok",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:25+00:00",
+     "deleted": false,
+     "turns": [
+      {
+       "id": "t1",
+       "q": "what killed on tuesday?",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:03+00:00",
+       "job": "job:9",
+       "sources": [
+        "unit:1",
+        "seg:s1#2"
+       ],
+       "result": {
+        "answer": "the meter bit",
+        "found": true,
+        "citations": []
+       },
+       "error": null,
+       "done_at": "2026-10-29T12:00:10+00:00"
+      },
+      {
+       "id": "t2",
+       "q": "more?",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:12+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "done_at": "2026-10-29T12:00:13+00:00"
+      },
+      {
+       "id": "t3",
+       "q": "third",
+       "status": "failed",
+       "asked_at": "2026-10-29T12:00:15+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": "failed",
+       "done_at": "2026-10-29T12:00:16+00:00"
+      },
+      {
+       "id": "t4",
+       "q": "fourth",
+       "status": "done",
+       "asked_at": "2026-10-29T12:00:17+00:00",
+       "job": null,
+       "sources": [],
+       "result": null,
+       "error": null,
+       "done_at": "2026-10-29T12:00:18+00:00"
+      }
+     ],
+     "joke": "joke:a"
+    },
+    "chat:2": {
+     "id": "chat:2",
+     "title": "42",
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "updated_at": "2026-10-29T12:00:28+00:00",
+     "deleted": false,
+     "turns": [],
+     "joke": null
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,375 @@
+{
+ "store": "account",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "provider": "chatgpt",
+     "training": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "send one or more of provider, training, upload_video, cellular",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "provider": "openai"
+    }
+   },
+   "error": "provider must be one of hosted, chatgpt, key, custom",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "provider": null
+    }
+   },
+   "error": "provider must be one of hosted, chatgpt, key, custom",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "colour": 1,
+     "alpha": 2
+    }
+   },
+   "error": "unknown setting(s): alpha, colour",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "cellular": "yes"
+    }
+   },
+   "error": "cellular must be true or false",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "training": 1
+    }
+   },
+   "error": "training must be true or false",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "settings",
+    "id": "other",
+    "by": "owner",
+    "data": {
+     "training": true
+    }
+   },
+   "error": "settings live on item 'settings'",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": true,
+     "upload_video": false,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "settings",
+    "id": "settings",
+    "by": "owner",
+    "data": {
+     "training": false,
+     "upload_video": true,
+     "cellular": false
+    }
+   },
+   "ok": true,
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": false,
+     "upload_video": true,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:08+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "request_deletion",
+    "id": "deletion",
+    "by": "owner",
+    "data": {
+     "by_sub": "sub-1",
+     "would_delete": [
+      "jokes",
+      "sets"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": false,
+     "upload_video": true,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:08+00:00"
+    },
+    "deletion": {
+     "id": "deletion",
+     "requests": [
+      {
+       "at": "2026-10-29T12:00:09+00:00",
+       "by_sub": "sub-1",
+       "would_delete": [
+        "jokes",
+        "sets"
+       ],
+       "status": "requested"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "request_deletion",
+    "id": "deletion",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": false,
+     "upload_video": true,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:08+00:00"
+    },
+    "deletion": {
+     "id": "deletion",
+     "requests": [
+      {
+       "at": "2026-10-29T12:00:09+00:00",
+       "by_sub": "sub-1",
+       "would_delete": [
+        "jokes",
+        "sets"
+       ],
+       "status": "requested"
+      },
+      {
+       "at": "2026-10-29T12:00:10+00:00",
+       "by_sub": null,
+       "would_delete": [],
+       "status": "requested"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "request_deletion",
+    "id": "settings",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "deletion requests live on item 'deletion'",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": false,
+     "upload_video": true,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:08+00:00"
+    },
+    "deletion": {
+     "id": "deletion",
+     "requests": [
+      {
+       "at": "2026-10-29T12:00:09+00:00",
+       "by_sub": "sub-1",
+       "would_delete": [
+        "jokes",
+        "sets"
+       ],
+       "status": "requested"
+      },
+      {
+       "at": "2026-10-29T12:00:10+00:00",
+       "by_sub": null,
+       "would_delete": [],
+       "status": "requested"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "close",
+    "id": "settings",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op close",
+   "type": "ValueError",
+   "items": {
+    "settings": {
+     "id": "settings",
+     "provider": "chatgpt",
+     "training": false,
+     "upload_video": true,
+     "cellular": false,
+     "updated_at": "2026-10-29T12:00:08+00:00"
+    },
+    "deletion": {
+     "id": "deletion",
+     "requests": [
+      {
+       "at": "2026-10-29T12:00:09+00:00",
+       "by_sub": "sub-1",
+       "would_delete": [
+        "jokes",
+        "sets"
+       ],
+       "status": "requested"
+      },
+      {
+       "at": "2026-10-29T12:00:10+00:00",
+       "by_sub": null,
+       "would_delete": [],
+       "status": "requested"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,440 @@
+{
+ "store": "suggestions",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "keep",
+    "id": "joke:a",
+    "by": "owner",
+    "data": {
+     "kind": "not_a_joke"
+    }
+   },
+   "ok": true,
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "keep",
+    "id": "joke:b",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "keep",
+    "id": "joke:c",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "keep",
+    "id": "joke:",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "id must be a joke id",
+   "type": "ValueError",
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "keep",
+    "id": "unit:a",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "id must be a joke id",
+   "type": "ValueError",
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "keep",
+    "id": "joke:a\n",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "keep",
+    "id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "id must be a joke id",
+   "type": "ValueError",
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "keep",
+    "id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "joke:a": {
+     "joke_id": "joke:a",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:00+00:00"
+    },
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    },
+    "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+     "joke_id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "unkeep",
+    "id": "joke:a",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    },
+    "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+     "joke_id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "unkeep",
+    "id": "joke:zz",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    },
+    "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+     "joke_id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "hide",
+    "id": "joke:b",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op hide",
+   "type": "ValueError",
+   "items": {
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    },
+    "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+     "joke_id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "unkeep",
+    "id": "nope",
+    "by": "owner"
+   },
+   "error": "id must be a joke id",
+   "type": "ValueError",
+   "items": {
+    "joke:b": {
+     "joke_id": "joke:b",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:01+00:00"
+    },
+    "joke:c": {
+     "joke_id": "joke:c",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:02+00:00"
+    },
+    "joke:a\n": {
+     "joke_id": "joke:a\n",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:05+00:00"
+    },
+    "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+     "joke_id": "joke:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "kept": true,
+     "kind": "not_a_joke",
+     "by": "owner",
+     "at": "2026-10-29T12:00:07+00:00"
+    }
+   }
+  }
+ ]
+}

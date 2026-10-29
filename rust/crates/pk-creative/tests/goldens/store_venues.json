@@ -1,0 +1,441 @@
+{
+ "store": "venues",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "pin",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "lat": 51.5,
+     "lon": -0.12
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "pin",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "lat": "51",
+     "lon": 0
+    }
+   },
+   "error": "lat and lon must be numbers",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "pin",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "lat": true,
+     "lon": 0
+    }
+   },
+   "error": "lat and lon must be numbers",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "pin",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "lat": 91,
+     "lon": 0
+    }
+   },
+   "error": "lat/lon out of range",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "pin",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "lat": 0,
+     "lon": -180.5
+    }
+   },
+   "error": "lat/lon out of range",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "pin",
+    "id": "v:2",
+    "by": "owner",
+    "data": {
+     "lat": 0,
+     "lon": 180
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:00+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "rename",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "name": "  The Cellar  "
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": "The Cellar",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:06+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "rename",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "name": "   "
+    }
+   },
+   "error": "name must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": "The Cellar",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:06+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "rename",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   },
+   "error": "name must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": "The Cellar",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:06+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "rename",
+    "id": "v:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "name must be 1-120 characters",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": "The Cellar",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:06+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "rename",
+    "id": "v:1",
+    "by": "owner",
+    "data": {
+     "name": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": 51.5,
+     "lon": -0.12,
+     "name": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:10+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "reset",
+    "id": "v:1",
+    "by": "import:places",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": null,
+     "lon": null,
+     "name": null,
+     "by": "import:places",
+     "updated_at": "2026-10-29T12:00:11+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "nuke",
+    "id": "v:3",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op nuke",
+   "type": "ValueError",
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": null,
+     "lon": null,
+     "name": null,
+     "by": "import:places",
+     "updated_at": "2026-10-29T12:00:11+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "rename",
+    "id": "v:4",
+    "by": "owner",
+    "data": {
+     "name": "Loft"
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": null,
+     "lon": null,
+     "name": null,
+     "by": "import:places",
+     "updated_at": "2026-10-29T12:00:11+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    },
+    "v:4": {
+     "venue_id": "v:4",
+     "lat": null,
+     "lon": null,
+     "name": "Loft",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:13+00:00"
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "pin",
+    "id": "v:4",
+    "by": "owner",
+    "data": {
+     "lat": -90,
+     "lon": 180
+    }
+   },
+   "ok": true,
+   "items": {
+    "v:1": {
+     "venue_id": "v:1",
+     "lat": null,
+     "lon": null,
+     "name": null,
+     "by": "import:places",
+     "updated_at": "2026-10-29T12:00:11+00:00"
+    },
+    "v:2": {
+     "venue_id": "v:2",
+     "lat": 0.0,
+     "lon": 180.0,
+     "name": null,
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:05+00:00"
+    },
+    "v:4": {
+     "venue_id": "v:4",
+     "lat": -90.0,
+     "lon": 180.0,
+     "name": "Loft",
+     "by": "owner",
+     "updated_at": "2026-10-29T12:00:14+00:00"
+    }
+   }
+  }
+ ]
+}

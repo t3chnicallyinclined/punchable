@@ -10,11 +10,21 @@ on:
     paths:
       - 'rust/**'
       - 'tools/explorer/kb.py'
+      - 'creative/**'
+      - 'engine/**'
+      - 'api-dev/metrics.py'
+      - 'api-dev/scrub.py'
+      - 'api-dev/search_api.py'
       - '.github/workflows/rust.yml'
   pull_request:
     paths:
       - 'rust/**'
       - 'tools/explorer/kb.py'
+      - 'creative/**'
+      - 'engine/**'
+      - 'api-dev/metrics.py'
+      - 'api-dev/scrub.py'
+      - 'api-dev/search_api.py'
       - '.github/workflows/rust.yml'
 
 permissions:
@@ -56,8 +66,19 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Regenerate the pk-kb goldens from the Python replay
-        run: python rust/tools/gen_kb_goldens.py
+      - name: Install the Python the generators import
+        # the API image's pins + the worker's SDK pin (gen_llm_goldens.py drives the real anthropic SDK through a mock
+        # transport; never the network) + numpy for the hash embedder. The bge model is not fetched here, so the
+        # pk-embed model goldens are regenerated only where PK_BGE_DIR is set (they stay as committed).
+        run: python -m pip install -r api/requirements.txt anthropic==0.104.1 jsonschema==4.26.0 httpx==0.28.1
+
+      - name: Regenerate the goldens from the Python they replace
+        run: |
+          python rust/tools/gen_kb_goldens.py
+          python rust/tools/gen_creative_goldens.py
+          python rust/tools/gen_obs_goldens.py
+          python rust/tools/gen_llm_goldens.py
+          python rust/tools/gen_embed_goldens.py
 
       - name: The committed goldens match
-        run: git diff --exit-code -- rust/crates/pk-kb/tests/goldens
+        run: git diff --exit-code -- rust/crates/*/tests/goldens

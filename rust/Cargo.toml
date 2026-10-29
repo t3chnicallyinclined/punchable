@@ -39,19 +39,27 @@ hex = "0.4"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+futures = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "signal"] }
 axum = { version = "0.8", features = ["ws", "json", "macros"] }
 tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
-surrealdb = { version = "3", default-features = false, features = ["protocol-ws", "rustls"] }
+eventsource-stream = "0.2"
+uuid = { version = "1", features = ["v4"] }
+# surrealdb: "=3.2.6" is the last 3.x whose family builds on the pinned 1.93.1 toolchain (rust-toolchain.toml): every
+# 3.3.x surrealdb-common uses std::hint::cold_path, stable only in a newer Rust. The client accepts servers
+# >=3.0.0-alpha.1, <4.0.0, so it talks to the 3.3.4 server. Moving the toolchain forward lets this become 3.3.x.
+surrealdb = { version = "=3.2.6", default-features = false, features = ["protocol-ws", "rustls"] }
 jsonwebtoken = "9"
 prometheus = "0.14"
 sentry = { version = "0.42", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }
 jsonschema = { version = "0.33", default-features = false }
 toml = "0.9"
-ort = { version = "=2.0.0-rc.10", default-features = false, features = ["ndarray"] }
-tokenizers = { version = "0.22", default-features = false, features = ["onig"] }
-ndarray = "0.16"
+# pk-embed: ort rc.15 wraps ONNX Runtime 1.31; default features download pyke's prebuilt binaries at build time
+ort = { version = "=2.0.0-rc.15", features = ["ndarray"] }
+# pk-embed: the same release as the Python wheel the goldens were made with (tokenizers==0.22.1)
+tokenizers = { version = "=0.22.1", default-features = false, features = ["onig"] }
+ndarray = "0.17"
 clap = { version = "4", features = ["derive"] }
 # tests
 insta = { version = "1", features = ["json"] }

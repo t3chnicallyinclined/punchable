@@ -1,0 +1,387 @@
+[
+ {
+  "quote": "the meter asked",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "  the meter asked  ",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "\"the meter asked\"",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "“the meter asked”",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "the meter asked...",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "...the meter asked…",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": "the meter asked",
+  "verify": "the meter asked",
+  "same": true
+ },
+ {
+  "quote": "The meter asked",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "the meter begged",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "me",
+  "source": "So the meter asked for my pronouns before my card",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "",
+  "source": "So the meter asked",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "the meter",
+  "source": "",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "   ",
+  "source": "So the meter asked",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "don't park there",
+  "source": "He said “don’t park there” — twice… really",
+  "askchat": "don’t park there",
+  "verify": "don’t park there",
+  "same": true
+ },
+ {
+  "quote": "\"don't park there\"",
+  "source": "He said “don’t park there” — twice… really",
+  "askchat": "don’t park there",
+  "verify": "don’t park there",
+  "same": true
+ },
+ {
+  "quote": "there\" - twice...",
+  "source": "He said “don’t park there” — twice… really",
+  "askchat": "there” — twice",
+  "verify": "there” — twice",
+  "same": true
+ },
+ {
+  "quote": "there - twice...",
+  "source": "He said “don’t park there” — twice… really",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "twice... really",
+  "source": "He said “don’t park there” — twice… really",
+  "askchat": "twice… really",
+  "verify": "twice… really",
+  "same": true
+ },
+ {
+  "quote": "twice… really",
+  "source": "He said “don’t park there” - twice... really",
+  "askchat": "twice... really",
+  "verify": "twice... really",
+  "same": true
+ },
+ {
+  "quote": "don’t park",
+  "source": "He said don't park there",
+  "askchat": "don't park",
+  "verify": "don't park",
+  "same": true
+ },
+ {
+  "quote": "a - b",
+  "source": "x a – b y a — b z",
+  "askchat": "a – b",
+  "verify": "a – b",
+  "same": true
+ },
+ {
+  "quote": "a — b",
+  "source": "x a – b y a — b z",
+  "askchat": "a — b",
+  "verify": "a — b",
+  "same": true
+ },
+ {
+  "quote": "a b c",
+  "source": "say a b c now",
+  "askchat": "a b c",
+  "verify": "a b c",
+  "same": true
+ },
+ {
+  "quote": "a b c",
+  "source": "say a b c now",
+  "askchat": "a b c",
+  "verify": "a b c",
+  "same": true
+ },
+ {
+  "quote": "a b c",
+  "source": "say a  b\tc now",
+  "askchat": "a  b\tc",
+  "verify": "a  b\tc",
+  "same": true
+ },
+ {
+  "quote": "a  b   c",
+  "source": "say a b c now",
+  "askchat": "a b c",
+  "verify": "a b c",
+  "same": true
+ },
+ {
+  "quote": "a b c",
+  "source": "say a\u001cb\u001dc now",
+  "askchat": "a\u001cb\u001dc",
+  "verify": "a\u001cb\u001dc",
+  "same": true
+ },
+ {
+  "quote": "\u001ca b c\u001f",
+  "source": "say a b c now",
+  "askchat": "a b c",
+  "verify": "a b c",
+  "same": true
+ },
+ {
+  "quote": "a\u001cb",
+  "source": "say a b now",
+  "askchat": "a b",
+  "verify": "a b",
+  "same": true
+ },
+ {
+  "quote": "a b c",
+  "source": "😀😀 a  b\u001cc",
+  "askchat": "a  b\u001cc",
+  "verify": "a  b\u001cc",
+  "same": true
+ },
+ {
+  "quote": "😀 a b",
+  "source": "x 😀 a  b y",
+  "askchat": "😀 a  b",
+  "verify": "😀 a  b",
+  "same": true
+ },
+ {
+  "quote": "😀 a b",
+  "source": "x 😀😀 a  b y",
+  "askchat": "😀 a  b",
+  "verify": "😀 a  b",
+  "same": true
+ },
+ {
+  "quote": "a……",
+  "source": "xx a… yy",
+  "askchat": null,
+  "verify": "a…",
+  "same": false
+ },
+ {
+  "quote": "\"x…\"",
+  "source": "x… and more",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "…",
+  "source": "………",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "..",
+  "source": "...",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "'tis",
+  "source": "well 'tis the season",
+  "askchat": "'tis",
+  "verify": "'tis",
+  "same": true
+ },
+ {
+  "quote": "′tis the",
+  "source": "well 'tis the season",
+  "askchat": "'tis the",
+  "verify": "'tis the",
+  "same": true
+ },
+ {
+  "quote": "rock ″n″ roll",
+  "source": "rock \"n\" roll",
+  "askchat": "rock \"n\" roll",
+  "verify": "rock \"n\" roll",
+  "same": true
+ },
+ {
+  "quote": "minus − one",
+  "source": "minus - one",
+  "askchat": "minus - one",
+  "verify": "minus - one",
+  "same": true
+ },
+ {
+  "quote": "much longer than the source",
+  "source": "short",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "the whole thing",
+  "source": "the whole thing",
+  "askchat": "the whole thing",
+  "verify": "the whole thing",
+  "same": true
+ },
+ {
+  "quote": "a\nb",
+  "source": "x a b y",
+  "askchat": "a b",
+  "verify": "a b",
+  "same": true
+ },
+ {
+  "quote": "a b",
+  "source": "x a\nb y",
+  "askchat": "a\nb",
+  "verify": "a\nb",
+  "same": true
+ },
+ {
+  "quote": "... a",
+  "source": "x a y",
+  "askchat": null,
+  "verify": null,
+  "same": true
+ },
+ {
+  "quote": "a b a b",
+  "source": "a b a b a b",
+  "askchat": "a b a b",
+  "verify": "a b a b",
+  "same": true
+ },
+ {
+  "quote": "a  b",
+  "source": "a b a  b",
+  "askchat": "a  b",
+  "verify": "a  b",
+  "same": true
+ },
+ {
+  "quote": "abc",
+  "source": "😀abc😀",
+  "askchat": "abc",
+  "verify": "abc",
+  "same": true
+ },
+ {
+  "quote": "‘abc’",
+  "source": "x 'abc' y",
+  "askchat": "abc",
+  "verify": "abc",
+  "same": true
+ },
+ {
+  "quote": "'abc'",
+  "source": "x ‘abc’ y",
+  "askchat": "abc",
+  "verify": "abc",
+  "same": true
+ },
+ {
+  "quote": "„‘quoted’",
+  "source": "it was “'quoted'” he said",
+  "askchat": "“'quoted",
+  "verify": "“'quoted",
+  "same": true
+ },
+ {
+  "quote": "..abc",
+  "source": "x ..abc y",
+  "askchat": "..abc",
+  "verify": "..abc",
+  "same": true
+ },
+ {
+  "quote": "abc....",
+  "source": "x abc. y",
+  "askchat": "abc.",
+  "verify": "abc.",
+  "same": true
+ },
+ {
+  "quote": "the",
+  "source": "the the",
+  "askchat": "the",
+  "verify": "the",
+  "same": true
+ },
+ {
+  "quote": "  abc",
+  "source": "zabcz",
+  "askchat": "abc",
+  "verify": "abc",
+  "same": true
+ },
+ {
+  "quote": "ab\u001cc",
+  "source": "x ab c",
+  "askchat": "ab c",
+  "verify": "ab c",
+  "same": true
+ }
+]

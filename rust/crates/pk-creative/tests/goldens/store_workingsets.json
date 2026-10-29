@@ -1,0 +1,4919 @@
+{
+ "store": "workingsets",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "promote",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "target_s": "900",
+     "bits": [
+      {
+       "joke_id": "joke:a",
+       "target_s": 300
+      },
+      {
+       "joke_id": "joke:b",
+       "target_s": 600
+      }
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "promote",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "title": "Set A",
+     "target_s": 1,
+     "bits": []
+    }
+   },
+   "error": "working set ws:1 exists",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "promote",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "'title'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "promote",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {
+     "title": "x"
+    }
+   },
+   "error": "'target_s'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "promote",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {
+     "title": "x",
+     "target_s": 1
+    }
+   },
+   "error": "'bits'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "promote",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {
+     "title": "x",
+     "target_s": "no",
+     "bits": []
+    }
+   },
+   "error": "invalid literal for int() with base 10: 'no'",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "promote",
+    "id": "ws:2",
+    "by": "ai:ws",
+    "data": {
+     "title": "Set B",
+     "target_s": 300,
+     "bits": [],
+     "note": "seeded by the model"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "new_version",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "a new version needs a note saying what changed",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:00+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "new_version",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note": "tightened",
+     "bits": [
+      {
+       "joke_id": "joke:a",
+       "target_s": 300
+      }
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "current": 2,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "new_version",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note": "longer",
+     "target_s": 1200,
+     "bits": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:09+00:00",
+     "current": 3,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "new_version",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note": "emptied",
+     "bits": []
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "current": 4,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "new_version",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note": "bad target",
+     "target_s": "soon"
+    }
+   },
+   "error": "invalid literal for int() with base 10: 'soon'",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:10+00:00",
+     "current": 4,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "lock_bit",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:a"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:12+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": true,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "unlock_bit",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:a"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "lock_bit",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "'joke_id'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:15+00:00",
+    "op": "lock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b",
+     "text": "the line",
+     "node": "unit:1"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:15+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:16+00:00",
+    "op": "lock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b",
+     "text": "the line"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:16+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:17+00:00",
+    "op": "lock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b"
+    }
+   },
+   "error": "'text'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:16+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:18+00:00",
+    "op": "lock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b",
+     "text": "second"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:18+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        },
+        {
+         "text": "second",
+         "node": null,
+         "ts": "2026-10-29T12:00:18+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:19+00:00",
+    "op": "unlock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:zz"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        },
+        {
+         "text": "second",
+         "node": null,
+         "ts": "2026-10-29T12:00:18+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:20+00:00",
+    "op": "unlock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b"
+    }
+   },
+   "error": "'text'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:19+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "the line",
+         "node": "unit:1",
+         "ts": "2026-10-29T12:00:15+00:00"
+        },
+        {
+         "text": "second",
+         "node": null,
+         "ts": "2026-10-29T12:00:18+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:21+00:00",
+    "op": "unlock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b",
+     "text": "the line"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:21+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": [
+        {
+         "text": "second",
+         "node": null,
+         "ts": "2026-10-29T12:00:18+00:00"
+        }
+       ]
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:22+00:00",
+    "op": "unlock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b",
+     "text": "second"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:22+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:23+00:00",
+    "op": "unlock_line",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "joke_id": "joke:b"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:23+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:24+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n1",
+     "joke_id": "joke:a",
+     "text": "  slow down  "
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:25+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n1",
+     "text": "again"
+    }
+   },
+   "error": "try note n1 exists",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:26+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n2",
+     "text": "   "
+    }
+   },
+   "error": "a try note needs its text (up to 500 characters)",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:27+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n2",
+     "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   },
+   "error": "a try note needs its text (up to 500 characters)",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:28+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "text": "no id"
+    }
+   },
+   "error": "'note_id'",
+   "type": "KeyError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:29+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n2",
+     "text": 5
+    }
+   },
+   "error": "'int' object has no attribute 'strip'",
+   "type": "AttributeError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:24+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:30+00:00",
+    "op": "try_add",
+    "id": "ws:1",
+    "by": "ai:ws",
+    "data": {
+     "note_id": "n2",
+     "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:30+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:31+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n1",
+     "done": 1
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:31+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": true,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": "2026-10-29T12:00:31+00:00",
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:32+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "n1",
+     "done": false
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:32+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ]
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:33+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "joke:a|put_back",
+     "done": true
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:33+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": true
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:34+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "joke:a|put_back",
+     "done": 0
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:34+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:35+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "done": true
+    }
+   },
+   "error": "note_id is required",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:34+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:36+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": "",
+     "done": true
+    }
+   },
+   "error": "note_id is required",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:34+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:37+00:00",
+    "op": "try_done",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "note_id": 7,
+     "done": true
+    }
+   },
+   "error": "note_id is required",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:34+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:38+00:00",
+    "op": "update",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {
+     "title": "Set A2"
+    }
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:38+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:39+00:00",
+    "op": "update",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {}
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:06+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:40+00:00",
+    "op": "delete",
+    "id": "ws:2",
+    "by": "owner"
+   },
+   "ok": true,
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:40+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": true,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:41+00:00",
+    "op": "update",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {
+     "title": "gone"
+    }
+   },
+   "error": "no working set ws:2",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:40+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": true,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:42+00:00",
+    "op": "update",
+    "id": "ws:nope",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "no working set ws:nope",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:40+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": true,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:43+00:00",
+    "op": "burn",
+    "id": "ws:1",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op burn",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:40+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": true,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:44+00:00",
+    "op": "try_done",
+    "id": "ws:2",
+    "by": "owner",
+    "data": {
+     "note_id": "n9",
+     "done": true
+    }
+   },
+   "error": "no working set ws:2",
+   "type": "ValueError",
+   "items": {
+    "ws:1": {
+     "id": "ws:1",
+     "title": "Set A2",
+     "storyboard_id": "sb:1",
+     "by": "owner",
+     "source": "his",
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "updated_at": "2026-10-29T12:00:39+00:00",
+     "current": 4,
+     "locks": {
+      "joke:a": {
+       "bit": false,
+       "lines": []
+      },
+      "joke:b": {
+       "bit": false,
+       "lines": []
+      }
+     },
+     "deleted": false,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:00+00:00",
+       "note": "v1: promoted from the storyboard",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        },
+        {
+         "joke_id": "joke:b",
+         "target_s": 600
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 2,
+       "created_at": "2026-10-29T12:00:08+00:00",
+       "note": "tightened",
+       "target_s": 900,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 3,
+       "created_at": "2026-10-29T12:00:09+00:00",
+       "note": "longer",
+       "target_s": 1200,
+       "bits": [
+        {
+         "joke_id": "joke:a",
+         "target_s": 300
+        }
+       ],
+       "by": "owner"
+      },
+      {
+       "v": 4,
+       "created_at": "2026-10-29T12:00:10+00:00",
+       "note": "emptied",
+       "target_s": 1200,
+       "bits": [],
+       "by": "owner"
+      }
+     ],
+     "try_notes": [
+      {
+       "id": "n1",
+       "joke_id": "joke:a",
+       "text": "slow down",
+       "done": false,
+       "created_at": "2026-10-29T12:00:24+00:00",
+       "done_at": null,
+       "by": "owner"
+      },
+      {
+       "id": "n2",
+       "joke_id": null,
+       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "done": false,
+       "created_at": "2026-10-29T12:00:30+00:00",
+       "done_at": null,
+       "by": "ai:ws"
+      }
+     ],
+     "try_done": {
+      "joke:a|put_back": false
+     }
+    },
+    "ws:2": {
+     "id": "ws:2",
+     "title": "Set B",
+     "storyboard_id": null,
+     "by": "ai:ws",
+     "source": "inferred",
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "updated_at": "2026-10-29T12:00:40+00:00",
+     "current": 1,
+     "locks": {},
+     "deleted": true,
+     "versions": [
+      {
+       "v": 1,
+       "created_at": "2026-10-29T12:00:06+00:00",
+       "note": "seeded by the model",
+       "target_s": 300,
+       "bits": [],
+       "by": "ai:ws"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

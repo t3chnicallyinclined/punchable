@@ -1,0 +1,1462 @@
+{
+ "store": "profile",
+ "owner": "owner",
+ "steps": [
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "op": "put",
+    "id": "profile:other",
+    "by": "owner",
+    "data": {
+     "text": "x"
+    }
+   },
+   "error": "profiles live on profile:voice",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:01+00:00",
+    "op": "put",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "text": 5
+    }
+   },
+   "error": "text must be a string",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:02+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": "nope"
+    }
+   },
+   "error": "kept and dropped must be lists",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:03+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": null
+    }
+   },
+   "error": "kept and dropped must be lists",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:04+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "a learn event names at least one line",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:05+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": [],
+     "dropped": []
+    }
+   },
+   "error": "a learn event names at least one line",
+   "type": "ValueError",
+   "items": {}
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:06+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": [
+      "  A kept   line ",
+      {
+       "text": "With bit",
+       "bit": "joke:a",
+       "date": "2026-02-03",
+       "edited": true
+      },
+      7,
+      {
+       "text": 5
+      },
+      "",
+      {
+       "text": "No bit",
+       "bit": ""
+      }
+     ],
+     "dropped": [
+      "a kept line",
+      "Passed over"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": null,
+     "updated_at": null,
+     "by": null,
+     "previous": null,
+     "learned": {
+      "kept": [
+       {
+        "text": "A kept line",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "With bit",
+        "bit": "joke:a",
+        "date": "2026-02-03",
+        "edited": true
+       },
+       {
+        "text": "No bit",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:06+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:07+00:00",
+    "op": "put",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "text": "first voice",
+     "kind": "voice"
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "first voice",
+     "updated_at": "2026-10-29T12:00:07+00:00",
+     "by": "owner",
+     "previous": null,
+     "learned": {
+      "kept": [
+       {
+        "text": "A kept line",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "With bit",
+        "bit": "joke:a",
+        "date": "2026-02-03",
+        "edited": true
+       },
+       {
+        "text": "No bit",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:06+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:08+00:00",
+    "op": "put",
+    "id": "profile:voice",
+    "by": "import:profile",
+    "data": {
+     "text": "second voice"
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "second voice",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "by": "import:profile",
+     "previous": {
+      "text": "first voice",
+      "updated_at": "2026-10-29T12:00:07+00:00",
+      "by": "owner"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "A kept line",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "With bit",
+        "bit": "joke:a",
+        "date": "2026-02-03",
+        "edited": true
+       },
+       {
+        "text": "No bit",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:06+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:09+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "dropped": [
+      "with BIT"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "second voice",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "by": "import:profile",
+     "previous": {
+      "text": "first voice",
+      "updated_at": "2026-10-29T12:00:07+00:00",
+      "by": "owner"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "A kept line",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "No bit",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "with BIT",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:09+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:10+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": [
+      "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "second voice",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "by": "import:profile",
+     "previous": {
+      "text": "first voice",
+      "updated_at": "2026-10-29T12:00:07+00:00",
+      "by": "owner"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [...]",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "A kept line",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "No bit",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "with BIT",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:10+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:11+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "kept": [
+      "kept line 0",
+      "kept line 1",
+      "kept line 2",
+      "kept line 3",
+      "kept line 4",
+      "kept line 5",
+      "kept line 6",
+      "kept line 7",
+      "kept line 8",
+      "kept line 9",
+      "kept line 10",
+      "kept line 11",
+      "kept line 12",
+      "kept line 13",
+      "kept line 14",
+      "kept line 15",
+      "kept line 16",
+      "kept line 17",
+      "kept line 18",
+      "kept line 19",
+      "kept line 20",
+      "kept line 21",
+      "kept line 22",
+      "kept line 23",
+      "kept line 24",
+      "kept line 25",
+      "kept line 26",
+      "kept line 27",
+      "kept line 28",
+      "kept line 29"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "second voice",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "by": "import:profile",
+     "previous": {
+      "text": "first voice",
+      "updated_at": "2026-10-29T12:00:07+00:00",
+      "by": "owner"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "kept line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 24",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "with BIT",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "Passed over",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:11+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:12+00:00",
+    "op": "learn",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "dropped": [
+      "dropped line 0",
+      "dropped line 1",
+      "dropped line 2",
+      "dropped line 3",
+      "dropped line 4",
+      "dropped line 5",
+      "dropped line 6",
+      "dropped line 7",
+      "dropped line 8",
+      "dropped line 9",
+      "dropped line 10",
+      "dropped line 11",
+      "dropped line 12",
+      "dropped line 13",
+      "dropped line 14",
+      "dropped line 15",
+      "dropped line 16",
+      "dropped line 17",
+      "dropped line 18",
+      "dropped line 19",
+      "dropped line 20",
+      "dropped line 21",
+      "dropped line 22",
+      "dropped line 23",
+      "dropped line 24",
+      "dropped line 25",
+      "dropped line 26",
+      "dropped line 27",
+      "dropped line 28",
+      "dropped line 29"
+     ],
+     "kept": [
+      "dropped line 3"
+     ]
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "second voice",
+     "updated_at": "2026-10-29T12:00:08+00:00",
+     "by": "import:profile",
+     "previous": {
+      "text": "first voice",
+      "updated_at": "2026-10-29T12:00:07+00:00",
+      "by": "owner"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "dropped line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "dropped line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 24",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 25",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:12+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:13+00:00",
+    "op": "put",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {
+     "text": "third",
+     "kind": null
+    }
+   },
+   "ok": true,
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "third",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "by": "owner",
+     "previous": {
+      "text": "second voice",
+      "updated_at": "2026-10-29T12:00:08+00:00",
+      "by": "import:profile"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "dropped line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "dropped line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 24",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 25",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:12+00:00"
+     }
+    }
+   }
+  },
+  {
+   "event": {
+    "ts": "2026-10-29T12:00:14+00:00",
+    "op": "forget",
+    "id": "profile:voice",
+    "by": "owner",
+    "data": {}
+   },
+   "error": "unknown op forget",
+   "type": "ValueError",
+   "items": {
+    "profile:voice": {
+     "id": "profile:voice",
+     "kind": "voice",
+     "text": "third",
+     "updated_at": "2026-10-29T12:00:13+00:00",
+     "by": "owner",
+     "previous": {
+      "text": "second voice",
+      "updated_at": "2026-10-29T12:00:08+00:00",
+      "by": "import:profile"
+     },
+     "learned": {
+      "kept": [
+       {
+        "text": "dropped line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 3",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "kept line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "dropped": [
+       {
+        "text": "dropped line 0",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 1",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 2",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 4",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 5",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 6",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 7",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 8",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 9",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 10",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 11",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 12",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 13",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 14",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 15",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 16",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 17",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 18",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 19",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 20",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 21",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 22",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 23",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 24",
+        "bit": null,
+        "date": "2026-10-29"
+       },
+       {
+        "text": "dropped line 25",
+        "bit": null,
+        "date": "2026-10-29"
+       }
+      ],
+      "updated_at": "2026-10-29T12:00:12+00:00"
+     }
+    }
+   }
+  }
+ ]
+}
