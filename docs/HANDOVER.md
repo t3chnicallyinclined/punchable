@@ -11,6 +11,7 @@ One comic's joke-writing app. It learns **his** voice from **his** material only
 every AI line that claims to be his is checked word for word against his notes first. Personal use first; the hosted
 copy at punchable.io is his. Product direction: `docs/UX_2026-10.md`. iPhone design rules: `docs/design/HIG.md`.
 Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone operating manual: `docs/IOS.md`.
+The Rust port of the services (the standing direction, the workspace, the migration gates): `docs/RUST.md`.
 
 ## Live right now
 
@@ -67,6 +68,11 @@ Found 2026-10-29 while building it: the decision builder refused `type: unit` ad
 writes them as a version of the main first.
 
 ## Standing owner decisions (do not re-open)
+
+- **The services are Rust from here (2026-10-29).** New services in Rust; the Python API, worker and engine are
+  ported in the order in `docs/RUST.md` (worker first, then API reads by route group, then every write at once,
+  then retire Python), each step gated by a byte-level differential against the Python it replaces. The app stays
+  TypeScript (React Native); Rust goes on the phone only as a library when a feature needs it.
 
 - Phone + frontier models only. The home PC / GPU worker is retired, never proposed.
 - TestFlight-only distribution; email-only sign-in on the phone; Google sign-in on the web only.
