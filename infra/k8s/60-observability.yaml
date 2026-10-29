@@ -156,9 +156,10 @@ spec:
             summary: "a recording has waited more than a day for a transcriber"
             description: "{{ $value | humanizeDuration }}: an upload or a YouTube import is queued as waiting_for=transcriber. Since 2026-10-27 transcription happens on the phone; the server never runs these."
             runbook: >-
-              Nothing is broken on the server. The owner finishes it on the phone (the app shows the waiting file), or the job is
-              dropped. If this fires for a set he already transcribed on the phone, the phone's POST /api/sets/transcript did not land:
-              check the API log for that route.
+              Nothing is broken on the server. Until the production app transcribes on the phone, EVERY set recorded on the phone
+              lands here. Drop the job: POST /api/jobs/<id>/drop {reason} with the owner's token, or from the worker pod a final
+              failure (ok=false, retry=false) on /api/worker/jobs/<id>/result. The audio file stays in the inbox. If this fires for
+              a set he already transcribed on the phone, POST /api/sets/transcript did not land: check the API log for that route.
 
     - name: punchable-data
       rules:

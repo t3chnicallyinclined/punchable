@@ -22,7 +22,7 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
 | Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. **Live since 2026-10-28 20:42 UTC**: 159 typed ideas (3 have no text) and all 675 moments embedded; a fused query takes ~0.1 s on the pod; API memory 450 MiB idle, ~560 MiB during a sweep (limit 1 Gi). |
 | Crash reporting | Self-hosted Bugsink at bugs.punchable.io. API wired and proven end to end. App DSN is an EAS environment variable (`EXPO_PUBLIC_SENTRY_DSN`, pulled by each `eas.json` profile's `environment`). Worker wired 2026-10-28 (`worker/crashreport.py`, the same Secret, release `punchable-worker@…`, tags kind/retry; a budget pause is never reported) and live since 2026-10-28 20:35 UTC (`crash reporting on: punchable-worker@…` in its log). |
-| Metrics | Prometheus scrape of API + worker, Grafana dashboard, 13 alert rules. **Two alerts can never fire** (backup missed, certificate expiring): the cluster has no kube-state-metrics and cert-manager is not scraped. Fix needs the owner's go (shared namespace). |
+| Metrics | Prometheus scrape of API + worker, Grafana dashboard, 13 alert rules. Alerts for `service=punchable` have their own Alertmanager route and receiver since 2026-10-29 (`[Punchable …]` subject, runbook in the body); the sender becomes `alerts@punchable.io` once the owner verifies punchable.io in Resend. **Two alerts can never fire** (backup missed, certificate expiring): the cluster has no kube-state-metrics and cert-manager is not scraped. Fix needs the owner's go (shared namespace). |
 | DNS | `infra/dns/cf_dns.py plan` / `apply` with a token scoped to this one zone (DNS Write + Zone Read). Records: apex, auth, bugs. |
 
 ## What the app does today (phone + web)
@@ -114,14 +114,20 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    dead alerts work (config reload, no app downtime).
 3. Worker crash reporting is live; still unproven end to end: run the worker command under "Verifying a crash lands" in
    `infra/OBSERVABILITY.md` once and see the event in Bugsink.
-4. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
-5. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
-6. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
-7. Move the Google Docs sync off the PC (last PC dependency). Its tests (`gsync/tests/test_auth.py`) need the
+4. **Recorded sets are a dead end right now (found 2026-10-29).** A set taped on the phone is uploaded and queued as
+   `process_set`, which nothing runs: the server stopped transcribing on 2026-10-27 and the shipped app does not
+   transcribe (the SpeechTranscriber bridge exists only in a separate build). Eight test tapes sat there and fired the
+   alert; dropped (`POST /api/jobs/<id>/drop`). Owner decision needed: on-device transcription in the production build
+   (ios-dev-expert; the standing decision) or a cloud speech API from the hosted worker (audio leaves the box). Until
+   then the Record screen should say so.
+5. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
+6. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
+7. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
+8. Move the Google Docs sync off the PC (last PC dependency). Its tests (`gsync/tests/test_auth.py`) need the
    google-auth library, which this PC's Python no longer has: four of them fail locally for that reason alone.
-8. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
-9. Pin the Bugsink image by digest.
-10. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
+9. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
+10. Pin the Bugsink image by digest.
+11. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
 Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
 now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).

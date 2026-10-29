@@ -57,6 +57,7 @@ series and that no label value on the page is an id.
 | PunchableWorkerHeartbeatStale | heartbeat age > 10 m | warning | a hung job; the liveness probe restarts at 20 m; restart sooner by hand if needed |
 | PunchableAiBudgetPaused | `pk_ai_paused == 1` for 15 m | warning | expected after a heavy day; raise `PK_AI_DAILY_USD` + `rollout worker` to continue today |
 | PunchableJobsWaitingForTranscriber | oldest waiting job > 24 h, for 1 h | info | nothing broken on the server: the owner finishes it on the phone, or drops it |
+| PunchableJobsWaitingForTranscriber | an upload or YouTube import queued > 1 day | info | nothing transcribes on the server since 2026-10-27 and the shipped app does not transcribe yet, so this fires for every set recorded on the phone. Drop it: `POST /api/jobs/<id>/drop {reason}` (his token), or from the worker pod as a final failure (`api-dev/tests/test_jobs_waiting.py` shows the rule). Fired 2026-10-29 for eight test tapes; dropped. The real fix is on-device transcription in the production app (open item). |
 | PunchableSurrealDbRestarted | any restart of `surrealdb-0` in 1 h | warning | `describe pod`: OOMKilled at 512 Mi → memtable; then confirm the last backup is recent |
 | PunchableBackupFailed | a `punchable-backup*` Job failed, 10 m | critical | the Job's log (one redacted line): R2 token, a refused export, SurrealDB down; `ship.sh backup-now` |
 | PunchableBackupMissed | no success for 36 h (VERIFY the metric, below) | critical | CronJob suspended? missed its deadline? `backup-now`, `backup-list` |
@@ -64,10 +65,16 @@ series and that no label value on the page is an id.
 | PunchablePodCrashLooping | > 3 restarts in 1 h | warning | `describe pod`, `logs --previous` |
 | PunchableBugsinkDown | no available replica 10 m | warning | its log; a PVC or SECRET_KEY problem; `ship.sh bugsink` |
 
-**Where they go.** The same place as every other alert on the box: the shared Alertmanager in namespace
-`observability` (routes on `severity`: critical repeats hourly, the rest every 4 h; inhibits on `service`), which
-emails the owner, and the host's alert poller, which posts firing alerts to the owner's chat channel. No new
-receiver, no new credential.
+**Where they go.** The shared Alertmanager in namespace `observability`, which emails the owner through Resend. Since
+2026-10-29 every alert with `service=punchable` takes its **own route and receiver** (`punchable-email`: subject
+`[Punchable FIRING] …`, the rule's `runbook` annotation in the body, a pointer to this file) and never also goes out
+through the other app's receiver. The config's source is the repo of the app that owns the shared Alertmanager (its `infra/k8s/observability/alertmanager.yaml`, commit
+3108c3d4); it is a subPath mount, so a change needs `kubectl create configmap … --dry-run=client -o yaml | kubectl apply`
+**and** `kubectl -n observability rollout restart deploy/alertmanager` (a reload alone keeps the old file). Critical
+repeats hourly, the rest every 4 h. The sender is still the other app's address until **punchable.io is a verified sending
+domain in Resend** (the cluster's Resend key is send-only, so that is a dashboard step for the owner); then `from:`
+becomes `Punchable Alerts <alerts@punchable.io>` and nothing else changes. The DNS records Resend asks for go into
+`infra/dns/cf_dns.py` WANT and `ship.sh dns apply`.
 
 **Two rules to VERIFY on the live Prometheus before trusting them** (a rule on a metric nobody emits never fires and
 looks exactly like a rule that is passing):
