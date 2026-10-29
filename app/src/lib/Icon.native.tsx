@@ -16,7 +16,7 @@ const SF: Record<IconName, SFSymbol> = {
   boards: 'rectangle.grid.1x2', calendar: 'calendar', notes: 'note.text', mic: 'mic.fill', upload: 'square.and.arrow.up',
   photos: 'photo.on.rectangle', lock: 'lock', unlock: 'lock.open', search: 'magnifyingglass', grip: 'line.3.horizontal',
   up: 'arrow.up', down: 'arrow.down', trash: 'trash', list: 'list.bullet', map: 'map', star: 'star', more: 'ellipsis',
-  play: 'play.fill', user: 'person.crop.circle', tonight: 'moon.stars.fill', bits: 'square.grid.2x2.fill',
+  play: 'play.fill', record: 'record.circle', user: 'person.crop.circle', tonight: 'moon.stars.fill', bits: 'square.grid.2x2.fill',
   sets: 'list.bullet.rectangle.portrait.fill', plus: 'plus', chat: 'text.bubble', chevron: 'chevron.right',
 };
 

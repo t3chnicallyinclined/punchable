@@ -3,6 +3,10 @@
 // "N pairs look like the same idea → Review" when the merge judge found some. One list request, virtualized.
 // A search also asks /api/search for the taped moments that match ("In your sets": lib/MomentRow), so a word he half
 // remembers saying on stage comes back with where and when, not only the bits that carry it.
+// 2026-10-29 (owner: "like Google Docs"): the list opens on what he touched last (sort=recent, the server's
+// `touched` timestamp: his last add/edit/confirm, else the newest version, night or first day); Performed and
+// Strongest stay as choices in the toolbar's sort menu (HIG/pull-down-buttons: a sort is a menu, not a segmented
+// control, which is for views). "+" in the navigation bar makes a new bit (the composer, like Tonight's "+").
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -19,6 +23,9 @@ import { Avatar, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, use
 import { Screen } from '@/lib/Screen';
 
 type View_ = 'bits' | 'notes';
+type Sort = 'recent' | 'performed' | 'strongest';
+const SORT_WORD: Record<Sort, string> = { recent: 'Recent', performed: 'Performed', strongest: 'Strongest' };
+const SORTS: Sort[] = ['recent', 'performed', 'strongest'];
 const native = Platform.OS !== 'web';
 type Status = 'kills' | 'working' | 'fresh' | 'resting';
 const STATUSES: Status[] = ['kills', 'working', 'fresh', 'resting'];
@@ -65,6 +72,7 @@ const Row = memo(function Row({ j }: { j: JokeSummary }) {
 export default function Bits() {
   const wide = useWide();
   const [view, setView] = useState<View_>('bits');
+  const [sort, setSort] = useState<Sort>('recent');
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
   const [focused, setFocused] = useState(false);
@@ -74,7 +82,8 @@ export default function Bits() {
     return () => clearTimeout(t);
   }, [q]);
   const question = dq.length >= 3 && isQuestion(dq);
-  const list = useApi<{ items: JokeSummary[]; total: number }>(question ? null : `/api/jokes?sort=performed&limit=500${dq ? `&q=${encodeURIComponent(dq)}&mode=hybrid` : ''}`, { poll: 60000 });
+  // a search is ranked by relevance (the server ignores sort when q is set and mode=hybrid); the plain list by his sort
+  const list = useApi<{ items: JokeSummary[]; total: number }>(question ? null : `/api/jokes?sort=${sort}&limit=500${dq ? `&q=${encodeURIComponent(dq)}&mode=hybrid` : ''}`, { poll: 60000 });
   // the taped moments that match the same words (api-dev/search_api.py); the bits above come from the list request
   const found = useApi<SearchResult>(dq && !question ? `/api/search?q=${encodeURIComponent(dq)}&limit=6` : null);
   const moments = dq && !question ? found.data?.moments || [] : [];
@@ -91,6 +100,7 @@ export default function Bits() {
     return c;
   }, [items]);
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
+  const newBit = useCallback(() => router.push({ pathname: '/say', params: { focus: '1', screen: 'bits' } } as any), []);
   const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
   // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types
   const search: SearchBarProps | undefined = native ? {
@@ -100,12 +110,17 @@ export default function Bits() {
   // HIG/segmented-controls: Map is a navigation, not a view, so it is a header button, not a third segment
   const mapBtn = native ? (
     <Stack.Toolbar placement="right">
+      <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" onPress={newBit}>New bit</Stack.Toolbar.Button>
+      <Stack.Toolbar.Menu icon="arrow.up.arrow.down" accessibilityLabel={`Sort: ${SORT_WORD[sort]}`}>
+        {SORTS.map((k) => <Stack.Toolbar.MenuAction key={k} icon={k === sort ? 'checkmark' : undefined} onPress={() => { haptics.selection(); setSort(k); }}>{SORT_WORD[k]}</Stack.Toolbar.MenuAction>)}
+      </Stack.Toolbar.Menu>
       <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
       <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
     </Stack.Toolbar>
   ) : null;
   const right = native ? undefined : (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <IconBtn testID="bits-new" label="New bit" onPress={newBit}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></IconBtn>
       <IconBtn testID="bits-map" label="Map of all your bits" onPress={() => router.push('/map' as any)}><Icon name="map" size={22} color={C.amber} /></IconBtn>
       <Avatar />
     </View>
@@ -139,6 +154,17 @@ export default function Bits() {
         </View>
       )}
       <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
+      {view === 'bits' && !dq && (
+        <View testID="bits-sort" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Sort">
+          <T v="small" style={{ marginRight: 4 }}>{native ? 'Sorted by' : 'Sort'}</T>
+          {SORTS.map((k) => (
+            <Pressable key={k} testID={`bits-sort-${k}`} accessibilityRole="radio" accessibilityState={{ selected: k === sort }} onPress={() => { haptics.selection(); setSort(k); }} hitSlop={6}
+              style={{ minHeight: 32, paddingHorizontal: 10, borderRadius: 16, justifyContent: 'center', backgroundColor: k === sort ? C.card2 : 'transparent' }}>
+              <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: k === sort ? F.semi : F.body, fontSize: 13, color: k === sort ? C.text : C.mut2 }}>{SORT_WORD[k]}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       {view === 'bits' && !!pairs && (
         <Pressable testID="merge-banner" accessibilityRole="button" onPress={() => router.push('/merge' as any)}
           style={{ padding: 12, borderRadius: 14, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>

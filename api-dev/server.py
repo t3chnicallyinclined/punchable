@@ -65,7 +65,7 @@ HIT_RATINGS = {"killed", "worked"}
 TONIGHT_ID = "list:tonight"
 AUDIO_EXT = {".webm", ".m4a", ".mp3", ".wav", ".ogg", ".opus", ".mp4", ".mov", ".aac", ".flac", ".caf", ".3gp"}
 MAX_JOKES_PAGE = 5000      # the Desk pages 500 at a time; a whole-catalogue page is allowed
-JOKE_SORTS = ("performed", "strongest", "written", "untouched")
+JOKE_SORTS = ("recent", "performed", "strongest", "written", "untouched")
 VS_ROOM_CLIP = 3.0         # a near-silent room inflates vs_room (a casino room '17: 7.47x); creative/ clips it the same way
 # analysis.json summary fields passed through to /api/sets/{id}/analysis as they are (docs/KB_SCHEMA.md "Set analysis")
 SUMMARY_PASS = ("material_s", "laugh_s_total", "laugh_s_per_min", "pct_laughing", "laughs_merged", "laughs_per_min_merged",
@@ -560,7 +560,7 @@ class AppIndex:
                 st = self.stage_ai(s["id"])
                 js = stats.get(s["id"]) or {}
                 out.append({"id": s["id"], "title": s["title"], "stage": s["stage"], "summary": s.get("summary") or "",
-                            "first_seen": s.get("first_seen"), "last_seen": s.get("last_seen"),
+                            "first_seen": s.get("first_seen"), "last_seen": s.get("last_seen"), "touched": s.get("touched"),
                             "versions": s["units"], "sets": rooms["sets"], "hit_sets": rooms["hit_sets"], "ai_hit_sets": rooms["ai_hit_sets"],
                             "to_review": s["counts"]["proposed"], "labels": labels[:6], "label_ids": [l["id"] for l in s["labels"]],
                             "yours": s.get("yours", False), "stage_ai": st["stage_ai"], "stage_confidence": st["stage_confidence"],
@@ -857,11 +857,20 @@ def glance(kb: AppKB, a: AppIndex) -> dict:
             "new_material": new, "hints": hints[:3]}
 
 
+def recent_key(x: dict) -> str:
+    return max((x.get("touched") or "")[:19], (x.get("last_seen") or "")[:10], (x.get("last_performed") or "")[:10],
+               (x.get("first_seen") or "")[:10])
+
+
 def sort_jokes(items: list[dict], how: str) -> list[dict]:
     """Desk sorts (UX_SPEC 4.2). Missing values go last; ties by title then id, so pages are stable."""
     if how not in JOKE_SORTS:
         raise ValueError(f"sort must be one of {', '.join(JOKE_SORTS)}")
     tie = lambda x: (x["title"].lower(), x["id"])  # noqa: E731
+    if how == "recent":      # what he touched last, first (the Bits tab's default since 2026-10-29, like a Docs list):
+        # the newest of: his last edit/add/confirm on it (a decision timestamp), the newest version, the last night it
+        # was on stage, the day it first appeared. Date-only values compare correctly against same-day timestamps.
+        return sorted(sorted(items, key=tie), key=recent_key, reverse=True)
     if how == "performed":   # most recently on stage first (by show date), then most recently written
         return sorted(sorted(items, key=tie), key=lambda x: (x.get("last_performed") or "", x.get("last_seen") or ""), reverse=True)
     if how == "strongest":   # best average against the room, then most nights

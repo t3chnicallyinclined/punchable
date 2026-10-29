@@ -311,9 +311,11 @@ class View:
                     lid = e["dst"]
                     if labels.get(lid) != "confirmed":
                         labels[lid] = b
+            last = j.get("_last")   # the index of the last decision that touched it (an add, an edit, a confirm)
+            touched = self.decisions[last].get("ts") if isinstance(last, int) and 0 <= last < len(self.decisions) else None
             out.append({"id": jid, "title": j.get("title") or jid, "stage": j.get("stage"),
                         "summary": j.get("summary"), "first_seen": j.get("first_seen"), "last_seen": j.get("last_seen"),
-                        "counts": c, "labels": [{"id": k, "name": self.nodes[k].get("name"), "bucket": v} for k, v in labels.items()],
+                        "touched": touched, "counts": c, "labels": [{"id": k, "name": self.nodes[k].get("name"), "bucket": v} for k, v in labels.items()],
                         "units": len(self.joke_units.get(jid, [])), "yours": bool(j.get("_by_tristan"))})
         return out
 
