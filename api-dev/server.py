@@ -1298,6 +1298,13 @@ class Handler(BaseHTTPRequestHandler):
                         self.log_message("today: creative part failed: %r", e)
                         old["creative_error"] = f"{type(e).__name__}: {e}"
                 return self.send_json(old)
+            if path == "/api/map/cloud":   # every bit placed by meaning (api-dev/cloud_api.py); 501 on the files backend
+                import cloud_api as CL
+                cap = arg("cap", str(CL.CAP_DEFAULT))
+                if not str(cap).isdigit() or not 1 <= int(cap) <= CL.CAP_MAX:
+                    return self.err(400, f"cap must be 1-{CL.CAP_MAX}")
+                st, out = CL.cloud_payload(kb, a, int(cap))
+                return self.send_json(out, st)
             if path == "/api/search":   # bits + taped set moments, best first (api-dev/search_api.py)
                 import search_api as SR
                 qs = (arg("q") or "").strip()

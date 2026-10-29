@@ -272,6 +272,13 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Audio session: record category, `doNotMix`, background recording (kept, `lib/recorder.native`).
 
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
+- **The cloud (default since 2026-10-29, `lib/Cloud.tsx`, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
+  3-axis PCA of its bge-small vector (the mean of its versions', or the typed idea's own), k-means groups named by
+  their titles' words. A slow turn about the vertical axis until he touches (off under Reduce Motion; HIG/motion:
+  motion is never the only signal and stops on request), depth as size and fade (near = bigger, brighter), pinch and
+  pan (lib/PanZoom), a tap selects the nearest dot (a card: Open · To a set), group names float at their centres, the
+  legend's chips turn a group to the front. Turn left/right buttons (44 pt) for a no-gesture path. "Links" switches to
+  the galaxy below, where nearness means a stored link; the choice is remembered (prefs.mapMode).
 - Push, inline title "Map"; `Stack.Toolbar` right: Shuffle (`shuffle`), Centre (`scope`, "Centre on the selected
   bit"), List (`list.bullet`, the map as a SectionList grouped by cluster for VoiceOver); the header search field
   ("Find a bit") on the phone, a field above the map on the web. Pan + pinch (`lib/PanZoom`), double-tap zooms.

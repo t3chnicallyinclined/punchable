@@ -60,7 +60,7 @@ function LegendRow({ wide, column, children }: { wide: boolean; column: boolean;
   return <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>{children}</ScrollView>;
 }
 
-export function Galaxy({ focusId }: { focusId?: string }) {
+export function Galaxy({ focusId, onCloud }: { focusId?: string; onCloud?: () => void }) {
   const wide = useWide();
   const reduce = useReduceMotion();
   const ui = useUI();
@@ -296,6 +296,7 @@ export function Galaxy({ focusId }: { focusId?: string }) {
       <Stack.Toolbar.Button icon="shuffle" accessibilityLabel="Shuffle the layout" onPress={shuffle}>Shuffle</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="scope" accessibilityLabel="Centre on the selected bit" onPress={centre}>Centre</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="list.bullet" accessibilityLabel={listOpen ? 'Back to the map' : 'Read the map as a list'} onPress={() => setListOpen((v) => !v)}>List</Stack.Toolbar.Button>
+      {onCloud ? <Stack.Toolbar.Button icon="cloud" accessibilityLabel="The cloud: bits placed by meaning" onPress={onCloud}>Cloud</Stack.Toolbar.Button> : null}
     </Stack.Toolbar>
   ) : null;
   const webRight = !native ? (
@@ -303,6 +304,7 @@ export function Galaxy({ focusId }: { focusId?: string }) {
       <TextBtn testID="galaxy-shuffle" label="Shuffle" onPress={shuffle} />
       <TextBtn testID="galaxy-centre" label="Centre" onPress={centre} />
       <TextBtn testID="galaxy-list" label={listOpen ? 'Map' : 'List'} onPress={() => setListOpen((v) => !v)} />
+      {onCloud && <TextBtn testID="galaxy-cloud" label="Cloud" onPress={onCloud} />}
     </View>
   ) : undefined;
 

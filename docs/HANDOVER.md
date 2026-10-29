@@ -29,9 +29,9 @@ Engineering rules (platform splits, CI gates): `docs/ENGINEERING.md`. Phone oper
 
 - **Tonight**: tonight's set list as one bar, "N to sort" inbox, three questions to ask the material, a system search
   field ("Ask your material", typed only). "+" opens the create sheet. No input bar in the tab bar (owner decision).
-- **Bits**: every joke with versions and stage history; a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page has **Elsewhere**: the tapes it is on, taped moments that sound like it but are not linked, and bits that sound like it; the **galaxy map** (`/map`: clusters by likeness, edge kinds by
+- **Bits**: opens on what he touched last (Recent; Performed / Strongest in the toolbar's sort menu), "+" makes a new bit from a premise and a first line (`/new-bit`); a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page has **Elsewhere**: the tapes it is on, taped moments that sound like it but are not linked, and bits that sound like it; **Map** is the **cloud** by default (`/api/map/cloud`, `lib/Cloud`: every bit placed by its vector, 3-axis PCA, named k-means groups, a slow turn, depth as size) with the older links **galaxy map** (`/map`: clusters by likeness, edge kinds by
   colour and dash, status by shape, shuffle / centre / find / legend isolate); write + riff; merge same-idea notes.
-- **Sets**: set lists (boards) with timing, gaps, bridges; the **stage** screen (`/stage/[id]`) with the set recorder.
+- **Sets**: segments **Set lists · Recorded** (a set exists once it is taped); set lists (boards) with timing, gaps, bridges; **Record** (`/stage/[id]`, the list's prominent action) and the free recorder (`/record`) share the Voice Memos control (`lib/RecordControl`, 2026-10-29): nothing tapes until the red disc, the square stops and saves, Discard behind Close.
 - **Recorder** (sets only; jots and questions are text): 48 kHz stereo AAC .m4a, keep-awake while taping, real dBFS
   meter on Record and Stage, a phone call pauses the clock ("Paused by a call", 60-pt Resume), a media-services reset
   keeps the partial file, built-in mic preferred over a Bluetooth headset mic. Logic in `app/src/lib/recorderLogic.ts`
@@ -104,9 +104,10 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
-0. **Owner checks on build 10**: Bits › type a word you once said on stage › "In your sets" rows (tap one: the set opens at
-   that second and plays); open a bit › "Elsewhere" (on tape / sounds like it). Then tell me which results feel wrong:
-   the ranking fuses words and meaning and has had no human judgment yet.
+0. **Owner checks on build 11** (2026-10-29): Bits opens on Recent, "+" → New bit; Bits › Map is the cloud (turn it,
+   tap a dot, a group chip turns it to the front; "Links" is the old map); Sets › a set list › **Record**: the clock at
+   0:00 until the red disc, the square stops and saves, Close while taping asks Discard / Save / Keep going. Still owed
+   from build 10: which search results feel wrong.
 
 1. **Owner checks on build 9**: tape a short set from Record, clap near the phone and watch the meter; riff a bit, keep
    one line and dismiss another, then Settings › Voice profile › "What it has learned" should list both; Bits › Map.
@@ -129,5 +130,5 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 10. Pin the Bugsink image by digest.
 11. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
-Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
+Done 2026-10-29: the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
 now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).
