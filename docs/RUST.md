@@ -150,7 +150,17 @@ Edition 2024, pinned `rust-version`, `unsafe_code = "forbid"`, rustfmt `max_widt
 `.github/workflows/rust.yml` next to `api.yml`; the differential jobs need both languages until step 6. Images:
 `gcr.io/distroless/cc-debian12` (onnxruntime needs glibc and libstdc++ [I]); keep the hash-checked model stage from
 `tools/kb/fetch_bge.py`; the k8s securityContext unchanged. Targets to measure on the server [I]: API image ≤ 250 MB;
-RSS warm ≤ 200 MiB with the model loaded (Python today: 450 MiB idle, ~560 MiB in a sweep, measured 2026-10-28).
+RSS warm ≤ 200 MiB with the model loaded.
+
+**Step 0 baseline, measured on the server 2026-10-29 (the Python images at `51bfdf1` / `3d4dce9`)** [C]:
+
+| | API | Worker | Web |
+|---|---|---|---|
+| image (`docker image ls`, uncompressed) | 650 MB | 679 MB | 97 MB |
+| anonymous memory, idle (cgroup `anon`) | 371 MiB (450 MiB on 2026-10-28 before a restart; ~560 MiB during an embed sweep) | 130 MiB | |
+
+`db/tests/test_baseline.py` was not re-run on the server: the hosted pods carry no pytest and the files-backend oracle
+needs the knowledge base on disk; it runs on the PC that holds the data (its last green run is in the repo's history).
 
 ## Not ported; stays as is
 
