@@ -104,6 +104,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 | Trap | Rule |
 |---|---|
+| EAS packs the repository root under `EAS_NO_VCS=1` | `rust/target` (GBs) went into the tarball and filled the disk (ENOSPC); builds 13-15 died uploading. `.easignore` at the root keeps everything but `app/` out. |
 | iOS 26 header is transparent by default (expo-router ≥ 58.0.20 with Liquid Glass) | A screen that brings its own body (`scroll={false}`: Bits, the maps) sets `headerTransparent: false` or the list runs under the bar and the search field floats over the rows (`lib/Screen.native.tsx`, 2026-10-29). Search fields: `placement: 'stacked'`. |
 | A `requestAnimationFrame` loop re-rendering 1,600 SVG dots every frame | Starves the JS thread: taps and toolbar buttons stop landing, the screen reads as dead. Throttle to ~30 fps, round path numbers, stop under a pushed screen (`lib/Cloud.tsx`). |
 | `*.native.tsx` importing its own basename | Base + shim + `.native`; never import `./<own name>` (ENGINEERING.md §1; static tests pin it). |
@@ -118,7 +119,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
-0. **Owner checks on build 13** (2026-10-29, the build-12 fixes): Bits › scroll (the search field stays put, nothing
+0. **Owner checks on build 16** (2026-10-29, the build-12 fixes; 13-15 were failed uploads, see the EAS trap): Bits › scroll (the search field stays put, nothing
    passes under it); Bits › Map (dots turn, a tap selects within a second, Links from the skeleton); Sets › Record ›
    the disc ("Starting…" then "Recording", the meter moves on a clap, the square saves). Still from 12: edit a bit's
    text › Save; ask "what else do I have like this?" in a bit's bar; search › Select › Make them one bit. From 10:
