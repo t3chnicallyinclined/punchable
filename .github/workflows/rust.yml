@@ -1,0 +1,63 @@
+# The Rust services' gate (docs/RUST.md "Build, CI, images"): format, clippy with warnings denied, the tests, per
+# crate, through `cargo xtask gate`, so CI and a laptop run the same thing. The goldens under crates/*/tests/goldens
+# are committed (synthetic fixtures); the "goldens are current" job regenerates them with the repo's Python and
+# fails if they drift, so a change to the Python replay cannot land without the Rust side seeing it.
+name: rust
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rust/**'
+      - 'tools/explorer/kb.py'
+      - '.github/workflows/rust.yml'
+  pull_request:
+    paths:
+      - 'rust/**'
+      - 'tools/explorer/kb.py'
+      - '.github/workflows/rust.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # rust/rust-toolchain.toml pins the channel; the action only adds the components
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Gate (fmt, clippy -D warnings, tests, per crate)
+        run: cargo xtask gate
+
+  goldens-current:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Regenerate the pk-kb goldens from the Python replay
+        run: python rust/tools/gen_kb_goldens.py
+
+      - name: The committed goldens match
+        run: git diff --exit-code -- rust/crates/pk-kb/tests/goldens

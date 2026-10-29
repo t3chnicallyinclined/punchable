@@ -1,0 +1,819 @@
+[
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "callback_to"
+   },
+   "reason": "they chain"
+  },
+  "built": {
+   "target": "edge",
+   "id": "e:e8147dfecfcf",
+   "action": "add",
+   "before": null,
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "callback_to",
+    "status": "confirmed",
+    "confidence": 1.0,
+    "reason": "they chain",
+    "evidence": [],
+    "source": "owner"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "callback_to"
+   }
+  },
+  "error": "say why (reason) when you add a connection",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:meters",
+    "kind": "segue"
+   },
+   "reason": "x"
+  },
+  "error": "a connection needs two different ends",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "has_label"
+   },
+   "reason": "x"
+  },
+  "error": "has_label must point at a label",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "custom",
+    "custom_kind": "  runner "
+   },
+   "reason": "x"
+  },
+  "built": {
+   "target": "edge",
+   "id": "e:410d028139db",
+   "action": "add",
+   "before": null,
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "custom",
+    "custom_kind": "runner",
+    "status": "confirmed",
+    "confidence": 1.0,
+    "reason": "x",
+    "evidence": [],
+    "source": "owner"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": "custom"
+   },
+   "reason": "x"
+  },
+  "error": "a custom connection needs a name (custom_kind), up to 60 characters",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "unit:m1",
+    "dst": "joke:meters",
+    "kind": "part_of"
+   },
+   "reason": "dup"
+  },
+  "built": {
+   "target": "edge",
+   "id": "e:391915286bd0",
+   "action": "add",
+   "before": null,
+   "after": {
+    "src": "unit:m1",
+    "dst": "joke:meters",
+    "kind": "part_of",
+    "status": "confirmed",
+    "confidence": 1.0,
+    "reason": "dup",
+    "evidence": [],
+    "source": "owner"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "joke:nope",
+    "dst": "joke:cat",
+    "kind": "segue"
+   },
+   "reason": "x"
+  },
+  "error": "unknown node 'joke:nope'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
+    "src": "label:topic:cash",
+    "dst": "joke:cat",
+    "kind": "segue"
+   },
+   "reason": "aliased label is unknown"
+  },
+  "error": "unknown node 'label:topic:cash'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "confirm",
+   "id": "e:aaaaaaaaab10"
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "reject",
+   "id": "e:aaaaaaaaab10"
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "delete",
+   "id": "e:aaaaaaaaab10"
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "delete",
+   "id": "e:bbbbbbbbbbb1"
+  },
+  "built": {
+   "target": "edge",
+   "id": "e:bbbbbbbbbbb1",
+   "action": "delete",
+   "before": {
+    "src": "unit:m1",
+    "dst": "label:device:callback",
+    "kind": "has_label",
+    "confidence": 1.0,
+    "id": "e:bbbbbbbbbbb1",
+    "status": "confirmed"
+   },
+   "after": null
+  }
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "edit",
+   "id": "e:aaaaaaaaab10",
+   "after": {
+    "dst": "label:device:callback"
+   }
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "edit",
+   "id": "e:aaaaaaaaab10",
+   "after": {}
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "edit",
+   "id": "e:aaaaaaaaab10",
+   "after": {},
+   "reason": "just a note"
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "edit",
+   "id": "e:aaaaaaaaab10",
+   "after": {
+    "kind": "segue"
+   }
+  },
+  "error": "unknown edge 'e:aaaaaaaaab10'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "edit",
+   "id": "e:nope",
+   "after": {}
+  },
+  "error": "unknown edge 'e:nope'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "label",
+    "name": "  Timing ",
+    "kind": "device",
+    "definition": " beats "
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "label:device:timing",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "label",
+    "kind": "device",
+    "name": "Timing",
+    "definition": "beats"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "label",
+    "name": "Money",
+    "kind": "topic"
+   }
+  },
+  "error": "label label:topic:money already exists; pick it instead",
+  "status": 409
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "label",
+    "name": "",
+    "kind": "topic"
+   }
+  },
+  "error": "a label needs a name (up to 80 characters)",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "label",
+    "name": "X",
+    "kind": "colour"
+   }
+  },
+  "error": "unknown label kind 'colour'",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "joke",
+    "title": " Parking meters ",
+    "summary": " a second one "
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "joke:parking-meters",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "idea",
+    "summary": "a second one",
+    "first_seen": "2026-10-29",
+    "last_seen": "2026-10-29"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "joke",
+    "title": "",
+    "summary": "x"
+   }
+  },
+  "error": "a joke or idea needs a title (up to 120 characters)",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "joke",
+    "title": "Stage check",
+    "stage": "flying"
+   }
+  },
+  "error": "unknown stage 'flying'",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "unit",
+    "text": "  A new line  ",
+    "source": "app"
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "unit:a10a7292566b",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "unit",
+    "text": "A new line",
+    "kind": "tag",
+    "source": "app",
+    "date": "2026-10-29"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "unit",
+    "text": "ok",
+    "id": "unit:draft-abc",
+    "date": "2024-02-03",
+    "doc_title": " Notes "
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "unit:draft-abc",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "unit",
+    "text": "ok",
+    "kind": "tag",
+    "source": "app",
+    "date": "2024-02-03",
+    "doc_title": "Notes"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "unit",
+    "text": "ok",
+    "id": "unit:m1"
+   }
+  },
+  "error": "unit:m1 already exists",
+  "status": 409
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "unit",
+    "text": "   "
+   }
+  },
+  "error": "a line needs its text (up to 4000 characters)",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "add",
+   "after": {
+    "type": "set",
+    "title": "x"
+   }
+  },
+  "error": "you can add a label, a joke/idea or a line (unit)",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "delete",
+   "id": "joke:raccoons"
+  },
+  "built": {
+   "target": "node",
+   "id": "joke:raccoons",
+   "action": "delete",
+   "before": {
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "first_seen": "2026-10-01",
+    "last_seen": "2026-10-01",
+    "id": "joke:raccoons"
+   },
+   "after": null
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "delete",
+   "id": "joke:meters"
+  },
+  "error": "only things you added can be deleted",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "confirm",
+   "id": "joke:meters"
+  },
+  "built": {
+   "target": "node",
+   "id": "joke:meters",
+   "action": "confirm",
+   "before": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary",
+    "first_seen": "2024-01-01",
+    "last_seen": "2025-01-02"
+   },
+   "after": {
+    "status": "confirmed"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "stage": "retired",
+    "title": " Meters ",
+    "short_name": null
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "joke:meters",
+   "action": "edit",
+   "before": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary",
+    "first_seen": "2024-01-01",
+    "last_seen": "2025-01-02"
+   },
+   "after": {
+    "stage": "retired",
+    "title": "Meters"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "stage": "flying"
+   }
+  },
+  "error": "unknown stage 'flying'",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "title": "  "
+   }
+  },
+  "error": "title can't be empty",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "text": "no"
+   }
+  },
+  "error": "can't edit 'text' on a joke",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "stage": "working"
+   }
+  },
+  "error": "nothing changed",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "short_name": "a name that is far too long for a list"
+   }
+  },
+  "error": "short_name must be 1-24 characters (or null for the default)",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "hidden": "yes"
+   }
+  },
+  "error": "hidden must be true or false",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "set:s1",
+   "after": {
+    "show_date": "2025-02-30"
+   }
+  },
+  "error": "show_date '2025-02-30' is not a real date",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "set:s1",
+   "after": {
+    "show_date": "2025-02-28",
+    "venue": " The Cellar ",
+    "audio_unreliable": true
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "set:s1",
+   "action": "edit",
+   "before": {
+    "id": "set:s1",
+    "type": "set",
+    "title": "Tuesday",
+    "venue": "The Cellar",
+    "date": "2025-03-04"
+   },
+   "after": {
+    "show_date": "2025-02-28",
+    "venue": "The Cellar",
+    "audio_unreliable": true
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "set:s1",
+   "after": {
+    "venue": ""
+   }
+  },
+  "error": "venue must be 1-120 characters",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "perf:p1",
+   "after": {
+    "kind": "crowd_work"
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "perf:p1",
+   "action": "edit",
+   "before": {
+    "id": "perf:p1",
+    "type": "performance",
+    "set": "set:s1",
+    "start_ms": 60000,
+    "end_ms": 90000,
+    "text": "so the parking meter wants my pronouns now",
+    "kind": "bit"
+   },
+   "after": {
+    "kind": "crowd_work"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "perf:p1",
+   "after": {
+    "kind": "song"
+   }
+  },
+  "error": "kind must be one of bit, crowd_work, banter",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "label:topic:money",
+   "after": {
+    "merged_into": "label:device:callback"
+   }
+  },
+  "built": {
+   "target": "node",
+   "id": "label:topic:money",
+   "action": "edit",
+   "before": {
+    "id": "label:topic:money",
+    "type": "label",
+    "kind": "topic",
+    "name": "Money",
+    "definition": "coins, bills, meters"
+   },
+   "after": {
+    "merged_into": "label:device:callback"
+   }
+  }
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "label:topic:money",
+   "after": {
+    "merged_into": "label:topic:money"
+   }
+  },
+  "error": "can't merge a label into itself",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "label:topic:money",
+   "after": {
+    "merged_into": "joke:cat"
+   }
+  },
+  "error": "joke:cat is a joke, expected label",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:nope",
+   "after": {
+    "stage": "idea"
+   }
+  },
+  "error": "unknown node 'joke:nope'",
+  "status": 404
+ },
+ {
+  "request": {
+   "target": "thing",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {}
+  },
+  "error": "target must be edge|node and action confirm|reject|edit|add|delete",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": "nope"
+  },
+  "error": "after must be an object",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "node",
+   "action": "edit",
+   "id": "joke:meters",
+   "after": {
+    "stage": "idea"
+   },
+   "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "error": "reason must be text under 4000 characters",
+  "status": 400
+ }
+]

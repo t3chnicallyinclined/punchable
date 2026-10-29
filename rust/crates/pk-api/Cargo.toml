@@ -1,0 +1,15 @@
+[package]
+name = "pk-api"
+description = "Punchable's API: every /api route the app calls, on axum (docs/RUST.md steps 4-5)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+pk-kb = { path = "../pk-kb" }
+
+[lints]
+workspace = true

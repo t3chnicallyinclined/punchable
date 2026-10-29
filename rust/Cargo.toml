@@ -1,0 +1,86 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/pk-kb",
+    "crates/pk-creative",
+    "crates/pk-store",
+    "crates/pk-llm",
+    "crates/pk-embed",
+    "crates/pk-obs",
+    "crates/pk-api",
+    "crates/pk-worker",
+    "xtask",
+]
+
+# The Rust port of Punchable's services (docs/RUST.md). One workspace, a DAG of crates:
+#   pk-kb (the graph, no IO) <- pk-creative (the rules, no IO)
+#   pk-store (SurrealDB) · pk-llm (Anthropic) · pk-embed (bge-small) · pk-obs (tracing, metrics, sentry)
+#   pk-api (axum) · pk-worker (the job loop); the binaries never depend on each other.
+# Gates run per crate: `cargo test -p pk-kb`, never `--workspace` (docs/RUST.md "Build, CI, images").
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+# the crates we stand on (docs/RUST.md "Crates we stand on"); versions pinned here, used by `.workspace = true`
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+indexmap = { version = "2", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+regex = "1"
+sha1 = "0.10"
+sha2 = "0.11"
+hex = "0.4"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "signal"] }
+axum = { version = "0.8", features = ["ws", "json", "macros"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+surrealdb = { version = "3", default-features = false, features = ["protocol-ws", "rustls"] }
+jsonwebtoken = "9"
+prometheus = "0.14"
+sentry = { version = "0.42", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }
+jsonschema = { version = "0.33", default-features = false }
+toml = "0.9"
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["ndarray"] }
+tokenizers = { version = "0.22", default-features = false, features = ["onig"] }
+ndarray = "0.16"
+clap = { version = "4", features = ["derive"] }
+# tests
+insta = { version = "1", features = ["json"] }
+proptest = "1"
+wiremock = "0.6"
+tempfile = "3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# pedantic lints we turn off on purpose: the domain is JSON maps and the Python it mirrors
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+debug = 0
+
+[profile.dev]
+debug = 0

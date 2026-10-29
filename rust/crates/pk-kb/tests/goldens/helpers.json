@@ -1,0 +1,82 @@
+{
+ "edge_ids": [
+  [
+   "joke:a",
+   "segue",
+   "joke:b",
+   "e:bb1c2b63a972"
+  ],
+  [
+   "unit:x",
+   "part_of",
+   "joke:y",
+   "e:26951bcfbade"
+  ],
+  [
+   "joke:a",
+   "runner",
+   "joke:b",
+   "e:8a603f07e471"
+  ]
+ ],
+ "slugs": [
+  [
+   "Parking meters",
+   "parking-meters"
+  ],
+  [
+   "  Hello, World!  ",
+   "hello-world"
+  ],
+  [
+   "ÀÉÎ ünïcode",
+   "n-code"
+  ],
+  [
+   "",
+   "x"
+  ],
+  [
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq",
+   "zqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzqzq"
+  ],
+  [
+   "--x--",
+   "x"
+  ]
+ ],
+ "buckets": [
+  [
+   "confirmed",
+   "confirmed"
+  ],
+  [
+   "edited",
+   "confirmed"
+  ],
+  [
+   "rejected",
+   "rejected"
+  ],
+  [
+   "ruled_out",
+   "rejected"
+  ],
+  [
+   "superseded",
+   "rejected"
+  ],
+  [
+   "proposed",
+   "proposed"
+  ],
+  [
+   null,
+   "proposed"
+  ],
+  [
+   "weird",
+   "proposed"
+  ]
+ ]
+}

@@ -162,8 +162,14 @@ Python oracle in the harness only); `db/load.py` and `push_remote.py` stay Pytho
 
 Stays TypeScript: `app/` (Expo React Native) and `infra/web`.
 
-## First ticket
+## Progress
 
-Step 0 and step 1: `rust/Cargo.toml` (workspace, the crates above as deps), `pk-kb` with the replay and `insta`
-snapshots against `kb.py` and `fn::apply_decision` on a scratch SurrealDB, `pk-store` proving the official crate's
-NONE/NULL round-trip and the decision-append transaction. Nothing ships until the worker (step 3).
+| Date | What landed |
+|---|---|
+| 2026-10-29 | `rust/` workspace (nine crates as above, `cargo xtask gate`, `.github/workflows/rust.yml`). **`pk-kb` built**: typed ids, `Decision`, the replay (`_apply`, merge resolution, the index), the read models (brief, edge view, summaries, search, joke detail, label index, actors) and the decision builder with undo. Proven against the Python by goldens: `rust/tools/gen_kb_goldens.py` replays a synthetic graph with every `_apply` branch, 52 builder requests (14 accepted, 38 refused with the exact message and status) and every undo through `kb.py`; the Rust tests compare as parsed JSON and pass. CI regenerates the goldens and fails on drift. Not yet in `pk-kb`: the Desk explorer's `queue`, `neighborhood`, `stats` (PC-only screens), the legal rules. |
+
+## Next ticket
+
+Step 1 continued: `pk-creative` (the store reducers over the creative event logs, the verbatim gate with property
+tests, askchat prompt/finish) and `pk-store` (the official crate against a scratch SurrealDB: NONE/NULL round-trip,
+the decision-append transaction, the `creative_event` mirror). Then step 0's server measurement and step 2.

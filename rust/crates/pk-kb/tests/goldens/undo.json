@@ -1,0 +1,319 @@
+[
+ {
+  "index": 0,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:raccoons",
+   "action": "delete",
+   "before": {
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "first_seen": "2026-10-01",
+    "last_seen": "2026-10-01",
+    "id": "joke:raccoons"
+   },
+   "after": null,
+   "reason": "undo: said on the input bar",
+   "by": "owner",
+   "undo_of": 0
+  }
+ },
+ {
+  "index": 1,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:aaaaaaaaaaa5",
+   "action": "edit",
+   "before": {
+    "id": "e:aaaaaaaaaaa5",
+    "kind": "has_label",
+    "src": "joke:meters",
+    "dst": "label:topic:money",
+    "status": "confirmed",
+    "confidence": 0.7
+   },
+   "after": {
+    "status": "proposed"
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 1
+  }
+ },
+ {
+  "index": 2,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:aaaaaaaaaaa8",
+   "action": "edit",
+   "before": {
+    "id": "e:aaaaaaaaaaa8",
+    "kind": "same_premise",
+    "src": "joke:meters",
+    "dst": "joke:talks",
+    "status": "rejected",
+    "confidence": 0.55
+   },
+   "after": {
+    "status": "proposed"
+   },
+   "reason": "undo: not the same",
+   "by": "owner",
+   "undo_of": 2
+  }
+ },
+ {
+  "index": 3,
+  "error": "already undone",
+  "status": 409
+ },
+ {
+  "index": 4,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:talks",
+   "action": "edit",
+   "before": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back",
+    "hidden": true
+   },
+   "after": {
+    "stage": "idea"
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 4
+  }
+ },
+ {
+  "index": 5,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:bbbbbbbbbbb1",
+   "action": "delete",
+   "before": {
+    "src": "unit:m1",
+    "dst": "label:device:callback",
+    "kind": "has_label",
+    "confidence": 1.0,
+    "id": "e:bbbbbbbbbbb1",
+    "status": "confirmed"
+   },
+   "after": null,
+   "reason": "undo: [gdocs] tagged in the doc",
+   "by": "owner",
+   "undo_of": 5
+  }
+ },
+ {
+  "index": 6,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:ccccccccccc1",
+   "action": "edit",
+   "before": {
+    "src": "joke:cat",
+    "dst": "joke:raccoons",
+    "kind": "callback_to",
+    "status": "confirmed",
+    "confidence": 0.4,
+    "id": "e:ccccccccccc1"
+   },
+   "after": {
+    "status": "proposed"
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 6
+  }
+ },
+ {
+  "index": 7,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:ghost",
+   "action": "edit",
+   "before": null,
+   "after": {
+    "stage": "idea"
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 7
+  }
+ },
+ {
+  "index": 8,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:ddddddddddd1",
+   "action": "edit",
+   "before": null,
+   "after": {
+    "status": null
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 8
+  }
+ },
+ {
+  "index": 9,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:ghost",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "joke"
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 9
+  }
+ },
+ {
+  "index": 10,
+  "error": "that line is itself an undo",
+  "status": 409
+ },
+ {
+  "index": 11,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "blob",
+   "id": "x",
+   "action": "delete",
+   "before": {},
+   "after": null,
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 11
+  }
+ },
+ {
+  "index": 12,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": null,
+   "action": "delete",
+   "before": {
+    "type": "joke"
+   },
+   "after": null,
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 12
+  }
+ },
+ {
+  "index": 13,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "unit:v1",
+   "action": "delete",
+   "before": {
+    "type": "unit",
+    "text": "Raccoons unionised",
+    "kind": "tag",
+    "source": "app",
+    "date": "2026-10-01",
+    "id": "unit:v1"
+   },
+   "after": null,
+   "reason": "undo: written in the app",
+   "by": "owner",
+   "undo_of": 13
+  }
+ },
+ {
+  "index": 14,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:eeeeeeeeeee1",
+   "action": "delete",
+   "before": {
+    "src": "unit:v1",
+    "dst": "joke:raccoons",
+    "kind": "part_of",
+    "status": "confirmed",
+    "confidence": 1.0,
+    "id": "e:eeeeeeeeeee1"
+   },
+   "after": null,
+   "reason": "undo: written in the app",
+   "by": "owner",
+   "undo_of": 14
+  }
+ },
+ {
+  "index": 15,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:talks",
+   "action": "edit",
+   "before": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back",
+    "hidden": true
+   },
+   "after": {
+    "hidden": null
+   },
+   "reason": "undo: [merge] mg:x",
+   "by": "owner",
+   "undo_of": 15
+  }
+ },
+ {
+  "index": 16,
+  "line": {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:cat",
+   "action": "edit",
+   "before": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat",
+    "last_seen": "2025-06-01",
+    "short_name": "Cat app"
+   },
+   "after": {
+    "short_name": null
+   },
+   "reason": "undo",
+   "by": "owner",
+   "undo_of": 16
+  }
+ },
+ {
+  "index": 17,
+  "error": "no such decision",
+  "status": 404
+ }
+]

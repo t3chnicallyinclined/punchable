@@ -1,0 +1,15 @@
+[package]
+name = "pk-worker"
+description = "Punchable's worker: claim a job from the API, run it, post the result (docs/RUST.md step 3)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+pk-kb = { path = "../pk-kb" }
+
+[lints]
+workspace = true

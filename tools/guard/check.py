@@ -320,7 +320,7 @@ class Scanner:
                             continue
                     if name.startswith(r"\b(?:\d") and (IP_OK.match(s) or re.search(r"(?i)version|v\d", ctx)):
                         continue
-                    if "[0-9a-f]" in name and re.search(r"(?i)sha|digest|hash|md5|integrity|onnx|model", ctx):
+                    if "[0-9a-f]" in name and re.search(r"(?i)sha|digest|hash|md5|integrity|onnx|model|checksum", ctx):   # a lockfile's `checksum = "…"` is a public hash
                         continue
                     if "48" in name and (re.search(r"(?i)sha512-|sha256:|data:image|base64,|integrity", ctx)
                                          or not (re.search(r"\d", s) and re.search(r"[A-Z]", s))):

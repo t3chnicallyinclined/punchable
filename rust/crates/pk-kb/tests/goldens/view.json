@@ -1,0 +1,2422 @@
+{
+ "graph_meta": {
+  "version": "v0-test",
+  "generated_at": "2026-10-01",
+  "runs": [
+   "r1"
+  ]
+ },
+ "nodes": {
+  "joke:meters": {
+   "id": "joke:meters",
+   "type": "joke",
+   "title": "Parking meters",
+   "stage": "working",
+   "summary": "AI summary",
+   "first_seen": "2024-01-01",
+   "last_seen": "2025-01-02"
+  },
+  "unit:m1": {
+   "id": "unit:m1",
+   "type": "unit",
+   "text": "The meter asked for my pronouns before my card",
+   "date": "2025-01-02",
+   "kind": "bit",
+   "source": "gdoc",
+   "doc_title": "Notes 2025"
+  },
+  "unit:m0": {
+   "id": "unit:m0",
+   "type": "unit",
+   "text": "Meters, first draft",
+   "date": "2024-01-01",
+   "kind": "bit"
+  },
+  "joke:talks": {
+   "id": "joke:talks",
+   "type": "joke",
+   "title": "Meter that talks",
+   "stage": "to_try",
+   "summary": "The meter talks back",
+   "_last": 15,
+   "hidden": true
+  },
+  "joke:cat": {
+   "id": "joke:cat",
+   "type": "joke",
+   "title": "Dating my cat",
+   "stage": "testing",
+   "summary": "An app for dating my cat",
+   "last_seen": "2025-06-01",
+   "short_name": "Cat app",
+   "_last": 16
+  },
+  "unit:c1": {
+   "id": "unit:c1",
+   "type": "unit",
+   "text": "Dating apps are a job interview",
+   "date": "2025-06-01"
+  },
+  "label:topic:money": {
+   "id": "label:topic:money",
+   "type": "label",
+   "kind": "topic",
+   "name": "Money",
+   "definition": "coins, bills, meters"
+  },
+  "label:topic:cash": {
+   "id": "label:topic:cash",
+   "type": "label",
+   "kind": "topic",
+   "name": "Cash",
+   "definition": "",
+   "merged_into": "label:topic:money"
+  },
+  "label:device:callback": {
+   "id": "label:device:callback",
+   "type": "label",
+   "kind": "device",
+   "name": "Callback"
+  },
+  "set:s1": {
+   "id": "set:s1",
+   "type": "set",
+   "title": "Tuesday",
+   "venue": "The Cellar",
+   "date": "2025-03-04"
+  },
+  "perf:p1": {
+   "id": "perf:p1",
+   "type": "performance",
+   "set": "set:s1",
+   "start_ms": 60000,
+   "end_ms": 90000,
+   "text": "so the parking meter wants my pronouns now",
+   "kind": "bit"
+  },
+  "perf:p2": {
+   "id": "perf:p2",
+   "type": "performance",
+   "set": "set:s1",
+   "start_ms": 120000,
+   "end_ms": 150000,
+   "text": "my cat swiped left"
+  },
+  "list:tonight": {
+   "id": "list:tonight",
+   "type": "list",
+   "title": "Tonight"
+  },
+  "joke:raccoons": {
+   "type": "joke",
+   "title": "Raccoons",
+   "stage": "idea",
+   "summary": "A raccoon with a tight five",
+   "first_seen": "2026-10-01",
+   "last_seen": "2026-10-01",
+   "id": "joke:raccoons",
+   "_by_tristan": true,
+   "_last": 0
+  },
+  "unit:v1": {
+   "type": "unit",
+   "text": "Raccoons unionised",
+   "kind": "tag",
+   "source": "app",
+   "date": "2026-10-01",
+   "id": "unit:v1",
+   "_by_tristan": true,
+   "_last": 13
+  }
+ },
+ "edges": {
+  "e:aaaaaaaaaaa1": {
+   "id": "e:aaaaaaaaaaa1",
+   "kind": "part_of",
+   "src": "unit:m1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.9
+  },
+  "e:aaaaaaaaaaa2": {
+   "id": "e:aaaaaaaaaaa2",
+   "kind": "part_of",
+   "src": "joke:meters",
+   "dst": "unit:m0",
+   "status": "proposed",
+   "confidence": 0.6
+  },
+  "e:aaaaaaaaaaa3": {
+   "id": "e:aaaaaaaaaaa3",
+   "kind": "part_of",
+   "src": "unit:c1",
+   "dst": "joke:cat",
+   "status": "rejected"
+  },
+  "e:aaaaaaaaaaa4": {
+   "id": "e:aaaaaaaaaaa4",
+   "kind": "performed_as",
+   "src": "perf:p1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.95
+  },
+  "e:aaaaaaaaaaa5": {
+   "id": "e:aaaaaaaaaaa5",
+   "kind": "has_label",
+   "src": "joke:meters",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.7,
+   "_last": 1
+  },
+  "e:aaaaaaaaaaa7": {
+   "id": "e:aaaaaaaaaaa7",
+   "kind": "has_label",
+   "src": "unit:c1",
+   "dst": "label:device:callback",
+   "status": null,
+   "_last": 10
+  },
+  "e:aaaaaaaaaaa8": {
+   "id": "e:aaaaaaaaaaa8",
+   "kind": "same_premise",
+   "src": "joke:meters",
+   "dst": "joke:talks",
+   "status": "rejected",
+   "confidence": 0.55,
+   "_last": 2
+  },
+  "e:aaaaaaaaaaa9": {
+   "id": "e:aaaaaaaaaaa9",
+   "kind": "custom",
+   "custom_kind": "runner",
+   "src": "joke:cat",
+   "dst": "joke:talks",
+   "status": "proposed"
+  },
+  "e:aaaaaaaaab11": {
+   "id": "e:aaaaaaaaab11",
+   "kind": "has_label",
+   "src": "joke:cat",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.9
+  },
+  "e:bbbbbbbbbbb1": {
+   "src": "unit:m1",
+   "dst": "label:device:callback",
+   "kind": "has_label",
+   "confidence": 1.0,
+   "id": "e:bbbbbbbbbbb1",
+   "status": "confirmed",
+   "_by_tristan": true,
+   "_last": 5
+  },
+  "e:ccccccccccc1": {
+   "src": "joke:cat",
+   "dst": "joke:raccoons",
+   "kind": "callback_to",
+   "status": "confirmed",
+   "confidence": 0.4,
+   "id": "e:ccccccccccc1",
+   "_last": 6
+  },
+  "e:eeeeeeeeeee1": {
+   "src": "unit:v1",
+   "dst": "joke:raccoons",
+   "kind": "part_of",
+   "status": "confirmed",
+   "confidence": 1.0,
+   "id": "e:eeeeeeeeeee1",
+   "_by_tristan": true,
+   "_last": 14
+  }
+ },
+ "orphans": 1,
+ "undone": [
+  3
+ ],
+ "alias": {
+  "label:topic:cash": "label:topic:money"
+ },
+ "adj": {
+  "unit:m1": [
+   "e:aaaaaaaaaaa1",
+   "e:bbbbbbbbbbb1"
+  ],
+  "joke:meters": [
+   "e:aaaaaaaaaaa1",
+   "e:aaaaaaaaaaa2",
+   "e:aaaaaaaaaaa4",
+   "e:aaaaaaaaaaa5",
+   "e:aaaaaaaaaaa8"
+  ],
+  "unit:m0": [
+   "e:aaaaaaaaaaa2"
+  ],
+  "unit:c1": [
+   "e:aaaaaaaaaaa3",
+   "e:aaaaaaaaaaa7"
+  ],
+  "joke:cat": [
+   "e:aaaaaaaaaaa3",
+   "e:aaaaaaaaaaa9",
+   "e:aaaaaaaaab11",
+   "e:ccccccccccc1"
+  ],
+  "perf:p1": [
+   "e:aaaaaaaaaaa4"
+  ],
+  "label:topic:money": [
+   "e:aaaaaaaaaaa5",
+   "e:aaaaaaaaab11"
+  ],
+  "label:device:callback": [
+   "e:aaaaaaaaaaa7",
+   "e:bbbbbbbbbbb1"
+  ],
+  "joke:talks": [
+   "e:aaaaaaaaaaa8",
+   "e:aaaaaaaaaaa9"
+  ],
+  "joke:raccoons": [
+   "e:ccccccccccc1",
+   "e:eeeeeeeeeee1"
+  ],
+  "unit:v1": [
+   "e:eeeeeeeeeee1"
+  ]
+ },
+ "jokes": [
+  "joke:meters",
+  "joke:talks",
+  "joke:cat",
+  "joke:raccoons"
+ ],
+ "labels": [
+  "label:topic:money",
+  "label:device:callback"
+ ],
+ "unit_joke": {
+  "unit:m1": "joke:meters",
+  "unit:m0": "joke:meters",
+  "unit:v1": "joke:raccoons"
+ },
+ "joke_units": {
+  "joke:meters": [
+   [
+    "unit:m1",
+    "e:aaaaaaaaaaa1"
+   ],
+   [
+    "unit:m0",
+    "e:aaaaaaaaaaa2"
+   ]
+  ],
+  "joke:cat": [
+   [
+    "unit:c1",
+    "e:aaaaaaaaaaa3"
+   ]
+  ],
+  "joke:raccoons": [
+   [
+    "unit:v1",
+    "e:eeeeeeeeeee1"
+   ]
+  ]
+ },
+ "degree": {
+  "unit:m1": 2,
+  "joke:meters": 5,
+  "unit:m0": 1,
+  "unit:c1": 2,
+  "joke:cat": 4,
+  "perf:p1": 1,
+  "label:topic:money": 2,
+  "label:device:callback": 2,
+  "joke:talks": 2,
+  "joke:raccoons": 2,
+  "unit:v1": 1
+ },
+ "briefs": {
+  "joke:meters": {
+   "id": "joke:meters",
+   "type": "joke",
+   "title": "Parking meters",
+   "stage": "working",
+   "summary": "AI summary"
+  },
+  "unit:m1": {
+   "id": "unit:m1",
+   "type": "unit",
+   "title": "The meter asked for my pronouns before my card",
+   "kind": "bit",
+   "date": "2025-01-02",
+   "doc_title": "Notes 2025",
+   "joke": "joke:meters",
+   "joke_title": "Parking meters"
+  },
+  "unit:m0": {
+   "id": "unit:m0",
+   "type": "unit",
+   "title": "Meters, first draft",
+   "kind": "bit",
+   "date": "2024-01-01",
+   "doc_title": null,
+   "joke": "joke:meters",
+   "joke_title": "Parking meters"
+  },
+  "joke:talks": {
+   "id": "joke:talks",
+   "type": "joke",
+   "title": "Meter that talks",
+   "stage": "to_try",
+   "summary": "The meter talks back"
+  },
+  "joke:cat": {
+   "id": "joke:cat",
+   "type": "joke",
+   "title": "Dating my cat",
+   "stage": "testing",
+   "summary": "An app for dating my cat"
+  },
+  "unit:c1": {
+   "id": "unit:c1",
+   "type": "unit",
+   "title": "Dating apps are a job interview",
+   "kind": null,
+   "date": "2025-06-01",
+   "doc_title": null,
+   "joke": null
+  },
+  "label:topic:money": {
+   "id": "label:topic:money",
+   "type": "label",
+   "title": "Money",
+   "kind": "topic",
+   "definition": "coins, bills, meters"
+  },
+  "label:topic:cash": {
+   "id": "label:topic:cash",
+   "type": "label",
+   "title": "Cash",
+   "kind": "topic",
+   "definition": ""
+  },
+  "label:device:callback": {
+   "id": "label:device:callback",
+   "type": "label",
+   "title": "Callback",
+   "kind": "device",
+   "definition": null
+  },
+  "set:s1": {
+   "id": "set:s1",
+   "type": "set",
+   "title": "Tuesday",
+   "date": "2025-03-04",
+   "venue": "The Cellar"
+  },
+  "perf:p1": {
+   "id": "perf:p1",
+   "type": "performance",
+   "title": "so the parking meter wants my pronouns now",
+   "set": "set:s1",
+   "date": "2025-03-04",
+   "venue": "The Cellar",
+   "start_ms": 60000,
+   "end_ms": 90000
+  },
+  "perf:p2": {
+   "id": "perf:p2",
+   "type": "performance",
+   "title": "my cat swiped left",
+   "set": "set:s1",
+   "date": "2025-03-04",
+   "venue": "The Cellar",
+   "start_ms": 120000,
+   "end_ms": 150000
+  },
+  "list:tonight": {
+   "id": "list:tonight",
+   "type": "list",
+   "title": "Tonight"
+  },
+  "joke:raccoons": {
+   "id": "joke:raccoons",
+   "type": "joke",
+   "title": "Raccoons",
+   "stage": "idea",
+   "summary": "A raccoon with a tight five",
+   "yours": true
+  },
+  "unit:v1": {
+   "id": "unit:v1",
+   "type": "unit",
+   "title": "Raccoons unionised",
+   "kind": "tag",
+   "date": "2026-10-01",
+   "doc_title": null,
+   "joke": "joke:raccoons",
+   "joke_title": "Raccoons",
+   "yours": true
+  },
+  "missing:x": {
+   "id": "missing:x",
+   "type": "missing",
+   "title": "missing:x"
+  }
+ },
+ "edge_views": {
+  "e:aaaaaaaaaaa1": {
+   "id": "e:aaaaaaaaaaa1",
+   "kind": "part_of",
+   "src": "unit:m1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "bucket": "confirmed",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:m1",
+    "type": "unit",
+    "title": "The meter asked for my pronouns before my card",
+    "kind": "bit",
+    "date": "2025-01-02",
+    "doc_title": "Notes 2025",
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "dst_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   }
+  },
+  "e:aaaaaaaaaaa2": {
+   "id": "e:aaaaaaaaaaa2",
+   "kind": "part_of",
+   "src": "joke:meters",
+   "dst": "unit:m0",
+   "status": "proposed",
+   "confidence": 0.6,
+   "bucket": "proposed",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "unit:m0",
+    "type": "unit",
+    "title": "Meters, first draft",
+    "kind": "bit",
+    "date": "2024-01-01",
+    "doc_title": null,
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   }
+  },
+  "e:aaaaaaaaaaa3": {
+   "id": "e:aaaaaaaaaaa3",
+   "kind": "part_of",
+   "src": "unit:c1",
+   "dst": "joke:cat",
+   "status": "rejected",
+   "bucket": "rejected",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:c1",
+    "type": "unit",
+    "title": "Dating apps are a job interview",
+    "kind": null,
+    "date": "2025-06-01",
+    "doc_title": null,
+    "joke": null
+   },
+   "dst_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   }
+  },
+  "e:aaaaaaaaaaa4": {
+   "id": "e:aaaaaaaaaaa4",
+   "kind": "performed_as",
+   "src": "perf:p1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.95,
+   "bucket": "confirmed",
+   "display_kind": "performed_as",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "perf:p1",
+    "type": "performance",
+    "title": "so the parking meter wants my pronouns now",
+    "set": "set:s1",
+    "date": "2025-03-04",
+    "venue": "The Cellar",
+    "start_ms": 60000,
+    "end_ms": 90000
+   },
+   "dst_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   }
+  },
+  "e:aaaaaaaaaaa5": {
+   "id": "e:aaaaaaaaaaa5",
+   "kind": "has_label",
+   "src": "joke:meters",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.7,
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   }
+  },
+  "e:aaaaaaaaaaa7": {
+   "id": "e:aaaaaaaaaaa7",
+   "kind": "has_label",
+   "src": "unit:c1",
+   "dst": "label:device:callback",
+   "status": null,
+   "bucket": "proposed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:c1",
+    "type": "unit",
+    "title": "Dating apps are a job interview",
+    "kind": null,
+    "date": "2025-06-01",
+    "doc_title": null,
+    "joke": null
+   },
+   "dst_brief": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   }
+  },
+  "e:aaaaaaaaaaa8": {
+   "id": "e:aaaaaaaaaaa8",
+   "kind": "same_premise",
+   "src": "joke:meters",
+   "dst": "joke:talks",
+   "status": "rejected",
+   "confidence": 0.55,
+   "bucket": "rejected",
+   "display_kind": "same_premise",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   }
+  },
+  "e:aaaaaaaaaaa9": {
+   "id": "e:aaaaaaaaaaa9",
+   "kind": "custom",
+   "custom_kind": "runner",
+   "src": "joke:cat",
+   "dst": "joke:talks",
+   "status": "proposed",
+   "bucket": "proposed",
+   "display_kind": "runner",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   }
+  },
+  "e:aaaaaaaaab11": {
+   "id": "e:aaaaaaaaab11",
+   "kind": "has_label",
+   "src": "joke:cat",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   }
+  },
+  "e:bbbbbbbbbbb1": {
+   "src": "unit:m1",
+   "dst": "label:device:callback",
+   "kind": "has_label",
+   "confidence": 1.0,
+   "id": "e:bbbbbbbbbbb1",
+   "status": "confirmed",
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": true,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:m1",
+    "type": "unit",
+    "title": "The meter asked for my pronouns before my card",
+    "kind": "bit",
+    "date": "2025-01-02",
+    "doc_title": "Notes 2025",
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "dst_brief": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   }
+  },
+  "e:ccccccccccc1": {
+   "src": "joke:cat",
+   "dst": "joke:raccoons",
+   "kind": "callback_to",
+   "status": "confirmed",
+   "confidence": 0.4,
+   "id": "e:ccccccccccc1",
+   "bucket": "confirmed",
+   "display_kind": "callback_to",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   }
+  },
+  "e:eeeeeeeeeee1": {
+   "src": "unit:v1",
+   "dst": "joke:raccoons",
+   "kind": "part_of",
+   "status": "confirmed",
+   "confidence": 1.0,
+   "id": "e:eeeeeeeeeee1",
+   "bucket": "confirmed",
+   "display_kind": "part_of",
+   "yours": true,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:v1",
+    "type": "unit",
+    "title": "Raccoons unionised",
+    "kind": "tag",
+    "date": "2026-10-01",
+    "doc_title": null,
+    "joke": "joke:raccoons",
+    "joke_title": "Raccoons",
+    "yours": true
+   },
+   "dst_brief": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   }
+  }
+ },
+ "edge_views_focus": {
+  "e:aaaaaaaaaaa1": {
+   "id": "e:aaaaaaaaaaa1",
+   "kind": "part_of",
+   "src": "unit:m1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "bucket": "confirmed",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:m1",
+    "type": "unit",
+    "title": "The meter asked for my pronouns before my card",
+    "kind": "bit",
+    "date": "2025-01-02",
+    "doc_title": "Notes 2025",
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "dst_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "other": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa2": {
+   "id": "e:aaaaaaaaaaa2",
+   "kind": "part_of",
+   "src": "joke:meters",
+   "dst": "unit:m0",
+   "status": "proposed",
+   "confidence": 0.6,
+   "bucket": "proposed",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "unit:m0",
+    "type": "unit",
+    "title": "Meters, first draft",
+    "kind": "bit",
+    "date": "2024-01-01",
+    "doc_title": null,
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "other": {
+    "id": "unit:m0",
+    "type": "unit",
+    "title": "Meters, first draft",
+    "kind": "bit",
+    "date": "2024-01-01",
+    "doc_title": null,
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa3": {
+   "id": "e:aaaaaaaaaaa3",
+   "kind": "part_of",
+   "src": "unit:c1",
+   "dst": "joke:cat",
+   "status": "rejected",
+   "bucket": "rejected",
+   "display_kind": "part_of",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:c1",
+    "type": "unit",
+    "title": "Dating apps are a job interview",
+    "kind": null,
+    "date": "2025-06-01",
+    "doc_title": null,
+    "joke": null
+   },
+   "dst_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "other": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa4": {
+   "id": "e:aaaaaaaaaaa4",
+   "kind": "performed_as",
+   "src": "perf:p1",
+   "dst": "joke:meters",
+   "status": "confirmed",
+   "confidence": 0.95,
+   "bucket": "confirmed",
+   "display_kind": "performed_as",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "perf:p1",
+    "type": "performance",
+    "title": "so the parking meter wants my pronouns now",
+    "set": "set:s1",
+    "date": "2025-03-04",
+    "venue": "The Cellar",
+    "start_ms": 60000,
+    "end_ms": 90000
+   },
+   "dst_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "other": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa5": {
+   "id": "e:aaaaaaaaaaa5",
+   "kind": "has_label",
+   "src": "joke:meters",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.7,
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   },
+   "other": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa7": {
+   "id": "e:aaaaaaaaaaa7",
+   "kind": "has_label",
+   "src": "unit:c1",
+   "dst": "label:device:callback",
+   "status": null,
+   "bucket": "proposed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:c1",
+    "type": "unit",
+    "title": "Dating apps are a job interview",
+    "kind": null,
+    "date": "2025-06-01",
+    "doc_title": null,
+    "joke": null
+   },
+   "dst_brief": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   },
+   "other": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa8": {
+   "id": "e:aaaaaaaaaaa8",
+   "kind": "same_premise",
+   "src": "joke:meters",
+   "dst": "joke:talks",
+   "status": "rejected",
+   "confidence": 0.55,
+   "bucket": "rejected",
+   "display_kind": "same_premise",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary"
+   },
+   "dst_brief": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   },
+   "other": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaaaa9": {
+   "id": "e:aaaaaaaaaaa9",
+   "kind": "custom",
+   "custom_kind": "runner",
+   "src": "joke:cat",
+   "dst": "joke:talks",
+   "status": "proposed",
+   "bucket": "proposed",
+   "display_kind": "runner",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   },
+   "other": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back"
+   },
+   "direction": "out"
+  },
+  "e:aaaaaaaaab11": {
+   "id": "e:aaaaaaaaab11",
+   "kind": "has_label",
+   "src": "joke:cat",
+   "dst": "label:topic:money",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   },
+   "other": {
+    "id": "label:topic:money",
+    "type": "label",
+    "title": "Money",
+    "kind": "topic",
+    "definition": "coins, bills, meters"
+   },
+   "direction": "out"
+  },
+  "e:bbbbbbbbbbb1": {
+   "src": "unit:m1",
+   "dst": "label:device:callback",
+   "kind": "has_label",
+   "confidence": 1.0,
+   "id": "e:bbbbbbbbbbb1",
+   "status": "confirmed",
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": true,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:m1",
+    "type": "unit",
+    "title": "The meter asked for my pronouns before my card",
+    "kind": "bit",
+    "date": "2025-01-02",
+    "doc_title": "Notes 2025",
+    "joke": "joke:meters",
+    "joke_title": "Parking meters"
+   },
+   "dst_brief": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   },
+   "other": {
+    "id": "label:device:callback",
+    "type": "label",
+    "title": "Callback",
+    "kind": "device",
+    "definition": null
+   },
+   "direction": "out"
+  },
+  "e:ccccccccccc1": {
+   "src": "joke:cat",
+   "dst": "joke:raccoons",
+   "kind": "callback_to",
+   "status": "confirmed",
+   "confidence": 0.4,
+   "id": "e:ccccccccccc1",
+   "bucket": "confirmed",
+   "display_kind": "callback_to",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat"
+   },
+   "dst_brief": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   },
+   "other": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   },
+   "direction": "out"
+  },
+  "e:eeeeeeeeeee1": {
+   "src": "unit:v1",
+   "dst": "joke:raccoons",
+   "kind": "part_of",
+   "status": "confirmed",
+   "confidence": 1.0,
+   "id": "e:eeeeeeeeeee1",
+   "bucket": "confirmed",
+   "display_kind": "part_of",
+   "yours": true,
+   "edited": false,
+   "src_brief": {
+    "id": "unit:v1",
+    "type": "unit",
+    "title": "Raccoons unionised",
+    "kind": "tag",
+    "date": "2026-10-01",
+    "doc_title": null,
+    "joke": "joke:raccoons",
+    "joke_title": "Raccoons",
+    "yours": true
+   },
+   "dst_brief": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   },
+   "other": {
+    "id": "joke:raccoons",
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "yours": true
+   },
+   "direction": "out"
+  }
+ },
+ "summaries": [
+  {
+   "id": "joke:meters",
+   "title": "Parking meters",
+   "stage": "working",
+   "summary": "AI summary",
+   "first_seen": "2024-01-01",
+   "last_seen": "2025-01-02",
+   "touched": null,
+   "counts": {
+    "proposed": 1,
+    "confirmed": 4,
+    "rejected": 1
+   },
+   "labels": [
+    {
+     "id": "label:topic:money",
+     "name": "Money",
+     "bucket": "confirmed"
+    },
+    {
+     "id": "label:device:callback",
+     "name": "Callback",
+     "bucket": "confirmed"
+    }
+   ],
+   "units": 2,
+   "yours": false
+  },
+  {
+   "id": "joke:talks",
+   "title": "Meter that talks",
+   "stage": "to_try",
+   "summary": "The meter talks back",
+   "first_seen": null,
+   "last_seen": null,
+   "touched": "2026-10-01T10:15:00+00:00",
+   "counts": {
+    "proposed": 1,
+    "confirmed": 0,
+    "rejected": 1
+   },
+   "labels": [],
+   "units": 0,
+   "yours": false
+  },
+  {
+   "id": "joke:cat",
+   "title": "Dating my cat",
+   "stage": "testing",
+   "summary": "An app for dating my cat",
+   "first_seen": null,
+   "last_seen": "2025-06-01",
+   "touched": "2026-10-01T10:16:00+00:00",
+   "counts": {
+    "proposed": 2,
+    "confirmed": 2,
+    "rejected": 1
+   },
+   "labels": [
+    {
+     "id": "label:topic:money",
+     "name": "Money",
+     "bucket": "confirmed"
+    },
+    {
+     "id": "label:device:callback",
+     "name": "Callback",
+     "bucket": "proposed"
+    }
+   ],
+   "units": 1,
+   "yours": false
+  },
+  {
+   "id": "joke:raccoons",
+   "title": "Raccoons",
+   "stage": "idea",
+   "summary": "A raccoon with a tight five",
+   "first_seen": "2026-10-01",
+   "last_seen": "2026-10-01",
+   "touched": "2026-10-01T10:00:00+00:00",
+   "counts": {
+    "proposed": 0,
+    "confirmed": 2,
+    "rejected": 0
+   },
+   "labels": [],
+   "units": 1,
+   "yours": true
+  }
+ ],
+ "search": {
+  "": [
+   "joke:meters",
+   "joke:talks",
+   "joke:cat",
+   "joke:raccoons"
+  ],
+  "meter": [
+   "joke:meters",
+   "joke:talks"
+  ],
+  "METER pronouns": [
+   "joke:meters"
+  ],
+  "cat job": [
+   "joke:cat"
+  ],
+  "money": [
+   "joke:meters",
+   "joke:cat"
+  ],
+  "runner": [],
+  "nothing-here": [],
+  "joke:cat": [
+   "joke:cat"
+  ]
+ },
+ "details": {
+  "joke:meters": {
+   "joke": {
+    "id": "joke:meters",
+    "type": "joke",
+    "title": "Parking meters",
+    "stage": "working",
+    "summary": "AI summary",
+    "first_seen": "2024-01-01",
+    "last_seen": "2025-01-02"
+   },
+   "yours": false,
+   "unit_groups": [
+    {
+     "date": "2024-01-01",
+     "units": [
+      {
+       "id": "unit:m0",
+       "type": "unit",
+       "text": "Meters, first draft",
+       "date": "2024-01-01",
+       "kind": "bit",
+       "edge": {
+        "id": "e:aaaaaaaaaaa2",
+        "kind": "part_of",
+        "src": "joke:meters",
+        "dst": "unit:m0",
+        "status": "proposed",
+        "confidence": 0.6,
+        "bucket": "proposed",
+        "display_kind": "part_of",
+        "yours": false,
+        "edited": false,
+        "src_brief": {
+         "id": "joke:meters",
+         "type": "joke",
+         "title": "Parking meters",
+         "stage": "working",
+         "summary": "AI summary"
+        },
+        "dst_brief": {
+         "id": "unit:m0",
+         "type": "unit",
+         "title": "Meters, first draft",
+         "kind": "bit",
+         "date": "2024-01-01",
+         "doc_title": null,
+         "joke": "joke:meters",
+         "joke_title": "Parking meters"
+        },
+        "other": {
+         "id": "unit:m0",
+         "type": "unit",
+         "title": "Meters, first draft",
+         "kind": "bit",
+         "date": "2024-01-01",
+         "doc_title": null,
+         "joke": "joke:meters",
+         "joke_title": "Parking meters"
+        },
+        "direction": "out"
+       }
+      }
+     ]
+    },
+    {
+     "date": "2025-01-02",
+     "units": [
+      {
+       "id": "unit:m1",
+       "type": "unit",
+       "text": "The meter asked for my pronouns before my card",
+       "date": "2025-01-02",
+       "kind": "bit",
+       "source": "gdoc",
+       "doc_title": "Notes 2025",
+       "edge": {
+        "id": "e:aaaaaaaaaaa1",
+        "kind": "part_of",
+        "src": "unit:m1",
+        "dst": "joke:meters",
+        "status": "confirmed",
+        "confidence": 0.9,
+        "bucket": "confirmed",
+        "display_kind": "part_of",
+        "yours": false,
+        "edited": false,
+        "src_brief": {
+         "id": "unit:m1",
+         "type": "unit",
+         "title": "The meter asked for my pronouns before my card",
+         "kind": "bit",
+         "date": "2025-01-02",
+         "doc_title": "Notes 2025",
+         "joke": "joke:meters",
+         "joke_title": "Parking meters"
+        },
+        "dst_brief": {
+         "id": "joke:meters",
+         "type": "joke",
+         "title": "Parking meters",
+         "stage": "working",
+         "summary": "AI summary"
+        },
+        "other": {
+         "id": "unit:m1",
+         "type": "unit",
+         "title": "The meter asked for my pronouns before my card",
+         "kind": "bit",
+         "date": "2025-01-02",
+         "doc_title": "Notes 2025",
+         "joke": "joke:meters",
+         "joke_title": "Parking meters"
+        },
+        "direction": "in"
+       }
+      }
+     ]
+    }
+   ],
+   "performances": [
+    {
+     "perf": {
+      "id": "perf:p1",
+      "type": "performance",
+      "set": "set:s1",
+      "start_ms": 60000,
+      "end_ms": 90000,
+      "text": "so the parking meter wants my pronouns now",
+      "kind": "bit"
+     },
+     "set": {
+      "id": "set:s1",
+      "type": "set",
+      "title": "Tuesday",
+      "venue": "The Cellar",
+      "date": "2025-03-04"
+     },
+     "edge": {
+      "id": "e:aaaaaaaaaaa4",
+      "kind": "performed_as",
+      "src": "perf:p1",
+      "dst": "joke:meters",
+      "status": "confirmed",
+      "confidence": 0.95,
+      "bucket": "confirmed",
+      "display_kind": "performed_as",
+      "yours": false,
+      "edited": false,
+      "src_brief": {
+       "id": "perf:p1",
+       "type": "performance",
+       "title": "so the parking meter wants my pronouns now",
+       "set": "set:s1",
+       "date": "2025-03-04",
+       "venue": "The Cellar",
+       "start_ms": 60000,
+       "end_ms": 90000
+      },
+      "dst_brief": {
+       "id": "joke:meters",
+       "type": "joke",
+       "title": "Parking meters",
+       "stage": "working",
+       "summary": "AI summary"
+      },
+      "other": {
+       "id": "perf:p1",
+       "type": "performance",
+       "title": "so the parking meter wants my pronouns now",
+       "set": "set:s1",
+       "date": "2025-03-04",
+       "venue": "The Cellar",
+       "start_ms": 60000,
+       "end_ms": 90000
+      },
+      "direction": "in"
+     },
+     "laughs": null
+    }
+   ],
+   "edges": [
+    {
+     "src": "unit:m1",
+     "dst": "label:device:callback",
+     "kind": "has_label",
+     "confidence": 1.0,
+     "id": "e:bbbbbbbbbbb1",
+     "status": "confirmed",
+     "bucket": "confirmed",
+     "display_kind": "has_label",
+     "yours": true,
+     "edited": false,
+     "src_brief": {
+      "id": "unit:m1",
+      "type": "unit",
+      "title": "The meter asked for my pronouns before my card",
+      "kind": "bit",
+      "date": "2025-01-02",
+      "doc_title": "Notes 2025",
+      "joke": "joke:meters",
+      "joke_title": "Parking meters"
+     },
+     "dst_brief": {
+      "id": "label:device:callback",
+      "type": "label",
+      "title": "Callback",
+      "kind": "device",
+      "definition": null
+     },
+     "via_unit": {
+      "id": "unit:m1",
+      "type": "unit",
+      "title": "The meter asked for my pronouns before my card",
+      "kind": "bit",
+      "date": "2025-01-02",
+      "doc_title": "Notes 2025",
+      "joke": "joke:meters",
+      "joke_title": "Parking meters"
+     },
+     "other": {
+      "id": "label:device:callback",
+      "type": "label",
+      "title": "Callback",
+      "kind": "device",
+      "definition": null
+     }
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "has_label",
+     "src": "joke:meters",
+     "dst": "label:topic:money",
+     "status": "confirmed",
+     "confidence": 0.7,
+     "bucket": "confirmed",
+     "display_kind": "has_label",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "dst_brief": {
+      "id": "label:topic:money",
+      "type": "label",
+      "title": "Money",
+      "kind": "topic",
+      "definition": "coins, bills, meters"
+     },
+     "other": {
+      "id": "label:topic:money",
+      "type": "label",
+      "title": "Money",
+      "kind": "topic",
+      "definition": "coins, bills, meters"
+     },
+     "direction": "out"
+    },
+    {
+     "id": "e:aaaaaaaaaaa8",
+     "kind": "same_premise",
+     "src": "joke:meters",
+     "dst": "joke:talks",
+     "status": "rejected",
+     "confidence": 0.55,
+     "bucket": "rejected",
+     "display_kind": "same_premise",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "dst_brief": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "other": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "direction": "out"
+    }
+   ],
+   "history": [
+    {
+     "ts": "2026-10-01T10:01:00+00:00",
+     "target": "edge",
+     "id": "e:aaaaaaaaaaa5",
+     "action": "confirm",
+     "before": {
+      "status": "proposed"
+     },
+     "after": {
+      "status": "confirmed"
+     },
+     "reason": "",
+     "by": "owner",
+     "index": 1,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:02:00+00:00",
+     "target": "edge",
+     "id": "e:aaaaaaaaaaa8",
+     "action": "reject",
+     "before": {
+      "status": "proposed"
+     },
+     "after": {
+      "status": "rejected"
+     },
+     "reason": "not the same",
+     "by": "owner",
+     "index": 2,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:05:00+00:00",
+     "target": "edge",
+     "id": "e:bbbbbbbbbbb1",
+     "action": "add",
+     "before": null,
+     "after": {
+      "src": "unit:m1",
+      "dst": "label:device:callback",
+      "kind": "has_label",
+      "confidence": 1.0
+     },
+     "reason": "[gdocs] tagged in the doc",
+     "by": "owner",
+     "index": 5,
+     "undone": false
+    }
+   ]
+  },
+  "joke:talks": {
+   "joke": {
+    "id": "joke:talks",
+    "type": "joke",
+    "title": "Meter that talks",
+    "stage": "to_try",
+    "summary": "The meter talks back",
+    "hidden": true
+   },
+   "yours": false,
+   "unit_groups": [],
+   "performances": [],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa9",
+     "kind": "custom",
+     "custom_kind": "runner",
+     "src": "joke:cat",
+     "dst": "joke:talks",
+     "status": "proposed",
+     "bucket": "proposed",
+     "display_kind": "runner",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "dst_brief": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "other": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "direction": "in"
+    },
+    {
+     "id": "e:aaaaaaaaaaa8",
+     "kind": "same_premise",
+     "src": "joke:meters",
+     "dst": "joke:talks",
+     "status": "rejected",
+     "confidence": 0.55,
+     "bucket": "rejected",
+     "display_kind": "same_premise",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "dst_brief": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "other": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "direction": "in"
+    }
+   ],
+   "history": [
+    {
+     "ts": "2026-10-01T10:02:00+00:00",
+     "target": "edge",
+     "id": "e:aaaaaaaaaaa8",
+     "action": "reject",
+     "before": {
+      "status": "proposed"
+     },
+     "after": {
+      "status": "rejected"
+     },
+     "reason": "not the same",
+     "by": "owner",
+     "index": 2,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:04:00+00:00",
+     "target": "node",
+     "id": "joke:talks",
+     "action": "edit",
+     "before": {
+      "stage": "idea"
+     },
+     "after": {
+      "stage": "to_try"
+     },
+     "reason": "",
+     "by": "owner",
+     "index": 4,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:15:00+00:00",
+     "target": "node",
+     "id": "joke:talks",
+     "action": "edit",
+     "before": {
+      "hidden": null
+     },
+     "after": {
+      "hidden": true
+     },
+     "reason": "[merge] mg:x",
+     "by": "owner",
+     "index": 15,
+     "undone": false
+    }
+   ]
+  },
+  "joke:cat": {
+   "joke": {
+    "id": "joke:cat",
+    "type": "joke",
+    "title": "Dating my cat",
+    "stage": "testing",
+    "summary": "An app for dating my cat",
+    "last_seen": "2025-06-01",
+    "short_name": "Cat app"
+   },
+   "yours": false,
+   "unit_groups": [
+    {
+     "date": "2025-06-01",
+     "units": [
+      {
+       "id": "unit:c1",
+       "type": "unit",
+       "text": "Dating apps are a job interview",
+       "date": "2025-06-01",
+       "edge": {
+        "id": "e:aaaaaaaaaaa3",
+        "kind": "part_of",
+        "src": "unit:c1",
+        "dst": "joke:cat",
+        "status": "rejected",
+        "bucket": "rejected",
+        "display_kind": "part_of",
+        "yours": false,
+        "edited": false,
+        "src_brief": {
+         "id": "unit:c1",
+         "type": "unit",
+         "title": "Dating apps are a job interview",
+         "kind": null,
+         "date": "2025-06-01",
+         "doc_title": null,
+         "joke": null
+        },
+        "dst_brief": {
+         "id": "joke:cat",
+         "type": "joke",
+         "title": "Dating my cat",
+         "stage": "testing",
+         "summary": "An app for dating my cat"
+        },
+        "other": {
+         "id": "unit:c1",
+         "type": "unit",
+         "title": "Dating apps are a job interview",
+         "kind": null,
+         "date": "2025-06-01",
+         "doc_title": null,
+         "joke": null
+        },
+        "direction": "in"
+       }
+      }
+     ]
+    }
+   ],
+   "performances": [],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa7",
+     "kind": "has_label",
+     "src": "unit:c1",
+     "dst": "label:device:callback",
+     "status": null,
+     "bucket": "proposed",
+     "display_kind": "has_label",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "unit:c1",
+      "type": "unit",
+      "title": "Dating apps are a job interview",
+      "kind": null,
+      "date": "2025-06-01",
+      "doc_title": null,
+      "joke": null
+     },
+     "dst_brief": {
+      "id": "label:device:callback",
+      "type": "label",
+      "title": "Callback",
+      "kind": "device",
+      "definition": null
+     },
+     "via_unit": {
+      "id": "unit:c1",
+      "type": "unit",
+      "title": "Dating apps are a job interview",
+      "kind": null,
+      "date": "2025-06-01",
+      "doc_title": null,
+      "joke": null
+     },
+     "other": {
+      "id": "label:device:callback",
+      "type": "label",
+      "title": "Callback",
+      "kind": "device",
+      "definition": null
+     }
+    },
+    {
+     "id": "e:aaaaaaaaaaa9",
+     "kind": "custom",
+     "custom_kind": "runner",
+     "src": "joke:cat",
+     "dst": "joke:talks",
+     "status": "proposed",
+     "bucket": "proposed",
+     "display_kind": "runner",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "dst_brief": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "other": {
+      "id": "joke:talks",
+      "type": "joke",
+      "title": "Meter that talks",
+      "stage": "to_try",
+      "summary": "The meter talks back"
+     },
+     "direction": "out"
+    },
+    {
+     "src": "joke:cat",
+     "dst": "joke:raccoons",
+     "kind": "callback_to",
+     "status": "confirmed",
+     "confidence": 0.4,
+     "id": "e:ccccccccccc1",
+     "bucket": "confirmed",
+     "display_kind": "callback_to",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "dst_brief": {
+      "id": "joke:raccoons",
+      "type": "joke",
+      "title": "Raccoons",
+      "stage": "idea",
+      "summary": "A raccoon with a tight five",
+      "yours": true
+     },
+     "other": {
+      "id": "joke:raccoons",
+      "type": "joke",
+      "title": "Raccoons",
+      "stage": "idea",
+      "summary": "A raccoon with a tight five",
+      "yours": true
+     },
+     "direction": "out"
+    },
+    {
+     "id": "e:aaaaaaaaab11",
+     "kind": "has_label",
+     "src": "joke:cat",
+     "dst": "label:topic:money",
+     "status": "confirmed",
+     "confidence": 0.9,
+     "bucket": "confirmed",
+     "display_kind": "has_label",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "dst_brief": {
+      "id": "label:topic:money",
+      "type": "label",
+      "title": "Money",
+      "kind": "topic",
+      "definition": "coins, bills, meters"
+     },
+     "other": {
+      "id": "label:topic:money",
+      "type": "label",
+      "title": "Money",
+      "kind": "topic",
+      "definition": "coins, bills, meters"
+     },
+     "direction": "out"
+    }
+   ],
+   "history": [
+    {
+     "ts": "2026-10-01T10:03:00+00:00",
+     "target": "edge",
+     "id": "e:aaaaaaaaaaa7",
+     "action": "edit",
+     "before": {
+      "src": "unit:c1"
+     },
+     "after": {
+      "src": "joke:cat",
+      "status": "confirmed"
+     },
+     "reason": "",
+     "by": "owner",
+     "index": 3,
+     "undone": true
+    },
+    {
+     "ts": "2026-10-01T10:06:00+00:00",
+     "target": "edge",
+     "id": "e:ccccccccccc1",
+     "action": "confirm",
+     "before": {
+      "src": "joke:cat",
+      "dst": "joke:raccoons",
+      "kind": "callback_to",
+      "status": "proposed",
+      "confidence": 0.4
+     },
+     "after": {
+      "status": "confirmed"
+     },
+     "reason": "",
+     "by": "owner",
+     "index": 6,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:10:00+00:00",
+     "target": "edge",
+     "id": "e:aaaaaaaaaaa7",
+     "action": "edit",
+     "before": {
+      "src": "joke:cat"
+     },
+     "after": {
+      "src": "unit:c1",
+      "status": null
+     },
+     "reason": "undo",
+     "by": "owner",
+     "undo_of": 3,
+     "index": 10,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:16:00+00:00",
+     "target": "node",
+     "id": "joke:cat",
+     "action": "edit",
+     "before": {
+      "short_name": null
+     },
+     "after": {
+      "short_name": "Cat app"
+     },
+     "reason": "",
+     "by": "import:gsync",
+     "index": 16,
+     "undone": false
+    }
+   ]
+  },
+  "joke:raccoons": {
+   "joke": {
+    "type": "joke",
+    "title": "Raccoons",
+    "stage": "idea",
+    "summary": "A raccoon with a tight five",
+    "first_seen": "2026-10-01",
+    "last_seen": "2026-10-01",
+    "id": "joke:raccoons"
+   },
+   "yours": true,
+   "unit_groups": [
+    {
+     "date": "2026-10-01",
+     "units": [
+      {
+       "type": "unit",
+       "text": "Raccoons unionised",
+       "kind": "tag",
+       "source": "app",
+       "date": "2026-10-01",
+       "id": "unit:v1",
+       "edge": {
+        "src": "unit:v1",
+        "dst": "joke:raccoons",
+        "kind": "part_of",
+        "status": "confirmed",
+        "confidence": 1.0,
+        "id": "e:eeeeeeeeeee1",
+        "bucket": "confirmed",
+        "display_kind": "part_of",
+        "yours": true,
+        "edited": false,
+        "src_brief": {
+         "id": "unit:v1",
+         "type": "unit",
+         "title": "Raccoons unionised",
+         "kind": "tag",
+         "date": "2026-10-01",
+         "doc_title": null,
+         "joke": "joke:raccoons",
+         "joke_title": "Raccoons",
+         "yours": true
+        },
+        "dst_brief": {
+         "id": "joke:raccoons",
+         "type": "joke",
+         "title": "Raccoons",
+         "stage": "idea",
+         "summary": "A raccoon with a tight five",
+         "yours": true
+        },
+        "other": {
+         "id": "unit:v1",
+         "type": "unit",
+         "title": "Raccoons unionised",
+         "kind": "tag",
+         "date": "2026-10-01",
+         "doc_title": null,
+         "joke": "joke:raccoons",
+         "joke_title": "Raccoons",
+         "yours": true
+        },
+        "direction": "in"
+       }
+      }
+     ]
+    }
+   ],
+   "performances": [],
+   "edges": [
+    {
+     "src": "joke:cat",
+     "dst": "joke:raccoons",
+     "kind": "callback_to",
+     "status": "confirmed",
+     "confidence": 0.4,
+     "id": "e:ccccccccccc1",
+     "bucket": "confirmed",
+     "display_kind": "callback_to",
+     "yours": false,
+     "edited": false,
+     "src_brief": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "dst_brief": {
+      "id": "joke:raccoons",
+      "type": "joke",
+      "title": "Raccoons",
+      "stage": "idea",
+      "summary": "A raccoon with a tight five",
+      "yours": true
+     },
+     "other": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "direction": "in"
+    }
+   ],
+   "history": [
+    {
+     "ts": "2026-10-01T10:00:00+00:00",
+     "target": "node",
+     "id": "joke:raccoons",
+     "action": "add",
+     "before": null,
+     "after": {
+      "type": "joke",
+      "title": "Raccoons",
+      "stage": "idea",
+      "summary": "A raccoon with a tight five",
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01"
+     },
+     "reason": "said on the input bar",
+     "by": "owner",
+     "index": 0,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:06:00+00:00",
+     "target": "edge",
+     "id": "e:ccccccccccc1",
+     "action": "confirm",
+     "before": {
+      "src": "joke:cat",
+      "dst": "joke:raccoons",
+      "kind": "callback_to",
+      "status": "proposed",
+      "confidence": 0.4
+     },
+     "after": {
+      "status": "confirmed"
+     },
+     "reason": "",
+     "by": "owner",
+     "index": 6,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:13:00+00:00",
+     "target": "node",
+     "id": "unit:v1",
+     "action": "add",
+     "before": null,
+     "after": {
+      "type": "unit",
+      "text": "Raccoons unionised",
+      "kind": "tag",
+      "source": "app",
+      "date": "2026-10-01"
+     },
+     "reason": "written in the app",
+     "by": "owner",
+     "index": 13,
+     "undone": false
+    },
+    {
+     "ts": "2026-10-01T10:14:00+00:00",
+     "target": "edge",
+     "id": "e:eeeeeeeeeee1",
+     "action": "add",
+     "before": null,
+     "after": {
+      "src": "unit:v1",
+      "dst": "joke:raccoons",
+      "kind": "part_of",
+      "status": "confirmed",
+      "confidence": 1.0
+     },
+     "reason": "written in the app",
+     "by": "owner",
+     "index": 14,
+     "undone": false
+    }
+   ]
+  }
+ },
+ "detail_missing": null,
+ "label_index": [
+  {
+   "id": "label:device:callback",
+   "type": "label",
+   "kind": "device",
+   "name": "Callback",
+   "yours": false,
+   "carriers": [
+    {
+     "edge": "e:aaaaaaaaaaa7",
+     "bucket": "proposed",
+     "confidence": null,
+     "joke": {
+      "id": "unit:c1",
+      "type": "unit",
+      "title": "Dating apps are a job interview",
+      "kind": null,
+      "date": "2025-06-01",
+      "doc_title": null,
+      "joke": null
+     },
+     "via_unit": "unit:c1"
+    },
+    {
+     "edge": "e:bbbbbbbbbbb1",
+     "bucket": "confirmed",
+     "confidence": 1.0,
+     "joke": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "via_unit": "unit:m1"
+    }
+   ],
+   "merged_from": [],
+   "counts": {
+    "proposed": 1,
+    "confirmed": 1,
+    "rejected": 0
+   }
+  },
+  {
+   "id": "label:topic:money",
+   "type": "label",
+   "kind": "topic",
+   "name": "Money",
+   "definition": "coins, bills, meters",
+   "yours": false,
+   "carriers": [
+    {
+     "edge": "e:aaaaaaaaaaa5",
+     "bucket": "confirmed",
+     "confidence": 0.7,
+     "joke": {
+      "id": "joke:meters",
+      "type": "joke",
+      "title": "Parking meters",
+      "stage": "working",
+      "summary": "AI summary"
+     },
+     "via_unit": null
+    },
+    {
+     "edge": "e:aaaaaaaaab11",
+     "bucket": "confirmed",
+     "confidence": 0.9,
+     "joke": {
+      "id": "joke:cat",
+      "type": "joke",
+      "title": "Dating my cat",
+      "stage": "testing",
+      "summary": "An app for dating my cat"
+     },
+     "via_unit": null
+    }
+   ],
+   "merged_from": [
+    "label:topic:cash"
+   ],
+   "counts": {
+    "proposed": 0,
+    "confirmed": 2,
+    "rejected": 0
+   }
+  }
+ ],
+ "actors": [
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "import:gsync",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "owner",
+  "import:gsync"
+ ]
+}
