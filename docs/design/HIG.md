@@ -272,7 +272,7 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Audio session: record category, `doNotMix`, background recording (kept, `lib/recorder.native`).
 
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
-- **The cloud (default since 2026-10-29, `lib/Cloud.tsx`, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
+- **The cloud (default since 2026-10-29, `lib/Cloud.native.tsx` on Skia / `lib/Cloud.tsx` SVG on the web, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
   3-axis PCA of its bge-small vector (the mean of its versions', or the typed idea's own), k-means groups named by
   their titles' words. A slow turn about the vertical axis until he touches (off under Reduce Motion; HIG/motion:
   motion is never the only signal and stops on request), depth as size and fade (near = bigger, brighter), pinch and
@@ -325,14 +325,14 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   bit" (prominent, appears at two picked) confirms on the phone, then opens the merged bit. The main is the bit with
   the most versions, then nights; the copy says so.
 
-### 3.13 The conversation (`/say`) and New bit (`/new-bit`)
+### 3.13 The conversation (`/say`) and a new bit (Bits "+")
 - `/say`: push, inline title "Asking"; the thread as now; the input bar as the bottom accessory. The spinner with
   "Reading your material…" is an acceptable indeterminate indicator for a short wait (HIG/progress-indicators); the
   "The writer is offline" card stays (HIG/feedback: status near the item it describes).
-- Bits "+" (2026-10-29) opens **`/new-bit`**, a form sheet at `fitToContents`: "Premise" (the short name he'd write on
-  a set list, autoFocus) and an optional "First line"; Cancel leading, **Add** trailing (`variant: 'done'`; HIG/sheets:
-  a Done button is always paired with Cancel). Not the conversation: the agreed unit is a named premise
-  (docs/HANDOVER.md "organizing ideas"). Tonight's "+ Bit" still opens the composer.
+- Bits "+" (2026-10-29, owner: "it should just open a doc like Google Docs does") creates the bit at once and pushes
+  its page with the editor open and focused: no sheet, no form, no menu. The bit carries a placeholder title until
+  the first Save, which names it from the first line (the first seven words); Undo in the snack reverts both. The
+  workbench (§3.12b) is where he writes, asks and pulls other bits in, so a new bit starts there.
 - Bits sort (Recent · Performed · Strongest, default Recent) is a toolbar pop-up labelled with the current choice
   (HIG/pop-up-buttons), not a segmented control (segments are for views: Bits · Notes).
 

@@ -149,7 +149,6 @@ function RootLayout() {
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
                 {/* Short tasks as form sheets: "+" at the medium detent (the menu fits in half; "New set list" expands), Add a joke at the large one */}
                 <Stack.Screen name="create" options={{ ...sheet([0.5, 1]), title: t('New') }} />
-                <Stack.Screen name="new-bit" options={{ ...sheet('fitToContents'), title: t('New bit') }} />
                 <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />

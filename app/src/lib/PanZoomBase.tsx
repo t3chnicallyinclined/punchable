@@ -8,6 +8,8 @@ export type View_ = { x: number; y: number; scale: number };
 export type PanZoomProps = { view: View_; onView: (v: View_) => void; width: number; height: number; children: React.ReactNode; minScale?: number; maxScale?: number; testID?: string };
 
 export function clampScale(s: number, lo = 0.25, hi = 3) {
+  'worklet'; // PanZoom.native calls this inside the pinch gesture's worklet: a plain function there is a crash
+  // ("[Worklets] Tried to synchronously call a Remote Function"), the app's crash on build 16's map (Bugsink, 2026-10-29)
   return Math.max(lo, Math.min(hi, s));
 }
 /** Zoom around a point (px, py in screen space) so what is under the pointer stays put. */

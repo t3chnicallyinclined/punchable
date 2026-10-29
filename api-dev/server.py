@@ -2037,12 +2037,18 @@ class Handler(BaseHTTPRequestHandler):
         stem = re.sub(r"[^a-z0-9]+", "-", Path(orig).stem.lower()).strip("-")[:40] or "recording"
         name = f"{now:%Y-%m-%d}_punchable-{kind}_{now:%H%M%S}_{stem}{ext}"
         kb.inbox.mkdir(parents=True, exist_ok=True)
+        # the name is reserved with an exclusive create, so two uploads in the same second (the phone posting one
+        # recording twice, seen 2026-10-29) never share a destination; the body goes to a private temp first
         dest = kb.inbox / name
         k = 2
-        while dest.exists():
-            dest = kb.inbox / f"{Path(name).stem}-{k}{ext}"
-            k += 1
-        tmp = dest.with_name(dest.name + ".part")
+        while True:
+            try:
+                os.close(os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644))
+                break
+            except FileExistsError:
+                dest = kb.inbox / f"{Path(name).stem}-{k}{ext}"
+                k += 1
+        tmp = dest.with_name(f"{dest.name}.{os.getpid()}-{threading.get_ident()}.part")
         left = n
         with open(tmp, "wb") as f:
             while left > 0:

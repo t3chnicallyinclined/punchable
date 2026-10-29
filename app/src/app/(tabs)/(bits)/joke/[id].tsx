@@ -8,7 +8,7 @@
 // "Elsewhere" (a third request, /api/jokes/<id>/similar) answers
 // "did I ever do this, and is it like anything?": the tapes it is on, the taped moments that sound like it but are
 // not linked, and the bits that sound like it (api-dev/search_api.py; lib/MomentRow).
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
@@ -46,7 +46,7 @@ function versionsOf(d: any): Version[] {
 }
 
 export default function BitPage() {
-  const p = useLocalSearchParams<{ id: string }>();
+  const p = useLocalSearchParams<{ id: string; edit?: string }>();
   const id = decodeURIComponent(String(p.id || ''));
   const ui = useUI();
   const wide = useWide();
@@ -60,6 +60,11 @@ export default function BitPage() {
   const [why, setWhy] = useState<{ title: string; why?: string; g: MapGroupKey } | null>(null);
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);   // the text being edited (a new version on Save)
+  // opened from Bits "+": a fresh document, the editor open and focused before anything else
+  const [openedFresh, setOpenedFresh] = useState(false);
+  useEffect(() => {
+    if (p.edit === '1' && d.data && !openedFresh && editing == null) { setEditing(''); setOpenedFresh(true); }
+  }, [p.edit, d.data, openedFresh, editing]);
   const [saving, setSaving] = useState(false);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
   const reloadAll = useCallback(() => { d.reload(); sim.reload(); }, [d.reload, sim.reload]);
@@ -89,11 +94,17 @@ export default function BitPage() {
     setSaving(true);
     try {
       const r = await addVersion(id, t, 'edited on the bit page');
+      let indexes = r.indexes;
+      if ((J?.title || '').startsWith('Untitled bit')) {
+        // a fresh document takes its name from its first line (the first seven words, like a typed jot)
+        const name = t.split(/\s+/).slice(0, 7).join(' ').replace(/[\s,.;:!?"']+$/, '').slice(0, 120) || 'New bit';
+        try { const w = await decide({ target: 'node', action: 'edit', id, after: { title: name }, reason: 'named from its first line' }); indexes = [...indexes, ...w.indexes]; } catch { /* the version is saved either way */ }
+      }
       haptics.success();
       setEditing(null);
       setVi(0);
       reloadAll();
-      ui.snack('Saved as a new version · the old one stays', async () => { await undo(r.indexes); reloadAll(); });
+      ui.snack(openedFresh ? 'Saved' : 'Saved as a new version · the old one stays', async () => { await undo(indexes); reloadAll(); });
     } catch (e: any) {
       ui.snack(`Couldn’t save: ${e.message}`);
     } finally {

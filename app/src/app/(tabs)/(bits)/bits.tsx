@@ -11,7 +11,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import type { SearchBarProps } from 'react-native-screens';
-import { ApiError, JokeSummary, get, useApi } from '@/lib/api';
+import { ApiError, JokeSummary, decide, get, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { fmtDur } from '@/lib/laughs';
 import { VoiceMemos } from '@/lib/memos';
@@ -134,7 +134,18 @@ export default function Bits() {
     return c;
   }, [items]);
   const askIt = useCallback(() => router.push({ pathname: '/say', params: { text: dq, screen: 'bits' } } as any), [dq]);
-  const newBit = useCallback(() => router.push('/new-bit' as any), []);
+  // "+" opens a document (owner, 2026-10-29: "it should just open a doc like Google Docs does"): the bit exists at
+  // once with a placeholder title and its page opens in the editor; the first saved line names it (joke/[id].tsx)
+  const newBit = useCallback(async () => {
+    try {
+      const w = await decide({ target: 'node', action: 'add', after: { type: 'joke', title: `Untitled bit ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`, stage: 'idea' }, reason: 'new bit (Bits +)' });
+      const id = w.decisions?.[0]?.id;
+      if (!id) throw new Error('no id came back');
+      router.push({ pathname: `/joke/${encodeURIComponent(id)}`, params: { edit: '1' } } as any);
+    } catch (e: any) {
+      ui.snack(`Couldn’t start a bit: ${e.message}`);
+    }
+  }, [ui]);
   const refreshControl = useRefresh(useCallback(() => list.reload(), [list.reload]));
   // HIG/search-fields (phone): the system search bar in the header; it supplies Clear and Cancel and starts as he types.
   // `stacked`, not `automatic`: the field stays under the title while the list scrolls (it never goes to the trailing
