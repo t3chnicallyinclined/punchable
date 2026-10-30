@@ -1,17 +1,20 @@
-// Tonight (MixHome, docs/UX_2026-10.md): the home tab. The date line, "N to sort" (the morning inbox), "+" (the create
-// sheet), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap), three questions
-// to ask his material, and the one input bar. One request: GET /api/tonight/screen; changes arrive over /api/live.
+// Tonight (MixHome, docs/UX_2026-10.md): the home tab. The date line, "N to sort" (the morning inbox), "+" (a new
+// bit, at once: the same lib/newBit as the Bits tab, SPEC 2026-10-30), the ⋯ menu (New set list · Record a set ·
+// Import a recording…), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap),
+// three questions to ask his material. One request: GET /api/tonight/screen; changes arrive over /api/live.
 import React, { useCallback, useState } from 'react';
 import { PixelRatio, Platform, Pressable, Text, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useApi } from '@/lib/api';
 import { mmss } from '@/rules/format';
 import { TonightScreen, useOutbox } from '@/lib/say';
-import { CreateSheet } from '@/lib/CreateSheet';
+import { useBoards } from '@/lib/boards';
+import { useNewBit } from '@/lib/newBit';
+import { newSetList } from '@/lib/newSetList';
 import { C, F } from '@/lib/theme';
 import { tonightTitleRow } from '@/rules/layoutRules';
 import { noteWorker } from '@/lib/worker';
-import { Avatar, Icon, Skeleton, T, useUI, useWide } from '@/lib/ui';
+import { Avatar, Icon, IconBtn, MenuItem, MenuSheet, Skeleton, T, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -34,7 +37,8 @@ export default function Tonight() {
   const ui = useUI();
   const s = useApi<TonightScreen>('/api/tonight/screen', { poll: 30000 });
   const queued = useOutbox();
-  const [create, setCreate] = useState(false);
+  const boards = useBoards();
+  const [more, setMore] = useState(false);          // the web's ⋯ menu (the phone's is the toolbar's own)
   const d = s.data;
   const now = new Date();
   const b = d?.board || null;
@@ -55,13 +59,24 @@ export default function Tonight() {
   // the "N to sort" pill, which stacks under the title at text sizes >= 1.3x. No Ask button: the input bar IS Ask.
   const titleRow = tonightTitleRow(PixelRatio.getFontScale());
   const native = Platform.OS !== 'web';
-  const openCreate = () => (native ? router.push('/create' as any) : setCreate(true));
+  // "+" acts at once (SPEC 2026-10-30 §2: the Notes pattern, 1 tap to typing); the secondary creates live in ⋯.
+  // The haptic is inside newBit / newSetList, after the server write, never on the tap (§4).
+  const newBit = useNewBit('Tonight');
+  const newList = () => { void newSetList({ setCurrent: boards.setCurrent, snack: ui.snack }); };
+  const recordSet = () => ui.withMic(() => router.push('/record' as any));
+  // HIG/menus: an ellipsis only where more input follows (the import screen asks which recordings); no articles
+  const moreItems: MenuItem[] = [
+    { label: 'New set list', icon: 'list.bullet.rectangle', onPress: newList, testID: 'more-new-list' },
+    { label: 'Record a set', icon: 'record.circle', onPress: recordSet, testID: 'more-record' },
+    { label: 'Import a recording…', icon: 'square.and.arrow.down', onPress: () => router.push('/import' as any), testID: 'more-import' },
+  ];
   const dateLine = `${DAYS[now.getDay()]}${d?.latest_set?.date === d?.date ? ' · set tonight' : ''}`;
   const header = (
     <View testID="tonight-header" style={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 4, paddingBottom: 4, gap: 2 }}>
       <View testID="tonight-bar" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
         <T v="eb" testID="tonight-date" numberOfLines={1} style={{ flex: 1, minWidth: 0, color: C.mut2 }}>{DAYS[now.getDay()]}{d?.latest_set?.date === d?.date ? ' · set tonight' : ''}</T>
-        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New" onPress={openCreate} hitSlop={4}
+        <IconBtn testID="more" label="More" onPress={() => setMore(true)}><Icon name="more" size={22} color={C.amber} /></IconBtn>
+        <Pressable testID="create" accessibilityRole="button" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit} hitSlop={4}
           style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon name="plus" size={20} color={C.amber} sw={2.4} />
         </Pressable>
@@ -81,9 +96,15 @@ export default function Tonight() {
   return (
     <Screen title="Tonight" testID="tonight" header={native ? undefined : header} largeTitle={native} search={search as any} onRefresh={s.reload}>
       {native && (
-        // HIG/toolbars: "+" and the face in the bar; the title stays short so there is room for them
+        // HIG/toolbars: the primary action ("+") acts, trailing; the other creates in the ⋯ menu (HIG/pull-down-buttons:
+        // a view's primary action is never hidden in a menu); the face last. The title stays short so there is room.
         <Stack.Toolbar placement="right">
-          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New" onPress={openCreate}>New</Stack.Toolbar.Button>
+          <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="list.bullet.rectangle" onPress={newList}>New set list</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="record.circle" onPress={recordSet}>Record a set</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="square.and.arrow.down" onPress={() => router.push('/import' as any)}>Import a recording…</Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
@@ -102,8 +123,8 @@ export default function Tonight() {
       {!!queued.length && <T v="small" testID="say-queued" style={{ color: C.amber }}>{queued.length} saved on this phone, sending when Punchable is back…</T>}
       {s.rawError && !d && <T v="mut" testID="tonight-error">Can’t reach Punchable: {s.rawError}</T>}
       {!d && !s.rawError && <Skeleton lines={3} height={20} testID="tonight-skeleton" />}
-      <Pressable testID="tonight-set" accessibilityRole="button" accessibilityLabel={b ? `${b.title}, ${b.runtime}. Open the set list` : 'No set list yet. Make one'}
-        onPress={() => (b ? router.push(`/list/${encodeURIComponent(b.id)}` as any) : openCreate())}
+      <Pressable testID="tonight-set" accessibilityRole="button" accessibilityLabel={b ? `${b.title}, ${b.runtime}. Open the set list` : 'No set list yet. Start one for tonight'}
+        onPress={() => (b ? router.push(`/list/${encodeURIComponent(b.id)}` as any) : newList())}
         style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <Text numberOfLines={1} style={{ flex: 1, fontFamily: F.bold, fontSize: 15, color: C.text }}>{b ? `Your ${Math.round(b.target_s / 60)} for tonight` : 'No set list yet'}</Text>
@@ -113,7 +134,7 @@ export default function Tonight() {
         <Text numberOfLines={2} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>
           {b ? b.segments.map((sg, i) => (
             <Text key={i}>{i ? ' · ' : ''}{sg.gap ? <Text style={{ color: C.gapText }}>gap · </Text> : null}{sg.short_name}</Text>
-          )) : 'Tap + to start one, or say "new 7 for Friday".'}
+          )) : 'Tap here to start one for tonight, or say "new 7 for Friday".'}
         </Text>
       </Pressable>
 
@@ -133,7 +154,7 @@ export default function Tonight() {
           <T style={{ color: C.amber }}>Open ›</T>
         </Pressable>
       )}
-      {!native && <CreateSheet visible={create} onClose={() => setCreate(false)} />}
+      {!native && <MenuSheet visible={more} title="Tonight" items={moreItems} onClose={() => setMore(false)} testID="more-menu" />}
     </Screen>
   );
 }

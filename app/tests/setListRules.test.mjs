@@ -1,7 +1,7 @@
 // Unit test for src/rules/setListRules.ts (docs/design/SPEC-2026-10-29-set-lists-and-stage-notes.md §4.1): his vs
 // drafts vs archived, the drafts row's words, the "To a set" target, the picker's rows, the notes sheet's fallbacks.
 //   node --experimental-strip-types --no-warnings tests/setListRules.test.mjs
-import { addTarget, draftsLabel, notesFor, notesFooter, pickerLists, seedWord, splitLists, stageRowLabel } from "../src/rules/setListRules.ts";
+import { DEFAULT_LIST_TARGET_S, addTarget, defaultListTitle, draftsLabel, notesFor, notesFooter, pickerLists, seedWord, splitLists, stageRowLabel } from "../src/rules/setListRules.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };
@@ -66,6 +66,27 @@ check(JSON.stringify(notesFooter(false, 2, 7)) === JSON.stringify({ label: "Open
 check(stageRowLabel(2, 7, "Kale", 2) === "3 of 7, Kale, current. Notes", "the current row");
 check(stageRowLabel(0, 7, "Kale", 2) === "1 of 7, Kale, done. Notes", "a crossed-out row");
 check(stageRowLabel(5, 7, "Kale", 2) === "6 of 7, Kale. Notes", "a row still to come");
+
+// defaultListTitle (SPEC 2026-10-30 §3, §5): "<Weekday> · <d> <Mon>" in local time, English names whatever the locale,
+// " (2)" / " (3)" when the day's title is taken. Local-time constructors, so the weekday is the calendar's, not UTC's.
+// 2026-10-30 is a Friday (the spec's example line says Thursday for that date; the calendar wins): 10-29 is the Thursday.
+const fri = new Date(2026, 9, 30, 20, 0);
+const thu = new Date(2026, 9, 29, 20, 0);
+check(defaultListTitle(fri, []) === "Friday · 30 Oct", `2026-10-30 20:00 -> "${defaultListTitle(fri, [])}"`);
+check(defaultListTitle(thu, []) === "Thursday · 29 Oct", `2026-10-29 20:00 -> "${defaultListTitle(thu, [])}"`);
+check(defaultListTitle(fri, ["Friday · 30 Oct"]) === "Friday · 30 Oct (2)", "taken once: (2)");
+check(defaultListTitle(fri, ["Friday · 30 Oct", "Friday · 30 Oct (2)"]) === "Friday · 30 Oct (3)", "taken twice: (3)");
+check(defaultListTitle(fri, ["Friday · 30 Oct (2)"]) === "Friday · 30 Oct", "only the (2) taken: the plain title is free");
+check(defaultListTitle(fri, [" Friday · 30 Oct "]) === "Friday · 30 Oct (2)", "a taken title is compared trimmed");
+check(defaultListTitle(fri, ["Thursday · 29 Oct", "Kale set"]) === "Friday · 30 Oct", "other days and names never collide");
+check(defaultListTitle(new Date(2026, 0, 1, 9, 0), []) === "Thursday · 1 Jan", "no zero padding on the day; Jan as three letters");
+check(defaultListTitle(new Date(2026, 11, 31, 23, 59), []) === "Thursday · 31 Dec", "the last day of the year");
+check(DEFAULT_LIST_TARGET_S === 420, "a new list is 7 minutes until he says otherwise");
+{
+  // locale-stable: the same answer under another locale (Intl plays no part)
+  const before = Intl.DateTimeFormat().resolvedOptions().locale;
+  check(defaultListTitle(fri, []) === "Friday · 30 Oct" && typeof before === "string", `no Intl in the title (host locale ${before})`);
+}
 
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");
 process.exit(fails.length ? 1 : 0);

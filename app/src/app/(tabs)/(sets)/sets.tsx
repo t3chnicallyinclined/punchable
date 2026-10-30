@@ -1,6 +1,7 @@
 // Sets (MixSets, docs/UX_2026-10.md): HIS set lists as Sharpie-on-paper cards, each joke's short name in order (the
 // boards list carries `names`, one request), tonight's first; "Recorded" lists the taped sets. A set list IS a board
-// (/list/<id>); "New set list" is the create sheet. The lists the app made (`source` "inferred") are drafts: ONE
+// (/list/<id>); "+" starts today's list at once and opens it (lib/newSetList, SPEC 2026-10-30: one tap to an open
+// list, the name and the length are defaults he changes from the list's own menu). The lists the app made (`source` "inferred") are drafts: ONE
 // collapsed row at the bottom ("15 drafts from your Insights"), each with "Use this" (an owner write: the list becomes
 // his) and Archive (undoable: `{archive: true}` / `{unarchive: true}`); nothing is ever chosen for him
 // (docs/design/SPEC-2026-10-29-set-lists-and-stage-notes.md §1). Archived lists live on /archived (the toolbar menu).
@@ -18,10 +19,10 @@ import { draftsLabel, splitLists } from '@/rules/setListRules';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { getPrefs, setPrefs } from '@/lib/prefs';
-import { CreateSheet } from '@/lib/CreateSheet';
+import { newSetList } from '@/lib/newSetList';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
-import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
+import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
 type Seg_ = 'lists' | 'performed';
@@ -85,7 +86,6 @@ export default function Sets() {
   const b = useCreative<{ boards: BoardListItem[] }>('boards', creative.boards, { poll: 30000 });
   const sets = useSets();
   const [seg, setSeg] = useState<Seg_>('lists');
-  const [create, setCreate] = useState(false);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [rename, setRename] = useState<BoardListItem | null>(null);
   const [draftsOpen, setDraftsOpen] = useState(() => getPrefs().draftsOpen);
@@ -97,8 +97,16 @@ export default function Sets() {
   const label = draftsLabel(drafts);
   const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
   const native = Platform.OS !== 'web';
-  const openCreate = () => (native ? router.push({ pathname: '/create', params: { start: 'set' } } as any) : setCreate(true));
+  // "+" acts (SPEC 2026-10-30 §2): today's title, 7 minutes, empty, current, open. The titles on this tab are passed so
+  // a second list the same day gets "(2)" without another request; the tab re-reads once the list exists.
+  const startList = async () => { if (await newSetList({ titles: (b.data?.boards || []).map((x) => x.title), setCurrent: cur.setCurrent, snack: ui.snack })) b.reload(); };
+  const recordSet = () => ui.withMic(() => router.push('/record' as any));
   const openArchived = () => router.push('/archived' as any);
+  // the ⋯ menu's items, the same words on the phone's toolbar menu and the web's sheet (HIG/menus: "Archived" is navigation, no ellipsis)
+  const moreItems: MenuItem[] = [
+    { label: 'Record a set', icon: 'record.circle', onPress: recordSet, testID: 'sets-record' },
+    { label: 'Archived', icon: 'archivebox', onPress: openArchived, testID: 'sets-archived' },
+  ];
   const open = (x: BoardListItem) => { cur.setCurrent({ id: x.id, title: x.title }); router.push(`/list/${enc(x.id)}` as any); };
   const openDraft = (x: BoardListItem) => router.push(`/list/${enc(x.id)}` as any); // a draft is never made current
   const toggleDrafts = () => { haptics.selection(); setDraftsOpen((v) => { setPrefs({ draftsOpen: !v }); return !v; }); };
@@ -174,16 +182,17 @@ export default function Sets() {
   const groupItems: MenuItem[] = [{ label: 'Archive all drafts', icon: 'archivebox', onPress: archiveAll, testID: 'drafts-archive-all-menu' }];
   return (
     <Screen title="Sets" testID="sets" onRefresh={refresh} largeTitle={native} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <TextBtn testID="sets-archived" label="Archived" onPress={openArchived} />
-      <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={openCreate} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
+      <IconBtn testID="sets-more" label="More" onPress={() => setMenu({ title: 'Sets', items: moreItems })}><Icon name="more" size={22} color={C.amber} /></IconBtn>
+      <IconBtn testID="new-setlist" label="New set list" onPress={startList}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></IconBtn>
       <Avatar /></View>}>
       {native && (
         <Stack.Toolbar placement="right">
-          {/* HIG/menus: "Archived" is navigation, no ellipsis */}
+          {/* HIG/toolbars: the primary action ("+") acts, trailing; Record a set and Archived in the ⋯ menu */}
           <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="record.circle" onPress={recordSet}>Record a set</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="archivebox" onPress={openArchived}>Archived</Stack.Toolbar.MenuAction>
           </Stack.Toolbar.Menu>
-          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" onPress={openCreate}>New set list</Stack.Toolbar.Button>
+          <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" accessibilityHint="Starts an empty list named for today" onPress={startList}>New set list</Stack.Toolbar.Button>
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
@@ -195,8 +204,8 @@ export default function Sets() {
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
           {b.error && !b.data ? <ErrorCard error={b.error} onRetry={b.reload} /> : null}
           {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
-          {/* HIG/writing: an empty screen says what to do next and gives the button */}
-          {b.data && !his.length && <Empty text="No set list yet. Build the first one."><Btn small v="add" label="+ New set list" accessibilityLabel="New set list" onPress={openCreate} /></Empty>}
+          {/* HIG/writing: an empty screen says what to do next; the "+" in the bar is the button (SPEC 2026-10-30 §3) */}
+          {b.data && !his.length && <Empty text="No set list yet. Tap + and it starts one for tonight." />}
           <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 18, paddingVertical: 6 }}>
             {ordered.map((x) => (
               <View key={x.id} style={{ width: wide ? 300 : '100%' }}>
@@ -245,7 +254,7 @@ export default function Sets() {
         <View style={{ gap: 6 }}>
           {!!sets.list.length && <T v="small" testID="sets-count">{sets.list.length} {sets.list.length === 1 ? 'set' : 'sets'} on tape</T>}
           {sets.error && !sets.list.length ? <ErrorCard error={sets.error} /> : null}
-          {!sets.list.length && !sets.error && <Empty text="No recorded sets yet. Open a set list and tap Record, or record one from ＋." />}
+          {!sets.list.length && !sets.error && <Empty text="No recorded sets yet. Open a set list and tap Record, or pick Record a set from the ⋯ menu." />}
           <List>
             {sets.list.map((x) => (
               <ListRow key={x.id} testID={`performed-${x.id}`} title={<T v="semi" numberOfLines={1}>{x.venue.name}</T>}
@@ -255,7 +264,6 @@ export default function Sets() {
           </List>
         </View>
       )}
-      {!native && <CreateSheet visible={create} onClose={() => setCreate(false)} start="set" />}
       <MenuSheet visible={!!menu} title={menu?.title} items={menu?.items || []} onClose={() => setMenu(null)} testID="card-menu" />
       <Sheet visible={!!rename} onClose={() => setRename(null)} label="Rename the set list" testID="card-title-sheet">
         <SheetHead title="Rename the set list" onCancel={() => setRename(null)} testID="card-title" />

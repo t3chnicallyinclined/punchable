@@ -147,8 +147,7 @@ function RootLayout() {
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
                 <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
-                {/* Short tasks as form sheets: "+" at the medium detent (the menu fits in half; "New set list" expands), Add a joke at the large one */}
-                <Stack.Screen name="create" options={{ ...sheet([0.5, 1]), title: t('New') }} />
+                {/* Short tasks as form sheets: Add a joke at the large detent ("+" itself is no sheet: it acts, SPEC 2026-10-30) */}
                 <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
                 {/* A bit's notes over the stage or a set list (HIG/sheets: medium detent first, large on drag; nonmodal at
                     the medium detent so the clock behind stays readable and the stage keeps running; the elevated ground) */}

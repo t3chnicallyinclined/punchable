@@ -3,7 +3,9 @@
 // time; "Gap here · add a bridge" where the builder flags a weak transition; the time bar; drag to reorder; "Add a
 // joke · N left" at the bottom. HIG (the audit): tap a row OPENS the bit; trailing swipe = Remove (red, a full swipe
 // runs it, Undo in the snackbar) + Swap; long-press = Open · Swap · Rename · Move to top · Move to bottom · Remove;
-// the title and the "…" More button rename; pull to refresh. A trailing 44-pt notes button per row (and "Notes" first
+// the title and the "…" More button rename; "Length…" in the same menu sets the slot (5 · 7 · 10 · 15 · custom,
+// PATCH {target_s}; SPEC 2026-10-30: the length a new list is born with is 7, changed here, never asked up front);
+// pull to refresh. A trailing 44-pt notes button per row (and "Notes" first
 // in the menu) opens the bit's words as a sheet (/bitnotes, SPEC 2026-10-29 §2); the row tap stays the workbench.
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
@@ -34,6 +36,11 @@ const boardPatch = (id: string, body: any) => patch<any>(`/api/boards/${enc(id)}
 
 const native = Platform.OS !== 'web';
 const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
+const LENGTHS = [5, 7, 10, 15];
+/** The length sheet's state while open: a chip or a typed number of minutes (the typed one wins while it has text). */
+type Len = { mins: number; custom: string };
+const lenMinutes = (l: Len) => (l.custom.trim() ? Number(l.custom) : l.mins);
+const lenValid = (l: Len) => { const m = lenMinutes(l); return Number.isInteger(m) && m >= 1 && m <= 240; };
 
 function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; onNotes: () => void; items: MenuItem[] }) {
   const name = x.short_name || shortNameOf(x.title);
@@ -62,7 +69,7 @@ function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: num
 }
 
 export default function SetListScreen() {
-  const p = useLocalSearchParams<{ id: string }>();
+  const p = useLocalSearchParams<{ id: string; rename?: string }>();
   const id = decodeURIComponent(String(p.id || ''));
   const ui = useUI();
   const boards = useBoards();
@@ -71,12 +78,19 @@ export default function SetListScreen() {
   const [gap, setGap] = useState<Gap | null>(null);
   const [rename, setRename] = useState<Step | null>(null);
   const [title, setTitle] = useState(false);
+  const [len, setLen] = useState<Len | null>(null);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [listMenu, setListMenu] = useState(false);
   const B = b.data;
   React.useEffect(() => {
     if (B?.board) boards.setCurrent({ id, title: B.board.title });
   }, [B?.board?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // "Rename" on the snack after a new list (lib/newSetList) navigates here with a fresh `rename` value: open the sheet
+  // once per value, once the list is on screen; a cancel is not undone by a reload
+  const renamed = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (p.rename && B && renamed.current !== p.rename) { renamed.current = p.rename; setTitle(true); }
+  }, [p.rename, B]);
   // the Add-a-joke sheet is its own route on the phone and writes the op itself: re-read when this screen is back in front
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => {
@@ -186,8 +200,18 @@ export default function SetListScreen() {
     } },
     { label: 'Cancel', cancel: true },
   ] });
+  // the slot: a chip or a typed number of minutes; one PATCH, Undo puts the old length back (through `act`)
+  const openLength = () => setLen({ mins: target && LENGTHS.includes(Math.round(target / 60)) ? Math.round(target / 60) : 7, custom: target && !LENGTHS.includes(Math.round(target / 60)) ? String(Math.round(target / 60)) : '' });
+  const saveLength = () => {
+    if (!len || !lenValid(len)) return;
+    const m = lenMinutes(len);
+    setLen(null);
+    if (target && m * 60 === target) return;
+    act(() => boardPatch(id, { target_s: m * 60 }), `${m} min set`, target ? () => boardPatch(id, { target_s: target }) : undefined);
+  };
   const listItems: MenuItem[] = [
     { label: 'Rename…', onPress: () => setTitle(true), testID: 'list-rename' },
+    { label: 'Length…', onPress: openLength, testID: 'list-length' },
     { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
     { label: 'Share…', onPress: share, testID: 'list-share' },
     { label: 'Delete', onPress: del, destructive: true, testID: 'list-delete' },
@@ -196,7 +220,7 @@ export default function SetListScreen() {
   const header = native ? undefined : (
     <TopBar title={B.board.title} back backLabel="Sets" onBack={() => (router.canGoBack() ? router.back() : router.navigate('/sets' as any))}
       right={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename, duplicate, share or delete the set list" onPress={() => setListMenu(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
+        <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename, set the length, duplicate, share or delete the set list" onPress={() => setListMenu(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
         <TextBtn testID="stage" label="Record" onPress={stage} />
       </View>} />
   );
@@ -210,6 +234,7 @@ export default function SetListScreen() {
           <Stack.Toolbar placement="right">
             <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
               <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setTitle(true)}>Rename…</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
@@ -238,7 +263,8 @@ export default function SetListScreen() {
         </View>
       </View>
 
-      {!steps.length && <Empty text="Empty list. Add a joke below, or say one." />}
+      {/* a fresh list (SPEC 2026-10-30 §3): what to do next, and the name it was born with is one tap from here (44 pt, TextBtn) */}
+      {!steps.length && <Empty text="Nothing on it yet. Add a joke below."><TextBtn testID="list-name-it" label="Name it" accessibilityLabel={`Name it. The list is called ${B.board.title}`} onPress={() => setTitle(true)} /></Empty>}
       <DragList testID="list-rows" items={steps} keyOf={(x) => x.joke_id} onReorder={reorder}
         render={(x: Step, i, handle) => (
           <View>
@@ -273,6 +299,18 @@ export default function SetListScreen() {
       <Sheet visible={title} onClose={() => setTitle(false)} label="Rename the set list" testID="title-sheet">
         <SheetHead title="Rename the set list" onCancel={() => setTitle(false)} testID="title" />
         <TitleForm title={B.board.title} onSave={(t) => { setTitle(false); const old = B.board.title; act(() => boardPatch(id, { title: t }), `Renamed to ${t}`, () => boardPatch(id, { title: old })); }} />
+      </Sheet>
+      {/* HIG/sheets: a short request for one value; Cancel leading, Done trailing (the kit's Sheet until A5's route sheet lands) */}
+      <Sheet visible={!!len} onClose={() => setLen(null)} label="How long is the set?" testID="length-sheet">
+        <SheetHead title="How long is the set?" onCancel={() => setLen(null)} onDone={saveLength} doneDisabled={!len || !lenValid(len)} testID="length" />
+        {len && (
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }} accessibilityRole="radiogroup" accessibilityLabel="Set length">
+            {LENGTHS.map((m) => <Btn key={m} small testID={`length-${m}`} v={len.mins === m && !len.custom.trim() ? 'primary' : 'plain'} label={`${m} min`} accessibilityLabel={`${m} minutes`} onPress={() => setLen({ mins: m, custom: '' })} />)}
+            {/* HIG/virtual-keyboards: a number pad for a number */}
+            <TextInput testID="length-custom" value={len.custom} onChangeText={(t) => setLen({ ...len, custom: t })} placeholder="custom" placeholderTextColor={C.dim} keyboardType="number-pad" returnKeyType="done" onSubmitEditing={saveLength} accessibilityLabel="Custom length in minutes" maxLength={3}
+              style={{ width: 84, minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 15 }} />
+          </View>
+        )}
       </Sheet>
       <MenuSheet visible={!!menu} title={menu?.title} items={menu?.items || []} onClose={() => setMenu(null)} testID="row-menu" />
       <MenuSheet visible={listMenu} title={B.board.title} items={listItems} onClose={() => setListMenu(false)} testID="list-menu" />

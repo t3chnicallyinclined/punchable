@@ -16,3 +16,26 @@ export function pickMain<T extends { id: string; versions?: number; sets?: numbe
 export function answerLine(answer?: string | null): string {
   return (answer || '').replace(/\s*\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
 }
+
+// A fresh bit (the "+" on Tonight and Bits, docs/design/SPEC-2026-10-30-create-flow.md §3): it exists before it has a
+// name, under a marker title the first Save keys on; the first saved line then names it.
+const FRESH_MARK = 'Untitled bit';
+
+/** The placeholder title a new bit is created with: "Untitled bit YYYY-MM-DD HH:MM" (UTC minute; the bar shows "New bit"). */
+export function freshBitTitle(now: Date): string {
+  return `${FRESH_MARK} ${now.toISOString().slice(0, 16).replace('T', ' ')}`;
+}
+
+/** True only for a title still carrying the marker prefix (so "Untitled bits of wisdom" is a real title, not fresh). */
+export function isFreshBit(title?: string | null): boolean {
+  const t = (title || '').trim();
+  return t === FRESH_MARK || t.startsWith(`${FRESH_MARK} `);
+}
+
+/** The name a fresh bit takes from what he wrote: the first seven words of the first non-empty line, trailing
+ *  punctuation cut, at most 120 characters; "New bit" when there is nothing to name it from. */
+export function nameFromFirstLine(text?: string | null): string {
+  const line = (text || '').split(/\r?\n/).map((l) => l.trim()).find((l) => l) || '';
+  const name = line.split(/\s+/).slice(0, 7).join(' ').replace(/[\s,.;:!?"'…]+$/, '').slice(0, 120).trim();
+  return name || 'New bit';
+}

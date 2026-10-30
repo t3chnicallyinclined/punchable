@@ -16,6 +16,7 @@ import { useBoards } from '@/lib/boards';
 import { MergeHint } from '@/lib/MergeHint';
 import { BitTalk, useBitTalk } from '@/lib/BitTalk';
 import { addVersion, mergeInto, undoMerge } from '@/lib/bitWork';
+import { isFreshBit, nameFromFirstLine } from '@/rules/bitWorkRules';
 import { isQuestion } from '@/lib/say';
 import { MomentRow } from '@/lib/MomentRow';
 import { SimilarResult, closeness, oneLine } from '@/rules/searchRows';
@@ -71,8 +72,10 @@ export default function BitPage() {
   const reloadAll = useCallback(() => { d.reload(); sim.reload(); }, [d.reload, sim.reload]);
   const talk = useBitTalk(id, reloadAll);
   const J = d.data?.joke;
-  const title = (J?.title || '').split(' (')[0] || J?.title || 'Bit';
-  const shortName = shortNameOf(J?.title || '', J?.short_name);
+  // a fresh bit (lib/newBit) carries a marker title until its first Save names it; the page says "New bit" meanwhile
+  const fresh = isFreshBit(J?.title);
+  const title = fresh ? 'New bit' : (J?.title || '').split(' (')[0] || J?.title || 'Bit';
+  const shortName = fresh ? 'New bit' : shortNameOf(J?.title || '', J?.short_name);
   // the bar: a question goes to the conversation about this bit; a line becomes its newest version
   const onSay = useCallback(async (text: string) => {
     const t = text.trim();
@@ -96,9 +99,9 @@ export default function BitPage() {
     try {
       const r = await addVersion(id, t, 'edited on the bit page');
       let indexes = r.indexes;
-      if ((J?.title || '').startsWith('Untitled bit')) {
-        // a fresh document takes its name from its first line (the first seven words, like a typed jot)
-        const name = t.split(/\s+/).slice(0, 7).join(' ').replace(/[\s,.;:!?"']+$/, '').slice(0, 120) || 'New bit';
+      if (fresh) {
+        // a fresh document takes its name from its first line (the first seven words, like a typed jot): rules/bitWorkRules
+        const name = nameFromFirstLine(t);
         try { const w = await decide({ target: 'node', action: 'edit', id, after: { title: name }, reason: 'named from its first line' }); indexes = [...indexes, ...w.indexes]; } catch { /* the version is saved either way */ }
       }
       haptics.success();
@@ -209,9 +212,10 @@ export default function BitPage() {
       {editing != null ? (
         <View testID="bit-edit" style={{ padding: 12, borderRadius: 16, backgroundColor: C.card, gap: 10, borderWidth: 1, borderColor: C.amber }}>
           <TextInput testID="bit-edit-input" value={editing} onChangeText={setEditing} multiline autoFocus textAlignVertical="top" accessibilityLabel="The bit's text"
+            placeholder={fresh ? 'Write the bit. The first line names it.' : undefined} placeholderTextColor={C.dim}
             style={{ minHeight: 160, fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text }} />
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <T v="small" style={{ flex: 1 }}>Saves as a new version · the old one stays</T>
+            <T v="small" style={{ flex: 1 }}>{fresh ? 'The first line names it' : 'Saves as a new version · the old one stays'}</T>
             <Btn small v="ghost" testID="bit-edit-cancel" label="Cancel" onPress={() => setEditing(null)} />
             <Btn small v="primary" testID="bit-edit-save" label={saving ? 'Saving…' : 'Save'} disabled={saving || !(editing || '').trim()} onPress={saveEdit} />
           </View>

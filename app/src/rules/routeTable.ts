@@ -8,7 +8,7 @@ export const REQUIRED_URLS = [
   '/', '/bits', '/sets', '/list/x', '/joke/x', '/set/x', '/board/x', '/map', '/inbox', '/say', '/stage/x', '/merge',
   '/settings', '/write', '/builder/x', '/notebook', '/boards', '/review', '/ask', '/ask/x', '/login', '/auth/callback',
   '/auth/logout', '/profile', '/record', '/today', '/import', '/learned', '/notes', '/desk', '/shows', '/calendar',
-  '/bit/x', '/map/x', '/venue/x', '/myset/x', '/workingset/x', '/setlist/x', '/create', '/add/x', '/voice',
+  '/bit/x', '/map/x', '/venue/x', '/myset/x', '/workingset/x', '/setlist/x', '/add/x', '/voice',
   '/archived', '/bitnotes',
 ];
 /** Served as static files by the web image (app/public), outside the router. */

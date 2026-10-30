@@ -83,3 +83,23 @@ export function stageRowLabel(i: number, n: number, name: string, cur: number): 
   const state = i === cur ? ', current' : i < cur ? ', done' : '';
   return `${i + 1} of ${n}, ${name}${state}. Notes`;
 }
+
+// English on purpose, not the device locale: the title is a label he reads back the same on every device and in the
+// API ("Friday · 30 Oct"), and node runs this without ICU data (docs/design/SPEC-2026-10-30-create-flow.md §3, §5).
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** The default length of a new set list, in seconds: 7 minutes (the old sheet's own default). */
+export const DEFAULT_LIST_TARGET_S = 420;
+
+/** The name a new set list gets without asking: "<Weekday> · <d> <Mon>" in local time, e.g. "Friday · 30 Oct"; when
+ *  that title is already taken, " (2)", then " (3)" and so on. Comparison trims both sides; nothing else is normalised. */
+export function defaultListTitle(now: Date, taken: readonly string[]): string {
+  const base = `${DAY_NAMES[now.getDay()]} · ${now.getDate()} ${MONTH_NAMES[now.getMonth()]}`;
+  const have = new Set(taken.map((t) => (t || '').trim()));
+  if (!have.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const t = `${base} (${n})`;
+    if (!have.has(t)) return t;
+  }
+}

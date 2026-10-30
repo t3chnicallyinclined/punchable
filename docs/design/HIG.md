@@ -309,7 +309,11 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   ("Make haptics optional", HIG/playing-haptics). Account deletion is required and present ("If you help people create
   an account … you must also help them delete it", HIG/managing-accounts).
 
-### 3.12 Create ("+", form sheet at [0.5, 1])
+### 3.12 Create ("+", form sheet at [0.5, 1]) — SUPERSEDED
+- **Superseded 2026-10-30 by `docs/design/SPEC-2026-10-30-create-flow.md`** (built as A10): there is no create sheet
+  and no `/create` route. "+" acts at once on every tab (a new bit on Tonight and Bits, a new set list on Sets); the
+  secondary creates live in the toolbar's ⋯ menu; the set length is "Length…" in the list's own menu. The §2 rows
+  "create.tsx" and "Create ("+")" above are history. The text below is kept as the record of what shipped in builds 4-18.
 - Rows Bit · Set list · Record a set · Voice memos; the YouTube field; "Or just say it". Cancel leading. "Set list"
   expands to the large detent (programmatic detent change is INFERRED to need a re-mount with
   `sheetInitialDetentIndex: 1`; otherwise the grabber lets him drag).

@@ -1,5 +1,5 @@
 {
   "_": "npm run lint today (eslint over app/, 2026-10-29): CI fails when either count rises; lower a number here in the commit that lowers the count",
-  "errors": 58,
+  "errors": 57,
   "warnings": 49
 }
