@@ -12,6 +12,7 @@ fn run(args: &[&str]) -> anyhow::Result<()> {
 
 const CRATES: &[&str] = &[
     "pk-core",
+    "pk-wire",
     "pk-kb",
     "pk-creative",
     "pk-store",
