@@ -1,4 +1,8 @@
-# Punchable services in Rust: the port plan (2026-10-29, revised the same day)
+# Punchable services in Rust: the port plan (2026-10-29, revised the same day; amended 2026-10-29 by `docs/ARCHITECTURE.md`)
+
+**Read `docs/ARCHITECTURE.md` first.** It adds two crates (`pk-core`, `pk-wire`), the dependency rule (ADR 0010), the
+`pk-api` / `pk-worker` shapes, the single home for every duplicated rule, the conventions and the revised order. Where
+this file and that one differ, that one wins; the amendments are marked **[amended]** below.
 
 Standing owner decision (2026-10-29): **the services are Rust from here.** The Python API, worker and engine are
 what the project was built in; nothing recorded chose Python over Rust. New services go in Rust, the existing ones
@@ -71,15 +75,17 @@ Facts that shape the port [C]:
 | Embeddings | `ort` (onnxruntime), `tokenizers` | onnxruntime, tokenizers |
 | Linear algebra, PCA, k-means | `ndarray`, `linfa-reduction`, `linfa-clustering` | numpy (`cloud_api.py`) |
 | Text retrieval | SurrealDB's own BM25 (`@@` with the `punch_en` analyzer, `search::score`) for both the Bits search and the askchat retrieval; `bm25` crate only if a query needs to run off-DB | `creative/askchat.py:_bm25` |
-| Anthropic | no official Rust SDK. `reqwest` + typed serde models for the Messages API, SSE via `reqwest-eventsource` | the `anthropic` SDK |
+| Anthropic | no official Rust SDK. `reqwest` + typed serde models for the Messages API, SSE via `eventsource-stream` (T5; `reqwest-eventsource` reconnects on its own and was rejected) | the `anthropic` SDK |
 | Errors | `thiserror` 2 (libs), `anyhow` (bins) | exceptions |
 | Hashing, time, ids | `sha2`, `hex`, `chrono`, `uuid` | hashlib, datetime |
-| Tests | `wiremock` (Anthropic, JWKS), `proptest` (the gate), `insta` (goldens), `cargo-mutants` | pytest |
+| Tests | `wiremock` (Anthropic, JWKS), `proptest` (the gate), `cargo-mutants` **[amended: `insta` dropped; goldens are JSON written by Python and compared as values, ADR 0007]** | pytest |
 
 ## Workspace (`rust/` at the repo root)
 
 | Crate | Hides | Depends on | Python cycle it breaks |
 |---|---|---|---|
+| `pk-core` **[amended]** | `py` (the Python-format helpers now copied in pk-kb, pk-creative, pk-llm), `text::head`, `time::now_iso` + `Clock`, `config::Env` (the one reader of `secrets.env` and the process env), `canon` (the line-hash form, T10). Deps: serde_json, chrono | | the three disagreeing `repr` copies; env reads in five crates |
+| `pk-wire` **[amended]** | the typed HTTP contract: the worker protocol and the 58 app-facing response types; after T9 it generates the app's TypeScript with `ts-rs` | serde | the hand-written shapes in `app/src/lib/{api,creative,simple}.ts` |
 | `pk-kb` | the graph with no IO: typed ids, `Decision`, replay, merge resolution, the read index, decision validation (`kb.py:677`), the legal rules (`gsync/rules.py`) | serde | engine.kbstore → kb.py; db/load → ai_overlay |
 | `pk-creative` | the rules with no IO: store reducers (`job_apply` and friends), Store replay over lines, the verbatim gate, askchat prompt / finish, story / workingset / write / merge / memolink split into a prompt half and a finish half; job wire types | pk-kb | creative → engine.providers (the binaries run prompt, then the model, then finish) |
 | `pk-store` | SurrealDB through the official crate: typed row models (the `kbmap.py` contract), the decision-append transaction (`surreal_kb.py:330-337`), the creative_event mirror, srcfile, LIVE. The schema is `include_str!("../../db/schema.surql")` | pk-kb, surrealdb | |
@@ -88,7 +94,10 @@ Facts that shape the port [C]:
 | `pk-obs` | tracing init, the metrics registry, sentry init with the scrubber | prometheus, sentry | |
 | `pk-api` (lib + bin) | axum: routes, JWKS auth, actor rules, CORS, `/api/live`; routes depend on `AppState`, never on each other | kb, creative, store, embed, obs | the api-dev hub |
 | `pk-worker` (bin) | the claim / run / result loop over HTTP to the API only, as today | kb, creative, llm, embed, obs | worker ↔ gsync |
-| `xtask` | the gates and the differential runners | | |
+| `xtask` | the gates and the differential runners, `cargo deny`, `contracts`, `live-probe` | | |
+
+The dependency rule and its enforcement (`cargo deny` bans with `wrappers`) are ADR 0010; library crates never call
+`std::env`.
 
 A DAG. `pk-api` never depends on `pk-llm` (the hosted API holds no model). The binaries never depend on each other.
 
@@ -117,7 +126,9 @@ trip through the job queue is too slow for search.
 - `pk-api`: axum + tokio (the long-lived `/api/live` sockets and the LIVE subscription). Requests read an immutable
   `Arc` snapshot swapped when `meta:state.gen` changes; the rebuild runs in `spawn_blocking`. ONNX query embedding
   runs in `spawn_blocking` behind a one-permit semaphore, one intra-op thread, no arena. PCA and k-means run in
-  `spawn_blocking`, cached per gen. **No rayon**: the pod limit is 1 CPU (`30-api.yaml`).
+  `spawn_blocking`, cached per gen. **No rayon** was the intent, but rayon is already in the tree through `tokenizers 0.22.1`
+  (`cargo tree -i rayon`, 2026-10-29) **[amended]**: `tokenizers` parallelism is turned off, tokio runs `worker_threads(2)`
+  and `max_blocking_threads(4)`, ort `intra_threads(1)` / `inter_threads(1)`, and a thread-count gate holds the pod at 1 CPU (`30-api.yaml`).
 - `pk-worker`: one tokio current-thread runtime (reqwest is async), one job at a time as today.
 
 ## Migration order, and the proof at each step
@@ -150,7 +161,13 @@ Edition 2024, pinned `rust-version`, `unsafe_code = "forbid"`, rustfmt `max_widt
 `.github/workflows/rust.yml` next to `api.yml`; the differential jobs need both languages until step 6. Images:
 `gcr.io/distroless/cc-debian12` (onnxruntime needs glibc and libstdc++ [I]); keep the hash-checked model stage from
 `tools/kb/fetch_bge.py`; the k8s securityContext unchanged. Targets to measure on the server [I]: API image ≤ 250 MB;
-RSS warm ≤ 200 MiB with the model loaded.
+memory ≤ 200 MiB warm with the model loaded, stated in cgroup `anon` (the baseline's unit) **[amended: at risk until measured;
+the bge-small model file alone is 126.9 MiB. The `pk-embed` memory measurement on the server (ARCHITECTURE.md §8 step 5)
+sets the honest target; 256 MiB with the request raised is acceptable if that is what the number says]**.
+
+**The distroless image carries neither a shell nor a `sleep` binary** **[amended]**: the worker's liveness probe (`35-worker.yaml`, `sh -c find`)
+becomes `pk-worker probe --max-age 20m`, and the API's `preStop: sleep 10` (`30-api.yaml`) becomes an in-process drain
+(readiness 503, wait, graceful shutdown), each in the same commit as its image swap.
 
 **Step 0 baseline, measured on the server 2026-10-29 (the Python images at `51bfdf1` / `3d4dce9`)** [C]:
 
@@ -180,6 +197,10 @@ Stays TypeScript: `app/` (Expo React Native) and `infra/web`.
 | 2026-10-29 | **`pk-creative` part 2 (T4)**: `pk_creative::ask`, the halves of `creative/askchat.py` with no model call: the flattened notebook (`Source`, `Sources`, `Notebook`), `retrieve` (the his-words BM25 written out, a room named, a year, "killed / best" by laughs, the last answer's sources carried, pins), `prompt` (headers, snippets, the rules in the system block), `finish` (every quote through the one `verbatim`, `[S#]` renumbered or cut, "quoted" prose cut, the refusal), `refusal`, `chip`. Proven by `rust/tools/gen_creative_goldens.py` over a synthetic notebook: 29 retrieve cases (ids and scores), 7 prompt, 23 finish, every header and chip, the word helpers; four mutations each fail. Not yet: `sources(c)` from a `Corpus` (T9) and the model call (T8). |
 
 ## Next ticket
+
+**[amended 2026-10-29]** The order from here is `docs/ARCHITECTURE.md` §8: honest CI (`PK_REQUIRE_EXTERNAL=1`, `surreal`
+and the model in CI, `cargo deny`, the oracle's Python tests), T12 `pk-core`, T13 `pk-wire`, the `pk-embed` memory
+measurement, then T8. The paragraph below is the pre-amendment text, kept for the record.
 
 Step 1 continued: `pk-creative` (the store reducers over the creative event logs, the verbatim gate with property
 tests, askchat prompt/finish) and `pk-store` (the official crate against a scratch SurrealDB: NONE/NULL round-trip,

@@ -1,4 +1,4 @@
-# Punchable: start here (handover, 2026-10-28, updated after the worker crash-report wiring)
+# Punchable: start here (handover, 2026-10-28, updated 2026-10-29 after T4 and the architecture decision)
 
 Read this first in a new session. It says what is live, what learns, what is open, and the traps that cost time
 today. It is public-safe: no secrets, no server names, no material. Private operating state (deploy log with image
@@ -104,6 +104,8 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 | Trap | Rule |
 |---|---|
+| A Python `set` on the path to a golden | Its order follows `PYTHONHASHSEED`, so the regenerated golden differs run to run and CI's `goldens-current` goes red while the gate stays green (`kb.py joke_scope`, 2026-10-29). Sort every set in the generator; where Python's order is the behaviour, normalise on both sides and say so. |
+| `python -I` on the owner's PC | Cannot see the user site (numpy lives there): run the golden generators with plain `python`. |
 | SurrealDB: selecting a database before `DEFINE DATABASE … STRICT` | Creates it lax, and `IF NOT EXISTS` then leaves it lax for good: an unknown table becomes a silent create instead of an error. `db/load.py` and `pk-store`'s `Store::connect` define first, then select. |
 | EAS packs the repository root under `EAS_NO_VCS=1` | `rust/target` (GBs) went into the tarball and filled the disk (ENOSPC); builds 13-15 died uploading. `.easignore` at the root keeps everything but `app/` out. |
 | A plain function called inside a Reanimated / gesture worklet | Crashes the app on the UI thread ("[Worklets] Tried to synchronously call a Remote Function"): the map's crash on build 16 was `clampScale` in the pinch gesture (Bugsink). Every function a worklet calls carries the `'worklet'` directive, or is inlined. |
@@ -141,12 +143,19 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    alert; dropped (`POST /api/jobs/<id>/drop`). Owner decision needed: on-device transcription in the production build
    (ios-dev-expert; the standing decision) or a cloud speech API from the hosted worker (audio leaves the box). Until
    then the Record screen should say so.
-5. **Rust port** (`docs/RUST.md` "Progress", the board `docs/RUST_WORKSTREAM.md`): six of nine crates are in and
-   golden against the Python they replace: `pk-kb`, `pk-creative` (the store + reducers + verbatim), `pk-llm`,
-   `pk-embed`, `pk-obs`, `pk-store` (the typed SurrealDB layer; its tests need a `surreal` binary at
-   `~/.punchable/bin/` and skip without one). Open: T4 (`askchat` retrieve / prompt / finish into `pk-creative`),
-   T8 (`pk-worker`: the loop and the kinds, the offline differential, the k8s swap), T9/T10 (`pk-api`), T11
-   (retire Python). Gate: `cd rust && cargo xtask gate`. Nothing ships until the worker swap (T8).
+5. **The architecture is written and awaits the owner's sign-off: `docs/ARCHITECTURE.md`** (2026-10-29), with the
+   decisions in `docs/adr/`, the index `docs/README.md`, `CLAUDE.md` for agents and a PR template. **No lane after
+   T4 starts until he has read it.** It adds `pk-core` and `pk-wire`, the crate dependency rule, the single home for
+   every duplicated rule (the 2026-10-29 audit found server rules re-implemented in the app, seven stop-word lists,
+   four crash scrubbers, three Python-repr helpers in Rust), and the order: honest CI (two Rust suites pass on GitHub
+   without running), `pk-core`, `pk-wire`, a memory measurement, then the worker swap. One decision is his:
+   `venue_short` differs between server and app; the default is the server's rule.
+   **Rust port** (`docs/RUST.md`, the board `docs/RUST_WORKSTREAM.md`): seven pieces are in and golden against the
+   Python: `pk-kb`, `pk-creative` (store + reducers + verbatim, and since 2026-10-29 `ask`: retrieve / prompt / finish,
+   `52df9e3`), `pk-llm`, `pk-embed`, `pk-obs`, `pk-store` (its tests need `~/.punchable/bin/surreal` and skip without
+   one; so do `pk-embed`'s model tests without the model, which is why T14 makes a skip a failure). Open: T14, T12,
+   T13, T15, T8 (`pk-worker`; the earlier lane's work never reached disk), T9/T10 (`pk-api`), T11. Gate:
+   `cd rust && cargo xtask gate`. Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).
 7. Measurement mode / AGC off (expo-audio config plugin), only if a real tape sounds pumped against a plain Voice Memo.
 8. Source maps for app crashes (EAS secret `SENTRY_AUTH_TOKEN`, drop `SENTRY_DISABLE_AUTO_UPLOAD`).
