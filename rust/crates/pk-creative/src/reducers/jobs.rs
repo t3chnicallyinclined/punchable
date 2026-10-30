@@ -6,8 +6,10 @@ use serde_json::{Value, json};
 use super::{item_mut, unknown_op};
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{get_or_null, head, key, or, or_else, py_str, truthy};
+use crate::pyish::{get_or_null, key, or, or_else};
 use crate::store::{Items, Reducer};
+use pk_core::py;
+use pk_core::text::head;
 
 /// Every job kind the queue accepts (`JOB_KINDS`), in the Python's order (it is printed in a refusal).
 pub const JOB_KINDS: [&str; 11] = [
@@ -78,7 +80,7 @@ impl Reducer for Jobs {
         let Some(j) = item_mut(items, i) else {
             return Err(CreativeError::refused(format!("no job {i}")));
         };
-        let status = py_str(key(j, "status")?);
+        let status = py::str(key(j, "status")?);
         match op {
             "claim" => {
                 if !matches!(status.as_str(), "queued" | "claimed") {
@@ -106,8 +108,8 @@ impl Reducer for Jobs {
                     return Err(CreativeError::refused(format!("job {i} is {status}")));
                 }
                 let attempts = key(j, "attempts")?.as_i64().unwrap_or(0);
-                let retry = truthy(d.get("retry")) && attempts < MAX_ATTEMPTS;
-                let error = head(&py_str(or(d, "error").unwrap_or(&json!("failed"))), 2000);
+                let retry = py::truthy(d.get("retry")) && attempts < MAX_ATTEMPTS;
+                let error = head(&py::str(or(d, "error").unwrap_or(&json!("failed"))), 2000);
                 let kind = key(j, "kind")?.as_str().unwrap_or("").to_string();
                 j.insert("status".into(), json!(if retry { "queued" } else { "failed" }));
                 j.insert("error".into(), json!(error));

@@ -6,8 +6,9 @@ use serde_json::{Value, json};
 use super::{item_mut, unknown_op};
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{Obj, all_distinct, get_or_null, key, or, or_else, py_list, py_sorted_set, py_str};
+use crate::pyish::{Obj, all_distinct, get_or_null, key, or, or_else};
 use crate::store::{Items, Reducer};
+use pk_core::py;
 
 /// The ops (`MERGE_OPS`).
 pub const MERGE_OPS: [&str; 5] = ["merge", "undo", "attach", "detach", "dismiss"];
@@ -19,7 +20,7 @@ pub struct Merges;
 /// `d.get("x") or []` as a list.
 fn list_or_empty(d: &Obj, k: &str) -> CreativeResult<Vec<Value>> {
     match or(d, k) {
-        Some(v) => py_list(v),
+        Some(v) => Ok(py::list(v)?),
         None => Ok(Vec::new()),
     }
 }
@@ -31,7 +32,7 @@ fn is_live(m: Option<&Obj>, kind: &str, status: &str) -> CreativeResult<bool> {
     if m.get("kind").and_then(Value::as_str) != Some(kind) {
         return Ok(false);
     }
-    Ok(py_str(key(m, "status")?) == status)
+    Ok(py::str(key(m, "status")?) == status)
 }
 
 impl Reducer for Merges {
@@ -105,7 +106,7 @@ impl Reducer for Merges {
                 m.insert("updated_at".into(), json!(ev.ts));
             }
             "dismiss" => {
-                let js = py_sorted_set(&list_or_empty(d, "jokes")?)?;
+                let js = py::sorted_set(&list_or_empty(d, "jokes")?)?;
                 if js.len() < 2 {
                     return Err(CreativeError::refused("dismiss needs two or more jokes"));
                 }

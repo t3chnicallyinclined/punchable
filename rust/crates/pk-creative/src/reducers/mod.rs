@@ -22,6 +22,7 @@ use serde_json::Value;
 use crate::error::{CreativeError, CreativeResult};
 use crate::pyish::Obj;
 use crate::store::{Items, Reducer};
+use pk_core::py;
 
 /// The store names, as the API and the `creative_event` mirror key them.
 pub const STORES: [&str; 10] = [
@@ -77,7 +78,7 @@ fn list_mut<'a>(d: &'a mut Obj, k: &str) -> CreativeResult<&'a mut Vec<Value>> {
         Some(Value::Array(a)) => Ok(a),
         Some(v) => Err(CreativeError::faulted(format!(
             "'{}' object has no attribute 'append'",
-            crate::pyish::type_name(v)
+            py::type_name(v)
         ))),
     }
 }
@@ -89,7 +90,7 @@ fn list_of<'a>(d: &'a Obj, k: &str) -> CreativeResult<&'a Vec<Value>> {
         Some(Value::Array(a)) => Ok(a),
         Some(v) => Err(CreativeError::faulted(format!(
             "'{}' object is not iterable",
-            crate::pyish::type_name(v)
+            py::type_name(v)
         ))),
     }
 }
@@ -101,7 +102,7 @@ fn obj_mut<'a>(d: &'a mut Obj, k: &str) -> CreativeResult<&'a mut Obj> {
         Some(Value::Object(o)) => Ok(o),
         Some(v) => Err(CreativeError::faulted(format!(
             "'{}' object has no attribute 'setdefault'",
-            crate::pyish::type_name(v)
+            py::type_name(v)
         ))),
     }
 }

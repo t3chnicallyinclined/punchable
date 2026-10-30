@@ -1,7 +1,7 @@
 //! The one error of the crate, with the plain words the comic reads copied from `engine/providers.py` (`Refusal`,
 //! `CutShort`) and `engine/budget.py` (`BudgetExceeded`): the app shows these texts, so they must not change.
 
-use crate::pyfmt;
+use pk_core::py;
 
 /// Everything that can go wrong between a task and its answer.
 #[derive(Debug, thiserror::Error)]
@@ -29,7 +29,7 @@ pub enum LlmError {
     #[error("{0}")]
     Budget(String),
     /// No provider in the task's chain has a key.
-    #[error("no available provider for task {}", pyfmt::quote(task))]
+    #[error("no available provider for task {}", py::quote(task))]
     NoProvider {
         /// The task name.
         task: String,
@@ -53,7 +53,7 @@ pub enum LlmError {
     #[error("{0}")]
     Config(String),
     /// Every provider in the chain failed for a reason that is not a refusal or a cut answer.
-    #[error("task {} failed on all providers: {attempts:?}; last: {last}", pyfmt::quote(task))]
+    #[error("task {} failed on all providers: {attempts:?}; last: {last}", py::quote(task))]
     Failed {
         /// The task name.
         task: String,
@@ -103,6 +103,12 @@ fn http_words(status: Option<u16>, message: &str) -> String {
     match status {
         Some(s) => format!("Error code: {s} - {message}"),
         None => format!("Connection error: {message}"),
+    }
+}
+
+impl From<pk_core::ConfigError> for LlmError {
+    fn from(e: pk_core::ConfigError) -> Self {
+        LlmError::Config(e.to_string())
     }
 }
 

@@ -11,7 +11,9 @@ use ort::session::Session;
 use ort::value::Tensor;
 use tokenizers::{Encoding, PaddingParams, Tokenizer, TruncationParams};
 
-use crate::{BATCH, DIM, EmbedError, Embedder, FINGERPRINT, FINGERPRINT_SENTENCE, MAX_TOKENS, MODEL_NAME, prepare};
+use crate::{
+    BATCH, DIM, EmbedConfig, EmbedError, Embedder, FINGERPRINT, FINGERPRINT_SENTENCE, MAX_TOKENS, MODEL_NAME, prepare,
+};
 
 /// bge-small-en-v1.5 from a folder with `onnx/model.onnx` and `tokenizer.json`.
 ///
@@ -74,9 +76,11 @@ impl Bge {
         })
     }
 
-    /// Load from where [`crate::bge_dir`] says the model is.
-    pub fn open() -> Result<Self, EmbedError> {
-        let dir = crate::bge_dir().ok_or_else(|| EmbedError::NoModel(PathBuf::from("$PK_BGE_DIR")))?;
+    /// Load from where [`EmbedConfig::model_dir`] says the model is.
+    pub fn open(cfg: &EmbedConfig) -> Result<Self, EmbedError> {
+        let dir = cfg
+            .model_dir()
+            .ok_or_else(|| EmbedError::NoModel(cfg.bge_dir.clone().unwrap_or_else(|| PathBuf::from("$PK_BGE_DIR"))))?;
         Self::load(&dir)
     }
 

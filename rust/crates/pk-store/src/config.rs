@@ -1,10 +1,8 @@
-//! Where the connection comes from: `~/.punchable/secrets.env` (or `PUNCH_SECRETS`), overridden by the environment,
-//! read the way `db/sdb.py` reads it. Nothing in that file is committed.
+//! Where the connection comes from: the `SURREAL_*` values of `pk_core::config::Env` (`~/.punchable/secrets.env`
+//! or `PUNCH_SECRETS`, overridden by the environment, read the way `db/sdb.py` reads it; a binary builds the `Env`
+//! once). Nothing in that file is committed.
 
-use std::collections::BTreeMap;
-use std::path::PathBuf;
-
-use crate::error::{Result, StoreError};
+use pk_core::{ConfigError, Env};
 
 /// The local server's port when `SURREAL_PORT` is not set.
 pub const DEFAULT_PORT: u16 = 8797;
@@ -12,53 +10,6 @@ pub const DEFAULT_PORT: u16 = 8797;
 pub const NS: &str = "punchable";
 /// The database the real data lives in.
 pub const DB: &str = "main";
-
-const ENV_KEYS: [&str; 8] = [
-    "SURREAL_USER",
-    "SURREAL_PASS",
-    "SURREAL_PORT",
-    "SURREAL_URL",
-    "SURREAL_API_USER",
-    "SURREAL_API_PASS",
-    "SURREAL_NS",
-    "SURREAL_DB",
-];
-
-/// `PUNCH_SECRETS`, else `~/.punchable/secrets.env`.
-pub fn secrets_path() -> PathBuf {
-    if let Some(p) = std::env::var_os("PUNCH_SECRETS") {
-        return PathBuf::from(p);
-    }
-    std::env::home_dir()
-        .unwrap_or_default()
-        .join(".punchable")
-        .join("secrets.env")
-}
-
-/// The `KEY=value` lines of the secrets file (comments and blanks skipped), with the `SURREAL_*` environment
-/// variables on top.
-pub fn secrets() -> BTreeMap<String, String> {
-    let mut out = BTreeMap::new();
-    if let Ok(text) = std::fs::read_to_string(secrets_path()) {
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            if let Some((k, v)) = line.split_once('=') {
-                out.insert(k.trim().to_string(), v.trim().to_string());
-            }
-        }
-    }
-    for k in ENV_KEYS {
-        if let Ok(v) = std::env::var(k)
-            && !v.is_empty()
-        {
-            out.insert(k.to_string(), v);
-        }
-    }
-    out
-}
 
 /// Who signs in.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,27 +62,34 @@ impl Config {
     /// The connection `db/sdb.py` would open: `SURREAL_URL` when it is set and no port was asked for, else
     /// `ws://127.0.0.1:<port or SURREAL_PORT or 8797>`; the database user when `SURREAL_API_USER`/`PASS` are set and
     /// no port was asked for, else root with `SURREAL_PASS` (required).
-    pub fn from_secrets(port: Option<u16>, ns: Option<&str>, db: Option<&str>) -> Result<Self> {
-        let s = secrets();
-        let url = if let (None, Some(u)) = (port, s.get("SURREAL_URL")) {
-            u.clone()
+    pub fn from_env(
+        env: &Env,
+        port: Option<u16>,
+        ns: Option<&str>,
+        db: Option<&str>,
+    ) -> std::result::Result<Self, ConfigError> {
+        let url = if let (None, Some(u)) = (port, env.opt("SURREAL_URL")) {
+            u.to_string()
         } else {
             let p = match port {
                 Some(p) => p,
-                None => s
-                    .get("SURREAL_PORT")
-                    .map_or(Ok(DEFAULT_PORT), |v| v.parse::<u16>())
-                    .map_err(|e| StoreError::Config(format!("SURREAL_PORT: {e}")))?,
+                None => match env.u64("SURREAL_PORT")? {
+                    None => DEFAULT_PORT,
+                    Some(p) => u16::try_from(p).map_err(|e| ConfigError::Invalid {
+                        key: "SURREAL_PORT".into(),
+                        reason: e.to_string(),
+                    })?,
+                },
             };
             format!("ws://127.0.0.1:{p}")
         };
-        let db_user = match (port, s.get("SURREAL_API_USER"), s.get("SURREAL_API_PASS")) {
-            (None, Some(u), Some(p)) if !u.is_empty() && !p.is_empty() => Some((u.clone(), p.clone())),
+        let db_user = match (port, env.opt("SURREAL_API_USER"), env.opt("SURREAL_API_PASS")) {
+            (None, Some(u), Some(p)) => Some((u.to_string(), p.to_string())),
             _ => None,
         };
         let (auth, dns, ddb) = if let Some((user, pass)) = db_user {
-            let dns = s.get("SURREAL_NS").cloned().unwrap_or_else(|| NS.to_string());
-            let ddb = s.get("SURREAL_DB").cloned().unwrap_or_else(|| DB.to_string());
+            let dns = env.opt("SURREAL_NS").unwrap_or(NS).to_string();
+            let ddb = env.opt("SURREAL_DB").unwrap_or(DB).to_string();
             (
                 Auth::Database {
                     user,
@@ -143,19 +101,7 @@ impl Config {
                 ddb,
             )
         } else {
-            let pass = s
-                .get("SURREAL_PASS")
-                .filter(|p| !p.is_empty())
-                .ok_or_else(|| StoreError::Config(format!("no SURREAL_PASS in {}", secrets_path().display())))?;
-            let user = s.get("SURREAL_USER").cloned().unwrap_or_else(|| "root".to_string());
-            (
-                Auth::Root {
-                    user,
-                    pass: pass.clone(),
-                },
-                NS.to_string(),
-                DB.to_string(),
-            )
+            (root_auth(env)?, NS.to_string(), DB.to_string())
         };
         Ok(Self {
             url,
@@ -166,21 +112,8 @@ impl Config {
     }
 
     /// A scratch server on `127.0.0.1:<port>` started with the secrets file's root user (tests).
-    pub fn scratch(port: u16, ns: &str, db: &str) -> Result<Self> {
-        let s = secrets();
-        let pass = s
-            .get("SURREAL_PASS")
-            .filter(|p| !p.is_empty())
-            .ok_or_else(|| StoreError::Config(format!("no SURREAL_PASS in {}", secrets_path().display())))?;
-        Ok(Self::new(
-            format!("ws://127.0.0.1:{port}"),
-            Auth::Root {
-                user: s.get("SURREAL_USER").cloned().unwrap_or_else(|| "root".to_string()),
-                pass: pass.clone(),
-            },
-            ns,
-            db,
-        ))
+    pub fn scratch(env: &Env, port: u16, ns: &str, db: &str) -> std::result::Result<Self, ConfigError> {
+        Ok(Self::new(format!("ws://127.0.0.1:{port}"), root_auth(env)?, ns, db))
     }
 
     /// The URL the crate connects to: the configured one without a trailing `/rpc`.
@@ -189,9 +122,87 @@ impl Config {
     }
 }
 
+/// Root with `SURREAL_USER` (default `root`) and `SURREAL_PASS` (required).
+fn root_auth(env: &Env) -> std::result::Result<Auth, ConfigError> {
+    Ok(Auth::Root {
+        user: env.opt("SURREAL_USER").unwrap_or("root").to_string(),
+        pass: env.str("SURREAL_PASS")?.to_string(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_connection_follows_sdb_py() {
+        let root = Env::from_map([
+            ("SURREAL_PASS", "pw"),
+            ("SURREAL_PORT", "9000"),
+            ("SURREAL_URL", "wss://db.example"),
+        ]);
+        let c = Config::from_env(&root, None, None, None).unwrap();
+        assert_eq!(c.url, "wss://db.example", "SURREAL_URL wins when no port is asked for");
+        assert_eq!(
+            c.auth,
+            Auth::Root {
+                user: "root".into(),
+                pass: "pw".into()
+            }
+        );
+        assert_eq!((c.ns.as_str(), c.db.as_str()), (NS, DB));
+        let c = Config::from_env(&root, Some(1), Some("a"), Some("b")).unwrap();
+        assert_eq!(c.url, "ws://127.0.0.1:1");
+        assert_eq!((c.ns.as_str(), c.db.as_str()), ("a", "b"));
+        let port_only = Env::from_map([("SURREAL_PASS", "pw"), ("SURREAL_PORT", "9000")]);
+        assert_eq!(
+            Config::from_env(&port_only, None, None, None).unwrap().url,
+            "ws://127.0.0.1:9000"
+        );
+        assert_eq!(
+            Config::from_env(&Env::from_map([("SURREAL_PASS", "pw")]), None, None, None)
+                .unwrap()
+                .url,
+            "ws://127.0.0.1:8797"
+        );
+        let api = Env::from_map([
+            ("SURREAL_API_USER", "api"),
+            ("SURREAL_API_PASS", "pw"),
+            ("SURREAL_NS", "n"),
+        ]);
+        let c = Config::from_env(&api, None, None, None).unwrap();
+        assert_eq!(
+            c.auth,
+            Auth::Database {
+                user: "api".into(),
+                pass: "pw".into(),
+                ns: "n".into(),
+                db: DB.into()
+            }
+        );
+        assert_eq!(c.ns, "n");
+        let c = Config::scratch(&root, 7, "x", "y").unwrap();
+        assert_eq!(
+            (c.url.as_str(), c.ns.as_str(), c.db.as_str()),
+            ("ws://127.0.0.1:7", "x", "y")
+        );
+        let e = Config::from_env(&Env::from_map([("SURREAL_PASS", "")]), None, None, None).unwrap_err();
+        assert!(
+            matches!(e, ConfigError::Missing { ref key, .. } if key == "SURREAL_PASS"),
+            "{e}"
+        );
+        let e = Config::from_env(
+            &Env::from_map([("SURREAL_PASS", "pw"), ("SURREAL_PORT", "70000")]),
+            None,
+            None,
+            None,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(e, ConfigError::Invalid { ref key, .. } if key == "SURREAL_PORT"),
+            "{e}"
+        );
+    }
 
     #[test]
     fn endpoint_drops_rpc() {

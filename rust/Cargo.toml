@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/pk-core",
     "crates/pk-kb",
     "crates/pk-creative",
     "crates/pk-store",
@@ -26,6 +27,8 @@ license = "UNLICENSED"
 publish = false
 
 [workspace.dependencies]
+# the workspace leaf (ADR 0010): the Python-format helpers, the clock, the one reader of the environment
+pk-core = { path = "crates/pk-core" }
 # the crates we stand on (docs/RUST.md "Crates we stand on"); versions pinned here, used by `.workspace = true`
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

@@ -12,10 +12,13 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
 
+use pk_core::py;
+
 use crate::backend::{AnthropicBackend, Called, ChatMessage};
-use crate::config::{Config, TaskCfg};
+use crate::budget::Budget;
+use crate::client::Client;
+use crate::config::{Config, LlmConfig, TaskCfg};
 use crate::error::LlmError;
-use crate::pyfmt;
 use crate::schema::{cut, parse_and_validate, schema_instructions};
 
 /// A finished call: the text, the parsed data when a schema was given, and the accounting.
@@ -106,18 +109,24 @@ impl Router {
         }
     }
 
-    /// The hosted router: an `AnthropicBackend` per `kind = "anthropic"` provider whose key is in the environment;
-    /// other kinds are not ported and are skipped with a warning.
-    pub fn from_env(cfg: Config, log_path: Option<PathBuf>) -> Result<Self, LlmError> {
+    /// The hosted router: an `AnthropicBackend` per `kind = "anthropic"` provider whose key `lc` holds (the binary
+    /// filled it from the environment); other kinds are not ported and are skipped with a warning.
+    pub fn hosted(cfg: Config, lc: &LlmConfig, log_path: Option<PathBuf>) -> Result<Self, LlmError> {
         let mut backends = Vec::new();
         for (name, pcfg) in cfg.providers() {
             if pcfg.kind != "anthropic" {
                 tracing::warn!(provider = %name, kind = %pcfg.kind, "provider kind not ported; skipped");
                 continue;
             }
-            if let Some(b) = AnthropicBackend::from_env(name, pcfg.clone())? {
-                backends.push(b);
+            let Some(key) = lc.api_keys.get(name) else {
+                continue;
+            };
+            let mut client = Client::new(key.clone())?;
+            if let Some(url) = &lc.base_url {
+                client = client.with_base_url(url.clone());
             }
+            let budget = pcfg.budget.then(|| Budget::from_config(&lc.budget));
+            backends.push(AnthropicBackend::new(name, pcfg.clone(), client, budget));
         }
         Ok(Self::new(cfg, backends, log_path))
     }
@@ -315,7 +324,7 @@ impl Router {
         called: Option<&Called>,
     ) {
         let rec = CallRecord {
-            ts: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S+00:00").to_string(),
+            ts: pk_core::time::now_iso(),
             call_id: call_id.to_string(),
             run_id: ctx.run_id.map(str::to_string),
             task: ctx.task.to_string(),
@@ -366,6 +375,6 @@ fn append_line(path: &PathBuf, rec: &CallRecord) -> std::io::Result<()> {
 
 /// `providers.py` `sha`: the first 16 hex of sha256 over `json.dumps(obj, sort_keys=True, ensure_ascii=False)`.
 pub fn sha16(value: &Value) -> String {
-    let text = pyfmt::dumps_sorted(value);
+    let text = py::dumps_sorted(value);
     hex::encode(Sha256::digest(text.as_bytes()))[..16].to_string()
 }

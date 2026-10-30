@@ -8,7 +8,10 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value, json};
 
 use crate::decision::actor_of;
-use crate::model::{Bucket, LABEL_KINDS, Rec, bucket, ekind, head, public, truthy, truthy_str};
+use pk_core::py::truthy;
+use pk_core::text::head;
+
+use crate::model::{Bucket, LABEL_KINDS, Rec, bucket, ekind, public, truthy_str};
 use crate::view::View;
 
 /// Laughs on a stretch of tape: `(set id, start_ms, end_ms) -> the laughs doc`, or None when there is no tape data.

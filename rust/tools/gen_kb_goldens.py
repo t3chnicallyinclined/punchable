@@ -107,6 +107,8 @@ BUILD_REQUESTS = [
     {"target": "edge", "action": "add", "after": {"src": "joke:meters", "dst": "joke:cat", "kind": "custom"}, "reason": "x"},
     {"target": "edge", "action": "add", "after": {"src": "unit:m1", "dst": "joke:meters", "kind": "part_of"}, "reason": "dup"},
     {"target": "edge", "action": "add", "after": {"src": "joke:nope", "dst": "joke:cat", "kind": "segue"}, "reason": "x"},
+    # a float where a kind goes: the refusal prints it as Python does (1e-05), not as serde_json's Display does (0.00001); T12
+    {"target": "edge", "action": "add", "after": {"src": "joke:meters", "dst": "joke:cat", "kind": 1e-05}, "reason": "x"},
     {"target": "edge", "action": "add", "after": {"src": "label:topic:cash", "dst": "joke:cat", "kind": "segue"}, "reason": "aliased label is unknown"},
     {"target": "edge", "action": "confirm", "id": "e:aaaaaaaaab10"},
     {"target": "edge", "action": "reject", "id": "e:aaaaaaaaab10"},

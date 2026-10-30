@@ -1,8 +1,9 @@
 //! Crash reporting: `sentry` pointed at the self-hosted Bugsink, with every event and breadcrumb passed through the
 //! scrubber ([`crate::scrub`]) before it leaves (the Rust home of `api-dev/crash.py`).
 //!
-//! `SENTRY_DSN` unset or empty means off: the process runs exactly as before and [`report`] is a no-op. The release
-//! is `<service>@<version>+<sha12>`; the environment is `SENTRY_ENVIRONMENT` (default `production`). No PII, no
+//! An empty DSN (`SENTRY_DSN` unset) means off: the process runs exactly as before and [`report`] is a no-op. The release
+//! is `<service>@<version>+<sha12>`; the environment is `SENTRY_ENVIRONMENT` (default `production`). Both come in
+//! through [`ObsConfig`]: this crate never reads the environment. No PII, no
 //! traces, 30 breadcrumbs. The Rust SDK never attaches local variables or source context, so the Python's
 //! `include_local_variables=False` / `include_source_context=False` have nothing to switch off; the scrubber drops
 //! `vars` and `context_line` from every frame anyway.
@@ -14,6 +15,9 @@ use sentry::types::Dsn;
 use sentry::{ClientInitGuard, ClientOptions, Level};
 use serde_json::{Map, Value, json};
 
+use pk_core::text::head;
+
+use crate::config::ObsConfig;
 use crate::scrub::{scrub_breadcrumb, scrub_event, scrub_text, sensitive_key};
 use crate::sha12;
 
@@ -25,15 +29,6 @@ pub const MAX_BREADCRUMBS: usize = 30;
 /// `<service>@<version>+<sha12>`, e.g. `punchable-api@0.1.0+0123456789ab` (`sha` empty = `dev`).
 pub fn release(service: &str, version: &str, sha: &str) -> String {
     format!("{service}@{version}+{}", sha12(sha))
-}
-
-/// `SENTRY_ENVIRONMENT`, or [`DEFAULT_ENVIRONMENT`].
-pub fn environment() -> String {
-    std::env::var("SENTRY_ENVIRONMENT")
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| DEFAULT_ENVIRONMENT.to_string())
 }
 
 /// The client options `init_sentry` uses, in one place so a test can read them.
@@ -53,14 +48,14 @@ pub fn options(dsn: Dsn, release: String, environment: &str) -> ClientOptions {
     }
 }
 
-/// Start crash reporting when `SENTRY_DSN` is set. `None` means off. Keep the guard alive for the process: dropping
-/// it flushes and closes the client. Never fails: a DSN that does not parse is logged and reporting stays off.
-pub fn init_sentry(service: &str, version: &str, sha: &str, env: &str) -> Option<ClientInitGuard> {
-    let dsn = std::env::var("SENTRY_DSN").unwrap_or_default();
-    init_sentry_with(&dsn, service, version, sha, env)
+/// Start crash reporting when the config has a DSN. `None` means off. Keep the guard alive for the process:
+/// dropping it flushes and closes the client. Never fails: a DSN that does not parse is logged and reporting stays
+/// off.
+pub fn init_sentry(cfg: &ObsConfig, service: &str, version: &str, sha: &str) -> Option<ClientInitGuard> {
+    init_sentry_with(&cfg.sentry_dsn, service, version, sha, &cfg.sentry_environment)
 }
 
-/// [`init_sentry`] with the DSN given instead of read from the environment.
+/// [`init_sentry`] over explicit parts.
 pub fn init_sentry_with(dsn: &str, service: &str, version: &str, sha: &str, env: &str) -> Option<ClientInitGuard> {
     let dsn = dsn.trim();
     if dsn.is_empty() {
@@ -91,10 +86,6 @@ fn sdk_shape(mut v: Value) -> Value {
         }
     }
     v
-}
-
-fn head(s: &str, n: usize) -> String {
-    s.chars().take(n).collect()
 }
 
 /// The typed fallback when the JSON round trip fails: the same rules applied to the SDK's structs directly.

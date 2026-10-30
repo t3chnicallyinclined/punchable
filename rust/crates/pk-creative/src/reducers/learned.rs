@@ -4,7 +4,9 @@
 
 use serde_json::{Value, json};
 
-use crate::pyish::{Obj, head, or, py_isspace, py_len, truthy};
+use crate::pyish::{Obj, or};
+use pk_core::py;
+use pk_core::text::head;
 
 /// Lines kept per list (`CAP_KEPT`).
 pub const CAP_KEPT: usize = 25;
@@ -23,7 +25,7 @@ fn collapse(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut in_space = false;
     for c in text.chars() {
-        if py_isspace(c) {
+        if py::isspace(c) {
             if !in_space {
                 out.push(' ');
             }
@@ -57,7 +59,7 @@ fn entry(x: &Value, ts: Option<&str>) -> Option<Obj> {
     if text.is_empty() {
         return None;
     }
-    if py_len(&text) > LINE_CHARS {
+    if py::len(&text) > LINE_CHARS {
         let chars: Vec<char> = text.chars().collect();
         let cut = chars[..LINE_CHARS].iter().rposition(|c| *c == ' ');
         let keep = match cut {
@@ -65,7 +67,7 @@ fn entry(x: &Value, ts: Option<&str>) -> Option<Obj> {
             _ => LINE_CHARS,
         };
         let kept: String = chars[..keep].iter().collect();
-        text = format!("{} [...]", kept.trim_end_matches(py_isspace));
+        text = format!("{} [...]", kept.trim_end_matches(py::isspace));
     }
     let bit = x
         .get("bit")
@@ -88,7 +90,7 @@ fn entry(x: &Value, ts: Option<&str>) -> Option<Obj> {
 }
 
 fn entries(xs: Option<&Value>, ts: Option<&str>) -> Vec<Obj> {
-    xs.filter(|v| truthy(Some(v)))
+    xs.filter(|v| py::truthy(Some(v)))
         .and_then(Value::as_array)
         .map(|a| a.iter().filter_map(|x| entry(x, ts)).collect())
         .unwrap_or_default()

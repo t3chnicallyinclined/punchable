@@ -24,8 +24,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::{CreativeError, CreativeResult};
-use crate::pyish::{py_str, py_strip, truthy, type_name};
 use crate::verbatim::verbatim;
+use pk_core::py;
+use pk_core::text::head;
 pub use words::{mmss, month_year, short_title, snippet, tokens};
 
 /// What the comic reads when the notebook has no answer.
@@ -362,7 +363,7 @@ pub struct Finish {
 /// `material_owner()` (`creative/voice.py`): "stand-up comic Pat Example's" when he is named, else "a stand-up
 /// comic's". The name is `PK_COMIC_NAME` stripped; empty or the placeholder "the comic" is unnamed.
 pub fn material_owner(comic_name: Option<&str>) -> String {
-    let name = comic_name.map_or("", py_strip);
+    let name = comic_name.map_or("", py::strip);
     if name.is_empty() || name == "the comic" {
         "a stand-up comic's".to_string()
     } else {
@@ -806,10 +807,10 @@ impl Notebook {
             };
             let tag = cit
                 .get("source")
-                .filter(|v| truthy(Some(v)))
-                .map(py_str)
+                .filter(|v| py::truthy(Some(v)))
+                .map(py::str)
                 .unwrap_or_default();
-            let tag = py_strip(&tag).trim_matches(['[', ']']).to_uppercase();
+            let tag = py::strip(&tag).trim_matches(['[', ']']).to_uppercase();
             let quote = quote_of(cit.get("quote"))?;
             let Some(&sid) = sid_of.get(&tag) else {
                 dropped.push(Dropped {
@@ -819,7 +820,7 @@ impl Notebook {
                 });
                 continue;
             };
-            let q = py_strip(&quote);
+            let q = py::strip(&quote);
             let exact = if q.is_empty() {
                 None
             } else {
@@ -842,10 +843,10 @@ impl Notebook {
         }
         let answer = data
             .get("answer")
-            .filter(|v| truthy(Some(v)))
-            .map(py_str)
+            .filter(|v| py::truthy(Some(v)))
+            .map(py::str)
             .unwrap_or_default();
-        let answer = py_strip(&answer).to_string();
+        let answer = py::strip(&answer).to_string();
         // [S#] markers: retrieved ones become [1], [2] … (chip numbers); anything else is cut
         let mut num: IndexMap<&str, usize> = IndexMap::new();
         let answer = MARK_RE.replace_all(&answer, |m: &Captures| {
@@ -894,9 +895,9 @@ impl Notebook {
             .into_iter()
             .map(|(sid, n)| chip(&self.sources[sid], n, quotes.get(sid).map(String::as_str)))
             .collect();
-        let found = truthy(data.get("found")) && !chips.is_empty() && !py_strip(&answer).is_empty();
+        let found = py::truthy(data.get("found")) && !chips.is_empty() && !py::strip(&answer).is_empty();
         let (answer, chips) = if found {
-            (py_strip(&SQUEEZE.replace_all(&answer, " ")).to_string(), chips)
+            (py::strip(&SQUEEZE.replace_all(&answer, " ")).to_string(), chips)
         } else {
             (REFUSAL.to_string(), Vec::new())
         };
@@ -918,9 +919,9 @@ impl Notebook {
 fn citations(data: &serde_json::Map<String, Value>) -> CreativeResult<Vec<Value>> {
     match data.get("citations") {
         Some(Value::Array(a)) => Ok(a.clone()),
-        Some(v) if truthy(Some(v)) && !matches!(v, Value::String(_) | Value::Object(_)) => Err(CreativeError::faulted(
-            format!("'{}' object is not iterable", type_name(v)),
-        )),
+        Some(v) if py::truthy(Some(v)) && !matches!(v, Value::String(_) | Value::Object(_)) => Err(
+            CreativeError::faulted(format!("'{}' object is not iterable", py::type_name(v))),
+        ),
         _ => Ok(Vec::new()),
     }
 }
@@ -929,17 +930,12 @@ fn citations(data: &serde_json::Map<String, Value>) -> CreativeResult<Vec<Value>
 fn quote_of(v: Option<&Value>) -> CreativeResult<String> {
     match v {
         Some(Value::String(s)) => Ok(s.clone()),
-        Some(v) if truthy(Some(v)) => Err(CreativeError::faulted(format!(
+        Some(v) if py::truthy(Some(v)) => Err(CreativeError::faulted(format!(
             "'{}' object is not subscriptable",
-            type_name(v)
+            py::type_name(v)
         ))),
         _ => Ok(String::new()),
     }
-}
-
-/// `s[:n]` in code points.
-fn head(s: &str, n: usize) -> String {
-    s.chars().take(n).collect()
 }
 
 #[cfg(test)]

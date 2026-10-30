@@ -258,8 +258,8 @@ fn release_and_options_carry_the_python_settings() {
 
 #[test]
 fn tracing_installs_once() {
-    let first = init_tracing();
-    let second = init_tracing();
+    let first = init_tracing(None);
+    let second = init_tracing(None);
     assert!(first.is_ok() || second.is_err());
     assert!(second.is_err(), "a second install must be refused");
     tracing::info!("a line through the installed subscriber");

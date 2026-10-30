@@ -85,7 +85,9 @@ impl StoreError {
 /// `Result` with [`StoreError`].
 pub type Result<T> = std::result::Result<T, StoreError>;
 
-/// The first `n` characters of a statement, for an error message.
-pub(crate) fn head(sql: &str, n: usize) -> String {
-    sql.chars().take(n).collect()
+/// A value `pk_core::config::Env` could not give (a missing password, a port that is not a number).
+impl From<pk_core::ConfigError> for StoreError {
+    fn from(e: pk_core::ConfigError) -> Self {
+        Self::Config(e.to_string())
+    }
 }

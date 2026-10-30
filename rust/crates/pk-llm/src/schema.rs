@@ -5,7 +5,7 @@
 use serde_json::{Map, Value};
 
 use crate::error::LlmError;
-use crate::pyfmt;
+use pk_core::py;
 
 /// The string formats the API's structured output keeps; any other goes into the description.
 const SUPPORTED_STRING_FORMATS: &[&str] = &[
@@ -150,9 +150,9 @@ pub fn transform_schema(schema: &Value) -> Result<Value, LlmError> {
     if !rest.is_empty() {
         let head = strict
             .get("description")
-            .map(|d| format!("{}\n\n", pyfmt::py_str(d)))
+            .map(|d| format!("{}\n\n", py::str(d)))
             .unwrap_or_default();
-        let items: Vec<String> = rest.iter().map(|(k, v)| format!("{k}: {}", pyfmt::py_str(v))).collect();
+        let items: Vec<String> = rest.iter().map(|(k, v)| format!("{k}: {}", py::str(v))).collect();
         strict.insert(
             "description".into(),
             Value::String(format!("{head}{{{}}}", items.join(", "))),
@@ -220,7 +220,7 @@ pub fn validate(data: &Value, schema: &Value) -> Result<(), String> {
 pub fn schema_instructions(schema: &Value) -> String {
     format!(
         "Reply with ONE JSON object only, no prose and no code fences, matching this JSON Schema:\n{}",
-        pyfmt::dumps(schema)
+        py::dumps(schema)
     )
 }
 

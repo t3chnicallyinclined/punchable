@@ -31,7 +31,7 @@ pub mod schema;
 pub mod store;
 pub mod value;
 
-pub use config::{Auth, Config, secrets};
+pub use config::{Auth, Config};
 pub use creative::{Reconcile, Reconciled, line_hash, same_line};
 pub use error::{Result, StoreError};
 pub use kbmap::{CreativeEvent, DecisionRow, EdgeKind, EdgeRow, Field, MetaState, NodeRow, SrcFile};

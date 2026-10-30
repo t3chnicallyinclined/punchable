@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::error::{CreativeError, CreativeResult};
-use crate::pyish::{Obj, py_str, truthy, type_name};
+use crate::pyish::Obj;
+use pk_core::py;
 
 static EMPTY: LazyLock<Obj> = LazyLock::new(Map::new);
 
@@ -46,10 +47,10 @@ impl Event {
     pub fn data(&self) -> CreativeResult<&Obj> {
         match &self.data {
             Value::Object(o) => Ok(o),
-            v if !truthy(Some(v)) => Ok(&EMPTY),
+            v if !py::truthy(Some(v)) => Ok(&EMPTY),
             v => Err(CreativeError::faulted(format!(
                 "'{}' object has no attribute 'get'",
-                type_name(v)
+                py::type_name(v)
             ))),
         }
     }
@@ -61,8 +62,8 @@ impl Event {
 
     /// `str(ev.get("by") or "")`: the text the actor checks run on.
     pub fn by_text(&self) -> String {
-        if truthy(Some(&self.by)) {
-            py_str(&self.by)
+        if py::truthy(Some(&self.by)) {
+            py::str(&self.by)
         } else {
             String::new()
         }

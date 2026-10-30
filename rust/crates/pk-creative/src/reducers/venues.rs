@@ -6,8 +6,9 @@ use serde_json::{Value, json};
 use super::unknown_op;
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{py_len, strip_or_empty};
+use crate::pyish::strip_or_empty;
 use crate::store::{Items, Reducer};
+use pk_core::py;
 
 /// The venue reducer.
 #[derive(Debug, Clone, Copy, Default)]
@@ -43,7 +44,7 @@ impl Reducer for Venues {
             }
             "rename" => {
                 let name = strip_or_empty(d, "name")?;
-                if name.is_empty() || py_len(name) > 120 {
+                if name.is_empty() || py::len(name) > 120 {
                     return Err(CreativeError::refused("name must be 1-120 characters"));
                 }
                 v.insert("name".into(), json!(name));

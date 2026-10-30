@@ -8,7 +8,9 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value, json};
 
 use crate::decision::Decision;
-use crate::model::{Bucket, Rec, bucket, ekind, truthy, truthy_str};
+use pk_core::py::truthy;
+
+use crate::model::{Bucket, Rec, bucket, ekind, truthy_str};
 
 /// The replayed state. Built from scratch whenever an input changes; never mutated by a read.
 #[derive(Debug, Clone)]

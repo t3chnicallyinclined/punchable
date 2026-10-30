@@ -144,10 +144,10 @@ impl std::str::FromStr for Effort {
                 "effort must be one of ({}), not {}",
                 EFFORTS
                     .iter()
-                    .map(|e| crate::pyfmt::quote(e))
+                    .map(|e| pk_core::py::quote(e))
                     .collect::<Vec<_>>()
                     .join(", "),
-                crate::pyfmt::quote(other)
+                pk_core::py::quote(other)
             ))),
         }
     }

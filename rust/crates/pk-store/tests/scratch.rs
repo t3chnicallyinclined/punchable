@@ -13,6 +13,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use futures::StreamExt;
+use pk_core::Env;
 use pk_kb::{Decision, Rec, View};
 use pk_store::{Config, CreativeEvent, NodeRow, Reconcile, Store, StoreError, store::vars};
 use serde_json::{Value as Json, json};
@@ -68,15 +69,12 @@ async fn scratch(tag: &str) -> Option<(Scratch, Store)> {
         skip(tag, "no surreal binary (PUNCH_SURREAL or ~/.punchable/bin/surreal.exe)");
         return None;
     };
-    let secrets = pk_store::secrets();
-    let Some(pass) = secrets.get("SURREAL_PASS").filter(|p| !p.is_empty()) else {
-        skip(tag, "no SURREAL_PASS in the secrets file or the environment");
+    let env = Env::from_process();
+    let Some(pass) = env.opt("SURREAL_PASS") else {
+        skip(tag, &format!("no SURREAL_PASS in {}", env.place()));
         return None;
     };
-    let user = secrets
-        .get("SURREAL_USER")
-        .cloned()
-        .unwrap_or_else(|| "root".to_string());
+    let user = env.opt("SURREAL_USER").unwrap_or("root").to_string();
     let port = free_port();
     let child = Command::new(&exe)
         .args([
@@ -106,7 +104,7 @@ async fn scratch(tag: &str) -> Option<(Scratch, Store)> {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     tokio::time::sleep(Duration::from_millis(200)).await;
-    let cfg = Config::scratch(port, "punchable_test", &format!("t_{tag}")).expect("config");
+    let cfg = Config::scratch(&env, port, "punchable_test", &format!("t_{tag}")).expect("config");
     let store = Store::connect(cfg).await.expect("connect");
     let v = store.check_version().await.expect("version");
     assert!(v >= (3, 3, 1), "server {v:?}");

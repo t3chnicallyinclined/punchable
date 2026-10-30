@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::pyish::py_isspace;
+use pk_core::py;
 
 /// `_TOK`: a word is a run of ASCII letters, digits and apostrophes starting with a letter or digit.
 static TOK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-z0-9][a-z0-9']*").expect("a valid regex"));
@@ -66,7 +66,7 @@ pub fn tokens(text: &str) -> Vec<String> {
 pub fn short_title(t: Option<&str>) -> String {
     let t = t.unwrap_or("");
     let head = t.split(" (").next().unwrap_or("");
-    head.trim_matches(py_isspace).to_string()
+    head.trim_matches(py::isspace).to_string()
 }
 
 /// `month_year(date)`: `2015-06-26` to `Jun 2015`; `2015` to `2015`.
@@ -143,7 +143,7 @@ pub fn snippet(text: &str, terms: &[String], n: usize) -> String {
 
 /// `len(q.split())`: the number of whitespace-separated words (Python's `str.isspace` whitespace).
 pub fn py_word_count(s: &str) -> usize {
-    s.split(py_isspace).filter(|w| !w.is_empty()).count()
+    s.split(py::isspace).filter(|w| !w.is_empty()).count()
 }
 
 #[cfg(test)]

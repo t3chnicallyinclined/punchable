@@ -8,8 +8,9 @@ use super::learned;
 use super::unknown_op;
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{get, get_or_null, key, or, py_str};
+use crate::pyish::{get, get_or_null, key, or};
 use crate::store::{Items, Reducer};
+use pk_core::py;
 
 /// The one document id (`VOICE_ID`).
 pub const VOICE_ID: &str = "profile:voice";
@@ -44,7 +45,7 @@ impl Reducer for Profile {
                 items.insert(
                     i.to_string(),
                     json!({
-                        "id": i, "kind": py_str(or(d, "kind").unwrap_or(&json!("voice"))), "text": text,
+                        "id": i, "kind": py::str(or(d, "kind").unwrap_or(&json!("voice"))), "text": text,
                         "updated_at": ev.ts, "by": ev.by, "previous": previous, "learned": learned,
                     }),
                 );

@@ -1,7 +1,9 @@
 //! Observability for Punchable's services: logs, metrics and crash reports, with the one rule that matters here:
 //! nothing the comic wrote leaves through any of them.
 //!
-//! - [`log`]: the `tracing` subscriber (`RUST_LOG`, stderr, compact).
+//! - [`config`]: [`ObsConfig`], what a binary takes from `pk_core::config::Env` for the two below (this crate never
+//!   reads the environment).
+//! - [`log`]: the `tracing` subscriber (the `RUST_LOG` directive, stderr, compact).
 //! - [`metrics`]: the `prometheus` registries of the API ([`ApiMetrics`]) and the worker ([`WorkerMetrics`]) with
 //!   the exact metric names, labels, types and buckets of `api-dev/metrics.py` and `worker/metrics.py`; gauges read
 //!   at scrape time are [`CallbackGauge`] collectors.
@@ -13,6 +15,7 @@
 //! The tests compare against goldens the Python writes (`rust/tools/gen_obs_goldens.py`) and prove by property that
 //! no sensitive key survives the scrubber.
 
+pub mod config;
 pub mod crash;
 pub mod error;
 pub mod labels;
@@ -20,6 +23,7 @@ pub mod log;
 pub mod metrics;
 pub mod scrub;
 
+pub use config::ObsConfig;
 pub use crash::{before_breadcrumb, before_send, init_sentry, init_sentry_with, release};
 pub use error::{ObsError, ObsResult};
 pub use labels::{JobStats, job_stats, kind_label, model_label, route_pattern, status_class};

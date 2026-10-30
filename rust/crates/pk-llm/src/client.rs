@@ -12,7 +12,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use crate::api::{Request, Response, StreamEvent, accumulate};
 use crate::error::LlmError;
 
-/// The first-party API; `ANTHROPIC_BASE_URL` overrides it as it does for the SDK.
+/// The first-party API; `LlmConfig::base_url` (`ANTHROPIC_BASE_URL`) overrides it as it does for the SDK.
 pub const DEFAULT_BASE_URL: &str = "https://api.anthropic.com";
 /// The API version header every request carries.
 pub const ANTHROPIC_VERSION: &str = "2023-06-01";
@@ -34,20 +34,17 @@ pub struct Client {
 }
 
 impl Client {
-    /// A client on the first-party API (or `ANTHROPIC_BASE_URL`) with the SDK's defaults.
+    /// A client on the first-party API with the SDK's defaults; [`Client::with_base_url`] points it elsewhere (the
+    /// binary passes `ANTHROPIC_BASE_URL` through `LlmConfig`, as the SDK honours it).
     pub fn new(api_key: impl Into<String>) -> Result<Self, LlmError> {
         let http = reqwest::Client::builder()
             .connect_timeout(CONNECT_TIMEOUT)
             .read_timeout(READ_TIMEOUT)
             .user_agent(concat!("pk-llm/", env!("CARGO_PKG_VERSION")))
             .build()?;
-        let base_url = std::env::var("ANTHROPIC_BASE_URL")
-            .ok()
-            .filter(|s| !s.trim().is_empty())
-            .unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
         Ok(Self {
             http,
-            base_url,
+            base_url: DEFAULT_BASE_URL.to_string(),
             api_key: api_key.into(),
             max_retries: DEFAULT_MAX_RETRIES,
         })

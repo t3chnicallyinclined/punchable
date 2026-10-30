@@ -7,7 +7,8 @@
 
 use std::path::PathBuf;
 
-use pk_embed::{Bge, DIM, Embedder, FINGERPRINT, Hash, MAX_TOKENS, MODEL_NAME, bge_dir, prepare};
+use pk_core::Env;
+use pk_embed::{Bge, DIM, EmbedConfig, Embedder, FINGERPRINT, Hash, MAX_TOKENS, MODEL_NAME, prepare};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -48,7 +49,8 @@ fn golden<T: for<'a> Deserialize<'a>>(name: &str) -> T {
 /// the model is promised: with `PK_REQUIRE_EXTERNAL` set (CI), a missing model panics instead (docs/ARCHITECTURE.md
 /// section 5).
 fn model() -> Option<Bge> {
-    let Some(dir) = bge_dir() else {
+    let cfg = EmbedConfig::from_env(&Env::from_map(std::env::vars())).expect("config");
+    let Some(dir) = cfg.model_dir() else {
         let why =
             "PK_BGE_DIR unset or without the model (python tools/kb/fetch_bge.py --dest DIR, then PK_BGE_DIR=DIR)";
         assert!(

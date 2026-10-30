@@ -11,7 +11,9 @@ use std::sync::LazyLock;
 
 use crate::error::{KbError, KbResult};
 use crate::ids::{edge_id, slugify};
-use crate::model::{EDGE_KINDS, LABEL_KINDS, PERF_KINDS, Rec, STAGES, bucket, public, py_repr, truthy};
+use pk_core::py::{self, truthy};
+
+use crate::model::{EDGE_KINDS, LABEL_KINDS, PERF_KINDS, Rec, STAGES, bucket, public};
 use crate::view::View;
 
 static DATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("regex"));
@@ -30,11 +32,6 @@ pub struct Built {
     pub before: Option<Map<String, Value>>,
     /// The fields that change (or the whole new record), or null for a delete.
     pub after: Option<Map<String, Value>>,
-}
-
-/// The current UTC time the way the Python writes it: `2026-10-29T12:00:00+00:00`.
-pub fn now_iso() -> String {
-    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S+00:00").to_string()
 }
 
 /// Validate a request against the view. `now` is the timestamp the builder stamps new jokes and units with
@@ -76,20 +73,26 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                         return Err(KbError::bad(format!(
                             "{} is a {}, expected {}",
                             id.unwrap_or(""),
-                            py_none(n.get("type")),
+                            py::str(n.get("type").unwrap_or(&Value::Null)),
                             ts.join("/")
                         )));
                     }
                 }
                 Ok(n)
             }
-            _ => Err(KbError::with_status(404, format!("unknown node {}", py_repr(nid)))),
+            _ => Err(KbError::with_status(
+                404,
+                format!("unknown node {}", py::repr(nid.unwrap_or(&Value::Null))),
+            )),
         }
     };
     let kind_fields = |src: &Rec| -> KbResult<Map<String, Value>> {
         let kind = src.get("kind").and_then(Value::as_str);
         if !kind.is_some_and(|k| EDGE_KINDS.contains(&k)) {
-            return Err(KbError::bad(format!("unknown kind {}", py_repr(src.get("kind")))));
+            return Err(KbError::bad(format!(
+                "unknown kind {}",
+                py::repr(src.get("kind").unwrap_or(&Value::Null))
+            )));
         }
         let kind = kind.expect("checked");
         let mut out = Map::new();
@@ -171,7 +174,7 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
         let Some(e) = eid.and_then(|id| v.edges.get(id)) else {
             return Err(KbError::with_status(
                 404,
-                format!("unknown edge {}", py_repr(req.get("id"))),
+                format!("unknown edge {}", py::repr(req.get("id").unwrap_or(&Value::Null))),
             ));
         };
         let eid = eid.expect("present").to_string();
@@ -274,7 +277,7 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                 if !LABEL_KINDS.contains(&kind) {
                     return Err(KbError::bad(format!(
                         "unknown label kind {}",
-                        py_repr(after.get("kind"))
+                        py::repr(after.get("kind").unwrap_or(&Value::Null))
                     )));
                 }
                 let nid = format!("label:{kind}:{}", slugify(&name));
@@ -327,7 +330,10 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                     .filter(|s| !s.is_empty())
                     .unwrap_or("idea");
                 if !STAGES.contains(&stage) {
-                    return Err(KbError::bad(format!("unknown stage {}", py_repr(after.get("stage")))));
+                    return Err(KbError::bad(format!(
+                        "unknown stage {}",
+                        py::repr(after.get("stage").unwrap_or(&Value::Null))
+                    )));
                 }
                 let summary = after
                     .get("summary")
@@ -376,8 +382,8 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                     Some(d) if DATE_RE.is_match(d) => d.to_string(),
                     _ => now[..10].to_string(),
                 };
-                let kind: String = py_str(after.get("kind"), "tag").chars().take(40).collect();
-                let source: String = py_str(after.get("source"), "app").chars().take(40).collect();
+                let kind: String = text_or(after.get("kind"), "tag").chars().take(40).collect();
+                let source: String = text_or(after.get("source"), "app").chars().take(40).collect();
                 let mut rec = obj(&[
                     ("type", json!("unit")),
                     ("text", json!(text)),
@@ -443,14 +449,14 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
         if !allowed.contains(&k.as_str()) {
             return Err(KbError::bad(format!(
                 "can't edit {} on a {}",
-                py_repr(Some(&json!(k))),
-                py_none(n.get("type"))
+                py::repr(&json!(k)),
+                py::str(n.get("type").unwrap_or(&Value::Null))
             )));
         }
         let xs = x.as_str();
         match k.as_str() {
             "stage" if !xs.is_some_and(|s| STAGES.contains(&s)) => {
-                return Err(KbError::bad(format!("unknown stage {}", py_repr(Some(x)))));
+                return Err(KbError::bad(format!("unknown stage {}", py::repr(x))));
             }
             "merged_into" if !x.is_null() => {
                 need_node(Some(x), Some(&["label"]))?;
@@ -466,10 +472,7 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                     return Err(KbError::bad("show_date must be YYYY-MM-DD (or null to clear it)"));
                 };
                 if NaiveDate::parse_from_str(s, "%Y-%m-%d").is_err() {
-                    return Err(KbError::bad(format!(
-                        "show_date {} is not a real date",
-                        py_repr(Some(x))
-                    )));
+                    return Err(KbError::bad(format!("show_date {} is not a real date", py::repr(x))));
                 }
             }
             "venue" if !xs.is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 120) => {
@@ -579,23 +582,8 @@ fn obj(pairs: &[(&str, Value)]) -> Map<String, Value> {
     pairs.iter().map(|(k, v)| ((*k).to_string(), v.clone())).collect()
 }
 
-/// `str(x or default)`: a non-empty string value, else the default (the Python `str(after.get(k) or "tag")`).
-fn py_str(v: Option<&Value>, default: &str) -> String {
-    match v {
-        Some(x) if truthy(Some(x)) => match x {
-            Value::String(s) => s.clone(),
-            Value::Bool(true) => "True".to_string(),
-            other => other.to_string(),
-        },
-        _ => default.to_string(),
-    }
-}
-
-/// How Python prints a value in an f-string: `None` for null, the string itself otherwise.
-fn py_none(v: Option<&Value>) -> String {
-    match v {
-        None | Some(Value::Null) => "None".to_string(),
-        Some(Value::String(s)) => s.clone(),
-        Some(other) => other.to_string(),
-    }
+/// `str(after.get(k) or default)`: a truthy value as Python prints it, else the default.
+fn text_or(v: Option<&Value>, default: &str) -> String {
+    v.filter(|x| truthy(Some(x)))
+        .map_or_else(|| default.to_string(), py::str)
 }

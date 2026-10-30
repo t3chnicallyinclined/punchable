@@ -7,7 +7,8 @@
 //! `get_final_message()` does (`client`). Everything else is a straight port: the request the backend builds per
 //! task (`backend`), the task → provider → model routing with one retry on invalid JSON and the `fallbacks`
 //! models after a refusal (`router`), the SDK's `transform_schema` for `output_config.format` (`schema`), the TOML
-//! loader (`config`), the UTC-day USD ledger (`budget`). The plain-words errors the app shows are in `error`, copied
+//! loader (`config`) with the `LlmConfig` a binary fills from `pk_core::config::Env` (keys, base URL, budget: this
+//! crate never reads the environment), the UTC-day USD ledger (`budget`). The plain-words errors the app shows are in `error`, copied
 //! from `providers.py`.
 //!
 //! Proof: `rust/tools/gen_llm_goldens.py` records what the pinned Python SDK puts on the wire for synthetic prompts;
@@ -19,14 +20,13 @@ pub mod budget;
 pub mod client;
 pub mod config;
 pub mod error;
-pub mod pyfmt;
 pub mod router;
 pub mod schema;
 
 pub use api::{Request, Response, Usage};
 pub use backend::{AnthropicBackend, Called, ChatMessage};
-pub use budget::Budget;
+pub use budget::{Budget, BudgetConfig};
 pub use client::Client;
-pub use config::{Config, ProviderCfg, TaskCfg};
+pub use config::{Config, LlmConfig, ProviderCfg, TaskCfg};
 pub use error::LlmError;
 pub use router::{Completion, Router};

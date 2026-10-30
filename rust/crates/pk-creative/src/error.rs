@@ -45,5 +45,15 @@ impl CreativeError {
     }
 }
 
+/// A `pk_core::py` helper's Python exception: a `ValueError` is a refusal, a `TypeError` a fault.
+impl From<pk_core::py::PyError> for CreativeError {
+    fn from(e: pk_core::py::PyError) -> Self {
+        match e {
+            pk_core::py::PyError::Value(m) => Self::Refused(m),
+            pk_core::py::PyError::Type(m) => Self::Faulted(m),
+        }
+    }
+}
+
 /// `Result` with [`CreativeError`].
 pub type CreativeResult<T> = Result<T, CreativeError>;

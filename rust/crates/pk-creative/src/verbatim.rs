@@ -4,10 +4,10 @@
 //!
 //! One copy, ported from `creative/askchat.py::verbatim` (the one the hosted API runs; `engine/verify.py` is the
 //! same rule with one difference in the length gate, see `rust/tools/gen_creative_goldens.py`). Whitespace is
-//! Python's `str.isspace` ([`py_isspace`]) so the differential against the Python is exact; positions are code
+//! Python's `str.isspace` (`pk_core::py::isspace`) so the differential against the Python is exact; positions are code
 //! points there and bytes here, which the index map hides.
 
-use crate::pyish::{py_isspace, py_len, py_strip};
+use pk_core::py;
 
 /// The shortest quote the gate will look for, in code points (`QUOTE_MIN`).
 pub const QUOTE_MIN: usize = 3;
@@ -36,7 +36,7 @@ fn norm_map(s: &str) -> (String, Vec<usize>) {
             continue;
         }
         let c = typo(ch);
-        if py_isspace(c) {
+        if py::isspace(c) {
             if !prev_space {
                 out.push(' ');
                 idx.push(i);
@@ -55,10 +55,10 @@ fn norm_map(s: &str) -> (String, Vec<usize>) {
 fn strip_ellipsis(q: &str) -> &str {
     let mut s = q;
     if let Some(rest) = s.strip_prefix("...").or_else(|| s.strip_prefix('\u{2026}')) {
-        s = rest.trim_start_matches(py_isspace);
+        s = rest.trim_start_matches(py::isspace);
     }
     if let Some(rest) = s.strip_suffix("...").or_else(|| s.strip_suffix('\u{2026}')) {
-        s = rest.trim_end_matches(py_isspace);
+        s = rest.trim_end_matches(py::isspace);
     }
     s
 }
@@ -74,15 +74,15 @@ pub fn verbatim<'a>(quote: &str, source: &'a str) -> Option<&'a str> {
     if quote.is_empty() || source.is_empty() {
         return None;
     }
-    let q = py_strip(quote);
-    if py_len(q) >= QUOTE_MIN
+    let q = py::strip(quote);
+    if py::len(q) >= QUOTE_MIN
         && let Some(found) = slice_of(source, q)
     {
         return Some(found);
     }
-    let q = py_strip(q.trim_matches(|c| matches!(c, '"' | '\'' | '\u{201c}' | '\u{201d}' | '\u{2018}' | '\u{2019}')));
+    let q = py::strip(q.trim_matches(|c| matches!(c, '"' | '\'' | '\u{201c}' | '\u{201d}' | '\u{2018}' | '\u{2019}')));
     let q = strip_ellipsis(q);
-    if py_len(q) < QUOTE_MIN {
+    if py::len(q) < QUOTE_MIN {
         return None;
     }
     if let Some(found) = slice_of(source, q) {
@@ -90,8 +90,8 @@ pub fn verbatim<'a>(quote: &str, source: &'a str) -> Option<&'a str> {
     }
     let (ns, idx) = norm_map(source);
     let (nq, _) = norm_map(q);
-    let nq = py_strip(&nq);
-    let nq_len = py_len(nq);
+    let nq = py::strip(&nq);
+    let nq_len = py::len(nq);
     if nq_len < QUOTE_MIN {
         return None;
     }

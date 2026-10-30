@@ -6,8 +6,10 @@ use serde_json::{Value, json};
 use super::{item_mut, list_mut, unknown_op};
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{get, get_or_null, head, key, or, py_len, py_list, py_str, py_strip, truthy};
+use crate::pyish::{get, get_or_null, key, or};
 use crate::store::{Items, Reducer};
+use pk_core::py;
+use pk_core::text::head;
 
 /// The chat reducer.
 #[derive(Debug, Clone, Copy, Default)]
@@ -20,7 +22,7 @@ impl Reducer for Chats {
             if items.contains_key(i) {
                 return Err(CreativeError::refused(format!("chat {i} exists")));
             }
-            let title = head(&py_str(or(d, "title").unwrap_or(&json!(""))), 120);
+            let title = head(&py::str(or(d, "title").unwrap_or(&json!(""))), 120);
             let joke = d.get("joke").filter(|j| j.is_string()).cloned().unwrap_or(Value::Null);
             items.insert(
                 i.to_string(),
@@ -34,17 +36,17 @@ impl Reducer for Chats {
         };
         match op {
             "ask" => {
-                let Some(q) = get(d, "q").and_then(Value::as_str).filter(|q| !py_strip(q).is_empty()) else {
+                let Some(q) = get(d, "q").and_then(Value::as_str).filter(|q| !py::strip(q).is_empty()) else {
                     return Err(CreativeError::refused("q is required"));
                 };
                 let want = get_or_null(d, "turn");
                 let turns = list_mut(ch, "turns")?;
                 if turns.iter().any(|t| t.get("id") == Some(&want)) {
-                    return Err(CreativeError::refused(format!("turn {} exists", py_str(&want))));
+                    return Err(CreativeError::refused(format!("turn {} exists", py::str(&want))));
                 }
                 let turn = key(d, "turn")?.clone();
                 let sources = match or(d, "sources") {
-                    Some(s) => py_list(s)?,
+                    Some(s) => py::list(s)?,
                     None => Vec::new(),
                 };
                 turns.push(json!({"id": turn, "q": q, "status": "thinking", "asked_at": ev.ts,
@@ -58,13 +60,13 @@ impl Reducer for Chats {
                     .find(|t| t.get("id") == Some(&want))
                     .and_then(Value::as_object_mut)
                 else {
-                    return Err(CreativeError::refused(format!("no turn {}", py_str(&want))));
+                    return Err(CreativeError::refused(format!("no turn {}", py::str(&want))));
                 };
-                let status = py_str(key(t, "status")?);
+                let status = py::str(key(t, "status")?);
                 if status != "thinking" {
                     return Err(CreativeError::refused(format!(
                         "turn {} is {status}",
-                        py_str(key(t, "id")?)
+                        py::str(key(t, "id")?)
                     )));
                 }
                 if op == "answer" {
@@ -74,22 +76,22 @@ impl Reducer for Chats {
                     t.insert("status".into(), json!("failed"));
                     t.insert(
                         "error".into(),
-                        json!(head(&py_str(or(d, "error").unwrap_or(&json!("failed"))), 500)),
+                        json!(head(&py::str(or(d, "error").unwrap_or(&json!("failed"))), 500)),
                     );
                 }
                 t.insert("done_at".into(), json!(ev.ts));
             }
             "patch" => {
                 if let Some(t) = d.get("title") {
-                    let title = if truthy(Some(t)) { py_str(t) } else { String::new() };
-                    let title = py_strip(&title);
-                    if title.is_empty() || py_len(title) > 120 {
+                    let title = if py::truthy(Some(t)) { py::str(t) } else { String::new() };
+                    let title = py::strip(&title);
+                    if title.is_empty() || py::len(title) > 120 {
                         return Err(CreativeError::refused("title must be 1-120 characters"));
                     }
                     ch.insert("title".into(), json!(title));
                 }
                 if let Some(del) = d.get("deleted") {
-                    ch.insert("deleted".into(), json!(truthy(Some(del))));
+                    ch.insert("deleted".into(), json!(py::truthy(Some(del))));
                 }
             }
             _ => return Err(unknown_op(op)),

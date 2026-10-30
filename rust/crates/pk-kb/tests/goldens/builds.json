@@ -159,6 +159,20 @@
    "target": "edge",
    "action": "add",
    "after": {
+    "src": "joke:meters",
+    "dst": "joke:cat",
+    "kind": 1e-05
+   },
+   "reason": "x"
+  },
+  "error": "unknown kind 1e-05",
+  "status": 400
+ },
+ {
+  "request": {
+   "target": "edge",
+   "action": "add",
+   "after": {
     "src": "label:topic:cash",
     "dst": "joke:cat",
     "kind": "segue"

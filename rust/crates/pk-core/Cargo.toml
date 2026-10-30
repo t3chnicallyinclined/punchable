@@ -1,0 +1,16 @@
+[package]
+name = "pk-core"
+description = "The leaf every Punchable crate stands on: the Python-format helpers, code-point text, the clock, and the one reader of secrets.env and the process environment"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

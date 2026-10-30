@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use pk_core::{ConfigError, Env};
 use serde::{Deserialize, Serialize};
 
 use crate::api::Usage;
@@ -70,11 +71,6 @@ pub fn usage_usd(model: &str, usage: &Usage) -> f64 {
         / 1_000_000.0
 }
 
-/// Today as `YYYY-MM-DD` in UTC.
-pub fn today() -> String {
-    chrono::Utc::now().format("%Y-%m-%d").to_string()
-}
-
 /// One day of the ledger.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -102,6 +98,38 @@ pub struct Status {
     pub over: bool,
 }
 
+/// The cap and the ledger file as the worker's environment names them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BudgetConfig {
+    /// `PK_AI_DAILY_USD`, default [`DEFAULT_DAILY_USD`].
+    pub daily_usd: f64,
+    /// `PK_AI_SPEND_FILE`, else `<PK_CACHE_DIR | PK_WORKSPACE | ~/.punchable-worker>/ai_spend.json`.
+    pub path: PathBuf,
+}
+
+impl BudgetConfig {
+    /// A cap over a ledger file.
+    pub fn new(daily_usd: f64, path: impl Into<PathBuf>) -> Self {
+        Self {
+            daily_usd,
+            path: path.into(),
+        }
+    }
+
+    /// From the environment the binary read: a `PK_AI_DAILY_USD` that is not a number is
+    /// [`ConfigError::Invalid`] (the Python fell back to the default silently).
+    pub fn from_env(env: &Env) -> Result<Self, ConfigError> {
+        let daily_usd = env.f64("PK_AI_DAILY_USD")?.unwrap_or(DEFAULT_DAILY_USD);
+        let path = env.path("PK_AI_SPEND_FILE").unwrap_or_else(|| {
+            env.first_path(&["PK_CACHE_DIR", "PK_WORKSPACE"])
+                .or_else(|| env.home().map(|h| h.join(".punchable-worker")))
+                .unwrap_or_else(|| PathBuf::from(".punchable-worker"))
+                .join("ai_spend.json")
+        });
+        Ok(Self { daily_usd, path })
+    }
+}
+
 /// The cap and its ledger file.
 #[derive(Debug)]
 pub struct Budget {
@@ -122,31 +150,9 @@ impl Budget {
         }
     }
 
-    /// The worker's budget: `PK_AI_DAILY_USD` (default 2.00); the ledger at `PK_AI_SPEND_FILE`, else
-    /// `<PK_CACHE_DIR | PK_WORKSPACE | ~/.punchable-worker>/ai_spend.json`.
-    pub fn from_env() -> Self {
-        let daily = std::env::var("PK_AI_DAILY_USD")
-            .ok()
-            .filter(|s| !s.is_empty())
-            .and_then(|s| s.parse::<f64>().ok())
-            .unwrap_or(DEFAULT_DAILY_USD);
-        let path = std::env::var("PK_AI_SPEND_FILE")
-            .ok()
-            .filter(|s| !s.is_empty())
-            .map_or_else(
-                || {
-                    let base = std::env::var("PK_CACHE_DIR")
-                        .or_else(|_| std::env::var("PK_WORKSPACE"))
-                        .ok()
-                        .filter(|s| !s.is_empty())
-                        .map(PathBuf::from)
-                        .or_else(|| std::env::home_dir().map(|h| h.join(".punchable-worker")))
-                        .unwrap_or_else(|| PathBuf::from(".punchable-worker"));
-                    base.join("ai_spend.json")
-                },
-                PathBuf::from,
-            );
-        Self::new(daily, path)
+    /// A budget over a [`BudgetConfig`].
+    pub fn from_config(cfg: &BudgetConfig) -> Self {
+        Self::new(cfg.daily_usd, cfg.path.clone())
     }
 
     /// Pin "today" (tests and the golden replay); the clock otherwise.
@@ -172,7 +178,7 @@ impl Budget {
     }
 
     fn today(&self) -> String {
-        self.pinned_day.clone().unwrap_or_else(today)
+        self.pinned_day.clone().unwrap_or_else(pk_core::time::today)
     }
 
     fn read(&self) -> BTreeMap<String, Day> {

@@ -11,6 +11,8 @@
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
+use pk_core::py;
+use pk_core::text::head;
 use regex::Regex;
 use serde_json::{Map, Value, json};
 
@@ -89,11 +91,6 @@ pub fn sensitive_key(k: &str) -> bool {
     listed || KEY_HINT.is_match(&s)
 }
 
-/// The first `n` characters of `s`.
-fn head(s: &str, n: usize) -> String {
-    s.chars().take(n).collect()
-}
-
 /// An exception message or log line: the first line only (a `SurrealError` appends the statement after a newline),
 /// quoted literals replaced (a `KeyError`'s key, a parser's snippet, a search term in a query), bounded.
 pub fn scrub_text(s: &str) -> String {
@@ -101,23 +98,9 @@ pub fn scrub_text(s: &str) -> String {
     head(&QUOTED.replace_all(first, "'...'"), MAX_MESSAGE)
 }
 
-/// Python's `str(v or "")`: falsy values are empty; strings are themselves; numbers print plainly.
+/// Python's `str(v or "")`: a falsy value is empty; the rest prints as Python does (`True`, `1e-05`).
 fn text_of(v: Option<&Value>) -> String {
-    match v {
-        None | Some(Value::Null | Value::Bool(false)) => String::new(),
-        Some(Value::Bool(true)) => "true".to_string(),
-        Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => {
-            if n.as_f64() == Some(0.0) {
-                String::new()
-            } else {
-                n.to_string()
-            }
-        }
-        Some(Value::Array(a)) if a.is_empty() => String::new(),
-        Some(Value::Object(o)) if o.is_empty() => String::new(),
-        Some(other) => other.to_string(),
-    }
+    v.filter(|x| py::truthy(Some(x))).map_or_else(String::new, py::str)
 }
 
 /// [`scrub_text`] over a JSON value (an exception's `value` may be null or a number).

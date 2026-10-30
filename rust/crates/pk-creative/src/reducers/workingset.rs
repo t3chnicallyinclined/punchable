@@ -6,8 +6,9 @@ use serde_json::{Value, json};
 use super::{item_mut, list_mut, list_of, obj_mut, unknown_op};
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{Obj, get, get_or_null, key, or, or_else, py_int, py_len, py_list, py_str, strip_or_empty, truthy};
+use crate::pyish::{Obj, get, get_or_null, key, or, or_else, strip_or_empty};
 use crate::store::{Items, Reducer};
+use pk_core::py;
 
 /// The working-set reducer; `owner` is the actor id of his own edits.
 #[derive(Debug, Clone)]
@@ -48,8 +49,8 @@ impl Reducer for Workingsets {
                 "inferred"
             };
             let note = or_else(d, "note", json!("v1: promoted from the storyboard"));
-            let target_s = py_int(Some(key(d, "target_s")?))?;
-            let bits = py_list(key(d, "bits")?)?;
+            let target_s = py::int(Some(key(d, "target_s")?))?;
+            let bits = py::list(key(d, "bits")?)?;
             items.insert(
                 i.to_string(),
                 json!({
@@ -63,7 +64,7 @@ impl Reducer for Workingsets {
             return Ok(());
         }
         let ws = match item_mut(items, i) {
-            Some(ws) if !truthy(ws.get("deleted")) => ws,
+            Some(ws) if !py::truthy(ws.get("deleted")) => ws,
             _ => return Err(CreativeError::refused(format!("no working set {i}"))),
         };
         let cur = list_of(ws, "versions")?
@@ -73,17 +74,17 @@ impl Reducer for Workingsets {
             .ok_or_else(|| CreativeError::faulted("list index out of range"))?;
         match op {
             "new_version" => {
-                if !truthy(d.get("note")) {
+                if !py::truthy(d.get("note")) {
                     return Err(CreativeError::refused("a new version needs a note saying what changed"));
                 }
                 let vn = key(&cur, "v")?.as_i64().unwrap_or(0) + 1;
                 let target_s = match or(d, "target_s") {
-                    Some(t) => py_int(Some(t))?,
-                    None => py_int(Some(key(&cur, "target_s")?))?,
+                    Some(t) => py::int(Some(t))?,
+                    None => py::int(Some(key(&cur, "target_s")?))?,
                 };
                 let bits = match get(d, "bits") {
-                    None => py_list(key(&cur, "bits")?)?,
-                    Some(b) => py_list(b)?,
+                    None => py::list(key(&cur, "bits")?)?,
+                    Some(b) => py::list(b)?,
                 };
                 let version = json!({"v": vn, "created_at": ev.ts, "note": d["note"], "target_s": target_s,
                                      "bits": bits, "by": ev.by});
@@ -91,11 +92,11 @@ impl Reducer for Workingsets {
                 ws.insert("current".into(), json!(vn));
             }
             "lock_bit" | "unlock_bit" => {
-                let jid = py_str(key(d, "joke_id")?);
+                let jid = py::str(key(d, "joke_id")?);
                 lock_entry(ws, &jid)?.insert("bit".into(), json!(op == "lock_bit"));
             }
             "lock_line" => {
-                let jid = py_str(key(d, "joke_id")?);
+                let jid = py::str(key(d, "joke_id")?);
                 let text = key(d, "text")?;
                 let lk = lock_entry(ws, &jid)?;
                 let lines = list_mut(lk, "lines")?;
@@ -104,7 +105,7 @@ impl Reducer for Workingsets {
                 }
             }
             "unlock_line" => {
-                let jid = py_str(key(d, "joke_id")?);
+                let jid = py::str(key(d, "joke_id")?);
                 let locks = obj_mut(ws, "locks")?;
                 if let Some(lk) = locks
                     .get_mut(&jid)
@@ -120,7 +121,7 @@ impl Reducer for Workingsets {
             }
             "try_add" => {
                 let text = strip_or_empty(d, "text")?.to_string();
-                if text.is_empty() || py_len(&text) > 500 {
+                if text.is_empty() || py::len(&text) > 500 {
                     return Err(CreativeError::refused(
                         "a try note needs its text (up to 500 characters)",
                     ));
@@ -132,7 +133,7 @@ impl Reducer for Workingsets {
                     .as_array_mut()
                     .ok_or_else(|| CreativeError::faulted("'NoneType' object is not iterable"))?;
                 if notes.iter().any(|n| n.get("id") == Some(&want)) {
-                    return Err(CreativeError::refused(format!("try note {} exists", py_str(&want))));
+                    return Err(CreativeError::refused(format!("try note {} exists", py::str(&want))));
                 }
                 let note_id = key(d, "note_id")?.clone();
                 notes.push(
@@ -141,7 +142,7 @@ impl Reducer for Workingsets {
                 );
             }
             "try_done" => {
-                let done = truthy(d.get("done"));
+                let done = py::truthy(d.get("done"));
                 let Some(nid) = get(d, "note_id").and_then(Value::as_str).filter(|s| !s.is_empty()) else {
                     return Err(CreativeError::refused("note_id is required"));
                 };

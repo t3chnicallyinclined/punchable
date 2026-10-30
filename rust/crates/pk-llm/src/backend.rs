@@ -84,20 +84,6 @@ impl AnthropicBackend {
         }
     }
 
-    /// The hosted backend: the key from `pcfg.api_key_env`; `None` when the variable is empty (the provider is
-    /// then not available, as in the Python). The budget comes from the environment unless `budget = false`.
-    pub fn from_env(name: impl Into<String>, pcfg: ProviderCfg) -> Result<Option<Self>, LlmError> {
-        let Some(key) = std::env::var(&pcfg.api_key_env)
-            .ok()
-            .map(|k| k.trim().to_string())
-            .filter(|k| !k.is_empty())
-        else {
-            return Ok(None);
-        };
-        let budget = pcfg.budget.then(Budget::from_env);
-        Ok(Some(Self::new(name, pcfg, Client::new(key)?, budget)))
-    }
-
     /// The provider's configuration.
     pub fn pcfg(&self) -> &ProviderCfg {
         &self.pcfg

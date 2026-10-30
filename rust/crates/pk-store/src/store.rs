@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+use pk_core::text::head;
 use pk_kb::model::truthy_str;
 use pk_kb::{Decision, Rec, View};
 use serde_json::{Value as Json, json};
@@ -14,7 +15,7 @@ use surrealdb::opt::auth;
 use surrealdb::types::{Array, Number, Object, Value};
 
 use crate::config::{Auth, Config};
-use crate::error::{Result, StoreError, head};
+use crate::error::{Result, StoreError};
 use crate::ids::{EDGE_TABLES, NODE_TABLES, rid_str};
 use crate::kbmap::{DecisionRow, EdgeRow, MetaState, NodeRow, working_of};
 use crate::value::{as_f64, as_i64, to_db};

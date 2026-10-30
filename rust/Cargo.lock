@@ -3317,10 +3317,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pk-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "pk-creative"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "pk-core",
  "pk-kb",
  "proptest",
  "regex",
@@ -3335,6 +3345,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "ort",
+ "pk-core",
  "regex",
  "serde",
  "serde_json",
@@ -3351,6 +3362,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap",
+ "pk-core",
  "regex",
  "serde",
  "serde_json",
@@ -3367,6 +3379,7 @@ dependencies = [
  "futures",
  "hex",
  "jsonschema",
+ "pk-core",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -3385,6 +3398,7 @@ name = "pk-obs"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "pk-core",
  "prometheus",
  "proptest",
  "regex",
@@ -3402,6 +3416,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "hex",
+ "pk-core",
  "pk-kb",
  "regex",
  "serde",
