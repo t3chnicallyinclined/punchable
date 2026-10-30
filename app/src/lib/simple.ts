@@ -13,7 +13,14 @@ export type BitCard = {
 export type Related = { query: string; items: BitCard[]; total: number };
 export type MapGroupKey = 'next' | 'tags' | 'same_world' | 'callbacks' | 'versions';
 export type JokeMap = { joke: BitCard & { text?: string }; groups: { key: MapGroupKey; title: string; items: BitCard[] }[] };
-export type Step = BitCard & { position: number; transition_in: null | { words: string; weak: boolean; kind: 'proven' | 'link' | 'jump'; from: string; to: string } };
+/** A bit's words as the stage build carries them (api-dev/API.md "Creative routes", GET /api/boards/<id>/build): the
+ *  newest written version split as the joke page shows it, `from` naming it; with no written version `from` is null
+ *  (the split is the server's guess over his typed idea) and `idea` is the typed idea itself. */
+export type StepText = { setup: string | null; reveal: string | null; from: { unit?: string; date?: string; doc_title?: string } | null };
+export type Step = BitCard & {
+  position: number; transition_in: null | { words: string; weak: boolean; kind: 'proven' | 'link' | 'jump'; from: string; to: string };
+  text?: StepText | null; idea?: string | null;
+};
 export type Build = {
   board: { id: string; title: string; target_s: number; target_lo_s: number }; runtime_s: number; runtime: string; estimated_n: number;
   status: 'short' | 'on' | 'over' | 'none'; status_words: string; weak_n: number; steps: Step[]; next: BitCard[];

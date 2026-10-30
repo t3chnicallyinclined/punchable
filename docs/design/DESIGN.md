@@ -163,6 +163,7 @@ deviation from the HIG/branding sentence above (HIG.md §6); the cost is Bold Te
 | `type.caption2` | Caption 2 | **11 / 13** (the floor) | Space Grotesk 700, ls 0.66 | 1.6 (today 1.3-1.4) | `Badge` 11, `AIBadge` 11, `Yours` 11 (`ui.tsx:97,122,132`) | nothing below 11, ever |
 | `type.display` | — (ours) | 40 / 44 | Space Grotesk 700 tabular, ls −1 | 1.6 (a figure beside its label; PROPOSED) | `big` 40 / 44 | the set time, "6:40" |
 | `type.clock` | — (ours) | 84 / 90 | Inter 800 tabular, ls −2 | **1.2** | `RecordControl.tsx:76` | the one clock; the status word beside it is `subhead` at 1.4 |
+| `type.stageProse` | — (ours) | 20 / 26 | Inter 400; the reveal Inter 600 (the punch stands out by weight, not colour) | **2.0** (prose) | `ui.tsx` `buildTv` `stageProse` (2026-10-29) | a bit's words read at arm's length in the dark: the notes sheet's setup and reveal (SPEC-2026-10-29 §2); no other role sits between body 17 and title3 20 Grotesk |
 
 The Dynamic Type caps, by class (owner signed; ARCHITECTURE.md §7 item 4): **prose 2.0×, titles 1.8×, captions and
 controls 1.6×, the clock 1.2×.** Today every `T` caps at 1.6× (`ui.tsx:36`) and the inline caps are spread 14 × 1.2,

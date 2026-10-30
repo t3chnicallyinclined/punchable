@@ -150,6 +150,9 @@ function RootLayout() {
                 {/* Short tasks as form sheets: "+" at the medium detent (the menu fits in half; "New set list" expands), Add a joke at the large one */}
                 <Stack.Screen name="create" options={{ ...sheet([0.5, 1]), title: t('New') }} />
                 <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
+                {/* A bit's notes over the stage or a set list (HIG/sheets: medium detent first, large on drag; nonmodal at
+                    the medium detent so the clock behind stays readable and the stage keeps running; the elevated ground) */}
+                <Stack.Screen name="bitnotes" options={{ ...sheet([0.5, 1]), sheetLargestUndimmedDetentIndex: 0, title: t('Notes'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

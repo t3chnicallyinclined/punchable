@@ -5,6 +5,9 @@
 // red square: tap = stop AND save (Voice Memos; stopping is not loss). Discard is behind Close (top-leading): an action
 // sheet Discard / Save the set / Keep going. Saving hands the tape to the upload queue (retried if the venue has no
 // signal). A phone call reads "Paused by a call" and the disc reads Resume. The screen stays awake.
+// Notes (2026-10-29, SPEC §2): each bit row is its own 44-pt button that opens the notes sheet (/bitnotes, a nonmodal
+// form sheet over this screen, fed from lib/stageNotes); the clock and the hint are inert; Next bit lives ONLY on the
+// 60-pt dock control and in the sheet's footer, so a thumb aiming at Next can never land on a row.
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -16,8 +19,10 @@ import { isWeb } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
 import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordControl';
 import { type RecordState, nextRecordState, statusWord } from '@/rules/recorderLogic';
+import { stageRowLabel } from '@/rules/setListRules';
 import { enqueueUpload } from '@/lib/uploads';
 import { Build } from '@/lib/simple';
+import { stageNotes } from '@/lib/stageNotes';
 import { clockMs } from '@/rules/format';
 import { shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
@@ -62,6 +67,19 @@ export default function Stage() {
     haptics.selection();
     if (!taping && clockOnly == null) setClockOnly(Date.now());
     setCur((c) => Math.min(steps.length - 1, c + 1));
+  };
+  // the notes sheet reads this screen's build and current bit from lib/stageNotes and its footer calls this screen's
+  // Next (through a ref, so the sheet never holds a stale closure over the taping state); the store follows `cur`
+  const nextRef = useRef<() => void>(() => {});
+  useEffect(() => { nextRef.current = next; });
+  useEffect(() => {
+    if (B) stageNotes.set({ boardId: id, title: B.board.title, steps: B.steps, index: cur, onNext: () => nextRef.current() });
+  }, [B, cur, id]);
+  useEffect(() => () => stageNotes.clear(id), [id]);
+  const openNotes = (i: number) => {
+    if (!B) return;
+    stageNotes.set({ boardId: id, title: B.board.title, steps: B.steps, index: i, onNext: () => nextRef.current() });
+    router.push('/bitnotes' as any);
   };
   const back = () => (router.canGoBack() ? router.back() : router.navigate(`/list/${encodeURIComponent(id)}` as any));
   const start = async () => {
@@ -138,18 +156,25 @@ export default function Stage() {
       }>
       {native && <Stack.Screen options={{ title: 'Record' }} />}
       {!B ? (b.rawError ? <Empty text={`Can’t open the set list: ${b.rawError}`} /> : <Skeleton lines={5} height={28} />) : (
-        <Pressable accessibilityRole="button" accessibilityLabel="Next bit" onPress={next} style={{ gap: 18 }}>
+        <View style={{ gap: 18 }}>
           <RecordClock testID="stage" ms={ms} status={status} targetS={target} level={taping ? lvl : null} interrupted={intr} />
           <View style={{ gap: 6, paddingTop: 4 }}>
-            {steps.map((x, i) => (
-              <Text key={x.joke_id} testID={`stage-row-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.2}
-                style={{ fontFamily: F.black, fontSize: i === cur ? 40 : 30, lineHeight: i === cur ? 46 : 36, letterSpacing: -0.8, color: i === cur ? C.amber : i < cur ? C.tabOff : C.text, textDecorationLine: i < cur ? 'line-through' : 'none' }}>
-                {x.short_name || shortNameOf(x.title)}
-              </Text>
-            ))}
+            {/* HIG/buttons: each row its own 44-pt target (tap = its notes); Next is the dock's 60-pt control, another region */}
+            {steps.map((x, i) => {
+              const name = x.short_name || shortNameOf(x.title);
+              return (
+                <Pressable key={x.joke_id} testID={`stage-row-${i}`} accessibilityRole="button" accessibilityLabel={stageRowLabel(i, steps.length, name, cur)} onPress={() => openNotes(i)}
+                  style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
+                  <Text numberOfLines={1} maxFontSizeMultiplier={1.2}
+                    style={{ fontFamily: F.black, fontSize: i === cur ? 40 : 30, lineHeight: i === cur ? 46 : 36, letterSpacing: -0.8, color: i === cur ? C.amber : i < cur ? C.tabOff : C.text, textDecorationLine: i < cur ? 'line-through' : 'none' }}>
+                    {name}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-          <T v="small" style={{ textAlign: 'center' }}>{rec === 'idle' ? 'Tap the red button to tape the set · tap anywhere for next' : rec === 'recording' ? 'Tap anywhere for next · the square stops and saves' : 'Tap anywhere for next'}{lit ? ' · the light is on' : ''}</T>
-        </Pressable>
+          <T v="small" style={{ textAlign: 'center' }}>{rec === 'idle' ? 'Tap the red button to tape the set · tap a bit for its notes' : rec === 'recording' ? 'Tap a bit for its notes · the square stops and saves' : 'Tap a bit for its notes'}{lit ? ' · the light is on' : ''}</T>
+        </View>
       )}
       <Sheet visible={ask} onClose={() => setAsk(false)} label="Leave the stage" testID="stage-stop-sheet">
         <SheetHead title="Leave the stage?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="stage-stop" />

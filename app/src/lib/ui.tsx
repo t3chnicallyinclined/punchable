@@ -17,12 +17,15 @@ import { isWeb, micExplained, micSupported, pickFile, requestMic, setMicExplaine
 import type { Worker } from './ask';
 
 // ------------------------------------------------------------------ text (scales with the OS text size; capped)
-type TV = 'body' | 'mut' | 'eb' | 'h1' | 'h2' | 'num' | 'semi' | 'small' | 'big';
+type TV = 'body' | 'mut' | 'eb' | 'h1' | 'h2' | 'num' | 'semi' | 'small' | 'big' | 'stageProse';
 // Body text is 16 on the web and 17 on iOS (the HIG default), scaling with the OS text size (capped at 1.6x).
 const BODY = Platform.OS === 'ios' ? 17 : 16;
 const buildTv = (): Record<TV, TextStyle> => ({
   body: { fontFamily: F.body, fontSize: BODY, lineHeight: BODY + 7, color: C.text },
   semi: { fontFamily: F.semi, fontSize: BODY, lineHeight: BODY + 7, color: C.text },
+  // type.stageProse (docs/design/DESIGN.md §4): a bit's words read at arm's length in the dark (the notes sheet);
+  // the reveal is the same size in Inter 600 (weight, not colour, marks the punch)
+  stageProse: { fontFamily: F.body, fontSize: 20, lineHeight: 26, color: C.text },
   mut: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: C.mut },
   small: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: C.mut },
   eb: { fontFamily: F.g7, fontSize: 12, letterSpacing: 0.96, textTransform: 'uppercase', color: C.mut },
@@ -32,8 +35,10 @@ const buildTv = (): Record<TV, TextStyle> => ({
   big: { fontFamily: F.g7, fontVariant: ['tabular-nums'], color: C.text, fontSize: 40, lineHeight: 44, letterSpacing: -1 },
 });
 const tv: Record<TV, TextStyle> = buildTv();
+/** The Dynamic Type cap per variant (DESIGN.md §4: prose 2.0×; the rest stays at today's 1.6× until the token pass). */
+const CAP: Partial<Record<TV, number>> = { stageProse: 2.0 };
 export function T({ v = 'body', style, ...p }: TextProps & { v?: TV }) {
-  return <Text maxFontSizeMultiplier={1.6} {...p} style={[tv[v], style]} />;
+  return <Text maxFontSizeMultiplier={CAP[v] ?? 1.6} {...p} style={[tv[v], style]} />;
 }
 
 // ------------------------------------------------------------------ boxes

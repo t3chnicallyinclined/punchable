@@ -3,10 +3,11 @@
 // time; "Gap here · add a bridge" where the builder flags a weak transition; the time bar; drag to reorder; "Add a
 // joke · N left" at the bottom. HIG (the audit): tap a row OPENS the bit; trailing swipe = Remove (red, a full swipe
 // runs it, Undo in the snackbar) + Swap; long-press = Open · Swap · Rename · Move to top · Move to bottom · Remove;
-// the title and the "…" More button rename; pull to refresh.
+// the title and the "…" More button rename; pull to refresh. A trailing 44-pt notes button per row (and "Notes" first
+// in the menu) opens the bit's words as a sheet (/bitnotes, SPEC 2026-10-29 §2); the row tap stays the workbench.
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
@@ -20,10 +21,11 @@ import { mmss } from '@/rules/format';
 import { useBoards } from '@/lib/boards';
 import { Build, Step, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
+import { stageNotes } from '@/lib/stageNotes';
 import { SwipeRow } from '@/lib/SwipeRow';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { C, F } from '@/lib/theme';
-import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
+import { Btn, Empty, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
 
@@ -33,13 +35,13 @@ const boardPatch = (id: string, body: any) => patch<any>(`/api/boards/${enc(id)}
 const native = Platform.OS !== 'web';
 const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
 
-function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; items: MenuItem[] }) {
+function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; onNotes: () => void; items: MenuItem[] }) {
   const name = x.short_name || shortNameOf(x.title);
   return (
     <View testID={`row-${i}`} style={{ borderRadius: 16, paddingVertical: 4 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${mmss(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={ios ? undefined : onMenu} delayLongPress={350}
         {...rowActions(items)}
-        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, paddingRight: 12, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
+        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, paddingRight: 4, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
         {handle}
         <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.semi, fontSize: 14, color: C.mut2, textAlign: 'right' }}>{i + 1}</Text>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -48,6 +50,8 @@ function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; hand
           {!!x.stage_line && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: x.proven ? C.green : C.mut2 }}>{x.stage_line}</Text>}
         </View>
         <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{mmss(x.duration_s)}</Text>
+        {/* HIG/accessibility: the notes have a button, not only a menu item; 44 pt, its own VoiceOver element */}
+        <IconBtn testID={`row-notes-${i}`} label={`Notes for ${name}`} onPress={onNotes}><Icon name="lines" size={20} color={C.mut2} /></IconBtn>
         {/* HIG/context-menus: one of a context menu or an edit menu, not both; the phone has the long press (and the row's VoiceOver actions) */}
         {!native && <Pressable testID={`row-more-${i}`} accessibilityRole="button" accessibilityLabel={`More for ${name}`} onPress={onMenu} hitSlop={6} style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           <Text style={{ color: C.mut2, fontSize: 18, fontFamily: F.g7 }}>…</Text>
@@ -103,6 +107,13 @@ export default function SetListScreen() {
   const inSet = useMemo(() => steps.map((x, i) => ({ joke_id: x.joke_id, position: i })), [steps]);
   const nameOf = (x: Step) => x.short_name || shortNameOf(x.title);
   const titleOf = (j: string) => { const x = steps.find((y) => y.joke_id === j); return x ? nameOf(x) : ''; };
+  // the notes sheet reads the build from lib/stageNotes (no fetch); no onNext here, so its footer opens the bit
+  const openNotes = (i: number) => {
+    if (!B) return;
+    stageNotes.set({ boardId: id, title: B.board.title, steps, index: i, onNext: null });
+    router.push('/bitnotes' as any);
+  };
+  useEffect(() => () => stageNotes.clear(id), [id]);
 
   const reorder = (from: number, to: number) => {
     if (from === to) return;
@@ -134,6 +145,7 @@ export default function SetListScreen() {
   };
   // HIG/menus: an ellipsis where more input follows; the destructive item last (HIG/context-menus)
   const rowItems = (x: Step, i: number): MenuItem[] => [
+    { label: 'Notes', icon: 'text.alignleft', onPress: () => openNotes(i), testID: `row-notes-menu-${i}` },
     { label: 'Open the bit', icon: 'doc.text', onPress: () => router.push(`/joke/${enc(x.joke_id)}` as any), testID: `row-openbit-${i}` },
     { label: 'Swap…', icon: 'arrow.triangle.swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swap-${i}` },
     { label: 'Rename short name…', icon: 'pencil', onPress: () => setRename(x), testID: `row-rename-${i}` },
@@ -243,12 +255,12 @@ export default function SetListScreen() {
               second={{ label: 'Swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swipe-swap-${i}` }}
               onLongPress={ios ? undefined : () => openMenu(x, i)}>
               <RowMenu href={`/joke/${enc(x.joke_id)}`} items={rowItems(x, i)}>
-                <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} />
+                <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} onNotes={() => openNotes(i)} />
               </RowMenu>
             </SwipeRow>
           </View>
         )} />
-      {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>{native ? 'Hold the grip to drag · tap a row to open it · hold a row for Swap, Rename, Move, Remove' : 'Hold the grip to drag · tap a row to open it · … or hold for Swap, Rename, Move, Remove'}</T>}
+      {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>{native ? 'Hold the grip to drag · tap a row to open it · the lines button reads its notes · hold a row for Swap, Rename, Move, Remove' : 'Hold the grip to drag · tap a row to open it · the lines button reads its notes · … for Swap, Rename, Move, Remove'}</T>}
       {B.notes.map((n) => <T key={n.rule} v="small" testID={`note-${n.rule}`}>{n.text}</T>)}
 
       {!native && <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}

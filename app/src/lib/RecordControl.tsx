@@ -41,10 +41,12 @@ export function RecordButton({ state, interrupted, busy, onStart, onStop, onResu
   );
 }
 
-/** A side control: 60 pt, plain; `tone` colours the label. */
-export function SideButton({ label, onPress, disabled, tone = 'plain', testID, prominent }: { label: string; onPress: () => void; disabled?: boolean; tone?: 'plain' | 'amber'; testID?: string; prominent?: boolean }) {
+/** A side control: 60 pt, plain; `tone` colours the label; `accessibilityLabel` when VoiceOver should say more than the word ("Next bit, Raccoons"). */
+export function SideButton({ label, onPress, disabled, tone = 'plain', testID, prominent, accessibilityLabel }: {
+  label: string; onPress: () => void; disabled?: boolean; tone?: 'plain' | 'amber'; testID?: string; prominent?: boolean; accessibilityLabel?: string;
+}) {
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress}
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel || label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress}
       style={({ pressed }) => ({ flex: 1, minHeight: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
         backgroundColor: prominent ? C.amber : C.card, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 })}>
       <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={{ fontFamily: F.semi, fontSize: 17, color: prominent ? C.bg : tone === 'amber' ? C.amber : C.text }}>{label}</Text>
