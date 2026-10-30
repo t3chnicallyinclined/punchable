@@ -18,7 +18,7 @@ The Rust port of the services (the standing direction, the workspace, the migrat
 | Surface | State |
 |---|---|
 | Web | punchable.io, API and web images from `51bfdf1` (the workbench), rolled out 2026-10-29. Tabs Tonight · Bits · Sets. The cloud map computes in ~4 s on first request (1,576 bits, 14 groups), then from a 5-minute cache. |
-| iPhone | TestFlight **0.1.0 (12)**, built from `51bfdf1` (the workbench), auto-submitted 2026-10-29; 11 had the record control, Set lists · Recorded, Bits Recent / + / sort and the cloud map; 10 had search over everything. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-11 are good. |
+| iPhone | TestFlight **0.1.0 (18)**, built from `617ae81` and auto-submitted 2026-10-30 (Set lists are his with the drafts folded and archive/undo, notes on stage, the rules layer, the upload 401 fix, Reconnect Google web-only); 17 had the Skia cloud + pinch fix; 12 had the workbench. **Owner checks on 18** are the three in open item 0b. Older: TestFlight **0.1.0 (12)**, built from `51bfdf1` (the workbench), auto-submitted 2026-10-29; 11 had the record control, Set lists · Recorded, Bits Recent / + / sort and the cloud map; 10 had search over everything. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-11 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
 | Search | `GET /api/search?q=` (bits + taped set moments) and `GET /api/jokes/<id>/similar` ("did I ever do this, is it like anything"), `api-dev/search_api.py`. Full-text + bge-small vectors over unit text, joke titles, **typed ideas** (`joke.summary`) and **set moments** (`performance.text`). The API image ships the model (`PK_BGE_DIR`); a sweeper embeds anything new within a minute. Before 2026-10-28 the hosted API had no model (word search only), the 162 typed jots were not indexed at all and the 675 taped moments were invisible. **Live since 2026-10-28 20:42 UTC**: 159 typed ideas (3 have no text) and all 675 moments embedded; a fused query takes ~0.1 s on the pod; API memory 450 MiB idle, ~560 MiB during a sweep (limit 1 Gi). |
@@ -126,6 +126,15 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0b. **Owner checks on build 18** (2026-10-30): (1) Sets tab: only his lists as paper cards; one row "N drafts from your
+   Insights" at the bottom opens and remembers its state; toolbar ⋯ → Archived. (2) A draft: swipe → Archive, snack, Undo
+   brings it back; "Use this" makes it his (snack offers Open, there is no server op back to draft yet); "Archive all
+   drafts", Undo, Archived → Unarchive; on a bit page "To a set" with no list open shows the picker (his lists only).
+   (3) Notes on stage: open a list → Record → disc; tap a bit row → a half-height sheet with setup, reveal (or "Idea"),
+   the stage line, the clock still running above; the sheet's "Next bit" advances behind it ("Last bit" at the end);
+   swipe down; the dock's Next still works; the square saves. Server side is live: `PATCH /api/boards/<id>`
+   `{"archive": true}` / `{"unarchive": true}`, `GET /api/boards` hides archived (`?archived=1`), each build step
+   carries `text` + `idea` (commit `9ee66d0`, API image rolled out 2026-10-30; web image too).
 0. **Owner checks on build 17** (2026-10-29: the Skia cloud, the pinch crash fix, "+" opens a document; 16 had the build-12 fixes and crashed on a pinch in the map): Bits › scroll (the search field stays put, nothing
    passes under it); Bits › Map (dots turn, a tap selects within a second, Links from the skeleton); Sets › Record ›
    the disc ("Starting…" then "Recording", the meter moves on a clap, the square saves). Still from 12: edit a bit's
