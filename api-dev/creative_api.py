@@ -340,7 +340,6 @@ class Mirror:
         return out
 
     def create(self, store: str, seq: int, line: str, ev: dict | None = None) -> None:
-        import sdb
         ev = ev if ev is not None else json.loads(line)
         sdb_row = {"store": store, "seq": seq, "line": line, "h": _h(line), "op": ev.get("op"), "item": ev.get("id"),
                    "at": ev.get("ts")}

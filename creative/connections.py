@@ -8,11 +8,10 @@ Also: the stage trend across sets, the best night, and "what would make it land 
 """
 from __future__ import annotations
 
-from collections import defaultdict
 
 import numpy as np
 
-from .data import RATING_ORDER, Corpus, venue_short
+from .data import Corpus, venue_short
 from .util import first_line, mean, median, r2, trend
 
 GROUPS = [

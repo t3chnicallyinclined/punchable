@@ -7,7 +7,6 @@ from creative import story as S
 from creative import venues as V
 from creative import workingset as W
 from creative.data import Corpus
-from creative.store import Store
 
 from .conftest import FakeLLM, make_analyses, make_graph, walk_evidence
 
@@ -105,7 +104,7 @@ def test_health_energy_dip(corpus):
 # ---------------------------------------------------------------- storyboard store
 def test_storyboard_ops_and_replay(tmp_path):
     bs = S.board_store(tmp_path)
-    b = S.create(bs, "Run", ["joke:a", "joke:b"], 600, ts=TS, id_="sb:run")
+    S.create(bs, "Run", ["joke:a", "joke:b"], 600, ts=TS, id_="sb:run")
     S.add(bs, "sb:run", "joke:c", ts=TS)
     S.move(bs, "sb:run", 2, 0, ts=TS)
     S.remove(bs, "sb:run", "joke:a", ts=TS)

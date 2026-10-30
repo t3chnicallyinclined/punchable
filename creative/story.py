@@ -13,7 +13,7 @@ from collections import defaultdict
 
 from .data import Corpus, creative_dir, venue_short
 from .store import Store
-from .util import mean, mmss, r2, sha8, slug, suffix_words, prefix_words
+from .util import mmss, sha8, slug, suffix_words, prefix_words
 
 COMIC = os.environ.get("PK_COMIC_NAME", "the comic")  # how the AI prompts name you; PK_COMIC_NAME
 COMIC_FIRST = os.environ.get("PK_COMIC_FIRST", COMIC)

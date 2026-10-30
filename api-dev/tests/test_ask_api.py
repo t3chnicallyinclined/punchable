@@ -67,7 +67,7 @@ def test_offline_then_answered_with_gated_quotes_and_resolving_chips(api):
     assert job["kind"] == "ask_chat"
     srcs = sources_in(job)
     assert len(srcs) >= 2
-    (s1, h1, t1), (s2, h2, t2) = srcs[0], srcs[1]
+    (s1, _, t1), (s2, _, _) = srcs[0], srcs[1]
     answer_with(a, job, {"found": True, "answer": f"You have a few AI bits [{s1}] and more [{s2}] and [S77].",
                          "citations": [{"source": s1, "quote": real_quote(t1)}, {"source": s2, "quote": FAKE}]})
     s, ch = a.get(f"/api/ask/chats/{quote(ch['id'], safe='')}")
