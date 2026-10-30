@@ -1,0 +1,157 @@
+{
+ "total": 9,
+ "after": 3,
+ "lines": [
+  {
+   "index": 3,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "list:tonight",
+    "action": "add",
+    "before": null,
+    "after": {
+     "type": "list",
+     "name": "Tonight",
+     "items": [
+      {
+       "joke": "joke:a",
+       "done": false
+      },
+      {
+       "joke": "joke:d",
+       "done": true
+      }
+     ]
+    },
+    "reason": "",
+    "by": "owner"
+   },
+   "h": "sha256:2fefbbb85500f78516a80846cc5cf92478a7a6ae41a921a5aba85641e0404923"
+  },
+  {
+   "index": 4,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "joke:the-meter-wants-a-tip-now",
+    "action": "add",
+    "before": null,
+    "after": {
+     "type": "joke",
+     "title": "The meter wants a tip now",
+     "stage": "idea",
+     "summary": "The meter wants a tip now.",
+     "first_seen": "2026-10-29",
+     "last_seen": "2026-10-29"
+    },
+    "reason": "riff on: parking meters",
+    "by": "owner"
+   },
+   "h": "sha256:f727b1c1774dab27bc67b8f7e0fa2b47fec5735e106d5005206f2b4696375bf8"
+  },
+  {
+   "index": 5,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "joke:meter-note",
+    "action": "add",
+    "before": null,
+    "after": {
+     "type": "joke",
+     "title": "meter note",
+     "stage": "idea",
+     "summary": "A note about the meter and the quarters.",
+     "first_seen": "2026-10-29",
+     "last_seen": "2026-10-29",
+     "from": {
+      "note": "Voice note 'meter note', recorded 2024-01-05"
+     }
+    },
+    "reason": "[upload] voice note 'meter note' (upload a1b2c3d4, recorded 2024-01-05)",
+    "by": "import:upload"
+   },
+   "h": "sha256:4b059d93fb6309f407679e5a3869555144e932a8d81a51e86fb3f80522da1bae"
+  },
+  {
+   "index": 6,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "joke:alpha-opener-line-one-the-alpha-punch",
+    "action": "add",
+    "before": null,
+    "after": {
+     "type": "joke",
+     "title": "Alpha opener line one. The alpha punch",
+     "stage": "idea",
+     "summary": "Alpha opener line one. The alpha punch lands here every time.",
+     "first_seen": "2026-10-29",
+     "last_seen": "2026-10-29",
+     "from": {
+      "set": "20240201_y"
+     }
+    },
+    "reason": "[set_text] bit from 'Seaside open mic' (2024-02-01), transcribed on the phone; no audio",
+    "by": "ai:set_text"
+   },
+   "h": "sha256:b8fae62cba5b98cf061ed519019199d310e1565ac65600408d33cb018701429a"
+  },
+  {
+   "index": 7,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "joke:meter-note",
+    "action": "edit",
+    "before": {
+     "type": "joke",
+     "title": "meter note",
+     "stage": "idea",
+     "summary": "A note about the meter and the quarters.",
+     "first_seen": "2026-10-29",
+     "last_seen": "2026-10-29",
+     "from": {
+      "note": "Voice note 'meter note', recorded 2024-01-05"
+     },
+     "id": "joke:meter-note"
+    },
+    "after": {
+     "summary": "A note about the meter and the quarters, edited in the doc."
+    },
+    "reason": "[gdocs] edited",
+    "by": "import:gsync"
+   },
+   "h": "sha256:5afbe088fa1a98fba55db5b6833c1bb94b8f1a8540e71f14537c82b2ba9deed6"
+  },
+  {
+   "index": 8,
+   "decision": {
+    "ts": "2026-10-29T12:00:00+00:00",
+    "target": "node",
+    "id": "joke:meter-note",
+    "action": "edit",
+    "before": {
+     "type": "joke",
+     "title": "meter note",
+     "stage": "idea",
+     "summary": "A note about the meter and the quarters, edited in the doc.",
+     "first_seen": "2026-10-29",
+     "last_seen": "2026-10-29",
+     "from": {
+      "note": "Voice note 'meter note', recorded 2024-01-05"
+     },
+     "id": "joke:meter-note"
+    },
+    "after": {
+     "summary": "A note about the meter and the quarters."
+    },
+    "reason": "undo: [gdocs] edited",
+    "by": "import:gsync",
+    "undo_of": 7
+   },
+   "h": "sha256:e5ce4725e1a87c98c28bdf6060999546d42509b5923e392cd3a02390a45885e1"
+  }
+ ]
+}

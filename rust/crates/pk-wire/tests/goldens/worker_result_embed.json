@@ -1,0 +1,11 @@
+{
+ "ok": true,
+ "result": {
+  "status": "embedded",
+  "summary_only": 2,
+  "embedded": 2,
+  "removed": 0,
+  "have": 9,
+  "file": "vectors/extra_summary.json"
+ }
+}

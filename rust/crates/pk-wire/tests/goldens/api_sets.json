@@ -1,0 +1,219 @@
+{
+ "sets": [
+  {
+   "id": "set:2024-03-01_z",
+   "title": "Mabel's, March",
+   "date": "2024-03-01",
+   "venue": "Mabel's (upstairs)",
+   "show_date": "2024-03-01",
+   "show_date_source": "the title",
+   "description": null,
+   "laugh_s_per_min": 5.0,
+   "room_heat": 1.0,
+   "audio_unreliable": null,
+   "venue_id": "venue:mabel-s",
+   "source": "voice_memo",
+   "reference": {
+    "kind": "drive",
+    "url": "https://drive.google.com/file/d/memo0001/view",
+    "name": "mabels-march.m4a"
+   },
+   "duration_s": 120,
+   "performances": 3,
+   "rateable": 2,
+   "rated": 0,
+   "reviewed": false,
+   "laughs": 1,
+   "has_audio": false,
+   "analysis": {
+    "source": "real",
+    "run_id": "synthetic-1",
+    "generated_at": "2026-10-01T00:00:00+00:00",
+    "jokes_counted": 2,
+    "new_material": 0,
+    "crowd_work": 0,
+    "best": {
+     "id": "joke:a",
+     "title": "Alpha bit",
+     "idx": 2,
+     "rating": "worked"
+    },
+    "laughs_per_min": 0.2
+   },
+   "jokes": [
+    {
+     "perf": "perf:2024-03-01_z@0",
+     "title": "Bravo bit (the dog one)",
+     "joke": "joke:b",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 0
+    },
+    {
+     "perf": "perf:2024-03-01_z@40000",
+     "title": "Alpha bit",
+     "joke": "joke:a",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 40000
+    },
+    {
+     "perf": "perf:2024-03-01_z@70000",
+     "title": "T3",
+     "joke": null,
+     "kind": "banter",
+     "rating": "died",
+     "rating_by": "ai",
+     "start_ms": 70000
+    }
+   ]
+  },
+  {
+   "id": "set:2024-02-01_y",
+   "title": "Seaside open mic",
+   "date": "2024-02-01",
+   "venue": "Seaside Comedy Club",
+   "show_date": null,
+   "show_date_source": null,
+   "description": null,
+   "laugh_s_per_min": 6.0,
+   "room_heat": 1.0,
+   "audio_unreliable": null,
+   "venue_id": "venue:seaside-comedy-club",
+   "source": "app_upload",
+   "reference": {
+    "kind": "file",
+    "name": "seaside.m4a",
+    "recorded_at": "2024-02-01T21:00:00"
+   },
+   "duration_s": 240,
+   "performances": 3,
+   "rateable": 2,
+   "rated": 0,
+   "reviewed": false,
+   "laughs": 2,
+   "has_audio": false,
+   "analysis": {
+    "source": "real",
+    "run_id": "synthetic-1",
+    "generated_at": "2026-10-01T00:00:00+00:00",
+    "jokes_counted": 3,
+    "new_material": 1,
+    "crowd_work": 0,
+    "best": {
+     "id": "joke:a",
+     "title": "Alpha bit",
+     "idx": 1,
+     "rating": "worked"
+    },
+    "laughs_per_min": 0.4
+   },
+   "jokes": [
+    {
+     "perf": "perf:2024-02-01_y@0",
+     "title": "Alpha bit",
+     "joke": "joke:a",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 0
+    },
+    {
+     "perf": "perf:2024-02-01_y@60000",
+     "title": "Bravo bit (the dog one)",
+     "joke": "joke:b",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 60000
+    },
+    {
+     "perf": "perf:2024-02-01_y@150000",
+     "title": "T3",
+     "joke": null,
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 150000
+    }
+   ]
+  },
+  {
+   "id": "set:2024-01-01_x",
+   "title": "Corner Room, Tuesday",
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "show_date": "2024-01-01",
+   "show_date_source": "the folder date",
+   "description": null,
+   "laugh_s_per_min": 6.0,
+   "room_heat": 1.0,
+   "audio_unreliable": null,
+   "venue_id": "venue:the-corner-room",
+   "source": "tape",
+   "reference": null,
+   "duration_s": 300,
+   "performances": 4,
+   "rateable": 3,
+   "rated": 1,
+   "reviewed": false,
+   "laughs": 4,
+   "has_audio": false,
+   "analysis": {
+    "source": "real",
+    "run_id": "synthetic-1",
+    "generated_at": "2026-10-01T00:00:00+00:00",
+    "jokes_counted": 3,
+    "new_material": 0,
+    "crowd_work": 1,
+    "best": {
+     "id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "idx": 2,
+     "rating": "killed"
+    },
+    "laughs_per_min": 0.8
+   },
+   "jokes": [
+    {
+     "perf": "perf:2024-01-01_x@0",
+     "title": "Alpha bit",
+     "joke": "joke:a",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 0
+    },
+    {
+     "perf": "perf:2024-01-01_x@60000",
+     "title": "Bravo bit (the dog one)",
+     "joke": "joke:b",
+     "kind": "bit",
+     "rating": "killed",
+     "rating_by": "you",
+     "start_ms": 60000
+    },
+    {
+     "perf": "perf:2024-01-01_x@120000",
+     "title": "Crowd",
+     "joke": null,
+     "kind": "crowd_work",
+     "rating": "died",
+     "rating_by": "ai",
+     "start_ms": 120000
+    },
+    {
+     "perf": "perf:2024-01-01_x@140000",
+     "title": "Charlie bit",
+     "joke": "joke:c",
+     "kind": "bit",
+     "rating": "worked",
+     "rating_by": "ai",
+     "start_ms": 140000
+    }
+   ]
+  }
+ ]
+}

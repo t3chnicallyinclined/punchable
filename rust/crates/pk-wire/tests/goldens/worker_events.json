@@ -1,0 +1,18 @@
+{
+ "store": "merges",
+ "op": "attach",
+ "id": "at:f00dbabe12",
+ "actor": "ai:attach",
+ "data": {
+  "joke": "joke:f",
+  "into": "joke:a",
+  "text": "Foxtrot never performed idea about planes and pilots up there.",
+  "date": "2026-10-29",
+  "score": 0.91,
+  "source": "memo",
+  "reasons": [
+   "Claude: the same bit (0.91): the same opener",
+   "shares 4 rare words"
+  ]
+ }
+}

@@ -1,0 +1,27 @@
+{
+ "store": "merges",
+ "total": 1,
+ "lines": [
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"attach\", \"id\": \"at:d7b92b53\", \"by\": \"ai:attach\", \"data\": {\"joke\": \"joke:alpha-opener-line-one-the-alpha-punch\", \"into\": \"joke:a\", \"text\": \"Alpha opener line one. The alpha punch lands here every time.\", \"date\": \"2026-10-29\", \"score\": null, \"reasons\": [\"reads like your bit \\\"Alpha bit\\\"\", \"same words: \\\"alpha opener line\\\", \\\"alpha punch lands\\\", \\\"lands here every\\\"\"], \"source\": \"app\"}}"
+ ],
+ "items": {
+  "at:d7b92b53": {
+   "id": "at:d7b92b53",
+   "kind": "attach",
+   "status": "attached",
+   "joke": "joke:alpha-opener-line-one-the-alpha-punch",
+   "into": "joke:a",
+   "text": "Alpha opener line one. The alpha punch lands here every time.",
+   "date": "2026-10-29",
+   "score": null,
+   "reasons": [
+    "reads like your bit \"Alpha bit\"",
+    "same words: \"alpha opener line\", \"alpha punch lands\", \"lands here every\""
+   ],
+   "source": "app",
+   "by": "ai:attach",
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00"
+  }
+ }
+}

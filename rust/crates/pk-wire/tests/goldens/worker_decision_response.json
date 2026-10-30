@@ -1,0 +1,31 @@
+{
+ "ok": true,
+ "indexes": [
+  7
+ ],
+ "decisions": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:meter-note",
+   "action": "edit",
+   "before": {
+    "type": "joke",
+    "title": "meter note",
+    "stage": "idea",
+    "summary": "A note about the meter and the quarters.",
+    "first_seen": "2026-10-29",
+    "last_seen": "2026-10-29",
+    "from": {
+     "note": "Voice note 'meter note', recorded 2024-01-05"
+    },
+    "id": "joke:meter-note"
+   },
+   "after": {
+    "summary": "A note about the meter and the quarters, edited in the doc."
+   },
+   "reason": "[gdocs] edited",
+   "by": "import:gsync"
+  }
+ ]
+}

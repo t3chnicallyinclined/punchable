@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "result": {
+  "status": "processed",
+  "report": {
+   "status": "ok",
+   "kind": "set",
+   "set": "20240201_y",
+   "set_id": "set:2024-02-01_y",
+   "stats": {
+    "segments": 5,
+    "laughs": 2
+   },
+   "totals": {
+    "duration_s": 240.0
+   },
+   "date": "2024-02-01",
+   "venue": "Seaside Comedy Club"
+  }
+ }
+}

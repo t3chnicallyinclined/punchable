@@ -1,0 +1,88 @@
+[
+ {
+  "id": "e:la-d1",
+  "src": "joke:a",
+  "dst": "label:device:d1",
+  "kind": "has_label",
+  "status": "confirmed",
+  "confidence": 0.9,
+  "reason": "Alpha opener reads as d1",
+  "evidence": [
+   {
+    "node": "unit:a1",
+    "quote": "Alpha opener"
+   }
+  ],
+  "bucket": "confirmed",
+  "display_kind": "has_label",
+  "yours": false,
+  "edited": false,
+  "src_brief": {
+   "id": "joke:a",
+   "type": "joke",
+   "title": "Alpha bit",
+   "stage": "working",
+   "summary": "A bit about a."
+  },
+  "dst_brief": {
+   "id": "label:device:d1",
+   "type": "label",
+   "title": "D-one",
+   "kind": "device",
+   "definition": "D-one, as a label"
+  },
+  "other": {
+   "id": "label:device:d1",
+   "type": "label",
+   "title": "D-one",
+   "kind": "device",
+   "definition": "D-one, as a label"
+  },
+  "direction": "out",
+  "state": "confirmed",
+  "ai": false
+ },
+ {
+  "id": "e:cb_ad",
+  "src": "joke:a",
+  "dst": "joke:d",
+  "kind": "callback_to",
+  "status": "proposed",
+  "confidence": 0.5,
+  "reason": "the opener comes back",
+  "evidence": [
+   {
+    "node": "unit:a1",
+    "quote": "The alpha punch"
+   }
+  ],
+  "bucket": "proposed",
+  "display_kind": "callback_to",
+  "yours": false,
+  "edited": false,
+  "src_brief": {
+   "id": "joke:a",
+   "type": "joke",
+   "title": "Alpha bit",
+   "stage": "working",
+   "summary": "A bit about a."
+  },
+  "dst_brief": {
+   "id": "joke:d",
+   "type": "joke",
+   "title": "Delta bit",
+   "stage": "to_try",
+   "summary": "A bit about d."
+  },
+  "other": {
+   "id": "joke:d",
+   "type": "joke",
+   "title": "Delta bit",
+   "stage": "to_try",
+   "summary": "A bit about d."
+  },
+  "direction": "out",
+  "state": "suggested",
+  "ai": false
+ }
+]

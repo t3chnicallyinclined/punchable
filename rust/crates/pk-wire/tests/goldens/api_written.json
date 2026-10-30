@@ -1,0 +1,34 @@
+{
+ "ok": true,
+ "indexes": [
+  0
+ ],
+ "decisions": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:la-d1",
+   "action": "confirm",
+   "before": {
+    "id": "e:la-d1",
+    "src": "joke:a",
+    "dst": "label:device:d1",
+    "kind": "has_label",
+    "status": "proposed",
+    "confidence": 0.9,
+    "reason": "Alpha opener reads as d1",
+    "evidence": [
+     {
+      "node": "unit:a1",
+      "quote": "Alpha opener"
+     }
+    ]
+   },
+   "after": {
+    "status": "confirmed"
+   },
+   "reason": "yes, that is the move",
+   "by": "owner"
+  }
+ ]
+}

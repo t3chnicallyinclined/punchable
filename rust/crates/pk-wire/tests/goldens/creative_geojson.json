@@ -1,0 +1,62 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "venue_id": "venue:mabel-s",
+    "name": "Mabel's",
+    "raw": "Mabel's (upstairs)",
+    "status": "inferred",
+    "ambiguous": true,
+    "n_sets": 1,
+    "dates": [
+     "2024-03-01"
+    ],
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "color": "#f5b544",
+    "label": "Mabel's"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "venue_id": "venue:seaside-comedy-club",
+    "name": "Seaside Comedy Club",
+    "raw": "Seaside Comedy Club",
+    "status": "inferred",
+    "ambiguous": true,
+    "n_sets": 1,
+    "dates": [
+     "2024-02-01"
+    ],
+    "avg_laugh_s_per_min": 6.0,
+    "avg_room_heat": 1.0,
+    "color": "#f5b544",
+    "label": "Seaside"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "venue_id": "venue:the-corner-room",
+    "name": "The Corner Room",
+    "raw": "The Corner Room",
+    "status": "inferred",
+    "ambiguous": true,
+    "n_sets": 1,
+    "dates": [
+     "2024-01-01"
+    ],
+    "avg_laugh_s_per_min": 6.0,
+    "avg_room_heat": 1.0,
+    "color": "#f5b544",
+    "label": "The Corner Room"
+   }
+  }
+ ]
+}

@@ -1,0 +1,191 @@
+{
+ "joke": {
+  "id": "joke:b",
+  "title": "Bravo bit (the dog one)",
+  "stage": "working",
+  "stage_source": "proposed",
+  "summary": "A bit about b.",
+  "devices": [
+   "D-one"
+  ],
+  "duration_s": 60.0,
+  "duration_basis": "tape (3 nights)",
+  "rooms": 3,
+  "nights": 3
+ },
+ "groups": [
+  {
+   "key": "next",
+   "title": "What could come next",
+   "items": [
+    {
+     "id": "joke:a",
+     "score": 0.7,
+     "why": "Done right after it 1x on tape (Mabel's '24)",
+     "source": "inferred",
+     "basis": [
+      "back_to_back"
+     ],
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ],
+     "joke_id": "joke:a",
+     "nights": 1,
+     "title": "Alpha bit",
+     "stage": "working"
+    },
+    {
+     "id": "joke:c",
+     "score": 0.7,
+     "why": "dog leads to cars",
+     "source": "proposed",
+     "basis": [
+      "segue"
+     ],
+     "evidence": [
+      {
+       "node": "unit:b1",
+       "quote": "Bravo closer words."
+      },
+      {
+       "node": "unit:c1",
+       "quote": "Charlie premise"
+      }
+     ],
+     "joke_id": "joke:c",
+     "edge": "e:seg_bc",
+     "title": "Charlie bit",
+     "stage": "working"
+    }
+   ]
+  },
+  {
+   "key": "tags",
+   "title": "Lines that could tag it",
+   "items": []
+  },
+  {
+   "key": "same_world",
+   "title": "Same world (persona / premise)",
+   "items": []
+  },
+  {
+   "key": "callbacks",
+   "title": "Callbacks",
+   "items": []
+  },
+  {
+   "key": "same_shape",
+   "title": "Same shape",
+   "items": []
+  },
+  {
+   "key": "contrasts",
+   "title": "Same topic, other angle",
+   "items": []
+  }
+ ],
+ "stage_trend": {
+  "nights": [
+   {
+    "date": "2024-01-01",
+    "set": "2024-01-01_x",
+    "venue": "The Corner Room",
+    "label": "The Corner Room '24",
+    "laugh_s_per_min": 6.0,
+    "vs_room": 1.0,
+    "ai_rating": "killed",
+    "laugh_s": 6.0,
+    "duration_s": 60.0,
+    "time_to_first_laugh_s": 5.0,
+    "seg_ids": [
+     "seg:2024-01-01_x#2"
+    ]
+   },
+   {
+    "date": "2024-02-01",
+    "set": "2024-02-01_y",
+    "venue": "Seaside Comedy Club",
+    "label": "Seaside '24",
+    "laugh_s_per_min": 1.33,
+    "vs_room": 0.22,
+    "ai_rating": "worked",
+    "laugh_s": 2.0,
+    "duration_s": 90.0,
+    "time_to_first_laugh_s": 40.0,
+    "seg_ids": [
+     "seg:2024-02-01_y#2"
+    ]
+   },
+   {
+    "date": "2024-03-01",
+    "set": "2024-03-01_z",
+    "venue": "Mabel's (upstairs)",
+    "label": "Mabel's '24",
+    "laugh_s_per_min": 2.25,
+    "vs_room": 0.45,
+    "ai_rating": "worked",
+    "laugh_s": 1.5,
+    "duration_s": 40.0,
+    "time_to_first_laugh_s": 30.0,
+    "seg_ids": [
+     "seg:2024-03-01_z#1"
+    ]
+   }
+  ],
+  "trend": "down",
+  "trend_rel_change": -1.17,
+  "vs_room_trend": "down",
+  "vs_room_rel_change": -0.99,
+  "avg_laugh_s_per_min": 3.19,
+  "avg_vs_room": 0.56,
+  "best_night": {
+   "date": "2024-01-01",
+   "set": "2024-01-01_x",
+   "venue": "The Corner Room",
+   "label": "The Corner Room '24",
+   "laugh_s_per_min": 6.0,
+   "vs_room": 1.0,
+   "ai_rating": "killed",
+   "basis": "highest laugh-s/min (same rule as inferred.json best_set)"
+  },
+  "low_n": false,
+  "note": "Raw laugh-s/min moves with the room; read it against vs_room (1.0 = the room's own rate)."
+ },
+ "land_harder": [
+  {
+   "text": "Keep \"The purple monkey dishwasher line here.\": a 3-bar laugh at The Corner Room '24, and you didn't say it at Seaside '24, Mabel's '24.",
+   "basis": "best night's punchlines vs the other nights' transcripts",
+   "source": "inferred",
+   "evidence": [
+    {
+     "node": "seg:2024-01-01_x#2",
+     "quote": "The purple monkey dishwasher line here."
+    }
+   ]
+  },
+  {
+   "text": "The first laugh takes 30s on average (fastest 5s at The Corner Room '24). Get to the first punch sooner.",
+   "basis": "time_to_first_laugh_s across nights",
+   "source": "inferred",
+   "evidence": [
+    {
+     "node": "seg:2024-01-01_x#2",
+     "quote": "Bravo setup about the dog. The purple monkey dishwasher line"
+    }
+   ]
+  },
+  {
+   "text": "It plays below the room on 2 of 3 nights (avg 0.56x the room).",
+   "basis": "vs_room",
+   "source": "inferred",
+   "evidence": []
+  }
+ ],
+ "notes": [
+  "Scores are 0-1 within a group. Labels are machine proposals; laughs come from automatic detection. Source 'his' = you confirmed it, 'inferred' = AI-accepted, 'proposed' = a suggestion."
+ ]
+}

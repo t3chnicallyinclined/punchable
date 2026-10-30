@@ -1,0 +1,89 @@
+{
+ "job": {
+  "id": "job:punchup-57842f17bb4f",
+  "kind": "punchup",
+  "key": "punchup|ws:tuesday-run-14d826f7|joke:a|v1|bf21a9e8fb",
+  "input": {
+   "working_set": {
+    "id": "ws:tuesday-run-14d826f7",
+    "title": "Tuesday run",
+    "storyboard_id": "sb:tuesday-run-7507883e",
+    "by": "owner",
+    "source": "his",
+    "created_at": "2026-10-29T12:00:00+00:00",
+    "updated_at": "2026-10-29T12:00:00+00:00",
+    "current": 1,
+    "locks": {
+     "joke:b": {
+      "bit": false,
+      "lines": [
+       {
+        "text": "Bravo closer words.",
+        "node": "seg:2024-02-01_y#2",
+        "ts": "2026-10-29T12:00:00+00:00"
+       }
+      ]
+     }
+    },
+    "deleted": false,
+    "versions": [
+     {
+      "v": 1,
+      "created_at": "2026-10-29T12:00:00+00:00",
+      "note": "v1: promoted from storyboard 'Tuesday run'",
+      "target_s": 300,
+      "bits": [
+       {
+        "joke_id": "joke:a",
+        "title": "Alpha bit",
+        "target_s": 60,
+        "target_basis": "tape (3 nights)"
+       },
+       {
+        "joke_id": "joke:b",
+        "title": "Bravo bit (the dog one)",
+        "target_s": 60,
+        "target_basis": "tape (3 nights)"
+       },
+       {
+        "joke_id": "joke:c",
+        "title": "Charlie bit",
+        "target_s": 60,
+        "target_basis": "tape (1 night)"
+       },
+       {
+        "joke_id": "joke:d",
+        "title": "Delta bit",
+        "target_s": 5,
+        "target_basis": "estimate from 9 written words at 157 wpm"
+       }
+      ],
+      "by": "owner"
+     }
+    ],
+    "try_notes": [
+     {
+      "id": "try:ea835408",
+      "joke_id": "joke:a",
+      "text": "slow the opener down",
+      "done": false,
+      "created_at": "2026-10-29T12:00:00+00:00",
+      "done_at": null,
+      "by": "owner"
+     }
+    ]
+   },
+   "joke_id": "joke:a"
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

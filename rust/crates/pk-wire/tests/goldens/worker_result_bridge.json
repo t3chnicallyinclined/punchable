@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "result": {
+  "from": "joke:a",
+  "to": "joke:d",
+  "from_title": "Alpha bit",
+  "to_title": "Delta bit",
+  "transition": "link",
+  "draft": true,
+  "label": "DRAFT · AI · not your words yet",
+  "status": "ok",
+  "text": "Speaking of things that come back, my niece.",
+  "grounded_in": [
+   {
+    "id": "L1",
+    "kind": "callback_to",
+    "edge_id": "e:cb_ad",
+    "name": "the opener comes back",
+    "evidence": [
+     {
+      "node": "unit:a1",
+      "quote": "The alpha punch"
+     }
+    ]
+   }
+  ],
+  "all_links": [
+   "L1"
+  ],
+  "provider": "anthropic",
+  "model": "claude-synthetic",
+  "call_id": "c-1",
+  "task": "creative_bridge"
+ }
+}

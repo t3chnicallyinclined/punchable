@@ -1,0 +1,16 @@
+{
+ "kinds": [
+  "bridge",
+  "punchup",
+  "facts",
+  "riff",
+  "ask_chat",
+  "set_text",
+  "embed",
+  "memolink",
+  "ask"
+ ],
+ "worker": "api-worker-7f9c",
+ "hosted": true,
+ "model": "Anthropic API · claude-synthetic"
+}

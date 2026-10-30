@@ -1,0 +1,71 @@
+{
+ "files": [
+  {
+   "path": "corpus/sets/20240101_x/analysis.json",
+   "sha256": "f08db371e4daa882e020dcde74a7e1f7e72d776748409ceacde7604d711db0f2",
+   "bytes": 4252
+  },
+  {
+   "path": "corpus/sets/20240101_x/clips.json",
+   "sha256": "02a35a7eaa2468b3272cd9429bc40d4bcb380a62aef2c70f9a511637ecd7c4ec",
+   "bytes": 1810
+  },
+  {
+   "path": "corpus/sets/20240101_x/laughs_auto.json",
+   "sha256": "9559ba4ccde48bca863602024bf95f452f30b6ca5777930c5bee9f945cc18504",
+   "bytes": 720
+  },
+  {
+   "path": "corpus/sets/20240101_x/meta.json",
+   "sha256": "b2d2aea4ba8ef66e236162a2e8d856e45f6e00fb2d9ba3943b813c92f8605975",
+   "bytes": 159
+  },
+  {
+   "path": "corpus/sets/20240101_x/transcript.json",
+   "sha256": "37ea265ea80e58dbdbb9531e8b471d0a104a9e96a2228cd19ad5e775b752aa04",
+   "bytes": 710
+  },
+  {
+   "path": "corpus/sets/20240201_y/analysis.json",
+   "sha256": "bba4161fca4868e8d8c093a14a65310a7337e70cbe3823daba5da8ebb6ad1a18",
+   "bytes": 3020
+  },
+  {
+   "path": "corpus/sets/20240201_y/laughs_auto.json",
+   "sha256": "7c2d5283c8dd0ff4f62265b28011abcd8ff5184915cea50d170fd16962aed96f",
+   "bytes": 393
+  },
+  {
+   "path": "corpus/sets/20240201_y/meta.json",
+   "sha256": "35ea349ae2314e9c9eea127eab3dda63e7709893ff9d6db879ed7dbf56d3343e",
+   "bytes": 268
+  },
+  {
+   "path": "corpus/sets/20240201_y/transcript.json",
+   "sha256": "82c165dceea8474faea8fc58ab49f1cfe543f5f0037491703ee28e735b177462",
+   "bytes": 442
+  },
+  {
+   "path": "corpus/sets/20240301_z/analysis.json",
+   "sha256": "3801f6e17641644f81173410b5493f7b940c5ca84d449a2904234d8733035a9f",
+   "bytes": 2854
+  },
+  {
+   "path": "corpus/sets/20240301_z/laughs_auto.json",
+   "sha256": "47c80bb9bcff31b6194b12204e18c41b69f9ef084113eaaade60c861acdf75b9",
+   "bytes": 229
+  },
+  {
+   "path": "corpus/sets/20240301_z/meta.json",
+   "sha256": "fb8b3ccf67e465d2efbc517fdace977d8377c526d4b508f2299e36c31fbbf138",
+   "bytes": 238
+  },
+  {
+   "path": "corpus/sets/20240301_z/transcript.json",
+   "sha256": "65e56d9e49406c245d61f43f4a08e496a8773279b4a724ae6fb98dc0f7c87d4b",
+   "bytes": 354
+  }
+ ],
+ "files_rev": null,
+ "mode": "disk"
+}

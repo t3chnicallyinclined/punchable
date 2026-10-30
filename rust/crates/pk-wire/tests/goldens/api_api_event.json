@@ -1,0 +1,6 @@
+{
+ "method": "POST",
+ "path": "/api/ideas",
+ "status": 0,
+ "reason": "TypeError"
+}

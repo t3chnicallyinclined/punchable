@@ -1,0 +1,13 @@
+{
+ "status": "queued",
+ "job": {
+  "id": "job:ask-4b29ac6453d1",
+  "kind": "ask",
+  "status": "queued",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "done_at": null,
+  "attempts": 0,
+  "error": null
+ },
+ "poll": "/api/jobs/job:ask-4b29ac6453d1"
+}

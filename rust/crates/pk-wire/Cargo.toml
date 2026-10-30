@@ -1,0 +1,21 @@
+[package]
+name = "pk-wire"
+description = "Punchable's typed HTTP contract: the whole /api/worker/* protocol and the app-facing response shapes, as serde structs with no behaviour"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# `ts`: derive ts_rs::TS on every wire type, so `cargo test -p pk-wire --features ts` writes the app's TypeScript
+# (after T9: app/src/api/wire.gen.ts replaces the hand-written shapes). Off by default: the lead's gate stays serde-only.
+ts = ["dep:ts-rs"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+ts-rs = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,26 @@
+{
+ "cached": true,
+ "job": {
+  "id": "job:facts-c5b857fdc52d",
+  "kind": "facts",
+  "status": "done",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "done_at": "2026-10-29T12:00:00+00:00",
+  "attempts": 2,
+  "error": null
+ },
+ "idea": "parking meters",
+ "draft": true,
+ "label": "Checked by the AI against its sources · read the source",
+ "status": "ok",
+ "facts": [
+  {
+   "text": "A parking meter was first installed in 1935.",
+   "source_title": "Parking meter",
+   "source_url": "https://example.invalid/parking-meter"
+  }
+ ],
+ "dropped": 1,
+ "provider": "anthropic",
+ "model": "claude-synthetic"
+}

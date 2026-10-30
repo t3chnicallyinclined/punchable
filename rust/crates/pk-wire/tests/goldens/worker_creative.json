@@ -1,0 +1,7 @@
+{
+ "store": "storyboards",
+ "total": 1,
+ "lines": [
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"create\", \"id\": \"sb:tuesday-run-7507883e\", \"by\": \"owner\", \"data\": {\"title\": \"Tuesday run\", \"joke_ids\": [\"joke:a\", \"joke:b\", \"joke:c\", \"joke:d\"], \"target_s\": 300, \"notes\": \"the four taped bits\", \"seed\": null}}"
+ ]
+}

@@ -1,0 +1,19 @@
+{
+ "ok": true,
+ "result": {
+  "idea": "parking meters",
+  "draft": true,
+  "label": "Checked by the AI against its sources · read the source",
+  "status": "ok",
+  "facts": [
+   {
+    "text": "A parking meter was first installed in 1935.",
+    "source_title": "Parking meter",
+    "source_url": "https://example.invalid/parking-meter"
+   }
+  ],
+  "dropped": 1,
+  "provider": "anthropic",
+  "model": "claude-synthetic"
+ }
+}

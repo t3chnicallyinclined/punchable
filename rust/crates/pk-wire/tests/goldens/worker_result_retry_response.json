@@ -1,0 +1,12 @@
+{
+ "ok": true,
+ "job": {
+  "id": "job:facts-c5b857fdc52d",
+  "kind": "facts",
+  "status": "queued",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "done_at": null,
+  "attempts": 1,
+  "error": "TimeoutError: the provider did not answer in 120 s"
+ }
+}

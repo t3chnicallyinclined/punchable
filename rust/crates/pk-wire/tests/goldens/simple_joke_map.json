@@ -1,0 +1,118 @@
+{
+ "joke": {
+  "joke_id": "joke:a",
+  "title": "Alpha bit",
+  "short_name": "Alpha bit",
+  "stage": "working",
+  "quote": "The alpha punch lands here every time.",
+  "quote_node": "seg:2024-01-01_x#1",
+  "cut_start": false,
+  "cut_end": false,
+  "date": "2024-01-01",
+  "stage_line": "Worked at Mabel's, Mar 2024 · 3 nights",
+  "proven": true,
+  "nights": 3,
+  "duration_s": 60.0,
+  "estimated": false,
+  "text": "Alpha opener line one. The alpha punch lands here every time."
+ },
+ "groups": [
+  {
+   "key": "next",
+   "title": "Could come next",
+   "items": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit",
+     "short_name": "Bravo bit",
+     "stage": "working",
+     "quote": "The purple monkey dishwasher line here.",
+     "quote_node": "seg:2024-01-01_x#2",
+     "cut_start": false,
+     "cut_end": false,
+     "date": "2024-01-01",
+     "stage_line": "Killed at The Corner Room, Jan 2024 · 3 nights",
+     "proven": true,
+     "nights": 3,
+     "duration_s": 60.0,
+     "estimated": false,
+     "why": "You did it right after this on stage, 2 times",
+     "mine": false,
+     "proven_pair": true
+    },
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "short_name": "Delta bit",
+     "stage": "to_try",
+     "quote": "Delta bit about my niece and the laundromat place.",
+     "quote_node": "unit:d1",
+     "cut_start": false,
+     "cut_end": false,
+     "date": "2015-03-03",
+     "stage_line": null,
+     "proven": false,
+     "nights": 0,
+     "duration_s": 3.4,
+     "estimated": true,
+     "why": "Calls back",
+     "mine": false,
+     "proven_pair": false
+    }
+   ]
+  },
+  {
+   "key": "tags",
+   "title": "Could tag it",
+   "items": []
+  },
+  {
+   "key": "same_world",
+   "title": "Same world",
+   "items": []
+  },
+  {
+   "key": "callbacks",
+   "title": "Callbacks",
+   "items": [
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "short_name": "Delta bit",
+     "stage": "to_try",
+     "quote": "Delta bit about my niece and the laundromat place.",
+     "quote_node": "unit:d1",
+     "cut_start": false,
+     "cut_end": false,
+     "date": "2015-03-03",
+     "stage_line": null,
+     "proven": false,
+     "nights": 0,
+     "duration_s": 3.4,
+     "estimated": true,
+     "why": "This calls back to it",
+     "mine": false
+    }
+   ]
+  },
+  {
+   "key": "versions",
+   "title": "Older versions",
+   "items": [
+    {
+     "joke_id": "joke:a",
+     "unit_id": "unit:a0",
+     "title": "Written version",
+     "quote": "Alpha opener, first draft.",
+     "quote_node": "unit:a0",
+     "cut_start": false,
+     "cut_end": false,
+     "date": "2023-02-02",
+     "why": "An older version",
+     "stage_line": null,
+     "proven": false
+    }
+   ]
+  }
+ ]
+}

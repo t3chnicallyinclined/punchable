@@ -1,0 +1,557 @@
+{
+ "set": {
+  "id": "set:2024-01-01_x",
+  "title": "Corner Room, Tuesday",
+  "date": "2024-01-01",
+  "venue": "The Corner Room",
+  "show_date": "2024-01-01",
+  "show_date_source": "the folder date",
+  "description": null,
+  "laugh_s_per_min": 6.0,
+  "room_heat": 1.0,
+  "audio_unreliable": null,
+  "venue_id": "venue:the-corner-room",
+  "source": "tape",
+  "reference": null,
+  "duration_s": 300,
+  "performances": 4,
+  "rateable": 3,
+  "rated": 1,
+  "reviewed": false,
+  "laughs": 4,
+  "has_audio": false,
+  "analysis": {
+   "source": "real",
+   "run_id": "synthetic-1",
+   "generated_at": "2026-10-01T00:00:00+00:00",
+   "jokes_counted": 3,
+   "new_material": 0,
+   "crowd_work": 1,
+   "best": {
+    "id": "joke:b",
+    "title": "Bravo bit (the dog one)",
+    "idx": 2,
+    "rating": "killed"
+   },
+   "laughs_per_min": 0.8
+  },
+  "jokes": [
+   {
+    "perf": "perf:2024-01-01_x@0",
+    "title": "Alpha bit",
+    "joke": "joke:a",
+    "kind": "bit",
+    "rating": "worked",
+    "rating_by": "ai",
+    "start_ms": 0
+   },
+   {
+    "perf": "perf:2024-01-01_x@60000",
+    "title": "Bravo bit (the dog one)",
+    "joke": "joke:b",
+    "kind": "bit",
+    "rating": "killed",
+    "rating_by": "you",
+    "start_ms": 60000
+   },
+   {
+    "perf": "perf:2024-01-01_x@120000",
+    "title": "Crowd",
+    "joke": null,
+    "kind": "crowd_work",
+    "rating": "died",
+    "rating_by": "ai",
+    "start_ms": 120000
+   },
+   {
+    "perf": "perf:2024-01-01_x@140000",
+    "title": "Charlie bit",
+    "joke": "joke:c",
+    "kind": "bit",
+    "rating": "worked",
+    "rating_by": "ai",
+    "start_ms": 140000
+   }
+  ]
+ },
+ "steps": [
+  {
+   "key": "perf:2024-01-01_x@0",
+   "kind": "joke",
+   "perf": {
+    "id": "perf:2024-01-01_x@0",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 0,
+    "end_ms": 60000,
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "kind": "bit",
+    "name": "Alpha",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "name": "Alpha",
+   "joke": {
+    "id": "joke:a",
+    "title": "Alpha bit",
+    "stage": "working",
+    "summary": "A bit about a.",
+    "sets": 3,
+    "hit_sets": 0,
+    "ai_hit_sets": 3,
+    "stage_ai": true
+   },
+   "match": {
+    "id": "e:f9fe21d137b5",
+    "src": "perf:2024-01-01_x@0",
+    "dst": "joke:a",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [
+     {
+      "node": "perf:2024-01-01_x@0",
+      "quote": "The alpha punch lands here every time.",
+      "start_ms": 8000
+     }
+    ],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-01-01_x@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "dst_brief": {
+     "id": "joke:a",
+     "type": "joke",
+     "title": "Alpha bit",
+     "stage": "working",
+     "summary": "A bit about a."
+    },
+    "state": "ai",
+    "ai": true
+   },
+   "text": "Alpha opener line one. The alpha punch lands here every time.",
+   "punch": {
+    "text": "The alpha punch lands here every time.",
+    "start_ms": 8000,
+    "end_ms": 20000,
+    "laugh": {
+     "id": "l1",
+     "start_ms": 20500,
+     "end_ms": 23500,
+     "bars": 3,
+     "strength": 0.9,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    },
+    "segments": [
+     {
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "Alpha opener line one.",
+      "punch": false
+     },
+     {
+      "start_ms": 8000,
+      "end_ms": 20000,
+      "text": "The alpha punch lands here every time.",
+      "punch": true
+     },
+     {
+      "start_ms": 60000,
+      "end_ms": 70000,
+      "text": "Bravo setup about the dog.",
+      "punch": false
+     }
+    ]
+   },
+   "laughs": [
+    {
+     "id": "l1",
+     "start_ms": 20500,
+     "end_ms": 23500,
+     "bars": 3,
+     "strength": 0.9,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 3,
+   "hits": 1,
+   "suggested": "killed",
+   "rating": null,
+   "ai_rating": "worked",
+   "play": {
+    "start_ms": 4000,
+    "end_ms": 24700
+   }
+  },
+  {
+   "key": "perf:2024-01-01_x@60000",
+   "kind": "joke",
+   "perf": {
+    "id": "perf:2024-01-01_x@60000",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 60000,
+    "end_ms": 120000,
+    "text": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+    "kind": "bit",
+    "name": "Bravo",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch",
+    "rating": "killed",
+    "rating_auto": "killed",
+    "max_bars": 3
+   },
+   "name": "Bravo",
+   "joke": {
+    "id": "joke:b",
+    "title": "Bravo bit (the dog one)",
+    "stage": "working",
+    "summary": "A bit about b.",
+    "sets": 3,
+    "hit_sets": 0,
+    "ai_hit_sets": 3,
+    "stage_ai": false
+   },
+   "match": {
+    "id": "e:a482cf743a26",
+    "src": "perf:2024-01-01_x@60000",
+    "dst": "joke:b",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [
+     {
+      "node": "perf:2024-01-01_x@60000",
+      "quote": "The purple monkey dishwasher line here.",
+      "start_ms": 70000
+     }
+    ],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-01-01_x@60000",
+     "type": "performance",
+     "title": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 60000,
+     "end_ms": 120000
+    },
+    "dst_brief": {
+     "id": "joke:b",
+     "type": "joke",
+     "title": "Bravo bit (the dog one)",
+     "stage": "working",
+     "summary": "A bit about b."
+    },
+    "state": "ai",
+    "ai": true
+   },
+   "text": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+   "punch": {
+    "text": "The purple monkey dishwasher line here. Bravo closer words.",
+    "start_ms": 70000,
+    "end_ms": 90000,
+    "laugh": {
+     "id": "l2",
+     "start_ms": 80500,
+     "end_ms": 83500,
+     "bars": 3,
+     "strength": 0.95,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    },
+    "segments": [
+     {
+      "start_ms": 60000,
+      "end_ms": 70000,
+      "text": "Bravo setup about the dog.",
+      "punch": false
+     },
+     {
+      "start_ms": 70000,
+      "end_ms": 80000,
+      "text": "The purple monkey dishwasher line here.",
+      "punch": true
+     },
+     {
+      "start_ms": 80000,
+      "end_ms": 90000,
+      "text": "Bravo closer words.",
+      "punch": true
+     },
+     {
+      "start_ms": 120000,
+      "end_ms": 130000,
+      "text": "So who here has a car?",
+      "punch": false
+     }
+    ]
+   },
+   "laughs": [
+    {
+     "id": "l2",
+     "start_ms": 80500,
+     "end_ms": 83500,
+     "bars": 3,
+     "strength": 0.95,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 3,
+   "hits": 1,
+   "suggested": "killed",
+   "rating": "killed",
+   "ai_rating": "worked",
+   "play": {
+    "start_ms": 66000,
+    "end_ms": 84700
+   }
+  },
+  {
+   "key": "perf:2024-01-01_x@120000",
+   "kind": "crowd_work",
+   "perf": {
+    "id": "perf:2024-01-01_x@120000",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 120000,
+    "end_ms": 140000,
+    "text": "So who here has a car?",
+    "kind": "crowd_work",
+    "name": "Crowd",
+    "ai_rating": "died",
+    "rating_basis": "silence"
+   },
+   "name": "Crowd",
+   "joke": null,
+   "match": null,
+   "text": "So who here has a car?",
+   "punch": {
+    "text": "Charlie premise about cars and traffic and more traffic today.",
+    "start_ms": 140000,
+    "end_ms": 150000,
+    "laugh": null,
+    "segments": [
+     {
+      "start_ms": 120000,
+      "end_ms": 130000,
+      "text": "So who here has a car?",
+      "punch": false
+     },
+     {
+      "start_ms": 140000,
+      "end_ms": 150000,
+      "text": "Charlie premise about cars and traffic and more traffic today.",
+      "punch": true
+     }
+    ]
+   },
+   "laughs": [],
+   "max_bars": 0,
+   "hits": 0,
+   "suggested": "died",
+   "rating": null,
+   "ai_rating": "died",
+   "play": {
+    "start_ms": 136000,
+    "end_ms": 151200
+   }
+  },
+  {
+   "key": "perf:2024-01-01_x@140000",
+   "kind": "joke",
+   "perf": {
+    "id": "perf:2024-01-01_x@140000",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 140000,
+    "end_ms": 200000,
+    "text": "Charlie premise about cars and traffic and more traffic today.",
+    "kind": "bit",
+    "name": "Charlie",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "name": "Charlie",
+   "joke": {
+    "id": "joke:c",
+    "title": "Charlie bit",
+    "stage": "working",
+    "summary": "A bit about c.",
+    "sets": 1,
+    "hit_sets": 0,
+    "ai_hit_sets": 1,
+    "stage_ai": false
+   },
+   "match": {
+    "id": "e:f47a22db0d27",
+    "src": "perf:2024-01-01_x@140000",
+    "dst": "joke:c",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [
+     {
+      "node": "perf:2024-01-01_x@140000",
+      "quote": "and more traffic today.",
+      "start_ms": 150000
+     }
+    ],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-01-01_x@140000",
+     "type": "performance",
+     "title": "Charlie premise about cars and traffic and more traffic today.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 140000,
+     "end_ms": 200000
+    },
+    "dst_brief": {
+     "id": "joke:c",
+     "type": "joke",
+     "title": "Charlie bit",
+     "stage": "working",
+     "summary": "A bit about c."
+    },
+    "state": "ai",
+    "ai": true
+   },
+   "text": "Charlie premise about cars and traffic and more traffic today.",
+   "punch": {
+    "text": "Charlie premise about cars and traffic and more traffic today.",
+    "start_ms": 140000,
+    "end_ms": 150000,
+    "laugh": {
+     "id": "l3",
+     "start_ms": 150500,
+     "end_ms": 151500,
+     "bars": 1,
+     "strength": 0.5,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    },
+    "segments": [
+     {
+      "start_ms": 140000,
+      "end_ms": 150000,
+      "text": "Charlie premise about cars and traffic and more traffic today.",
+      "punch": true
+     },
+     {
+      "start_ms": 200000,
+      "end_ms": 206000,
+      "text": "Thanks everybody, you were a dream.",
+      "punch": false
+     }
+    ]
+   },
+   "laughs": [
+    {
+     "id": "l3",
+     "start_ms": 150500,
+     "end_ms": 151500,
+     "bars": 1,
+     "strength": 0.5,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 1,
+   "hits": 1,
+   "suggested": "meh",
+   "rating": null,
+   "ai_rating": "worked",
+   "play": {
+    "start_ms": 140000,
+    "end_ms": 152700
+   }
+  },
+  {
+   "key": "line:set:2024-01-01_x@200000",
+   "kind": "new_line",
+   "perf": null,
+   "name": null,
+   "joke": null,
+   "match": null,
+   "text": "Thanks everybody, you were a dream.",
+   "punch": {
+    "text": "Thanks everybody, you were a dream.",
+    "start_ms": 200000,
+    "end_ms": 206000,
+    "laugh": {
+     "id": "l4",
+     "start_ms": 206500,
+     "end_ms": 208500,
+     "bars": 2,
+     "strength": 0.7,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    },
+    "segments": [
+     {
+      "start_ms": 200000,
+      "end_ms": 206000,
+      "text": "Thanks everybody, you were a dream.",
+      "punch": true
+     }
+    ]
+   },
+   "laughs": [
+    {
+     "id": "l4",
+     "start_ms": 206500,
+     "end_ms": 208500,
+     "bars": 2,
+     "strength": 0.7,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 2,
+   "hits": 1,
+   "suggested": "worked",
+   "rating": null,
+   "play": {
+    "start_ms": 198000,
+    "end_ms": 209700
+   }
+  }
+ ],
+ "audio": null
+}

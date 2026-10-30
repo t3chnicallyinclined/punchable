@@ -1,0 +1,36 @@
+{
+ "ok": true,
+ "result": {
+  "question": "where did I do the alpha bit?",
+  "plan": {
+   "by_year": false,
+   "kinds": [
+    "written",
+    "performed"
+   ]
+  },
+  "run_id": "ask-1",
+  "sources": [
+   "unit:a1",
+   "perf:2024-01-01_x@0"
+  ],
+  "found": true,
+  "answer": "You did the alpha bit at the Corner Room [unit:a1] and it worked [perf:2024-01-01_x@0].",
+  "not_found": "",
+  "citations": [
+   {
+    "source_id": "unit:a1",
+    "quote": "Alpha opener line one."
+   }
+  ],
+  "removed": [],
+  "timings": {
+   "retrieve_s": 0.1,
+   "answer_s": 1.2,
+   "total_s": 1.3
+  },
+  "tokens_in": 1200,
+  "tokens_out": 80,
+  "provider": "anthropic:claude-synthetic"
+ }
+}

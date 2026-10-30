@@ -1,0 +1,41 @@
+{
+ "job": {
+  "id": "job:process_set-fixture0",
+  "kind": "process_set",
+  "key": "upload|2024-02-01_punchable-set_210000_seaside.m4a",
+  "input": {
+   "file": "2024-02-01_punchable-set_210000_seaside.m4a",
+   "meta": {
+    "kind": "set",
+    "original_name": "seaside.m4a",
+    "title": "Seaside open mic",
+    "received_at": "2026-10-29T12:00:00+00:00",
+    "bytes": 12,
+    "duration_s": 240.0,
+    "marks_ms": [
+     61000,
+     150000
+    ],
+    "status": "queued",
+    "recorded_at": "2024-02-01T21:00:00",
+    "venue": "Seaside Comedy Club",
+    "gps": {
+     "lat": 51.5,
+     "lon": -0.1
+    },
+    "show_group": null,
+    "align_working_set": null
+   }
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "home",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

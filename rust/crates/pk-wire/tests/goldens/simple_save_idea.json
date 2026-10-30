@@ -1,0 +1,31 @@
+{
+ "ok": true,
+ "indexes": [
+  9
+ ],
+ "id": "joke:an-idea-about-airport-security-lines",
+ "decisions": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:an-idea-about-airport-security-lines",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "joke",
+    "title": "An idea about airport security lines",
+    "stage": "idea",
+    "summary": "An idea about airport security lines.",
+    "first_seen": "2026-10-29",
+    "last_seen": "2026-10-29"
+   },
+   "reason": "riff on: airports",
+   "by": "owner"
+  }
+ ],
+ "attach": {
+  "decision": "new",
+  "reasons": []
+ },
+ "learned": null
+}

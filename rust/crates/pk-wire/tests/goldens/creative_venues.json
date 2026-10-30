@@ -1,0 +1,400 @@
+{
+ "generated_at": "2026-10-29T12:00:00+00:00",
+ "venues": [
+  {
+   "venue_id": "venue:mabel-s",
+   "raw": "Mabel's (upstairs)",
+   "name": "Mabel's",
+   "sets": [
+    {
+     "set": "2024-03-01_z",
+     "date": "2024-03-01",
+     "title": "Mabel's, March",
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": 0.08,
+     "material_s": 300.0,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-03-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-03-01",
+     "vs_room": 1.6,
+     "laugh_s_per_min": 8.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-03-01",
+     "vs_room": 0.45,
+     "laugh_s_per_min": 2.25,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#1",
+       "quote": "Bravo setup about the dog. Bravo closer words about the"
+      }
+     ]
+    }
+   ],
+   "worst_jokes": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-03-01",
+     "vs_room": 0.45,
+     "laugh_s_per_min": 2.25,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#1",
+       "quote": "Bravo setup about the dog. Bravo closer words about the"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-03-01",
+     "vs_room": 1.6,
+     "laugh_s_per_min": 8.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ]
+    }
+   ],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+   "geo": {
+    "raw": "Mabel's (upstairs)",
+    "name": "Mabel's",
+    "query": "Mabel's",
+    "queries_tried": [
+     "Mabel's"
+    ],
+    "status": "inferred",
+    "source": "nominatim",
+    "lat": null,
+    "lon": null,
+    "display_name": null,
+    "ambiguous": true,
+    "ambiguous_reasons": [
+     "not geocoded yet (offline)"
+    ]
+   }
+  },
+  {
+   "venue_id": "venue:seaside-comedy-club",
+   "raw": "Seaside Comedy Club",
+   "name": "Seaside Comedy Club",
+   "sets": [
+    {
+     "set": "2024-02-01_y",
+     "date": "2024-02-01",
+     "title": "Seaside open mic",
+     "laugh_s_per_min": 6.0,
+     "room_heat": 1.0,
+     "pct_laughing": 0.08,
+     "material_s": 300.0,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-02-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 6.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-02-01",
+     "vs_room": 1.4,
+     "laugh_s_per_min": 8.4,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-02-01",
+     "vs_room": 0.22,
+     "laugh_s_per_min": 1.33,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#2",
+       "quote": "Bravo setup about the dog. Bravo closer words."
+      }
+     ]
+    }
+   ],
+   "worst_jokes": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-02-01",
+     "vs_room": 0.22,
+     "laugh_s_per_min": 1.33,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#2",
+       "quote": "Bravo setup about the dog. Bravo closer words."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-02-01",
+     "vs_room": 1.4,
+     "laugh_s_per_min": 8.4,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    }
+   ],
+   "works_here": [],
+   "works_elsewhere": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "here_vs_room": 0.22,
+     "elsewhere_vs_room": 0.72,
+     "delta": -0.51,
+     "n_here": 1,
+     "n_elsewhere": 2,
+     "low_n": true
+    }
+   ],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+   "geo": {
+    "raw": "Seaside Comedy Club",
+    "name": "Seaside Comedy Club",
+    "query": "Seaside Comedy Club",
+    "queries_tried": [
+     "Seaside Comedy Club"
+    ],
+    "status": "inferred",
+    "source": "nominatim",
+    "lat": null,
+    "lon": null,
+    "display_name": null,
+    "ambiguous": true,
+    "ambiguous_reasons": [
+     "not geocoded yet (offline)"
+    ]
+   }
+  },
+  {
+   "venue_id": "venue:the-corner-room",
+   "raw": "The Corner Room",
+   "name": "The Corner Room",
+   "sets": [
+    {
+     "set": "2024-01-01_x",
+     "date": "2024-01-01",
+     "title": "Corner Room, Tuesday",
+     "laugh_s_per_min": 6.0,
+     "room_heat": 1.0,
+     "pct_laughing": 0.08,
+     "material_s": 300.0,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-01-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 6.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-01-01",
+     "vs_room": 1.5,
+     "laugh_s_per_min": 9.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-01-01",
+     "vs_room": 1.0,
+     "laugh_s_per_min": 6.0,
+     "ai_rating": "killed",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#2",
+       "quote": "Bravo setup about the dog. The purple monkey dishwasher line"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "date": "2024-01-01",
+     "vs_room": 1.0,
+     "laugh_s_per_min": 6.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#4",
+       "quote": "Charlie premise about cars and traffic and more traffic today."
+      }
+     ]
+    }
+   ],
+   "worst_jokes": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "date": "2024-01-01",
+     "vs_room": 1.0,
+     "laugh_s_per_min": 6.0,
+     "ai_rating": "killed",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#2",
+       "quote": "Bravo setup about the dog. The purple monkey dishwasher line"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "date": "2024-01-01",
+     "vs_room": 1.0,
+     "laugh_s_per_min": 6.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#4",
+       "quote": "Charlie premise about cars and traffic and more traffic today."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "date": "2024-01-01",
+     "vs_room": 1.5,
+     "laugh_s_per_min": 9.0,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    }
+   ],
+   "works_here": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "here_vs_room": 1.0,
+     "elsewhere_vs_room": 0.34,
+     "delta": 0.67,
+     "n_here": 1,
+     "n_elsewhere": 2,
+     "low_n": true
+    }
+   ],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+   "geo": {
+    "raw": "The Corner Room",
+    "name": "The Corner Room",
+    "query": "The Corner Room",
+    "queries_tried": [
+     "The Corner Room"
+    ],
+    "status": "inferred",
+    "source": "nominatim",
+    "lat": null,
+    "lon": null,
+    "display_name": null,
+    "ambiguous": true,
+    "ambiguous_reasons": [
+     "not geocoded yet (offline)"
+    ]
+   }
+  }
+ ],
+ "ambiguous": [
+  {
+   "venue_id": "venue:mabel-s",
+   "raw": "Mabel's (upstairs)",
+   "reasons": [
+    "not geocoded yet (offline)"
+   ],
+   "picked": null
+  },
+  {
+   "venue_id": "venue:seaside-comedy-club",
+   "raw": "Seaside Comedy Club",
+   "reasons": [
+    "not geocoded yet (offline)"
+   ],
+   "picked": null
+  },
+  {
+   "venue_id": "venue:the-corner-room",
+   "raw": "The Corner Room",
+   "reasons": [
+    "not geocoded yet (offline)"
+   ],
+   "picked": null
+  }
+ ],
+ "geocoder": {
+  "service": "OpenStreetMap Nominatim",
+  "user_agent": "Punchable/0.1 (personal)",
+  "requests_this_run": 0,
+  "cache": "geocode_cache.json",
+  "attribution": "Data © OpenStreetMap contributors, ODbL"
+ }
+}

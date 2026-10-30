@@ -1,0 +1,37 @@
+{
+ "job": {
+  "id": "job:set_text-f3f0d5bcdb67",
+  "kind": "set_text",
+  "key": "set_text|d65fd1c22c575832",
+  "input": {
+   "segments": [
+    {
+     "text": "The meter wants a tip now.",
+     "start": 0.0,
+     "end": 3.0
+    },
+    {
+     "text": "It only takes quarters and apologies.",
+     "start": 3.0,
+     "end": 6.5
+    }
+   ],
+   "title": "Phone night",
+   "recorded_at": "2024-05-01T21:00:00",
+   "venue": "The Corner Room",
+   "duration_s": 7.0,
+   "received_at": "2026-10-29T12:00:00+00:00",
+   "engine": "speech"
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

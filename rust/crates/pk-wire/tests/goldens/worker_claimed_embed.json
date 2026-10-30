@@ -1,0 +1,18 @@
+{
+ "job": {
+  "id": "job:embed-4b4b4671ac42",
+  "kind": "embed",
+  "key": "embed|6",
+  "input": {},
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "import:upload",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

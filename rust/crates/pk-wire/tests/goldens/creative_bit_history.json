@@ -1,0 +1,113 @@
+{
+ "joke_id": "joke:a",
+ "title": "Alpha bit",
+ "n_nights": 3,
+ "nights": [
+  {
+   "date": "2024-01-01",
+   "set": "2024-01-01_x",
+   "venue": "The Corner Room '24",
+   "time_s": 60.0,
+   "laugh_s": 9.0,
+   "laugh_s_per_min": 9.0,
+   "vs_room": 1.5,
+   "ai_rating": "worked"
+  },
+  {
+   "date": "2024-02-01",
+   "set": "2024-02-01_y",
+   "venue": "Seaside '24",
+   "time_s": 60.0,
+   "laugh_s": 8.4,
+   "laugh_s_per_min": 8.4,
+   "vs_room": 1.4,
+   "ai_rating": "worked"
+  },
+  {
+   "date": "2024-03-01",
+   "set": "2024-03-01_z",
+   "venue": "Mabel's '24",
+   "time_s": 30.0,
+   "laugh_s": 4.0,
+   "laugh_s_per_min": 8.0,
+   "vs_room": 1.6,
+   "ai_rating": "worked"
+  }
+ ],
+ "best_night": {
+  "date": "2024-01-01",
+  "venue": "The Corner Room '24",
+  "laugh_s_per_min": 9.0,
+  "vs_room": 1.5
+ },
+ "trend": "flat",
+ "trend_rel_change": -0.12,
+ "vs_room_trend": "flat",
+ "cv_laugh_s_per_min": 0.06,
+ "stability": 0.94,
+ "low_n": false,
+ "wording": {
+  "effects": [
+   {
+    "nights_with": [
+     "The Corner Room '24",
+     "Seaside '24"
+    ],
+    "nights_without": [
+     "Mabel's '24"
+    ],
+    "n_with": 2,
+    "n_without": 1,
+    "n_phrases": 1,
+    "delta_laugh_s": 4.7,
+    "delta_vs_room": -0.15,
+    "statement": "+4.7 laugh-s over 2 nights with it vs 1 without (vs room -0.15) · low n, a hunch not a finding",
+    "low_n": true,
+    "examples": [
+     {
+      "node": "seg:2024-01-01_x#1",
+      "quote": "The alpha punch lands here every time.",
+      "punchline": true
+     }
+    ],
+    "said_in_last": false,
+    "weight": 0.087
+   }
+  ],
+  "changes": [
+   {
+    "from": "The Corner Room '24",
+    "to": "Seaside '24",
+    "from_date": "2024-01-01",
+    "to_date": "2024-02-01",
+    "added": [],
+    "dropped": [],
+    "n_added": 0,
+    "n_dropped": 0,
+    "delta_laugh_s": -0.6,
+    "delta_vs_room": -0.1
+   },
+   {
+    "from": "Seaside '24",
+    "to": "Mabel's '24",
+    "from_date": "2024-02-01",
+    "to_date": "2024-03-01",
+    "added": [],
+    "dropped": [
+     {
+      "node": "seg:2024-02-01_y#1",
+      "quote": "The alpha punch lands here every time."
+     }
+    ],
+    "n_added": 0,
+    "n_dropped": 1,
+    "delta_laugh_s": -4.4,
+    "delta_vs_room": 0.2
+   }
+  ],
+  "note": "Wording vs laughs across nights is correlation inside different rooms; a line said only on one night carries that whole night's room with it."
+ },
+ "working_set": "ws:tuesday-run-14d826f7",
+ "locked": false,
+ "locked_lines": []
+}
