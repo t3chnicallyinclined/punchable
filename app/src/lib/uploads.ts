@@ -3,7 +3,7 @@
 // uploadsCore until the tab closes. The phone build (uploads.native.ts) keeps the file and the queue on disk.
 import { useEffect, useState } from 'react';
 import { ApiError, UploadMeta, setOnline, upload } from './api';
-import { QueuedUpload, backoffMs, runQueue } from '@/rules/uploadsCore';
+import { QueuedUpload, backoffMs, isPermanent, runQueue } from '@/rules/uploadsCore';
 import type { Recording } from './recorder';
 
 const blobs = new Map<string, Blob>();
@@ -18,7 +18,7 @@ async function send(item: QueuedUpload): Promise<Sent> {
   const b = blobs.get(item.id);
   if (!b) throw Object.assign(new Error('the recording is gone from this tab'), { status: 410 });
   try {
-    const r = await upload(b, { ...(item.meta as UploadMeta), filename: item.name });
+    const r = await upload(b, { ...(item.meta as UploadMeta), filename: item.name }, item.id);
     setOnline(true);
     return r;
   } catch (e: any) {
@@ -57,7 +57,7 @@ export async function enqueueUpload(rec: Recording, meta: UploadMeta): Promise<S
     blobs.delete(id);
     return r;
   } catch (e: any) {
-    if (e instanceof ApiError) {
+    if (e instanceof ApiError && isPermanent(e.status)) {
       blobs.delete(id);
       throw e;
     }

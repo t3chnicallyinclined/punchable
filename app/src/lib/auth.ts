@@ -136,6 +136,16 @@ export function isSignedIn() {
   return machine.signedIn;
 }
 
+/** The API answered 401 to a token the clock still liked (the fetch wrapper below, the native upload queue): refresh
+ *  through the one shared path and say whether he is still signed in. Only Keycloak's invalid_grant says no, and
+ *  then the login screen; a network failure keeps the session (this request failed, the next one tries again). */
+export async function handle401(): Promise<boolean> {
+  if (!AUTH_ENABLED) return false;
+  const stillSignedIn = await machine.handle401();
+  if (!stillSignedIn) goLogin();
+  return stillSignedIn;
+}
+
 let rememberedWay: string | null = (() => {
   try {
     return Platform.OS === 'web' ? (globalThis as any).localStorage?.getItem(WAY_KEY) ?? null : null;
@@ -284,13 +294,7 @@ function install() {
   g.fetch = async (input: any, init?: any) => {
     const r = await realFetch(input, init);
     const url = typeof input === 'string' ? input : input?.url ?? '';
-    if (r.status === 401 && apiOrigin(url) && !url.includes('/api/health')) {
-      // the API rejected the token: refresh through the one shared path; only Keycloak's invalid_grant means /login
-      // (a network failure keeps the session: this request failed, the next one tries again)
-      machine.handle401().then((stillSignedIn) => {
-        if (!stillSignedIn) goLogin();
-      });
-    }
+    if (r.status === 401 && apiOrigin(url) && !url.includes('/api/health')) void handle401(); // the API rejected the token
     return r;
   };
   const RealWS = g.WebSocket;

@@ -1,12 +1,13 @@
 // Sending recordings up (iOS/Android). The file is already in the document directory (recorder.native.ts); the
 // queue (`uploads.json` next to it) survives a crash or a dead signal at the venue, and each item goes up through
-// expo-file-system's uploadAsync (a native, background-capable transfer with the same headers api.ts sends) on
-// the backoff schedule in uploadsCore. The file is deleted once the API has it (Punchable keeps the words, not
-// the tape, on the phone).
+// expo-file-system's uploadAsync (a native, background-capable transfer with the headers api.ts builds: authHeaders
+// + uploadHeaders, plus X-Idempotency-Key = the item's id) on the backoff schedule in rules/uploadsCore. A 401 is
+// transient: sendOnce refreshes through the auth machine and tries once more; still 401 = kept, never deleted. The
+// file is deleted once the API has it (Punchable keeps the words, not the tape, on the phone).
 import { useEffect, useState } from 'react';
-import { API_URL, UploadMeta, setOnline } from './api';
-import { getAccessToken } from './auth';
-import { QueuedUpload, backoffMs, runQueue } from '@/rules/uploadsCore';
+import { API_URL, UploadMeta, authHeaders, setOnline, uploadHeaders } from './api';
+import { handle401 } from './auth';
+import { QueuedUpload, backoffMs, isPermanent, runQueue, sendOnce } from '@/rules/uploadsCore';
 import type { Recording } from './recorder';
 
 export type Sent = { status: string; file?: string };
@@ -49,45 +50,27 @@ async function persist() {
   }
 }
 
-function headersFor(item: QueuedUpload, token: string | null): Record<string, string> {
-  const m = item.meta as UploadMeta;
-  const enc = encodeURIComponent;
-  return {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    'Content-Type': item.type || 'application/octet-stream',
-    'X-Kind': m.kind,
-    'X-Filename': enc(item.name),
-    ...(m.title ? { 'X-Title': enc(m.title) } : {}),
-    ...(m.durationS ? { 'X-Duration-S': String(Math.round(m.durationS)) } : {}),
-    ...(m.marksMs?.length ? { 'X-Marks-Ms': JSON.stringify(m.marksMs) } : {}),
-    ...(m.recordedAt ? { 'X-Recorded-At': m.recordedAt } : {}),
-    ...(m.venue ? { 'X-Venue': enc(m.venue) } : {}),
-    ...(m.lat != null && m.lng != null ? { 'X-Lat': String(m.lat), 'X-Lng': String(m.lng) } : {}),
-    ...(m.showGroup ? { 'X-Show-Group': enc(m.showGroup) } : {}),
-    ...(m.alignWorkingSet ? { 'X-Align-Working-Set': enc(m.alignWorkingSet) } : {}),
-  };
-}
-
 async function send(item: QueuedUpload): Promise<Sent> {
   const FS = await fs();
-  const token = await getAccessToken();
-  let r: any;
-  try {
-    r = await FS.uploadAsync(API_URL + '/api/upload', item.uri, {
-      httpMethod: 'POST', uploadType: FS.FileSystemUploadType.BINARY_CONTENT, headers: headersFor(item, token), sessionType: FS.FileSystemSessionType.BACKGROUND,
-    });
-  } catch (e: any) {
-    setOnline(false);
-    throw Object.assign(new Error(e?.message || 'No connection'), { status: null });
-  }
-  setOnline(true);
-  let body: any = {};
-  try {
-    body = JSON.parse(r.body || '{}');
-  } catch {}
-  if (r.status < 200 || r.status >= 300) throw Object.assign(new Error(body.error || `HTTP ${r.status}`), { status: r.status });
+  const r = await sendOnce(item, {
+    headers: async (it) => ({ ...(await authHeaders()), ...uploadHeaders(it.meta as UploadMeta, it.name, it.type) }),
+    put: async (it, headers) => {
+      let res: any;
+      try {
+        res = await FS.uploadAsync(API_URL + '/api/upload', it.uri, {
+          httpMethod: 'POST', uploadType: FS.FileSystemUploadType.BINARY_CONTENT, headers, sessionType: FS.FileSystemSessionType.BACKGROUND,
+        });
+      } catch (e: any) {
+        setOnline(false);
+        throw Object.assign(new Error(e?.message || 'No connection'), { status: null });
+      }
+      setOnline(true);
+      return { status: res.status, body: res.body };
+    },
+    refresh: handle401,
+  });
   FS.deleteAsync(item.uri, { idempotent: true }).catch(() => {});
-  return body as Sent;
+  return r as Sent;
 }
 
 function schedule() {
@@ -122,7 +105,7 @@ export async function enqueueUpload(rec: Recording, meta: UploadMeta): Promise<S
     notify();
     return r;
   } catch (e: any) {
-    if (typeof e?.status === 'number' && e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429) {
+    if (isPermanent(typeof e?.status === 'number' ? e.status : null)) {
       queue = queue.filter((u) => u.id !== id);
       await persist();
       notify();

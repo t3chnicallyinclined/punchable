@@ -22,14 +22,18 @@ export const API_URL = (runtimeApi() || process.env.EXPO_PUBLIC_API_URL || 'http
 
 // ---- auth: the login module (src/lib/auth*, owned by the server agent) registers a header provider here.
 type HeaderProvider = () => Record<string, string> | Promise<Record<string, string>>;
-let authHeaders: HeaderProvider | null = null;
+let authHeaderProvider: HeaderProvider | null = null;
 /** Called by src/lib/auth* once a bearer token exists, e.g. `setAuthHeaderProvider(() => ({ Authorization: 'Bearer …' }))`. */
 export function setAuthHeaderProvider(p: HeaderProvider | null) {
-  authHeaders = p;
+  authHeaderProvider = p;
+}
+/** The bearer for a request, fresh from the token machine (refreshed when it has under 60 s left); {} signed out or
+ *  with auth off. Every request here and the native upload queue (lib/uploads.native) read it through this one door. */
+export async function authHeaders(): Promise<Record<string, string>> {
+  return authHeaderProvider ? await authHeaderProvider() : {};
 }
 async function headers(extra?: Record<string, string>) {
-  const h = authHeaders ? await authHeaders() : {};
-  return { ...h, ...(extra || {}) };
+  return { ...(await authHeaders()), ...(extra || {}) };
 }
 
 export class ApiError extends Error {
@@ -90,23 +94,29 @@ export type UploadMeta = {
   /** Requested by app (docs/API_CONTRACT.md): stored in the inbox meta.json when the API supports them. */
   recordedAt?: string; venue?: string; lat?: number; lng?: number; showGroup?: string; alignWorkingSet?: string;
 };
-export async function upload(blob: Blob, opts: UploadMeta) {
+/** The upload's headers (POST /api/upload reads the meta from X-* headers; the body is the file). One place for the
+ *  web upload below and the phone's queue (lib/uploads.native), which used to copy this block. */
+export function uploadHeaders(meta: UploadMeta, name: string, type: string): Record<string, string> {
   const enc = encodeURIComponent;
+  return {
+    'Content-Type': type || 'application/octet-stream',
+    'X-Kind': meta.kind,
+    'X-Filename': enc(name),
+    ...(meta.title ? { 'X-Title': enc(meta.title) } : {}),
+    ...(meta.durationS ? { 'X-Duration-S': String(Math.round(meta.durationS)) } : {}),
+    ...(meta.marksMs?.length ? { 'X-Marks-Ms': JSON.stringify(meta.marksMs) } : {}),
+    ...(meta.recordedAt ? { 'X-Recorded-At': meta.recordedAt } : {}),
+    ...(meta.venue ? { 'X-Venue': enc(meta.venue) } : {}),
+    ...(meta.lat != null && meta.lng != null ? { 'X-Lat': String(meta.lat), 'X-Lng': String(meta.lng) } : {}),
+    ...(meta.showGroup ? { 'X-Show-Group': enc(meta.showGroup) } : {}),
+    ...(meta.alignWorkingSet ? { 'X-Align-Working-Set': enc(meta.alignWorkingSet) } : {}),
+  };
+}
+/** Web: one POST of the blob. `key` is the queue item's id (X-Idempotency-Key), so a retry cannot land twice. */
+export async function upload(blob: Blob, opts: UploadMeta, key?: string) {
   const r = await fetch(API_URL + '/api/upload', {
     method: 'POST',
-    headers: await headers({
-      'Content-Type': blob.type || 'application/octet-stream',
-      'X-Kind': opts.kind,
-      'X-Filename': enc(opts.filename),
-      ...(opts.title ? { 'X-Title': enc(opts.title) } : {}),
-      ...(opts.durationS ? { 'X-Duration-S': String(Math.round(opts.durationS)) } : {}),
-      ...(opts.marksMs?.length ? { 'X-Marks-Ms': JSON.stringify(opts.marksMs) } : {}),
-      ...(opts.recordedAt ? { 'X-Recorded-At': opts.recordedAt } : {}),
-      ...(opts.venue ? { 'X-Venue': enc(opts.venue) } : {}),
-      ...(opts.lat != null && opts.lng != null ? { 'X-Lat': String(opts.lat), 'X-Lng': String(opts.lng) } : {}),
-      ...(opts.showGroup ? { 'X-Show-Group': enc(opts.showGroup) } : {}),
-      ...(opts.alignWorkingSet ? { 'X-Align-Working-Set': enc(opts.alignWorkingSet) } : {}),
-    }),
+    headers: await headers({ ...uploadHeaders(opts, opts.filename, blob.type), ...(key ? { 'X-Idempotency-Key': key } : {}) }),
     body: blob,
   });
   const j = await r.json().catch(() => ({}));
