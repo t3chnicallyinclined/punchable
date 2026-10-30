@@ -18,7 +18,7 @@ export type { ScreenProps } from './screenTypes';
 const PUSHED_ROOT: Record<string, string> = {
   joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', set: 'bits', venue: 'bits', calendar: 'bits',
   merge: 'bits', write: 'bits', today: 'tonight', import: 'tonight', record: 'tonight', inbox: 'tonight', say: 'tonight', ask: 'tonight',
-  board: 'sets', builder: 'sets', list: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
+  board: 'sets', builder: 'sets', list: 'sets', archived: 'sets', bitnotes: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
   settings: 'tonight', profile: 'tonight', learned: 'tonight',
 };
 

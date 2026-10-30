@@ -1,21 +1,27 @@
-// Sets (MixSets, docs/UX_2026-10.md): set lists as Sharpie-on-paper cards, each joke's short name in order (the
-// boards list carries `names`, one request), tonight's first; "Performed · N" lists the recorded sets. A set list IS
-// a board (/list/<id>); "New set list" is the create sheet.
+// Sets (MixSets, docs/UX_2026-10.md): HIS set lists as Sharpie-on-paper cards, each joke's short name in order (the
+// boards list carries `names`, one request), tonight's first; "Recorded" lists the taped sets. A set list IS a board
+// (/list/<id>); "New set list" is the create sheet. The lists the app made (`source` "inferred") are drafts: ONE
+// collapsed row at the bottom ("15 drafts from your Insights"), each with "Use this" (an owner write: the list becomes
+// his) and Archive (undoable: `{archive: true}` / `{unarchive: true}`); nothing is ever chosen for him
+// (docs/design/SPEC-2026-10-29-set-lists-and-stage-notes.md §1). Archived lists live on /archived (the toolbar menu).
 import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { BoardListItem, creative, useCreative } from '@/lib/creative';
-import { get, patch } from '@/lib/api';
+import { ApiError, get, patch } from '@/lib/api';
 import { Build } from '@/lib/simple';
 import { actionSheet } from '@/lib/actionSheet';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
+import { SwipeRow } from '@/lib/SwipeRow';
 import { fmtShortDate, mmss } from '@/rules/format';
+import { draftsLabel, splitLists } from '@/rules/setListRules';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
+import { getPrefs, setPrefs } from '@/lib/prefs';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
-import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, useUI, useWide } from '@/lib/ui';
+import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
 type Seg_ = 'lists' | 'performed';
@@ -43,10 +49,7 @@ export function PaperCard({ b, current, onPress, onLongPress, a11y, testID }: {
         {names.length > shown.length && <Text style={{ fontFamily: F.semi, fontSize: 14, color: '#6B6660' }}>+ {names.length - shown.length} more</Text>}
         {!names.length && <Text style={{ fontFamily: F.semi, fontSize: 14, color: '#6B6660' }}>(empty)</Text>}
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text style={{ flex: 1, fontFamily: F.medium, fontSize: 12, color: '#6B6660' }}>{current ? 'tonight · ' : ''}{b.target_s ? `${mmss(b.target_s)} slot · ` : ''}{fmtShortDate(b.updated)}</Text>
-        {b.source === 'inferred' && <Text style={{ fontFamily: F.semi, fontSize: 11, color: '#6B6660', borderWidth: 1, borderColor: '#C9C2B2', borderRadius: 4, paddingHorizontal: 5 }}>draft · found for you</Text>}
-      </View>
+      <Text style={{ fontFamily: F.medium, fontSize: 12, color: '#6B6660' }}>{current ? 'tonight · ' : ''}{b.target_s ? `${mmss(b.target_s)} slot · ` : ''}{fmtShortDate(b.updated)}</Text>
     </Pressable>
   );
 }
@@ -62,25 +65,45 @@ function RenameForm({ title, onSave }: { title: string; onSave: (t: string) => v
   );
 }
 
+/** A draft the app made: the title and size, "Use this" beside it (its own 44-pt target, so VoiceOver reaches both). */
+function DraftRow({ x, items, onOpen, onUse, onMenu }: { x: BoardListItem; items: MenuItem[]; onOpen: () => void; onUse: () => void; onMenu?: () => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56 }}>
+      <Pressable testID={`draft-${x.id}`} accessibilityRole="button" accessibilityLabel={`${x.title}, ${x.n} jokes, about ${x.runtime}. Open`} onPress={onOpen} onLongPress={onMenu} delayLongPress={350} {...rowActions(items)}
+        style={{ flex: 1, minWidth: 0, paddingVertical: 10 }}>
+        <T v="semi" numberOfLines={1}>{x.title}</T>
+        <T v="mut">{x.n} jokes · ~{x.runtime}</T>
+      </Pressable>
+      <TextBtn testID={`draft-use-${x.id}`} label="Use this" accessibilityLabel={`Use this list: ${x.title}`} onPress={onUse} />
+    </View>
+  );
+}
+
 export default function Sets() {
   const wide = useWide();
   const cur = useBoards();
-  const b = useCreative<{ boards: (BoardListItem & { names?: string[] })[] }>('boards', creative.boards, { poll: 30000 });
+  const b = useCreative<{ boards: BoardListItem[] }>('boards', creative.boards, { poll: 30000 });
   const sets = useSets();
   const [seg, setSeg] = useState<Seg_>('lists');
   const [create, setCreate] = useState(false);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [rename, setRename] = useState<BoardListItem | null>(null);
+  const [draftsOpen, setDraftsOpen] = useState(() => getPrefs().draftsOpen);
   const ui = useUI();
-  const all = b.data?.boards || [];
-  const his = all.filter((x) => x.source !== 'inferred');
-  const found = all.filter((x) => x.source === 'inferred');
-  const curId = cur.current?.id || his[0]?.id || null;
+  const { his, drafts } = splitLists(b.data?.boards || []);
+  // "tonight" for the card order only: the current list when it is his, else his newest; never a write
+  const curId = (cur.current && his.some((x) => x.id === cur.current!.id) ? cur.current.id : his[0]?.id) || null;
   const ordered = [...his.filter((x) => x.id === curId), ...his.filter((x) => x.id !== curId)];
+  const label = draftsLabel(drafts);
   const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
   const native = Platform.OS !== 'web';
   const openCreate = () => (native ? router.push({ pathname: '/create', params: { start: 'set' } } as any) : setCreate(true));
+  const openArchived = () => router.push('/archived' as any);
   const open = (x: BoardListItem) => { cur.setCurrent({ id: x.id, title: x.title }); router.push(`/list/${enc(x.id)}` as any); };
+  const openDraft = (x: BoardListItem) => router.push(`/list/${enc(x.id)}` as any); // a draft is never made current
+  const toggleDrafts = () => { haptics.selection(); setDraftsOpen((v) => { setPrefs({ draftsOpen: !v }); return !v; }); };
+  /** The server's plain words after "Couldn't …"; off the network nothing was written, and the words say so. */
+  const fail = (what: string, e: any) => ui.snack(e instanceof ApiError ? `${what}: ${e.message}` : 'Can’t reach Punchable. Nothing changed.');
   const duplicate = async (x: BoardListItem) => {
     try {
       const built = await get<Build>(`/api/boards/${enc(x.id)}/build`);
@@ -88,6 +111,39 @@ export default function Sets() {
       ui.snack(`Duplicated as ${v.board.title}`);
       b.reload();
     } catch (e: any) { ui.snack(`Couldn't duplicate: ${e.message}`); }
+  };
+  // Archive is not loss (HIG/feedback: no warning; HIG/undo-and-redo: Undo is the inverse op, also his write)
+  const archive = async (x: BoardListItem) => {
+    try {
+      await creative.patchBoard(x.id, { archive: true });
+      haptics.success();
+      b.reload();
+      ui.snack(`Archived ${x.title}`, async () => { await creative.patchBoard(x.id, { unarchive: true }); b.reload(); });
+    } catch (e: any) { fail('Couldn’t archive', e); }
+  };
+  const archiveAll = async () => {
+    const done: BoardListItem[] = [];
+    let err: any = null;
+    for (const d of drafts) {
+      try { await creative.patchBoard(d.id, { archive: true }); done.push(d); } catch (e) { err = e; break; }
+    }
+    b.reload();
+    if (!done.length) return fail('Couldn’t archive', err);
+    haptics.success();
+    const n = done.length;
+    const head = err ? `Archived ${n} of ${drafts.length} drafts, then: ${err instanceof ApiError ? err.message : 'no signal'}` : `Archived ${n} ${n === 1 ? 'draft' : 'drafts'}`;
+    ui.snack(head, async () => { for (const d of done) await creative.patchBoard(d.id, { unarchive: true }); b.reload(); });
+  };
+  // "Use this" = an owner update that keeps the title: the server marks the list his (creative/story.py: an owner
+  // `update` sets `source` "his"; archive / unarchive never do). There is no server op back to a draft, so the snack
+  // offers Open, not Undo (Archive is one tap away on the card).
+  const makeHis = async (x: BoardListItem) => {
+    try {
+      await creative.patchBoard(x.id, { title: x.title });
+      haptics.success();
+      b.reload();
+      ui.snack(`${x.title} is yours now`, undefined, { label: 'Open', testID: 'snack-open', run: () => open(x) });
+    } catch (e: any) { fail('Couldn’t make it yours', e); }
   };
   // not undoable, so an action sheet confirms (HIG/pull-down-buttons: a destructive choice gets an action sheet)
   const del = (x: BoardListItem) => actionSheet({ title: `Delete ${x.title}?`, message: 'The bits stay; only this list goes.', options: [
@@ -101,19 +157,32 @@ export default function Sets() {
     try { await creative.patchBoard(x.id, { title: t }); ui.snack(`Renamed to ${t}`, async () => { await creative.patchBoard(x.id, { title: x.title }); b.reload(); }); b.reload(); }
     catch (e: any) { ui.snack(`Couldn't rename: ${e.message}`); }
   };
+  // HIG/context-menus: the destructive item last; Archive (not loss) sits before it
   const cardItems = (x: BoardListItem): MenuItem[] => [
     { label: 'Open', icon: 'doc.text', onPress: () => open(x), testID: `card-open-${x.id}` },
     { label: 'Record', icon: 'record.circle', onPress: () => router.push(`/stage/${enc(x.id)}` as any), testID: `card-stage-${x.id}` },
     { label: 'Rename…', icon: 'pencil', onPress: () => setRename(x), testID: `card-rename-${x.id}` },
     { label: 'Duplicate', icon: 'plus.square.on.square', onPress: () => duplicate(x), testID: `card-duplicate-${x.id}` },
+    { label: 'Archive', icon: 'archivebox', onPress: () => archive(x), testID: `card-archive-${x.id}` },
     { label: 'Delete', icon: 'trash', onPress: () => del(x), destructive: true, testID: `card-delete-${x.id}` },
   ];
+  const draftItems = (x: BoardListItem): MenuItem[] => [
+    { label: 'Open', icon: 'doc.text', onPress: () => openDraft(x), testID: `draft-open-${x.id}` },
+    { label: 'Use this', icon: 'checkmark.circle', onPress: () => makeHis(x), testID: `draft-usethis-${x.id}` },
+    { label: 'Archive', icon: 'archivebox', onPress: () => archive(x), testID: `draft-archive-${x.id}` },
+  ];
+  const groupItems: MenuItem[] = [{ label: 'Archive all drafts', icon: 'archivebox', onPress: archiveAll, testID: 'drafts-archive-all-menu' }];
   return (
     <Screen title="Sets" testID="sets" onRefresh={refresh} largeTitle={native} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <TextBtn testID="sets-archived" label="Archived" onPress={openArchived} />
       <Pressable testID="new-setlist" accessibilityRole="button" accessibilityLabel="New set list" onPress={openCreate} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></Pressable>
       <Avatar /></View>}>
       {native && (
         <Stack.Toolbar placement="right">
+          {/* HIG/menus: "Archived" is navigation, no ellipsis */}
+          <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="archivebox" onPress={openArchived}>Archived</Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
           <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" onPress={openCreate}>New set list</Stack.Toolbar.Button>
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
@@ -126,7 +195,8 @@ export default function Sets() {
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
           {b.error && !b.data ? <ErrorCard error={b.error} onRetry={b.reload} /> : null}
           {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
-          {b.data && !his.length && <Empty text="No set list yet. ＋ New, or say “new 7 for Friday”."><Btn small v="add" label="New set list" onPress={openCreate} /></Empty>}
+          {/* HIG/writing: an empty screen says what to do next and gives the button */}
+          {b.data && !his.length && <Empty text="No set list yet. Build the first one."><Btn small v="add" label="+ New set list" accessibilityLabel="New set list" onPress={openCreate} /></Empty>}
           <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 18, paddingVertical: 6 }}>
             {ordered.map((x) => (
               <View key={x.id} style={{ width: wide ? 300 : '100%' }}>
@@ -137,13 +207,37 @@ export default function Sets() {
               </View>
             ))}
           </View>
-          {!!found.length && (
-            <View style={{ gap: 6 }}>
-              <T v="eb">Found for you</T>
-              <T v="small">Bits that share a world. Open one and make it yours.</T>
-              <List>
-                {found.map((x) => <ListRow key={x.id} testID={`found-${x.id}`} title={x.title} sub={`${x.n} jokes · ~${x.runtime}`} onPress={() => router.push(`/list/${encodeURIComponent(x.id)}` as any)} />)}
-              </List>
+          {!!drafts.length && (
+            <View style={{ gap: 2 }}>
+              {/* HIG/disclosure-controls: one row, collapsed by default, remembered per device; the chevron swaps
+                  symbols (no rotation: Reduce Motion). Its menu and the group's last row both archive all. */}
+              <RowMenu href="/sets" items={groupItems}>
+                <Pressable testID="drafts-row" accessibilityRole="button" accessibilityState={{ expanded: draftsOpen }} accessibilityLabel={label} accessibilityHint={draftsOpen ? 'Hides the drafts' : 'Shows the drafts'}
+                  onPress={toggleDrafts} onLongPress={ios ? undefined : () => { haptics.light(); setMenu({ title: label, items: groupItems }); }} delayLongPress={350} {...rowActions(groupItems)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <T v="semi" testID="drafts-label">{label}</T>
+                    {draftsOpen && <T v="mut">Lists the app put together from your notes. Use one, or archive them.</T>}
+                  </View>
+                  <Icon name={draftsOpen ? 'chevronDown' : 'chevron'} size={18} color={C.dim} />
+                </Pressable>
+              </RowMenu>
+              {draftsOpen && (
+                <List>
+                  {drafts.map((x) => (
+                    // HIG/gestures: the swipe reveals Archive (not red: not loss); the menu item is the no-gesture path
+                    <SwipeRow key={x.id} testID={`draft-swipe-${x.id}`} trailing={{ label: 'Archive', color: C.tabOff, onPress: () => archive(x), testID: `draft-swipe-archive-${x.id}` }}
+                      onLongPress={ios ? undefined : () => { haptics.light(); setMenu({ title: x.title, items: draftItems(x) }); }}>
+                      <RowMenu href={`/list/${enc(x.id)}`} items={draftItems(x)}>
+                        <DraftRow x={x} items={draftItems(x)} onOpen={() => openDraft(x)} onUse={() => makeHis(x)} />
+                      </RowMenu>
+                    </SwipeRow>
+                  ))}
+                  <Pressable testID="drafts-archive-all" accessibilityRole="button" onPress={archiveAll} style={{ minHeight: 44, justifyContent: 'center' }}>
+                    <T v="semi" style={{ color: C.amber }}>Archive all drafts</T>
+                  </Pressable>
+                </List>
+              )}
             </View>
           )}
         </>

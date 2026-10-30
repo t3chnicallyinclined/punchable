@@ -14,6 +14,7 @@ export default function SetsStack() {
     <Stack screenOptions={{ headerShown: false, headerTintColor: C.amber, contentStyle: { backgroundColor: C.bg } }}>
       <Stack.Screen name="sets" options={{ title: t('Sets') }} />
       <Stack.Screen name="list/[id]" options={{ title: t('Set list') }} />
+      <Stack.Screen name="archived" options={{ title: t('Archived') }} />
       <Stack.Screen name="set/[id]" options={{ title: t('Set') }} />
       <Stack.Screen name="board/[id]" options={{ title: t('Storyboard') }} />
       <Stack.Screen name="builder/[id]" options={{ title: t('Set builder') }} />

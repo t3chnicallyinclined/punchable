@@ -360,9 +360,9 @@ export function IconBtn({ label, onPress, children, testID, disabled }: { label:
   );
 }
 
-export function TextBtn({ label, onPress, testID, color = C.amber }: { label: string; onPress: () => void; testID?: string; color?: string }) {
+export function TextBtn({ label, onPress, testID, color = C.amber, accessibilityLabel }: { label: string; onPress: () => void; testID?: string; color?: string; accessibilityLabel?: string }) {
   return (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}>
       <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 15, color }}>{label}</Text>
     </Pressable>
   );

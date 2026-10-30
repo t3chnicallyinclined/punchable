@@ -10,8 +10,9 @@ export type Prefs = {
   appearance: SchemePref; haptics: boolean; /** the galaxy map's legend strip open */ mapLegend: boolean;
   /** the Bits list's order (2026-10-29: Recent by default, like a Docs list) */ bitsSort: BitsSort;
   /** Bits › Map: the cloud (bits placed by meaning) or the links map */ mapMode: MapMode;
+  /** Sets: the drafts row (the lists the app made) open; closed by default (HIG/disclosure-controls) */ draftsOpen: boolean;
 };
-export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud' };
+export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud', draftsOpen: false };
 
 const KEY = 'pk.prefs.v1';
 let cache: Prefs = { ...DEFAULT_PREFS };
@@ -26,6 +27,7 @@ function clean(raw: any): Prefs {
     if (typeof raw.mapLegend === 'boolean') p.mapLegend = raw.mapLegend;
     if (raw.bitsSort === 'recent' || raw.bitsSort === 'performed' || raw.bitsSort === 'strongest') p.bitsSort = raw.bitsSort;
     if (raw.mapMode === 'cloud' || raw.mapMode === 'links') p.mapMode = raw.mapMode;
+    if (typeof raw.draftsOpen === 'boolean') p.draftsOpen = raw.draftsOpen;
   }
   return p;
 }

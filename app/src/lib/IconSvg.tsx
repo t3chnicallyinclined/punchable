@@ -38,6 +38,9 @@ export const P = {
   plus: 'M12 5v14M5 12h14',
   chat: 'M4 5h16v11H9l-5 4V5z',
   chevron: 'M9 6l6 6-6 6',
+  chevronDown: 'M6 9l6 6 6-6',
+  // a bit's notes (the stage sheet): left-aligned lines of text
+  lines: 'M4 6h16M4 12h11M4 18h14',
 } as const;
 export type IconName = keyof typeof P;
 

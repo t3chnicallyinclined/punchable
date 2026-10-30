@@ -50,7 +50,20 @@ export type Board = {
 };
 export type BestNext = { joke_id: string; title: string; stage: string; score: number; why: string; source: Source; transition: string; energy: number | null; nights: number; evidence: Ev[] };
 export type BoardView = { board: Board; health: Health; best_next: BestNext[]; setlist: { board: string; title: string; lines: string[]; runtime: string; text: string }; __fixture?: boolean };
-export type BoardListItem = { id: string; title: string; n: number; runtime: string; updated: string; target_s?: number; source?: Source; working_set?: string | null };
+/** One row of GET /api/boards (api-dev/API.md "Creative routes"): `archived` lists are left out unless `?archived=1`;
+ *  `source` is "his" once he made or touched it, else "inferred" (a draft the app made); `by` is who created it
+ *  (his id, `ai:seed`, `ai:demo`); `seed` names where a draft came from. The screen words come from rules/setListRules. */
+export type BoardSeed = { from?: string | null; chunk?: string | number | null; minutes_est?: number | null };
+export type BoardListItem = {
+  id: string; title: string; n: number; runtime: string; runtime_s?: number; updated: string; target_s?: number; source?: Source; working_set?: string | null;
+  archived?: boolean; by?: string | null; seed?: BoardSeed | null; names?: string[];
+};
+/** PATCH /api/boards/<id>: every key is checked before any is written; `unarchive` runs first, so it combines with a
+ *  title; `archive` / `unarchive` are each other's undo and never change `source`; `delete` is terminal. */
+export type BoardPatch = {
+  title?: string; joke_ids?: string[]; target_s?: number; notes?: string; add?: { joke_id: string; at?: number }; remove?: { joke_id: string };
+  move?: { from: number; to: number }; archive?: true; unarchive?: true; delete?: true;
+};
 export type Bridge = {
   from: string; to: string; from_title?: string; to_title?: string; transition?: string; draft: true; label: string;
   status: 'ok' | 'no_grounding' | 'provider_error' | 'queued'; text?: string; grounded_in?: { id: string; kind: string; name?: string; evidence?: Ev[] }[];
@@ -158,7 +171,9 @@ export const creative = {
   board: (id: string) => withFixture(() => get<BoardView>(`/api/boards/${enc(id)}`), async () => (await fx()).board(id)),
   createBoard: (b: { title: string; joke_ids: string[]; target_s?: number; notes?: string }) =>
     withFixture(() => post<any>('/api/boards', b).then(boardOf), async () => (await fx()).createBoard(b)),
-  patchBoard: (id: string, p: { title?: string; joke_ids?: string[]; target_s?: number; notes?: string; add?: { joke_id: string; at?: number }; remove?: { joke_id: string } }) =>
+  /** The put-away lists (`?archived=1`); no fixture: an empty list is the honest answer when the route is missing. */
+  archivedBoards: () => get<any>('/api/boards?archived=1').then((j) => ({ boards: asList<BoardListItem>(j, 'boards') })),
+  patchBoard: (id: string, p: BoardPatch) =>
     withFixture(() => patch<any>(`/api/boards/${enc(id)}`, p).then(boardOf), async () => (await fx()).patchBoard(id, p)),
   addItem: (id: string, jokeId: string, after?: string) =>
     withFixture(() => post<any>(`/api/boards/${enc(id)}/items`, { joke_id: jokeId, ...(after ? { after } : {}) }).then(boardOf), async () => (await fx()).addItem(id, jokeId, after)),
