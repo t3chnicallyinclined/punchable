@@ -149,7 +149,11 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    every duplicated rule (the 2026-10-29 audit found server rules re-implemented in the app, seven stop-word lists,
    four crash scrubbers, three Python-repr helpers in Rust), and the order: honest CI (two Rust suites pass on GitHub
    without running), `pk-core`, `pk-wire`, a memory measurement, then the worker swap. One decision is his:
-   `venue_short` differs between server and app; the default is the server's rule.
+   `venue_short` differs between server and app; after the Punchable expert's review the one rule is the APP's
+   semantics (no year, a `guessed` flag), and the only call left is "Comix at X" → "X" or "Comix X". Four more
+   calls are listed at the top of ARCHITECTURE.md: "Reconnect Google" is reachable on the phone today (gate to web
+   or accept), where the Google Docs sync lands, and four visual values the tokens would change on screen.
+   Reviewed by the Punchable, iOS dev and iOS design experts on 2026-10-29; their corrections are marked [review].
    **Rust port** (`docs/RUST.md`, the board `docs/RUST_WORKSTREAM.md`): seven pieces are in and golden against the
    Python: `pk-kb`, `pk-creative` (store + reducers + verbatim, and since 2026-10-29 `ask`: retrieve / prompt / finish,
    `52df9e3`), `pk-llm`, `pk-embed`, `pk-obs`, `pk-store` (its tests need `~/.punchable/bin/surreal` and skip without
