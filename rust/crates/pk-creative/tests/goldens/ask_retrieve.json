@@ -1,0 +1,704 @@
+[
+ {
+  "name": "plain",
+  "question": "what did I write about the purple monkey dishwasher?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2024-01-01_x#2": 4.558827514468609,
+   "unit:b1": 4.558827514468609,
+   "unit:b2": 5.032311665778996,
+   "unit:b3": 5.032311665778996,
+   "unit:b4": 5.212779749424849
+  },
+  "ids": [
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2",
+   "seg:2015-09-09_v#1"
+  ]
+ },
+ {
+  "name": "qstop_only",
+  "question": "what did I write?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {},
+  "ids": []
+ },
+ {
+  "name": "qstop_killed",
+  "question": "which bits killed?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {},
+  "ids": []
+ },
+ {
+  "name": "room_corner",
+  "question": "what killed at The Corner Room?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2024-01-01_x"
+  ],
+  "scores": {
+   "seg:2024-01-01_x#1": 8.25,
+   "seg:2024-01-01_x#2": 7.25,
+   "seg:2024-01-01_x#3": 5.0,
+   "seg:2024-01-01_x#4": 6.35,
+   "seg:2024-01-01_x#5": 5.0
+  },
+  "ids": [
+   "seg:2024-01-01_x#1",
+   "seg:2024-01-01_x#2",
+   "seg:2024-01-01_x#4",
+   "seg:2024-01-01_x#3",
+   "seg:2024-01-01_x#5"
+  ]
+ },
+ {
+  "name": "room_ac",
+  "question": "how did the dog bit go in AC?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2024-02-01_y"
+  ],
+  "scores": {
+   "seg:2024-02-01_y#1": 5.5,
+   "seg:2024-02-01_y#2": 5.5,
+   "seg:2024-02-01_y#3": 5.5
+  },
+  "ids": [
+   "seg:2024-02-01_y#1",
+   "seg:2024-02-01_y#2",
+   "seg:2024-02-01_y#3"
+  ]
+ },
+ {
+  "name": "room_seaside_word",
+  "question": "the seaside night, what worked?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2024-02-01_y"
+  ],
+  "scores": {
+   "seg:2024-02-01_y#1": 7.3,
+   "seg:2024-02-01_y#2": 5.5,
+   "seg:2024-02-01_y#3": 8.4
+  },
+  "ids": [
+   "seg:2024-02-01_y#3",
+   "seg:2024-02-01_y#1",
+   "seg:2024-02-01_y#2"
+  ]
+ },
+ {
+  "name": "room_mabels",
+  "question": "anything from Mabel's?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2023-03-01_z"
+  ],
+  "scores": {
+   "seg:2023-03-01_z#1": 5.5,
+   "seg:2023-03-01_z#2": 5.5,
+   "seg:2023-03-01_z#3": 5.5,
+   "seg:2023-03-01_z#4": 5.0,
+   "seg:2023-03-01_z#6": 5.5
+  },
+  "ids": [
+   "seg:2023-03-01_z#1",
+   "seg:2023-03-01_z#2",
+   "seg:2023-03-01_z#3",
+   "seg:2023-03-01_z#6",
+   "seg:2023-03-01_z#4"
+  ]
+ },
+ {
+  "name": "room_mabels_curly",
+  "question": "anything from Mabel’s?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {},
+  "ids": []
+ },
+ {
+  "name": "room_loft_quiet",
+  "question": "which went quiet at the loft?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2015-09-09_v"
+  ],
+  "scores": {
+   "seg:2015-09-09_v#1": 7.9,
+   "seg:2015-09-09_v#2": 7.9
+  },
+  "ids": [
+   "seg:2015-09-09_v#1",
+   "seg:2015-09-09_v#2"
+  ]
+ },
+ {
+  "name": "room_unknown_skipped",
+  "question": "what about the unknown room?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {},
+  "ids": []
+ },
+ {
+  "name": "year_2015",
+  "question": "what did I write about my niece in 2015?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "unit:d1": 2.25711210853038
+  },
+  "ids": [
+   "unit:d1"
+  ]
+ },
+ {
+  "name": "year_none_match",
+  "question": "purple monkey in 1999?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2024-01-01_x#2": 2.9275902220451413,
+   "unit:b1": 2.9275902220451413,
+   "unit:b2": 3.231652520359845,
+   "unit:b3": 3.231652520359845,
+   "unit:b4": 3.347545608088216
+  },
+  "ids": [
+   "seg:2015-09-09_v#1",
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2"
+  ]
+ },
+ {
+  "name": "year_two",
+  "question": "alpha opener in 2015 or 2024",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#2": 3.9656542189349926,
+   "seg:2024-01-01_x#1": 4.066182039687666,
+   "seg:2024-02-01_y#1": 4.066182039687666,
+   "unit:a1": 4.066182039687666
+  },
+  "ids": [
+   "seg:2024-01-01_x#1",
+   "seg:2024-02-01_y#1",
+   "unit:a1",
+   "seg:2015-09-09_v#2"
+  ]
+ },
+ {
+  "name": "follow_up_killed",
+  "question": "which of those killed?",
+  "history": [
+   {
+    "q": "zebra quokka",
+    "answer": "The Bravo bit [1].",
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 4.0,
+   "seg:2023-03-01_z#1": 6.8500000000000005,
+   "seg:2023-03-01_z#4": 4.2691888975483465,
+   "seg:2024-01-01_x#2": 5.75,
+   "seg:2024-02-01_y#2": 4.0,
+   "unit:b1": 6.0
+  },
+  "ids": [
+   "seg:2023-03-01_z#1",
+   "unit:b1",
+   "seg:2024-01-01_x#2",
+   "seg:2023-03-01_z#4",
+   "seg:2015-09-09_v#1"
+  ]
+ },
+ {
+  "name": "follow_up_plain",
+  "question": "and the dishwasher line?",
+  "history": [
+   {
+    "q": "zebra quokka",
+    "answer": "The Bravo bit [1].",
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2023-03-01_z#4": 3.419188897548346,
+   "seg:2024-01-01_x#2": 1.6312372924234677,
+   "unit:b1": 7.631237292423467,
+   "unit:b2": 1.8006591454191518,
+   "unit:b3": 1.8006591454191518,
+   "unit:b4": 1.8652341413366331
+  },
+  "ids": [
+   "unit:b1",
+   "seg:2023-03-01_z#4",
+   "unit:b4",
+   "unit:b2",
+   "seg:2024-01-01_x#2"
+  ]
+ },
+ {
+  "name": "follow_up_room",
+  "question": "which of those were at the corner room?",
+  "history": [
+   {
+    "q": "zebra quokka",
+    "answer": "The Bravo bit [1].",
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [
+   "2024-01-01_x"
+  ],
+  "scores": {
+   "seg:2024-01-01_x#1": 5.5,
+   "seg:2024-01-01_x#2": 9.5,
+   "seg:2024-01-01_x#3": 5.0,
+   "seg:2024-01-01_x#4": 5.5,
+   "seg:2024-01-01_x#5": 5.0,
+   "unit:b1": 6.0
+  },
+  "ids": [
+   "seg:2024-01-01_x#2",
+   "unit:b1",
+   "seg:2024-01-01_x#1",
+   "seg:2024-01-01_x#4",
+   "seg:2024-01-01_x#3",
+   "seg:2024-01-01_x#5"
+  ]
+ },
+ {
+  "name": "carried_dupes",
+  "question": "which of those killed?",
+  "history": [
+   {
+    "q": "zebra quokka",
+    "answer": "x",
+    "cited": [
+     "unit:b1",
+     "unit:b1",
+     "unit:nope",
+     "seg:2023-03-01_z#4"
+    ]
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 4.0,
+   "seg:2023-03-01_z#1": 6.8500000000000005,
+   "seg:2023-03-01_z#4": 10.269188897548345,
+   "seg:2024-01-01_x#2": 5.75,
+   "seg:2024-02-01_y#2": 4.0,
+   "unit:b1": 12.0
+  },
+  "ids": [
+   "unit:b1",
+   "seg:2023-03-01_z#4",
+   "seg:2023-03-01_z#1",
+   "seg:2024-01-01_x#2",
+   "seg:2015-09-09_v#1"
+  ]
+ },
+ {
+  "name": "history_five_turns",
+  "question": "which of those killed?",
+  "history": [
+   {
+    "q": "gridlock bridge",
+    "cited": [
+     "unit:c1"
+    ]
+   },
+   {
+    "q": "laundromat"
+   },
+   {
+    "q": "soccer",
+    "cited": [
+     "unit:e1"
+    ]
+   },
+   {
+    "q": "",
+    "cited": null
+   },
+   {
+    "q": "zebra quokka",
+    "answer": null,
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 4.0,
+   "seg:2023-03-01_z#1": 6.8500000000000005,
+   "seg:2023-03-01_z#4": 4.2691888975483465,
+   "seg:2024-01-01_x#2": 5.75,
+   "seg:2024-02-01_y#2": 4.0,
+   "seg:2024-02-01_y#3": 4.093131090765402,
+   "seg:2024-05-05_w#1": 2.043131090765402,
+   "unit:b1": 6.0,
+   "unit:d1": 1.193131090765402,
+   "unit:e1": 1.193131090765402
+  },
+  "ids": [
+   "seg:2023-03-01_z#1",
+   "unit:b1",
+   "seg:2024-01-01_x#2",
+   "seg:2023-03-01_z#4",
+   "seg:2024-02-01_y#3",
+   "seg:2015-09-09_v#1",
+   "seg:2024-05-05_w#1",
+   "unit:d1",
+   "unit:e1"
+  ]
+ },
+ {
+  "name": "history_no_cited",
+  "question": "purple monkey",
+  "history": [
+   {
+    "q": "the laundromat place",
+    "answer": "Delta [1]."
+   }
+  ],
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2024-01-01_x#2": 2.9275902220451413,
+   "seg:2024-02-01_y#3": 2.386262181530804,
+   "unit:b1": 2.9275902220451413,
+   "unit:b2": 3.231652520359845,
+   "unit:b3": 3.231652520359845,
+   "unit:b4": 3.347545608088216,
+   "unit:d1": 2.386262181530804
+  },
+  "ids": [
+   "seg:2015-09-09_v#1",
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2",
+   "seg:2024-02-01_y#3",
+   "unit:d1"
+  ]
+ },
+ {
+  "name": "pinned_b",
+  "question": "what else do I have like this?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": "joke:b",
+  "pinned": [
+   "seg:2015-09-09_v#1",
+   "seg:2023-03-01_z#1",
+   "seg:2024-01-01_x#2",
+   "seg:2024-02-01_y#2",
+   "unit:b1",
+   "unit:b2",
+   "unit:b3",
+   "unit:b4"
+  ],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 12.0,
+   "seg:2023-03-01_z#1": 12.0,
+   "seg:2024-01-01_x#2": 12.0,
+   "seg:2024-02-01_y#2": 12.0,
+   "unit:b1": 12.0,
+   "unit:b2": 12.0,
+   "unit:b3": 12.0,
+   "unit:b4": 12.0
+  },
+  "ids": [
+   "seg:2015-09-09_v#1",
+   "seg:2023-03-01_z#1",
+   "seg:2024-01-01_x#2",
+   "seg:2024-02-01_y#2",
+   "unit:b1",
+   "unit:b2",
+   "unit:b3",
+   "unit:b4"
+  ]
+ },
+ {
+  "name": "pinned_b_cap",
+  "question": "purple monkey dishwasher dog",
+  "history": null,
+  "cap": 4,
+  "pin_joke": "joke:b",
+  "pinned": [
+   "seg:2015-09-09_v#1",
+   "seg:2023-03-01_z#1",
+   "seg:2024-01-01_x#2",
+   "seg:2024-02-01_y#2",
+   "unit:b1",
+   "unit:b2",
+   "unit:b3",
+   "unit:b4"
+  ],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 15.347545608088216,
+   "seg:2023-03-01_z#1": 12.0,
+   "seg:2024-01-01_x#2": 16.55882751446861,
+   "seg:2024-02-01_y#2": 12.0,
+   "unit:b1": 16.55882751446861,
+   "unit:b2": 17.032311665778998,
+   "unit:b3": 17.032311665778998,
+   "unit:b4": 17.212779749424847
+  },
+  "ids": [
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2"
+  ]
+ },
+ {
+  "name": "pinned_unknown",
+  "question": "purple monkey",
+  "history": null,
+  "cap": 24,
+  "pin_joke": "joke:nope",
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2024-01-01_x#2": 2.9275902220451413,
+   "unit:b1": 2.9275902220451413,
+   "unit:b2": 3.231652520359845,
+   "unit:b3": 3.231652520359845,
+   "unit:b4": 3.347545608088216
+  },
+  "ids": [
+   "seg:2015-09-09_v#1",
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2"
+  ]
+ },
+ {
+  "name": "per_joke_cap",
+  "question": "purple monkey dishwasher",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2024-01-01_x#2": 4.558827514468609,
+   "unit:b1": 4.558827514468609,
+   "unit:b2": 5.032311665778996,
+   "unit:b3": 5.032311665778996,
+   "unit:b4": 5.212779749424849
+  },
+  "ids": [
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2",
+   "seg:2015-09-09_v#1"
+  ]
+ },
+ {
+  "name": "cap_two",
+  "question": "alpha opener purple monkey niece",
+  "history": null,
+  "cap": 2,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#1": 3.347545608088216,
+   "seg:2015-09-09_v#2": 3.9656542189349926,
+   "seg:2023-03-01_z#2": 4.131686950706392,
+   "seg:2023-03-01_z#3": 1.8755555680838227,
+   "seg:2024-01-01_x#1": 4.066182039687666,
+   "seg:2024-01-01_x#2": 2.9275902220451413,
+   "seg:2024-02-01_y#1": 4.066182039687666,
+   "seg:2024-02-01_y#3": 2.25711210853038,
+   "seg:2024-05-05_w#1": 2.25711210853038,
+   "unit:a1": 4.066182039687666,
+   "unit:b1": 2.9275902220451413,
+   "unit:b2": 3.231652520359845,
+   "unit:b3": 3.231652520359845,
+   "unit:b4": 3.347545608088216,
+   "unit:d1": 2.25711210853038,
+   "unit:e1": 2.25711210853038
+  },
+  "ids": [
+   "seg:2023-03-01_z#2",
+   "seg:2024-01-01_x#1"
+  ]
+ },
+ {
+  "name": "cap_zero",
+  "question": "alpha opener",
+  "history": null,
+  "cap": 0,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2015-09-09_v#2": 3.9656542189349926,
+   "seg:2023-03-01_z#2": 4.131686950706392,
+   "seg:2023-03-01_z#3": 1.8755555680838227,
+   "seg:2024-01-01_x#1": 4.066182039687666,
+   "seg:2024-02-01_y#1": 4.066182039687666,
+   "unit:a1": 4.066182039687666
+  },
+  "ids": [
+   "seg:2023-03-01_z#2"
+  ]
+ },
+ {
+  "name": "worst_bombed",
+  "question": "what bombed worst?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {},
+  "ids": []
+ },
+ {
+  "name": "laughs_min_ten",
+  "question": "my niece, best laughs?",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "seg:2024-02-01_y#3": 5.157112108530381,
+   "seg:2024-05-05_w#1": 3.10711210853038,
+   "unit:d1": 2.25711210853038,
+   "unit:e1": 2.25711210853038
+  },
+  "ids": [
+   "seg:2024-02-01_y#3",
+   "seg:2024-05-05_w#1",
+   "unit:d1",
+   "unit:e1"
+  ]
+ },
+ {
+  "name": "long_text_hit",
+  "question": "the gridlock on the bridge",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "unit:c1": 1.1209556973073576
+  },
+  "ids": [
+   "unit:c1"
+  ]
+ },
+ {
+  "name": "note_and_idea",
+  "question": "the meter and my pronouns, the caddies",
+  "history": null,
+  "cap": 24,
+  "pin_joke": null,
+  "pinned": [],
+  "rooms": [],
+  "scores": {
+   "joke:g": 3.238218862580515,
+   "seg:2023-03-01_z#6": 3.1026933028420616,
+   "unit:h1": 5.911247271511409
+  },
+  "ids": [
+   "unit:h1",
+   "joke:g",
+   "seg:2023-03-01_z#6"
+  ]
+ }
+]

@@ -1,7 +1,9 @@
-"""Goldens for pk-creative part 1: synthetic event logs through every creative reducer (every op, every refusal), the
-verbatim gate over a corpus, and `ntok`. The Rust tests (rust/crates/pk-creative/tests/goldens.rs) replay the same
-events and compare as parsed JSON; every refusal's message must match. Synthetic data only: nothing of the comic's
-is here, no hostnames, no other project's names.
+"""Goldens for pk-creative: synthetic event logs through every creative reducer (every op, every refusal), the
+verbatim gate over a corpus, `ntok` (part 1, T3), and Ask (part 2, T4: `creative/askchat.py` over a synthetic
+notebook: the flattened sources, `tokens`, retrieve, prompt, finish, header, chip). The Rust tests
+(rust/crates/pk-creative/tests/goldens.rs, tests/ask_goldens.rs) replay the same inputs and compare as parsed JSON;
+every refusal's message must match. Synthetic data only: nothing of the comic's is here, no hostnames, no other
+project's names.
 
     PYTHONUSERBASE='C:\\Users\\<you>\\AppData\\Roaming\\Python' python rust/tools/gen_creative_goldens.py
         (from the repo root; writes rust/crates/pk-creative/tests/goldens/)
@@ -31,6 +33,9 @@ import profile_api  # noqa: E402,F401  (registers profile)
 import say_api  # noqa: E402,F401  (registers intents)
 import suggest_api  # noqa: E402,F401  (registers suggestions)
 from creative import askchat as AC  # noqa: E402
+from creative import notebook as NB  # noqa: E402
+from creative.data import Corpus, venue_short  # noqa: E402
+from creative.util import mmss  # noqa: E402
 from engine import verify as V  # noqa: E402
 from infer.scriptdiff import ntok  # noqa: E402
 
@@ -375,6 +380,310 @@ NTOK = ["Won\u2019t", "10", "20", "'Hello!'", "\u0130", "\u00dfeta", "\u2014", "
         "Caf\u00e9", "MVC2", "under_score", "a-b", "", "  spaced  ", "1,000", "\U0001F600"]
 
 
+# ============================================================== askchat (T4): a synthetic notebook
+# Ten jokes, five sets, invented words; the shapes are the real ones (units with dates, an idea typed in the app, a
+# voice note, moments with ratings and laughs, a crowd-work and a banter segment, an empty transcript, a transcript
+# with leading whitespace, a segment whose joke is unknown).
+LONG_C = ("Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, " * 13
+          + "and then the gridlock on the bridge, honestly.")
+ASK_TEXT = {
+    "unit:a1": "Alpha opener line one. The alpha punch lands here every time.",
+    "unit:b1": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+    "unit:b2": "Bravo older draft about the dog and the purple monkey. Dishwasher humming.",
+    "unit:b3": "Bravo oldest draft: a dog, a purple monkey, no dishwasher yet.",
+    "unit:b4": "Bravo scrap: purple monkey, dishwasher, dog, the lot.",
+    "unit:c1": LONG_C,
+    "unit:d1": "Delta bit about my niece and the laundromat place.",
+    "unit:e1": "Echo bit about my niece and her soccer schedule.",
+    "unit:f1": "Foxtrot never performed idea about planes and pilots up there.",
+    "unit:h1": "Hotel voice note: the meter asked for my pronouns \u2014 I don\u2019t have a card.",
+}
+ASK_DATES = {"unit:a1": "2015-06-26T10:00:00", "unit:b1": "2024-01-10", "unit:b2": "2023-05-01", "unit:b3": "2022-01-01",
+             "unit:b4": "2021-01-01", "unit:d1": "2015-03-03", "unit:e1": "2024-04-04", "unit:f1": "2016-07-07",
+             "unit:h1": "2024-08-08"}
+ASK_SETS = {  # key -> venue (the set node's), then the segments
+    "2024-01-01_x": ("The Corner Room", [
+        (1, "joke:a", 0, 60_000, "known", "killed", 7, ASK_TEXT["unit:a1"]),
+        (2, "joke:b", 70_500, 130_000, "known", "worked", 3, ASK_TEXT["unit:b1"]),
+        (3, None, 130_000, 150_000, "crowd_work", None, 0, "So who here has a car?"),
+        (4, "joke:c", 150_000, 210_000, "known", "meh", 1, "Charlie premise about cars and traffic and more traffic today."),
+        (5, None, 210_000, 215_000, "banter", None, 0, "Thanks for coming out tonight folks."),
+    ]),
+    "2024-02-01_y": ("Seaside Comedy Club", [
+        (1, "joke:a", 0, 60_000, "known", "worked", 4, ASK_TEXT["unit:a1"]),
+        (2, "joke:b", 60_000, 150_000, "known", "died", 0, "Bravo setup about the dog. Bravo closer words."),
+        (3, "joke:d", 150_000, 210_000, "new", "killed", 12, ASK_TEXT["unit:d1"]),
+    ]),
+    "2023-03-01_z": ("Mabel's (upstairs)", [
+        (1, "joke:b", 0, 40_000, "known", "killed", 9, "Bravo setup about the dog. Bravo closer words about the cat today."),
+        (2, "joke:a", 40_000, 70_000, "known", "worked", 2, "Alpha opener line one."),
+        (3, "joke:a", 71_500, 100_000, "known", "worked", 2, "The alpha punch lands here every time."),
+        (4, "joke:zz", 100_000, 120_000, "known", "meh", 1, "A line about a zebra and a quokka."),
+        (5, None, 120_000, 121_000, "known", None, 0, "   "),
+        (6, "joke:h", 121_000, 150_000, "known", "worked", 1, "  Leading space moment about the meter.  "),
+    ]),
+    "2024-05-05_w": ("Unknown", [
+        (1, "joke:e", 0, 60_000, "known", "meh", 1, ASK_TEXT["unit:e1"]),
+    ]),
+    "2015-09-09_v": ("maybe The Loft", [
+        (1, "joke:b", 5_000, 60_000, "known", "died", 0, "Bravo setup about the dog. Nobody laughed at the purple monkey."),
+        (2, "joke:a", 60_000, 90_000, "known", "died", 0, "Alpha opener line one, to silence."),
+    ]),
+}
+
+
+def ask_corpus() -> Corpus:
+    nodes, edges = [], []
+    for k in "abcdefh":
+        nodes.append({"id": f"joke:{k}", "type": "joke", "title": k.upper() + " bit (draft)", "stage": "testing",
+                      "lead_unit": f"unit:{k}1"})
+    for uid, text in ASK_TEXT.items():
+        n = {"id": uid, "type": "unit", "kind": "setup+punch", "text": text}
+        if uid in ASK_DATES:
+            n["date"] = ASK_DATES[uid]
+        if uid == "unit:h1":
+            n["source"] = "memo"  # a voice note, not a doc
+        nodes.append(n)
+        jid = f"joke:{uid[5]}"
+        edges.append({"id": f"e:p{uid[5:]}", "src": uid, "dst": jid, "kind": "part_of", "status": "inferred",
+                      "confidence": 0.9, "evidence": []})
+    for key, (venue, _) in ASK_SETS.items():
+        nodes.append({"id": f"set:{key}", "type": "set", "venue": venue})
+    # his idea typed in the app (no doc yet): the summary is the source text; the node's own `text` is what
+    # `Corpus.text_of` returns, so the gate reads a different string from the one the prompt shows
+    decisions = [{"target": "node", "action": "add", "id": "joke:g", "by": OWNER, "after": {
+        "type": "joke", "title": "Golf idea (jot)", "summary": "Golf idea about caddies and the cart that talks back.",
+        "text": "Golf idea typed: caddies and the cart that talks back.", "date": "2024-09-09T08:00:00+00:00"}}]
+    analyses = {}
+    for key, (_, segs) in ASK_SETS.items():
+        rows = []
+        for idx, joke, start, end, status, rating, laughs, text in segs:
+            rows.append({"idx": idx, "start_ms": start, "end_ms": end, "title": f"T{idx}", "status": status,
+                         "joke_id": joke, "transcript": text, "ai_rating": rating,
+                         "laughs": {"count": laughs, "laugh_s": float(laughs), "window_s": (end - start) / 1000}})
+        analyses[key] = {"set": key, "summary": {"laugh_s_per_min": 5.0, "room_heat": 1.0}, "jokes": rows}
+    return Corpus({"nodes": nodes, "edges": edges}, analyses, decisions=decisions)
+
+
+TOKENS_CASES = ["The purple monkey's dishwasher", "Mabel\u2019s and Mabel's", "boxes churches babies glasses buses ties",
+                "it's its don't I'm we're", "AI TV us US go ex", "2015 90s 100s 3 42", "\u0130stanbul Caf\u00e9 na\u00efve",
+                "'quoted' 'em ol' ''", "", "   ", "a-b c_d e.f", "hello,world!what?", "the and that", "Niece's nieces nieces' NIECE",
+                "process processes success successes", "us", "dishes wishes fixes", "kills killed killing", "a'b'c's"]
+MONTH_YEAR_CASES = ["2015-06-26", "2015", "2015-13-01", "2015-00-01", "2015-1", "", None, "2015-06", "2024-12-31T10:00:00",
+                    "abcd-ef-gh", "2015-0a-01", "2015-12"]
+MMSS_CASES = [0, 0.5, 1.5, 2.5, 59.5, 60, 70.5, 71.5, 3599.4, 3599.5, 3600, 125.49, 125.5, 126.5, 0.0005]
+SHORT_TITLE_CASES = ["A bit (v2)", "  spaced  ", "(all)", "no parens", None, "", "Two (one) (two)", " x (y"]
+SNIP_TEXT = "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp"
+SNIPPET_CASES = [  # (text, terms, n)
+    (SNIP_TEXT, ["kkk"], 40), (SNIP_TEXT, [], 40), (SNIP_TEXT, ["zzz"], 40), (SNIP_TEXT, ["aaa"], 40),
+    (SNIP_TEXT, ["ppp"], 40), (SNIP_TEXT, ["ooo", "ccc"], 20), (SNIP_TEXT, ["kkk"], 1000), (SNIP_TEXT, ["kkk"], 8),
+    ("nospaceshereatallnospaceshereatall", ["here"], 12), (SNIP_TEXT, ["mmm"], 12), (SNIP_TEXT, ["aaa"], 4),
+    ("x" * 30 + " " + "y" * 30, ["yyy"], 20), ("\u00e9\u00e9\u00e9 \u00e9\u00e9\u00e9 kkk \u00e9\u00e9\u00e9 zzz", ["kkk"], 10),
+]
+HIST_B = [{"q": "zebra quokka", "answer": "The Bravo bit [1].", "cited": ["unit:b1"]}]
+RETRIEVE_CASES = [  # name, question, history, cap, pin (a joke id for pinned(), or None)
+    ("plain", "what did I write about the purple monkey dishwasher?", None, AC.MAX_SOURCES, None),
+    ("qstop_only", "what did I write?", None, AC.MAX_SOURCES, None),
+    ("qstop_killed", "which bits killed?", None, AC.MAX_SOURCES, None),
+    ("room_corner", "what killed at The Corner Room?", None, AC.MAX_SOURCES, None),
+    ("room_ac", "how did the dog bit go in AC?", None, AC.MAX_SOURCES, None),
+    ("room_seaside_word", "the seaside night, what worked?", None, AC.MAX_SOURCES, None),
+    ("room_mabels", "anything from Mabel's?", None, AC.MAX_SOURCES, None),
+    ("room_mabels_curly", "anything from Mabel\u2019s?", None, AC.MAX_SOURCES, None),
+    ("room_loft_quiet", "which went quiet at the loft?", None, AC.MAX_SOURCES, None),
+    ("room_unknown_skipped", "what about the unknown room?", None, AC.MAX_SOURCES, None),
+    ("year_2015", "what did I write about my niece in 2015?", None, AC.MAX_SOURCES, None),
+    ("year_none_match", "purple monkey in 1999?", None, AC.MAX_SOURCES, None),
+    ("year_two", "alpha opener in 2015 or 2024", None, AC.MAX_SOURCES, None),
+    ("follow_up_killed", "which of those killed?", HIST_B, AC.MAX_SOURCES, None),
+    ("follow_up_plain", "and the dishwasher line?", HIST_B, AC.MAX_SOURCES, None),
+    ("follow_up_room", "which of those were at the corner room?", HIST_B, AC.MAX_SOURCES, None),
+    ("carried_dupes", "which of those killed?",
+     [{"q": "zebra quokka", "answer": "x", "cited": ["unit:b1", "unit:b1", "unit:nope", "seg:2023-03-01_z#4"]}],
+     AC.MAX_SOURCES, None),
+    ("history_five_turns", "which of those killed?",
+     [{"q": "gridlock bridge", "cited": ["unit:c1"]}, {"q": "laundromat"}, {"q": "soccer", "cited": ["unit:e1"]},
+      {"q": "", "cited": None}, {"q": "zebra quokka", "answer": None, "cited": ["unit:b1"]}], AC.MAX_SOURCES, None),
+    ("history_no_cited", "purple monkey", [{"q": "the laundromat place", "answer": "Delta [1]."}], AC.MAX_SOURCES, None),
+    ("pinned_b", "what else do I have like this?", None, AC.MAX_SOURCES, "joke:b"),
+    ("pinned_b_cap", "purple monkey dishwasher dog", None, 4, "joke:b"),
+    ("pinned_unknown", "purple monkey", None, AC.MAX_SOURCES, "joke:nope"),
+    ("per_joke_cap", "purple monkey dishwasher", None, AC.MAX_SOURCES, None),
+    ("cap_two", "alpha opener purple monkey niece", None, 2, None),
+    ("cap_zero", "alpha opener", None, 0, None),
+    ("worst_bombed", "what bombed worst?", None, AC.MAX_SOURCES, None),
+    ("laughs_min_ten", "my niece, best laughs?", None, AC.MAX_SOURCES, None),
+    ("long_text_hit", "the gridlock on the bridge", None, AC.MAX_SOURCES, None),
+    ("note_and_idea", "the meter and my pronouns, the caddies", None, AC.MAX_SOURCES, None),
+]
+PROMPT_CASES = [  # name, question, history, scope, named
+    ("plain", "what did I write about the purple monkey dishwasher?", None, None, False),
+    ("named_with_history", "which of those killed?", HIST_B, None, True),
+    ("scope", "what else do I have like this?", None, "joke:b", False),
+    ("long_text_hit", "the gridlock on the bridge", None, None, False),
+    ("long_text_no_hit", "the long drive home", [{"q": "drive"}, {"q": "", "answer": "skipped"}], None, True),
+    ("history_five_turns", "which of those killed?",
+     [{"q": "gridlock bridge", "cited": ["unit:c1"]}, {"q": "laundromat"}, {"q": "soccer", "cited": ["unit:e1"]},
+      {"q": "", "cited": None}, {"q": "zebra quokka", "answer": None, "cited": ["unit:b1"]}], "joke:g", False),
+]
+FIN_IDS = ["unit:b1", "seg:2024-01-01_x#2", "joke:g", "unit:h1", "unit:nope", "seg:2023-03-01_z#6"]
+FINISH_CASES = [  # name, data, provider, model
+    ("all_good", {"found": True, "answer": "You wrote about a dog and a dishwasher [S1]. On tape it worked [S2].",
+                  "citations": [{"source": "S1", "quote": "The purple monkey dishwasher line here."},
+                                {"source": "S2", "quote": "Bravo setup about the dog."}]}, "anthropic", "m-1"),
+    ("not_verbatim", {"found": True, "answer": "The dishwasher bit [S1].",
+                      "citations": [{"source": "S1", "quote": "The purple monkey washed the dishes."}]}, "anthropic", "m-1"),
+    ("typography_ok", {"found": True, "answer": "The meter line [S4] and the monkey [S1].",
+                       "citations": [{"source": "S4", "quote": "\"the meter asked for my pronouns - I don't have a card\""},
+                                     {"source": "S1", "quote": "\u201c\u2026purple monkey dishwasher line here.\u201d"}]}, None, None),
+    ("unknown_source", {"found": True, "answer": "It killed [S9] everywhere [S1] and [S5].",
+                        "citations": [{"source": "S9", "quote": "anything"}, {"source": "S5", "quote": "x" * 250},
+                                      {"source": "S1", "quote": ""}]}, "p", "m"),
+    ("malformed_markers", {"found": True, "answer": "Fine [S3a] and [S1, S2b] then [S1].",
+                           "citations": [{"source": "S1", "quote": "Bravo closer words."}]}, "p", "m"),
+    ("duplicate_citations", {"found": True, "answer": "Twice [S1] and again [S1], [s2].",
+                             "citations": [{"source": "S1", "quote": "Bravo closer words."},
+                                           {"source": "S1", "quote": "The purple monkey dishwasher line here."},
+                                           {"source": "[s2]", "quote": "Bravo closer words."}]}, "p", "m"),
+    ("prose_quote_removed", {"found": True,
+                             "answer": "You said \"the monkey ate all of my dishes\" once [S1] and \u201cthe cat did nothing at all\u201d too.",
+                             "citations": [{"source": "S1", "quote": "Bravo closer words."}]}, "p", "m"),
+    ("prose_quote_short_kept", {"found": True, "answer": "You said \"the monkey ate\" once [S1].",
+                                "citations": [{"source": "S1", "quote": ""}]}, "p", "m"),
+    ("prose_quote_in_source_kept", {"found": True,
+                                    "answer": "You wrote \"The purple monkey dishwasher line here.\" and \"Bravo setup about the dog\" [S1] [S2].",
+                                    "citations": []}, "p", "m"),
+    ("found_no_chips", {"found": True, "answer": "It killed in a room I made up.", "citations": []}, "p", "m"),
+    ("found_false", {"found": False, "answer": "", "citations": [{"source": "S1", "quote": "nope"}]}, "p", "m"),
+    ("non_dict", "nope", "p", "m"),
+    ("none_data", None, None, None),
+    ("double_spaces", {"found": True, "answer": "  Two  spaces   here [S1] and\t\ttabs\t here [ S1 ; S2 ].  ",
+                       "citations": [{"source": "s1", "quote": "Bravo closer words."}]}, "p", "m"),
+    ("combined_marker_unknown", {"found": True, "answer": "All [S2,S9;s1] of them.",
+                                 "citations": [{"source": 2, "quote": "x"}, "S1", None, {"source": "S1"}]}, "p", "m"),
+    ("citations_dict", {"found": True, "answer": "Hm [S1].", "citations": {"source": "S1", "quote": "x"}}, "p", "m"),
+    ("citations_number", {"found": True, "answer": "Hm [S1].", "citations": 5}, "p", "m"),
+    ("answer_number_found_string", {"found": "yes", "answer": 7, "citations": [{"source": "S1", "quote": ""}]}, "p", "m"),
+    ("found_zero", {"found": 0, "answer": "x [S1]", "citations": []}, "p", "m"),
+    ("gate_text_idea", {"found": True, "answer": "Typed [S3] and taped [S6].",
+                        "citations": [{"source": "S3", "quote": "Golf idea typed"},
+                                      {"source": "S6", "quote": "Leading space moment about the meter."}]}, "p", "m"),
+    ("gate_text_prose", {"found": True, "answer": "You typed \"Golf idea typed: caddies and the cart\" [S3].",
+                         "citations": []}, "p", "m"),
+    ("moment_quote", {"found": True, "answer": "At the corner room [S2].",
+                      "citations": [{"source": "S2", "quote": "Bravo closer words"}]}, "p", "m"),
+    ("uncited_but_quoted", {"found": True, "answer": "No markers at all.",
+                            "citations": [{"source": "S2", "quote": "Bravo closer words"},
+                                          {"source": "S4", "quote": "I don\u2019t have a card"}]}, "p", "m"),
+]
+OWNER_NAMES = ["Pat Example", "", "   ", "the comic", None, " Pat ", "The Comic"]
+
+
+def retrieve_with_scores(c, question, history, cap, pin):
+    """`retrieve` plus the score dict it sorted (captured from its one `sorted` call): the Rust side must sum the
+    same floats, not just land on the same order."""
+    import builtins
+    seen = []
+
+    def spy(it, *a, **k):
+        if isinstance(it, dict):
+            seen.append(dict(it))
+        return builtins.sorted(it, *a, **k)
+    AC.sorted = spy
+    try:
+        ids = AC.retrieve(c, question, history, cap, pin)
+    finally:
+        del AC.sorted
+    assert len(seen) == 1, "retrieve sorts its score dict exactly once"
+    score = seen[0]
+    vals = sorted(score.values())
+    for a, b in zip(vals, vals[1:]):  # a tie must be an exact tie (the same arithmetic), never a near one
+        assert a == b or b - a > 1e-9, f"{question!r}: scores {a!r} and {b!r} too close to sort robustly"
+    return ids, {k: score[k] for k in sorted(score)}
+
+
+def owner_env(name):
+    if name is None:
+        os.environ.pop("PK_COMIC_NAME", None)
+    else:
+        os.environ["PK_COMIC_NAME"] = name
+
+
+def main_ask() -> dict:
+    from creative import voice
+    c = ask_corpus()
+    S = AC.sources(c)
+    out_sources = {}
+    for sid, s in S.items():
+        row = dict(s)
+        gate = c.text_of(sid) or s["text"]
+        if gate != s["text"]:
+            row["gate_text"] = gate
+        out_sources[sid] = dict(sorted(row.items()))  # keys sorted per row; the rows keep the Python's order
+    notebook = {"sources": out_sources,
+                "rooms": {k: venue_short(s.get("venue"), None) for k, s in c.sets.items()},
+                "joke_titles": {jid: c.title(jid) for jid in c.jokes}}
+    (OUT / "ask_notebook.json").write_text(json.dumps(notebook, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    owners = []
+    for name in OWNER_NAMES:
+        owner_env(name)
+        owners.append({"name": name, "owner": voice.material_owner(), "system_text": AC.system_text()})
+    owner_env(None)
+    text = {"tokens": [[t, NB.tokens(t)] for t in TOKENS_CASES],
+            "month_year": [[d, NB.month_year(d)] for d in MONTH_YEAR_CASES],
+            "mmss": [[x, mmss(x)] for x in MMSS_CASES],
+            "short_title": [[t, NB.short_title(t)] for t in SHORT_TITLE_CASES],
+            "snippet": [{"text": t, "terms": sorted(terms), "n": n, "out": AC._snippet(t, set(terms), n)}
+                        for t, terms, n in SNIPPET_CASES],
+            "owners": owners, "rules": AC.RULES, "refusal": AC.REFUSAL,
+            "headers": {sid: AC.header(s) for sid, s in S.items()},
+            "chips": [AC.chip(s, i, "a quote" if i % 2 else None) for i, s in enumerate(S.values(), 1)]}
+    (OUT / "ask_text.json").write_text(json.dumps(text, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    retrieve = []
+    for name, q, hist, cap, pin_joke in RETRIEVE_CASES:
+        pin = AC.pinned(c, pin_joke)
+        ids, score = retrieve_with_scores(c, q, hist, cap, pin)
+        retrieve.append({"name": name, "question": q, "history": hist, "cap": cap, "pin_joke": pin_joke,
+                         "pinned": sorted(pin), "rooms": sorted(AC.rooms_named(c, q)), "scores": score, "ids": ids})
+    (OUT / "ask_retrieve.json").write_text(json.dumps(retrieve, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    prompts = []
+    for name, q, hist, scope_joke, named in PROMPT_CASES:
+        owner_env("Pat Example" if named else None)
+        ids = AC.retrieve(c, q, hist)
+        scope = AC.scope_line(c, scope_joke)
+        prompts.append({"name": name, "question": q, "history": hist, "ids": ids, "scope_joke": scope_joke, "scope": scope,
+                        "owner": voice.material_owner(), "messages": AC.prompt(c, q, hist, ids, scope)})
+    owner_env(None)
+    prompts.append({"name": "unknown_id", "question": "x", "history": None, "ids": ["unit:b1", "unit:nope"], "scope_joke": None,
+                    "scope": None, "owner": voice.material_owner(), "error": "'unit:nope'", "type": "KeyError"})
+    try:
+        AC.prompt(c, "x", None, ["unit:b1", "unit:nope"])
+    except KeyError as x:
+        assert str(x) == "'unit:nope'"
+    else:
+        raise AssertionError("prompt accepted an unknown id")
+    (OUT / "ask_prompt.json").write_text(json.dumps(prompts, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    finishes = []
+    for name, data, provider, model in FINISH_CASES:
+        try:
+            out = AC.finish(c, FIN_IDS, data, provider, model)
+        except Exception as x:  # noqa: BLE001  (recorded: the Rust side must fault the same way)
+            finishes.append({"name": name, "ids": FIN_IDS, "data": data, "provider": provider, "model": model,
+                             "error": str(x), "type": type(x).__name__})
+            continue
+        finishes.append({"name": name, "ids": FIN_IDS, "data": data, "provider": provider, "model": model, "out": out})
+    refusals = [{"ids": ids, "out": AC.refusal(ids)} for ids in ([], ["unit:b1", "x", "y"], None)]
+    (OUT / "ask_finish.json").write_text(json.dumps({"finish": finishes, "refusal": refusals}, ensure_ascii=False, indent=1),
+                                         encoding="utf-8")
+    return {"sources": len(S), "retrieve": len(retrieve), "prompt": len(prompts), "finish": len(finishes),
+            "finish_errors": sum(1 for f in finishes if "error" in f), "tokens": len(TOKENS_CASES),
+            "snippet": len(SNIPPET_CASES)}
+
+
 def run(apply, events: list[dict]) -> list[dict]:
     """Each event through `apply` on a copy, the way Store.append probes: a refused event changes nothing."""
     items: dict = {}
@@ -413,6 +722,8 @@ def main():
         print(f"  {name}: {n} events, {bad} refused")
     print(f"  verbatim: {len(corpus)} pairs, {len(differ)} where askchat and verify differ: {differ!r}")
     print(f"  ntok: {len(NTOK)}")
+    ask = main_ask()
+    print("  askchat: " + ", ".join(f"{k} {v}" for k, v in ask.items()))
 
 
 if __name__ == "__main__":

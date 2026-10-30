@@ -1,0 +1,1214 @@
+{
+ "finish": [
+  {
+   "name": "all_good",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "You wrote about a dog and a dishwasher [S1]. On tape it worked [S2].",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "The purple monkey dishwasher line here."
+     },
+     {
+      "source": "S2",
+      "quote": "Bravo setup about the dog."
+     }
+    ]
+   },
+   "provider": "anthropic",
+   "model": "m-1",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "anthropic",
+    "model": "m-1",
+    "retrieved": 6,
+    "answer": "You wrote about a dog and a dishwasher [1]. On tape it worked [2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "The purple monkey dishwasher line here."
+     },
+     {
+      "n": 2,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": "Bravo setup about the dog."
+     }
+    ]
+   }
+  },
+  {
+   "name": "not_verbatim",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "The dishwasher bit [S1].",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "The purple monkey washed the dishes."
+     }
+    ]
+   },
+   "provider": "anthropic",
+   "model": "m-1",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [
+     {
+      "source": "S1",
+      "quote": "The purple monkey washed the dishes.",
+      "why": "not word for word in the source"
+     }
+    ],
+    "provider": "anthropic",
+    "model": "m-1",
+    "retrieved": 6,
+    "answer": "The dishwasher bit [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "typography_ok",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "The meter line [S4] and the monkey [S1].",
+    "citations": [
+     {
+      "source": "S4",
+      "quote": "\"the meter asked for my pronouns - I don't have a card\""
+     },
+     {
+      "source": "S1",
+      "quote": "“…purple monkey dishwasher line here.”"
+     }
+    ]
+   },
+   "provider": null,
+   "model": null,
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": null,
+    "model": null,
+    "retrieved": 6,
+    "answer": "The meter line [1] and the monkey [2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "note",
+      "source": "unit:h1",
+      "label": "H bit · Aug 2024",
+      "sub": "Worked at Mabel's, Mar 2023",
+      "href": "/joke/joke:h",
+      "joke_id": "joke:h",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-08-08",
+      "venue": null,
+      "quote": "the meter asked for my pronouns — I don’t have a card"
+     },
+     {
+      "n": 2,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "purple monkey dishwasher line here."
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown_source",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "It killed [S9] everywhere [S1] and [S5].",
+    "citations": [
+     {
+      "source": "S9",
+      "quote": "anything"
+     },
+     {
+      "source": "S5",
+      "quote": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+     },
+     {
+      "source": "S1",
+      "quote": ""
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [
+     {
+      "source": "S9",
+      "quote": "anything",
+      "why": "not a retrieved source"
+     },
+     {
+      "source": "S5",
+      "quote": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "why": "not a retrieved source"
+     },
+     {
+      "source": "S9",
+      "quote": "",
+      "why": "cited in the answer but not a retrieved source"
+     },
+     {
+      "source": "S5",
+      "quote": "",
+      "why": "cited in the answer but not a retrieved source"
+     }
+    ],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "It killed everywhere [1] and .",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "malformed_markers",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "Fine [S3a] and [S1, S2b] then [S1].",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "Bravo closer words."
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "Fine and then [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "Bravo closer words."
+     }
+    ]
+   }
+  },
+  {
+   "name": "duplicate_citations",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "Twice [S1] and again [S1], [s2].",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "Bravo closer words."
+     },
+     {
+      "source": "S1",
+      "quote": "The purple monkey dishwasher line here."
+     },
+     {
+      "source": "[s2]",
+      "quote": "Bravo closer words."
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "Twice [1] and again [1], [2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "Bravo closer words."
+     },
+     {
+      "n": 2,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": "Bravo closer words."
+     }
+    ]
+   }
+  },
+  {
+   "name": "prose_quote_removed",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "You said \"the monkey ate all of my dishes\" once [S1] and “the cat did nothing at all” too.",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "Bravo closer words."
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [
+     {
+      "source": null,
+      "quote": "the monkey ate all of my dishes",
+      "why": "quoted in the answer, not word for word in any source"
+     },
+     {
+      "source": null,
+      "quote": "the cat did nothing at all",
+      "why": "quoted in the answer, not word for word in any source"
+     }
+    ],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "You said [quote removed] once [1] and [quote removed] too.",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "Bravo closer words."
+     }
+    ]
+   }
+  },
+  {
+   "name": "prose_quote_short_kept",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "You said \"the monkey ate\" once [S1].",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": ""
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "You said \"the monkey ate\" once [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "prose_quote_in_source_kept",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "You wrote \"The purple monkey dishwasher line here.\" and \"Bravo setup about the dog\" [S1] [S2].",
+    "citations": []
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "You wrote \"The purple monkey dishwasher line here.\" and \"Bravo setup about the dog\" [1] [2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     },
+     {
+      "n": 2,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "found_no_chips",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "It killed in a room I made up.",
+    "citations": []
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": false,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": []
+   }
+  },
+  {
+   "name": "found_false",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": false,
+    "answer": "",
+    "citations": [
+     {
+      "source": "S1",
+      "quote": "nope"
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": false,
+    "dropped": [
+     {
+      "source": "S1",
+      "quote": "nope",
+      "why": "not word for word in the source"
+     }
+    ],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": []
+   }
+  },
+  {
+   "name": "non_dict",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": "nope",
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": false,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": []
+   }
+  },
+  {
+   "name": "none_data",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": null,
+   "provider": null,
+   "model": null,
+   "out": {
+    "status": "done",
+    "found": false,
+    "dropped": [],
+    "provider": null,
+    "model": null,
+    "retrieved": 6,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": []
+   }
+  },
+  {
+   "name": "double_spaces",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "  Two  spaces   here [S1] and\t\ttabs\t here [ S1 ; S2 ].  ",
+    "citations": [
+     {
+      "source": "s1",
+      "quote": "Bravo closer words."
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "Two spaces here [1] and tabs here [1][2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": "Bravo closer words."
+     },
+     {
+      "n": 2,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "combined_marker_unknown",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "All [S2,S9;s1] of them.",
+    "citations": [
+     {
+      "source": 2,
+      "quote": "x"
+     },
+     "S1",
+     null,
+     {
+      "source": "S1"
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [
+     {
+      "source": "2",
+      "quote": "x",
+      "why": "not a retrieved source"
+     },
+     {
+      "source": "S9",
+      "quote": "",
+      "why": "cited in the answer but not a retrieved source"
+     }
+    ],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "All [1][2] of them.",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": null
+     },
+     {
+      "n": 2,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "citations_dict",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "Hm [S1].",
+    "citations": {
+     "source": "S1",
+     "quote": "x"
+    }
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "Hm [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "citations_number",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "Hm [S1].",
+    "citations": 5
+   },
+   "provider": "p",
+   "model": "m",
+   "error": "'int' object is not iterable",
+   "type": "TypeError"
+  },
+  {
+   "name": "answer_number_found_string",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": "yes",
+    "answer": 7,
+    "citations": [
+     {
+      "source": "S1",
+      "quote": ""
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "7",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "bit",
+      "source": "unit:b1",
+      "label": "B bit · Jan 2024",
+      "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+      "href": "/joke/joke:b",
+      "joke_id": "joke:b",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-01-10",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "found_zero",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": 0,
+    "answer": "x [S1]",
+    "citations": []
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": false,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": []
+   }
+  },
+  {
+   "name": "gate_text_idea",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "Typed [S3] and taped [S6].",
+    "citations": [
+     {
+      "source": "S3",
+      "quote": "Golf idea typed"
+     },
+     {
+      "source": "S6",
+      "quote": "Leading space moment about the meter."
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "Typed [1] and taped [2].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "idea",
+      "source": "joke:g",
+      "label": "Golf idea · Sep 2024",
+      "sub": "Your idea",
+      "href": "/joke/joke:g",
+      "joke_id": "joke:g",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-09-09",
+      "venue": null,
+      "quote": "Golf idea typed"
+     },
+     {
+      "n": 2,
+      "kind": "moment",
+      "source": "seg:2023-03-01_z#6",
+      "label": "Mabel's · Mar 2023 · 2:01",
+      "sub": "H bit · Worked · 1 laugh",
+      "href": "/set/set:2023-03-01_z?at=121000",
+      "joke_id": "joke:h",
+      "set_id": "set:2023-03-01_z",
+      "start_ms": 121000,
+      "date": "2023-03-01",
+      "venue": "Mabel's",
+      "quote": "Leading space moment about the meter."
+     }
+    ]
+   }
+  },
+  {
+   "name": "gate_text_prose",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "You typed \"Golf idea typed: caddies and the cart\" [S3].",
+    "citations": []
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "You typed \"Golf idea typed: caddies and the cart\" [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "idea",
+      "source": "joke:g",
+      "label": "Golf idea · Sep 2024",
+      "sub": "Your idea",
+      "href": "/joke/joke:g",
+      "joke_id": "joke:g",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-09-09",
+      "venue": null,
+      "quote": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "moment_quote",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "At the corner room [S2].",
+    "citations": [
+     {
+      "source": "S2",
+      "quote": "Bravo closer words"
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "At the corner room [1].",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": "Bravo closer words"
+     }
+    ]
+   }
+  },
+  {
+   "name": "uncited_but_quoted",
+   "ids": [
+    "unit:b1",
+    "seg:2024-01-01_x#2",
+    "joke:g",
+    "unit:h1",
+    "unit:nope",
+    "seg:2023-03-01_z#6"
+   ],
+   "data": {
+    "found": true,
+    "answer": "No markers at all.",
+    "citations": [
+     {
+      "source": "S2",
+      "quote": "Bravo closer words"
+     },
+     {
+      "source": "S4",
+      "quote": "I don’t have a card"
+     }
+    ]
+   },
+   "provider": "p",
+   "model": "m",
+   "out": {
+    "status": "done",
+    "found": true,
+    "dropped": [],
+    "provider": "p",
+    "model": "m",
+    "retrieved": 6,
+    "answer": "No markers at all.",
+    "chips": [
+     {
+      "n": 1,
+      "kind": "moment",
+      "source": "seg:2024-01-01_x#2",
+      "label": "The Corner Room · Jan 2024 · 1:10",
+      "sub": "B bit · Worked · 3 laughs",
+      "href": "/set/set:2024-01-01_x?at=70500",
+      "joke_id": "joke:b",
+      "set_id": "set:2024-01-01_x",
+      "start_ms": 70500,
+      "date": "2024-01-01",
+      "venue": "The Corner Room",
+      "quote": "Bravo closer words"
+     },
+     {
+      "n": 2,
+      "kind": "note",
+      "source": "unit:h1",
+      "label": "H bit · Aug 2024",
+      "sub": "Worked at Mabel's, Mar 2023",
+      "href": "/joke/joke:h",
+      "joke_id": "joke:h",
+      "set_id": null,
+      "start_ms": null,
+      "date": "2024-08-08",
+      "venue": null,
+      "quote": "I don’t have a card"
+     }
+    ]
+   }
+  }
+ ],
+ "refusal": [
+  {
+   "ids": [],
+   "out": {
+    "status": "done",
+    "found": false,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": [],
+    "dropped": [],
+    "provider": null,
+    "model": null,
+    "retrieved": 0
+   }
+  },
+  {
+   "ids": [
+    "unit:b1",
+    "x",
+    "y"
+   ],
+   "out": {
+    "status": "done",
+    "found": false,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": [],
+    "dropped": [],
+    "provider": null,
+    "model": null,
+    "retrieved": 3
+   }
+  },
+  {
+   "ids": null,
+   "out": {
+    "status": "done",
+    "found": false,
+    "answer": "I couldn't find that in your notebook.",
+    "chips": [],
+    "dropped": [],
+    "provider": null,
+    "model": null,
+    "retrieved": 0
+   }
+  }
+ ]
+}

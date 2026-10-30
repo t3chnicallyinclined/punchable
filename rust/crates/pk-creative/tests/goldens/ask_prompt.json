@@ -1,0 +1,239 @@
+[
+ {
+  "name": "plain",
+  "question": "what did I write about the purple monkey dishwasher?",
+  "history": null,
+  "ids": [
+   "unit:b4",
+   "unit:b2",
+   "unit:b3",
+   "seg:2024-01-01_x#2",
+   "seg:2015-09-09_v#1"
+  ],
+  "scope_joke": null,
+  "scope": null,
+  "owner": "a stand-up comic's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "QUESTION: what did I write about the purple monkey dishwasher?\n\nSOURCES:\n\n[S1] written bit · \"B bit\" · 2021-01-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights\nTEXT: Bravo scrap: purple monkey, dishwasher, dog, the lot.\n\n[S2] written bit · \"B bit\" · 2023-05-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights\nTEXT: Bravo older draft about the dog and the purple monkey. Dishwasher humming.\n\n[S3] written bit · \"B bit\" · 2022-01-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights\nTEXT: Bravo oldest draft: a dog, a purple monkey, no dishwasher yet.\n\n[S4] set moment · The Corner Room · 2024-01-01 · at 1:10 · bit: B bit · Worked · 3 laughs\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S5] set moment · The Loft? · 2015-09-09 · at 0:05 · bit: B bit · Went quiet\nTEXT: Bravo setup about the dog. Nobody laughed at the purple monkey.\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "named_with_history",
+  "question": "which of those killed?",
+  "history": [
+   {
+    "q": "zebra quokka",
+    "answer": "The Bravo bit [1].",
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "ids": [
+   "seg:2023-03-01_z#1",
+   "unit:b1",
+   "seg:2024-01-01_x#2",
+   "seg:2023-03-01_z#4",
+   "seg:2015-09-09_v#1"
+  ],
+  "scope_joke": null,
+  "scope": null,
+  "owner": "stand-up comic Pat Example's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer stand-up comic Pat Example's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "zebra quokka"
+   },
+   {
+    "role": "assistant",
+    "content": "The Bravo bit [1]."
+   },
+   {
+    "role": "user",
+    "content": "QUESTION: which of those killed?\n\nSOURCES:\n\n[S1] set moment · Mabel's · 2023-03-01 · at 0:00 · bit: B bit · Killed · 9 laughs\nTEXT: Bravo setup about the dog. Bravo closer words about the cat today.\n\n[S2] written bit · \"B bit\" · 2024-01-10 · on stage: Killed at Mabel's, Mar 2023 · 4 nights\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S3] set moment · The Corner Room · 2024-01-01 · at 1:10 · bit: B bit · Worked · 3 laughs\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S4] set moment · Mabel's · 2023-03-01 · at 1:40 · T4 · Got some laughs · 1 laugh\nTEXT: A line about a zebra and a quokka.\n\n[S5] set moment · The Loft? · 2015-09-09 · at 0:05 · bit: B bit · Went quiet\nTEXT: Bravo setup about the dog. Nobody laughed at the purple monkey.\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "scope",
+  "question": "what else do I have like this?",
+  "history": null,
+  "ids": [],
+  "scope_joke": "joke:b",
+  "scope": "B bit",
+  "owner": "a stand-up comic's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "THIS CONVERSATION IS ABOUT HIS BIT: B bit. 'This bit', 'it' and 'the joke' mean that one.\n\nQUESTION: what else do I have like this?\n\nSOURCES:\n\n\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "long_text_hit",
+  "question": "the gridlock on the bridge",
+  "history": null,
+  "ids": [
+   "unit:c1"
+  ],
+  "scope_joke": null,
+  "scope": null,
+  "owner": "a stand-up comic's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "QUESTION: the gridlock on the bridge\n\nSOURCES:\n\n[S1] written bit · \"C bit\" · undated · on stage: Got some laughs at The Corner Room, Jan 2024\nTEXT: [...] drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, and then the gridlock on the bridge, honestly.\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "long_text_no_hit",
+  "question": "the long drive home",
+  "history": [
+   {
+    "q": "drive"
+   },
+   {
+    "q": "",
+    "answer": "skipped"
+   }
+  ],
+  "ids": [
+   "unit:c1"
+  ],
+  "scope_joke": null,
+  "scope": null,
+  "owner": "stand-up comic Pat Example's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer stand-up comic Pat Example's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "drive"
+   },
+   {
+    "role": "assistant",
+    "content": "I couldn't find that in your notebook."
+   },
+   {
+    "role": "user",
+    "content": "QUESTION: the long drive home\n\nSOURCES:\n\n[S1] written bit · \"C bit\" · undated · on stage: Got some laughs at The Corner Room, Jan 2024\nTEXT: Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, [...]\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "history_five_turns",
+  "question": "which of those killed?",
+  "history": [
+   {
+    "q": "gridlock bridge",
+    "cited": [
+     "unit:c1"
+    ]
+   },
+   {
+    "q": "laundromat"
+   },
+   {
+    "q": "soccer",
+    "cited": [
+     "unit:e1"
+    ]
+   },
+   {
+    "q": "",
+    "cited": null
+   },
+   {
+    "q": "zebra quokka",
+    "answer": null,
+    "cited": [
+     "unit:b1"
+    ]
+   }
+  ],
+  "ids": [
+   "seg:2023-03-01_z#1",
+   "unit:b1",
+   "seg:2024-01-01_x#2",
+   "seg:2023-03-01_z#4",
+   "seg:2024-02-01_y#3",
+   "seg:2015-09-09_v#1",
+   "seg:2024-05-05_w#1",
+   "unit:d1",
+   "unit:e1"
+  ],
+  "scope_joke": "joke:g",
+  "scope": "Golf idea",
+  "owner": "a stand-up comic's",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+   },
+   {
+    "role": "user",
+    "content": "laundromat"
+   },
+   {
+    "role": "assistant",
+    "content": "I couldn't find that in your notebook."
+   },
+   {
+    "role": "user",
+    "content": "soccer"
+   },
+   {
+    "role": "assistant",
+    "content": "I couldn't find that in your notebook."
+   },
+   {
+    "role": "user",
+    "content": "zebra quokka"
+   },
+   {
+    "role": "assistant",
+    "content": "I couldn't find that in your notebook."
+   },
+   {
+    "role": "user",
+    "content": "THIS CONVERSATION IS ABOUT HIS BIT: Golf idea. 'This bit', 'it' and 'the joke' mean that one.\n\nQUESTION: which of those killed?\n\nSOURCES:\n\n[S1] set moment · Mabel's · 2023-03-01 · at 0:00 · bit: B bit · Killed · 9 laughs\nTEXT: Bravo setup about the dog. Bravo closer words about the cat today.\n\n[S2] written bit · \"B bit\" · 2024-01-10 · on stage: Killed at Mabel's, Mar 2023 · 4 nights\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S3] set moment · The Corner Room · 2024-01-01 · at 1:10 · bit: B bit · Worked · 3 laughs\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S4] set moment · Mabel's · 2023-03-01 · at 1:40 · T4 · Got some laughs · 1 laugh\nTEXT: A line about a zebra and a quokka.\n\n[S5] set moment · Seaside · 2024-02-01 · at 2:30 · bit: D bit · Killed · 12 laughs\nTEXT: Delta bit about my niece and the laundromat place.\n\n[S6] set moment · The Loft? · 2015-09-09 · at 0:05 · bit: B bit · Went quiet\nTEXT: Bravo setup about the dog. Nobody laughed at the purple monkey.\n\n[S7] set moment · Unknown room · 2024-05-05 · at 0:00 · bit: E bit · Got some laughs · 1 laugh\nTEXT: Echo bit about my niece and her soccer schedule.\n\n[S8] written bit · \"D bit\" · 2015-03-03 · on stage: Killed at Seaside, Feb 2024\nTEXT: Delta bit about my niece and the laundromat place.\n\n[S9] written bit · \"E bit\" · 2024-04-04 · on stage: Got some laughs on stage, May 2024\nTEXT: Echo bit about my niece and her soccer schedule.\n\nAnswer by the rules above."
+   }
+  ]
+ },
+ {
+  "name": "unknown_id",
+  "question": "x",
+  "history": null,
+  "ids": [
+   "unit:b1",
+   "unit:nope"
+  ],
+  "scope_joke": null,
+  "scope": null,
+  "owner": "a stand-up comic's",
+  "error": "'unit:nope'",
+  "type": "KeyError"
+ }
+]

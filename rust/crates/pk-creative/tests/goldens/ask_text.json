@@ -1,0 +1,836 @@
+{
+ "tokens": [
+  [
+   "The purple monkey's dishwasher",
+   [
+    "purple",
+    "monkey",
+    "dishwasher"
+   ]
+  ],
+  [
+   "Mabel’s and Mabel's",
+   [
+    "mabel",
+    "mabel"
+   ]
+  ],
+  [
+   "boxes churches babies glasses buses ties",
+   [
+    "box",
+    "church",
+    "baby",
+    "glass",
+    "buse",
+    "tie"
+   ]
+  ],
+  [
+   "it's its don't I'm we're",
+   [
+    "we're"
+   ]
+  ],
+  [
+   "AI TV us US go ex",
+   [
+    "ai",
+    "tv",
+    "us",
+    "us",
+    "go",
+    "ex"
+   ]
+  ],
+  [
+   "2015 90s 100s 3 42",
+   [
+    "2015",
+    "90s",
+    "100"
+   ]
+  ],
+  [
+   "İstanbul Café naïve",
+   [
+    "stanbul",
+    "caf"
+   ]
+  ],
+  [
+   "'quoted' 'em ol' ''",
+   [
+    "quoted"
+   ]
+  ],
+  [
+   "",
+   []
+  ],
+  [
+   "   ",
+   []
+  ],
+  [
+   "a-b c_d e.f",
+   []
+  ],
+  [
+   "hello,world!what?",
+   [
+    "hello",
+    "world"
+   ]
+  ],
+  [
+   "the and that",
+   []
+  ],
+  [
+   "Niece's nieces nieces' NIECE",
+   [
+    "niece",
+    "niece",
+    "niece",
+    "niece"
+   ]
+  ],
+  [
+   "process processes success successes",
+   [
+    "process",
+    "process",
+    "success",
+    "success"
+   ]
+  ],
+  [
+   "us",
+   [
+    "us"
+   ]
+  ],
+  [
+   "dishes wishes fixes",
+   [
+    "dish",
+    "wish",
+    "fix"
+   ]
+  ],
+  [
+   "kills killed killing",
+   [
+    "kill",
+    "killed",
+    "killing"
+   ]
+  ],
+  [
+   "a'b'c's",
+   [
+    "a'b'c"
+   ]
+  ]
+ ],
+ "month_year": [
+  [
+   "2015-06-26",
+   "Jun 2015"
+  ],
+  [
+   "2015",
+   "2015"
+  ],
+  [
+   "2015-13-01",
+   "2015"
+  ],
+  [
+   "2015-00-01",
+   "2015"
+  ],
+  [
+   "2015-1",
+   "2015"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   null,
+   ""
+  ],
+  [
+   "2015-06",
+   "Jun 2015"
+  ],
+  [
+   "2024-12-31T10:00:00",
+   "Dec 2024"
+  ],
+  [
+   "abcd-ef-gh",
+   "abcd"
+  ],
+  [
+   "2015-0a-01",
+   "2015"
+  ],
+  [
+   "2015-12",
+   "Dec 2015"
+  ]
+ ],
+ "mmss": [
+  [
+   0,
+   "0:00"
+  ],
+  [
+   0.5,
+   "0:00"
+  ],
+  [
+   1.5,
+   "0:02"
+  ],
+  [
+   2.5,
+   "0:02"
+  ],
+  [
+   59.5,
+   "1:00"
+  ],
+  [
+   60,
+   "1:00"
+  ],
+  [
+   70.5,
+   "1:10"
+  ],
+  [
+   71.5,
+   "1:12"
+  ],
+  [
+   3599.4,
+   "59:59"
+  ],
+  [
+   3599.5,
+   "60:00"
+  ],
+  [
+   3600,
+   "60:00"
+  ],
+  [
+   125.49,
+   "2:05"
+  ],
+  [
+   125.5,
+   "2:06"
+  ],
+  [
+   126.5,
+   "2:06"
+  ],
+  [
+   0.0005,
+   "0:00"
+  ]
+ ],
+ "short_title": [
+  [
+   "A bit (v2)",
+   "A bit"
+  ],
+  [
+   "  spaced  ",
+   "spaced"
+  ],
+  [
+   "(all)",
+   "(all)"
+  ],
+  [
+   "no parens",
+   "no parens"
+  ],
+  [
+   null,
+   ""
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "Two (one) (two)",
+   "Two"
+  ],
+  [
+   " x (y",
+   "x"
+  ]
+ ],
+ "snippet": [
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "kkk"
+   ],
+   "n": 40,
+   "out": "[...] iii jjj KKK lll mmm nnn ooo ppp"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [],
+   "n": 40,
+   "out": "aaa bbb ccc ddd eee fff ggg hhh iii jjj [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "zzz"
+   ],
+   "n": 40,
+   "out": "aaa bbb ccc ddd eee fff ggg hhh iii jjj [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "aaa"
+   ],
+   "n": 40,
+   "out": "aaa bbb ccc ddd eee fff ggg hhh iii jjj [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "ppp"
+   ],
+   "n": 40,
+   "out": "[...] nnn ooo ppp"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "ccc",
+    "ooo"
+   ],
+   "n": 20,
+   "out": "[...] bbb ccc ddd eee fff [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "kkk"
+   ],
+   "n": 1000,
+   "out": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "kkk"
+   ],
+   "n": 8,
+   "out": "[...] KKK lll [...]"
+  },
+  {
+   "text": "nospaceshereatallnospaceshereatall",
+   "terms": [
+    "here"
+   ],
+   "n": 12,
+   "out": "[...] ceshereatall [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "mmm"
+   ],
+   "n": 12,
+   "out": "[...] mmm nnn ooo [...]"
+  },
+  {
+   "text": "aaa bbb ccc ddd eee fff ggg hhh iii jjj KKK lll mmm nnn ooo ppp",
+   "terms": [
+    "aaa"
+   ],
+   "n": 4,
+   "out": "aaa [...]"
+  },
+  {
+   "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+   "terms": [
+    "yyy"
+   ],
+   "n": 20,
+   "out": "[...] yyyyyyyyyyyyyyyyyyyy [...]"
+  },
+  {
+   "text": "ééé ééé kkk ééé zzz",
+   "terms": [
+    "kkk"
+   ],
+   "n": 10,
+   "out": "[...] kkk ééé [...]"
+  }
+ ],
+ "owners": [
+  {
+   "name": "Pat Example",
+   "owner": "stand-up comic Pat Example's",
+   "system_text": "You answer stand-up comic Pat Example's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": "",
+   "owner": "a stand-up comic's",
+   "system_text": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": "   ",
+   "owner": "a stand-up comic's",
+   "system_text": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": "the comic",
+   "owner": "a stand-up comic's",
+   "system_text": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": null,
+   "owner": "a stand-up comic's",
+   "system_text": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": " Pat ",
+   "owner": "stand-up comic Pat's",
+   "system_text": "You answer stand-up comic Pat's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  },
+  {
+   "name": "The Comic",
+   "owner": "stand-up comic The Comic's",
+   "system_text": "You answer stand-up comic The Comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh."
+  }
+ ],
+ "rules": "Rules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty.",
+ "refusal": "I couldn't find that in your notebook.",
+ "headers": {
+  "unit:a1": "written bit · \"A bit\" · 2015-06-26 · on stage: Killed at The Corner Room, Jan 2024 · 4 nights",
+  "unit:b1": "written bit · \"B bit\" · 2024-01-10 · on stage: Killed at Mabel's, Mar 2023 · 4 nights",
+  "unit:b2": "written bit · \"B bit\" · 2023-05-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights",
+  "unit:b3": "written bit · \"B bit\" · 2022-01-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights",
+  "unit:b4": "written bit · \"B bit\" · 2021-01-01 · on stage: Killed at Mabel's, Mar 2023 · 4 nights",
+  "unit:c1": "written bit · \"C bit\" · undated · on stage: Got some laughs at The Corner Room, Jan 2024",
+  "unit:d1": "written bit · \"D bit\" · 2015-03-03 · on stage: Killed at Seaside, Feb 2024",
+  "unit:e1": "written bit · \"E bit\" · 2024-04-04 · on stage: Got some laughs on stage, May 2024",
+  "unit:f1": "written bit · \"F bit\" · 2016-07-07 · not on tape",
+  "unit:h1": "voice note · \"H bit\" · 2024-08-08 · on stage: Worked at Mabel's, Mar 2023",
+  "joke:g": "his idea (typed in the app) · \"Golf idea\" · 2024-09-09 · not on tape",
+  "seg:2015-09-09_v#1": "set moment · The Loft? · 2015-09-09 · at 0:05 · bit: B bit · Went quiet",
+  "seg:2015-09-09_v#2": "set moment · The Loft? · 2015-09-09 · at 1:00 · bit: A bit · Went quiet",
+  "seg:2023-03-01_z#1": "set moment · Mabel's · 2023-03-01 · at 0:00 · bit: B bit · Killed · 9 laughs",
+  "seg:2023-03-01_z#2": "set moment · Mabel's · 2023-03-01 · at 0:40 · bit: A bit · Worked · 2 laughs",
+  "seg:2023-03-01_z#3": "set moment · Mabel's · 2023-03-01 · at 1:12 · bit: A bit · Worked · 2 laughs",
+  "seg:2023-03-01_z#4": "set moment · Mabel's · 2023-03-01 · at 1:40 · T4 · Got some laughs · 1 laugh",
+  "seg:2023-03-01_z#6": "set moment · Mabel's · 2023-03-01 · at 2:01 · bit: H bit · Worked · 1 laugh",
+  "seg:2024-01-01_x#1": "set moment · The Corner Room · 2024-01-01 · at 0:00 · bit: A bit · Killed · 7 laughs",
+  "seg:2024-01-01_x#2": "set moment · The Corner Room · 2024-01-01 · at 1:10 · bit: B bit · Worked · 3 laughs",
+  "seg:2024-01-01_x#3": "set moment · The Corner Room · 2024-01-01 · at 2:10 · T3 · Crowd work",
+  "seg:2024-01-01_x#4": "set moment · The Corner Room · 2024-01-01 · at 2:30 · bit: C bit · Got some laughs · 1 laugh",
+  "seg:2024-01-01_x#5": "set moment · The Corner Room · 2024-01-01 · at 3:30 · T5 · Talking to the room",
+  "seg:2024-02-01_y#1": "set moment · Seaside · 2024-02-01 · at 0:00 · bit: A bit · Worked · 4 laughs",
+  "seg:2024-02-01_y#2": "set moment · Seaside · 2024-02-01 · at 1:00 · bit: B bit · Went quiet",
+  "seg:2024-02-01_y#3": "set moment · Seaside · 2024-02-01 · at 2:30 · bit: D bit · Killed · 12 laughs",
+  "seg:2024-05-05_w#1": "set moment · Unknown room · 2024-05-05 · at 0:00 · bit: E bit · Got some laughs · 1 laugh"
+ },
+ "chips": [
+  {
+   "n": 1,
+   "kind": "bit",
+   "source": "unit:a1",
+   "label": "A bit · Jun 2015",
+   "sub": "Killed at The Corner Room, Jan 2024 · 4 nights",
+   "href": "/joke/joke:a",
+   "joke_id": "joke:a",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2015-06-26",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 2,
+   "kind": "bit",
+   "source": "unit:b1",
+   "label": "B bit · Jan 2024",
+   "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+   "href": "/joke/joke:b",
+   "joke_id": "joke:b",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2024-01-10",
+   "venue": null,
+   "quote": null
+  },
+  {
+   "n": 3,
+   "kind": "bit",
+   "source": "unit:b2",
+   "label": "B bit · May 2023",
+   "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+   "href": "/joke/joke:b",
+   "joke_id": "joke:b",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2023-05-01",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 4,
+   "kind": "bit",
+   "source": "unit:b3",
+   "label": "B bit · Jan 2022",
+   "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+   "href": "/joke/joke:b",
+   "joke_id": "joke:b",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2022-01-01",
+   "venue": null,
+   "quote": null
+  },
+  {
+   "n": 5,
+   "kind": "bit",
+   "source": "unit:b4",
+   "label": "B bit · Jan 2021",
+   "sub": "Killed at Mabel's, Mar 2023 · 4 nights",
+   "href": "/joke/joke:b",
+   "joke_id": "joke:b",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2021-01-01",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 6,
+   "kind": "bit",
+   "source": "unit:c1",
+   "label": "C bit",
+   "sub": "Got some laughs at The Corner Room, Jan 2024",
+   "href": "/joke/joke:c",
+   "joke_id": "joke:c",
+   "set_id": null,
+   "start_ms": null,
+   "date": null,
+   "venue": null,
+   "quote": null
+  },
+  {
+   "n": 7,
+   "kind": "bit",
+   "source": "unit:d1",
+   "label": "D bit · Mar 2015",
+   "sub": "Killed at Seaside, Feb 2024",
+   "href": "/joke/joke:d",
+   "joke_id": "joke:d",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2015-03-03",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 8,
+   "kind": "bit",
+   "source": "unit:e1",
+   "label": "E bit · Apr 2024",
+   "sub": "Got some laughs on stage, May 2024",
+   "href": "/joke/joke:e",
+   "joke_id": "joke:e",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2024-04-04",
+   "venue": null,
+   "quote": null
+  },
+  {
+   "n": 9,
+   "kind": "bit",
+   "source": "unit:f1",
+   "label": "F bit · Jul 2016",
+   "sub": "Written",
+   "href": "/joke/joke:f",
+   "joke_id": "joke:f",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2016-07-07",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 10,
+   "kind": "note",
+   "source": "unit:h1",
+   "label": "H bit · Aug 2024",
+   "sub": "Worked at Mabel's, Mar 2023",
+   "href": "/joke/joke:h",
+   "joke_id": "joke:h",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2024-08-08",
+   "venue": null,
+   "quote": null
+  },
+  {
+   "n": 11,
+   "kind": "idea",
+   "source": "joke:g",
+   "label": "Golf idea · Sep 2024",
+   "sub": "Your idea",
+   "href": "/joke/joke:g",
+   "joke_id": "joke:g",
+   "set_id": null,
+   "start_ms": null,
+   "date": "2024-09-09",
+   "venue": null,
+   "quote": "a quote"
+  },
+  {
+   "n": 12,
+   "kind": "moment",
+   "source": "seg:2015-09-09_v#1",
+   "label": "The Loft? · Sep 2015 · 0:05",
+   "sub": "B bit · Went quiet",
+   "href": "/set/set:2015-09-09_v?at=5000",
+   "joke_id": "joke:b",
+   "set_id": "set:2015-09-09_v",
+   "start_ms": 5000,
+   "date": "2015-09-09",
+   "venue": "The Loft?",
+   "quote": null
+  },
+  {
+   "n": 13,
+   "kind": "moment",
+   "source": "seg:2015-09-09_v#2",
+   "label": "The Loft? · Sep 2015 · 1:00",
+   "sub": "A bit · Went quiet",
+   "href": "/set/set:2015-09-09_v?at=60000",
+   "joke_id": "joke:a",
+   "set_id": "set:2015-09-09_v",
+   "start_ms": 60000,
+   "date": "2015-09-09",
+   "venue": "The Loft?",
+   "quote": "a quote"
+  },
+  {
+   "n": 14,
+   "kind": "moment",
+   "source": "seg:2023-03-01_z#1",
+   "label": "Mabel's · Mar 2023 · 0:00",
+   "sub": "B bit · Killed · 9 laughs",
+   "href": "/set/set:2023-03-01_z?at=0",
+   "joke_id": "joke:b",
+   "set_id": "set:2023-03-01_z",
+   "start_ms": 0,
+   "date": "2023-03-01",
+   "venue": "Mabel's",
+   "quote": null
+  },
+  {
+   "n": 15,
+   "kind": "moment",
+   "source": "seg:2023-03-01_z#2",
+   "label": "Mabel's · Mar 2023 · 0:40",
+   "sub": "A bit · Worked · 2 laughs",
+   "href": "/set/set:2023-03-01_z?at=40000",
+   "joke_id": "joke:a",
+   "set_id": "set:2023-03-01_z",
+   "start_ms": 40000,
+   "date": "2023-03-01",
+   "venue": "Mabel's",
+   "quote": "a quote"
+  },
+  {
+   "n": 16,
+   "kind": "moment",
+   "source": "seg:2023-03-01_z#3",
+   "label": "Mabel's · Mar 2023 · 1:12",
+   "sub": "A bit · Worked · 2 laughs",
+   "href": "/set/set:2023-03-01_z?at=71500",
+   "joke_id": "joke:a",
+   "set_id": "set:2023-03-01_z",
+   "start_ms": 71500,
+   "date": "2023-03-01",
+   "venue": "Mabel's",
+   "quote": null
+  },
+  {
+   "n": 17,
+   "kind": "moment",
+   "source": "seg:2023-03-01_z#4",
+   "label": "Mabel's · Mar 2023 · 1:40",
+   "sub": "T4 · Got some laughs · 1 laugh",
+   "href": "/set/set:2023-03-01_z?at=100000",
+   "joke_id": null,
+   "set_id": "set:2023-03-01_z",
+   "start_ms": 100000,
+   "date": "2023-03-01",
+   "venue": "Mabel's",
+   "quote": "a quote"
+  },
+  {
+   "n": 18,
+   "kind": "moment",
+   "source": "seg:2023-03-01_z#6",
+   "label": "Mabel's · Mar 2023 · 2:01",
+   "sub": "H bit · Worked · 1 laugh",
+   "href": "/set/set:2023-03-01_z?at=121000",
+   "joke_id": "joke:h",
+   "set_id": "set:2023-03-01_z",
+   "start_ms": 121000,
+   "date": "2023-03-01",
+   "venue": "Mabel's",
+   "quote": null
+  },
+  {
+   "n": 19,
+   "kind": "moment",
+   "source": "seg:2024-01-01_x#1",
+   "label": "The Corner Room · Jan 2024 · 0:00",
+   "sub": "A bit · Killed · 7 laughs",
+   "href": "/set/set:2024-01-01_x?at=0",
+   "joke_id": "joke:a",
+   "set_id": "set:2024-01-01_x",
+   "start_ms": 0,
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "quote": "a quote"
+  },
+  {
+   "n": 20,
+   "kind": "moment",
+   "source": "seg:2024-01-01_x#2",
+   "label": "The Corner Room · Jan 2024 · 1:10",
+   "sub": "B bit · Worked · 3 laughs",
+   "href": "/set/set:2024-01-01_x?at=70500",
+   "joke_id": "joke:b",
+   "set_id": "set:2024-01-01_x",
+   "start_ms": 70500,
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "quote": null
+  },
+  {
+   "n": 21,
+   "kind": "moment",
+   "source": "seg:2024-01-01_x#3",
+   "label": "The Corner Room · Jan 2024 · 2:10",
+   "sub": "T3 · Crowd work",
+   "href": "/set/set:2024-01-01_x?at=130000",
+   "joke_id": null,
+   "set_id": "set:2024-01-01_x",
+   "start_ms": 130000,
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "quote": "a quote"
+  },
+  {
+   "n": 22,
+   "kind": "moment",
+   "source": "seg:2024-01-01_x#4",
+   "label": "The Corner Room · Jan 2024 · 2:30",
+   "sub": "C bit · Got some laughs · 1 laugh",
+   "href": "/set/set:2024-01-01_x?at=150000",
+   "joke_id": "joke:c",
+   "set_id": "set:2024-01-01_x",
+   "start_ms": 150000,
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "quote": null
+  },
+  {
+   "n": 23,
+   "kind": "moment",
+   "source": "seg:2024-01-01_x#5",
+   "label": "The Corner Room · Jan 2024 · 3:30",
+   "sub": "T5 · Talking to the room",
+   "href": "/set/set:2024-01-01_x?at=210000",
+   "joke_id": null,
+   "set_id": "set:2024-01-01_x",
+   "start_ms": 210000,
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "quote": "a quote"
+  },
+  {
+   "n": 24,
+   "kind": "moment",
+   "source": "seg:2024-02-01_y#1",
+   "label": "Seaside · Feb 2024 · 0:00",
+   "sub": "A bit · Worked · 4 laughs",
+   "href": "/set/set:2024-02-01_y?at=0",
+   "joke_id": "joke:a",
+   "set_id": "set:2024-02-01_y",
+   "start_ms": 0,
+   "date": "2024-02-01",
+   "venue": "Seaside",
+   "quote": null
+  },
+  {
+   "n": 25,
+   "kind": "moment",
+   "source": "seg:2024-02-01_y#2",
+   "label": "Seaside · Feb 2024 · 1:00",
+   "sub": "B bit · Went quiet",
+   "href": "/set/set:2024-02-01_y?at=60000",
+   "joke_id": "joke:b",
+   "set_id": "set:2024-02-01_y",
+   "start_ms": 60000,
+   "date": "2024-02-01",
+   "venue": "Seaside",
+   "quote": "a quote"
+  },
+  {
+   "n": 26,
+   "kind": "moment",
+   "source": "seg:2024-02-01_y#3",
+   "label": "Seaside · Feb 2024 · 2:30",
+   "sub": "D bit · Killed · 12 laughs",
+   "href": "/set/set:2024-02-01_y?at=150000",
+   "joke_id": "joke:d",
+   "set_id": "set:2024-02-01_y",
+   "start_ms": 150000,
+   "date": "2024-02-01",
+   "venue": "Seaside",
+   "quote": null
+  },
+  {
+   "n": 27,
+   "kind": "moment",
+   "source": "seg:2024-05-05_w#1",
+   "label": "Unknown room · May 2024 · 0:00",
+   "sub": "E bit · Got some laughs · 1 laugh",
+   "href": "/set/set:2024-05-05_w?at=0",
+   "joke_id": "joke:e",
+   "set_id": "set:2024-05-05_w",
+   "start_ms": 0,
+   "date": "2024-05-05",
+   "venue": "Unknown room",
+   "quote": "a quote"
+  }
+ ]
+}

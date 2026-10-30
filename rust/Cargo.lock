@@ -3320,6 +3320,7 @@ dependencies = [
 name = "pk-creative"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "pk-kb",
  "proptest",
  "regex",

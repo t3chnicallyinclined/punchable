@@ -3,62 +3,11 @@
 //! what it saw; these tests replay the same events through pk-creative and compare as parsed JSON. Every refusal's
 //! message must match, and a refusal (`ValueError`) must be a `Refused`, a malformed event a `Faulted`.
 
-use std::path::PathBuf;
+mod common;
 
+use common::{golden, same};
 use pk_creative::{CreativeError, Event, Store, for_store, ntok, parse_lines, verbatim};
 use serde_json::{Value, json};
-
-fn golden(name: &str) -> Value {
-    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/goldens")
-        .join(name);
-    serde_json::from_str(
-        &std::fs::read_to_string(&p)
-            .unwrap_or_else(|e| panic!("{}: {e} (run python rust/tools/gen_creative_goldens.py)", p.display())),
-    )
-    .expect("golden is JSON")
-}
-
-/// A readable diff on failure: the first path where two JSON values differ.
-fn first_diff(rust: &Value, python: &Value, path: &str) -> Option<String> {
-    match (rust, python) {
-        (Value::Object(ro), Value::Object(po)) => {
-            for key in ro.keys().chain(po.keys().filter(|k| !ro.contains_key(*k))) {
-                match (ro.get(key), po.get(key)) {
-                    (Some(rv), Some(pv)) => {
-                        if let Some(d) = first_diff(rv, pv, &format!("{path}.{key}")) {
-                            return Some(d);
-                        }
-                    }
-                    (Some(rv), None) => return Some(format!("{path}.{key}: rust has {rv}, python has nothing")),
-                    (None, Some(pv)) => return Some(format!("{path}.{key}: rust has nothing, python has {pv}")),
-                    (None, None) => {}
-                }
-            }
-            None
-        }
-        (Value::Array(ra), Value::Array(pa)) => {
-            if ra.len() != pa.len() {
-                return Some(format!("{path}: rust has {} items, python has {}", ra.len(), pa.len()));
-            }
-            ra.iter()
-                .zip(pa)
-                .enumerate()
-                .find_map(|(i, (rv, pv))| first_diff(rv, pv, &format!("{path}[{i}]")))
-        }
-        (Value::Number(rn), Value::Number(pn)) => {
-            let (fr, fp) = (rn.as_f64().unwrap_or(f64::NAN), pn.as_f64().unwrap_or(f64::NAN));
-            ((fr - fp).abs() > 1e-9).then(|| format!("{path}: rust {rn}, python {pn}"))
-        }
-        _ => (rust != python).then(|| format!("{path}: rust {rust}, python {python}")),
-    }
-}
-
-fn same(what: &str, rust: &Value, python: &Value) {
-    if let Some(d) = first_diff(rust, python, what) {
-        panic!("{what} differs from the Python golden at {d}");
-    }
-}
 
 const STORES: [&str; 10] = [
     "jobs",
