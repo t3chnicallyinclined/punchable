@@ -25,6 +25,9 @@
    "url": "https://drive.google.com/file/d/memo0001/view",
    "name": "mabels-march.m4a"
   },
+  "venue_short": "Mabel's (upstairs)",
+  "venue_guessed": false,
+  "when_label": "Mar 2024",
   "duration_s": 120,
   "performances": 3,
   "rateable": 2,
@@ -51,29 +54,35 @@
    {
     "perf": "perf:2024-03-01_z@0",
     "title": "Bravo bit (the dog one)",
+    "short_name": "Bravo bit",
     "joke": "joke:b",
     "kind": "bit",
     "rating": "worked",
     "rating_by": "ai",
-    "start_ms": 0
+    "start_ms": 0,
+    "at_label": "0:00"
    },
    {
     "perf": "perf:2024-03-01_z@40000",
     "title": "Alpha bit",
+    "short_name": "Alpha bit",
     "joke": "joke:a",
     "kind": "bit",
     "rating": "worked",
     "rating_by": "ai",
-    "start_ms": 40000
+    "start_ms": 40000,
+    "at_label": "0:40"
    },
    {
     "perf": "perf:2024-03-01_z@70000",
     "title": "T3",
+    "short_name": "T3",
     "joke": null,
     "kind": "banter",
     "rating": "died",
     "rating_by": "ai",
-    "start_ms": 70000
+    "start_ms": 70000,
+    "at_label": "1:10"
    }
   ],
   "moments": 3,
@@ -126,6 +135,7 @@
     "title": "Alpha bit",
     "stage": "working",
     "summary": "A bit about a.",
+    "short_name": "Alpha bit",
     "sets": 3,
     "hit_sets": 0,
     "ai_hit_sets": 3,
@@ -137,6 +147,7 @@
     "title": "Delta bit",
     "stage": "to_try",
     "summary": "A bit about d.",
+    "short_name": "Delta bit",
     "sets": 0,
     "hit_sets": 0,
     "ai_hit_sets": 0,

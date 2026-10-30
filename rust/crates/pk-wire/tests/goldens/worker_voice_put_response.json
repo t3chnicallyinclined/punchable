@@ -4,6 +4,7 @@
  "updated_at": "2026-10-29T12:00:00+00:00",
  "by": "import:profile",
  "chars": 75,
+ "by_kind": "import",
  "learned": {
   "kept": [
    {

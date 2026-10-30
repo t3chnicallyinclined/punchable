@@ -4,6 +4,7 @@
  "updated_at": "2026-10-29T12:00:00+00:00",
  "by": "import:profile",
  "chars": 26,
+ "by_kind": "import",
  "learned": {
   "kept": [
    {
@@ -19,6 +20,7 @@
  "previous": {
   "text": "# Voice\n\nShort sentences. Sits on the punch word. Never explains the joke.\n",
   "updated_at": "2026-10-29T12:00:00+00:00",
-  "by": "import:profile"
+  "by": "import:profile",
+  "by_kind": "import"
  }
 }

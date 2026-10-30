@@ -15,6 +15,8 @@ pub struct VoiceProfile {
     pub updated_at: Option<String>,
     /// The owner id, or `import:profile` for the loader.
     pub by: Option<String>,
+    /// `owner`, `import` or `ai` from `by`; `null` when `by` is (T16).
+    pub by_kind: Option<String>,
     /// `text`'s length (0 when `null`).
     pub chars: u64,
     /// What he kept and dismissed of the app's drafts.
@@ -36,6 +38,8 @@ pub struct VoiceProfileApp {
     pub updated_at: Option<String>,
     /// Who wrote it.
     pub by: Option<String>,
+    /// `owner`, `import` or `ai` from `by`; `null` when `by` is (T16).
+    pub by_kind: Option<String>,
     /// `text`'s length.
     pub chars: u64,
     /// What he kept and dismissed of the app's drafts.
@@ -54,6 +58,8 @@ pub struct VoicePrevious {
     pub updated_at: Option<String>,
     /// Who wrote it.
     pub by: Option<String>,
+    /// `owner`, `import` or `ai` from `by`; `null` when `by` is (T16).
+    pub by_kind: Option<String>,
 }
 
 /// The learned block (`creative/learned.py`): the lines he kept and dismissed, newest first, 25 each.

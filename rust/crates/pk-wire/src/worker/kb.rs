@@ -276,6 +276,12 @@ pub struct AiRating {
     pub date: Option<String>,
     /// The set's title.
     pub title: Option<String>,
+    /// `month_year` of the set's date (T16).
+    pub when_label: String,
+    /// The room name the Sets list shows, no year (T16).
+    pub venue_short: String,
+    /// The room name is a guess (T16).
+    pub venue_guessed: bool,
     /// The performance id.
     pub perf: String,
     /// The effective rating: his, else the AI's.

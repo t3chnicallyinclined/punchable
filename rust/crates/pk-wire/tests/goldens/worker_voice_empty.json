@@ -4,6 +4,7 @@
  "updated_at": null,
  "by": null,
  "chars": 0,
+ "by_kind": null,
  "learned": {
   "kept": [
    {

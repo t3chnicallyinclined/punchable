@@ -299,6 +299,8 @@ pub struct BriefJoke {
     pub id: String,
     /// The title (the id when none).
     pub title: String,
+    /// What he writes on a paper set list (T16).
+    pub short_name: String,
     /// The stage.
     pub stage: Option<String>,
     /// The summary (`""` when none).
@@ -396,6 +398,12 @@ pub struct SetCard {
     pub source: String,
     /// Where the recording lives; `null` for a tape only on his PC.
     pub reference: Option<Reference>,
+    /// The room name the Sets list shows, no year (T16: `creative/data.py` `venue_label`; "Unknown venue" when none).
+    pub venue_short: String,
+    /// The room name is a guess (`unknown`, `maybe`, `likely`, `(show)`).
+    pub venue_guessed: bool,
+    /// `month_year` of `show_date`, else of `date` ("Jun 2015"; `""` without a date).
+    pub when_label: String,
     /// The set's length.
     pub duration_s: Option<f64>,
     /// Performance nodes.
@@ -498,6 +506,8 @@ pub struct SetJoke {
     pub perf: String,
     /// The joke's title, the performance's name, or "New material".
     pub title: Option<String>,
+    /// What he writes on a paper set list (T16).
+    pub short_name: String,
     /// The matched joke, if the match is live.
     pub joke: Option<String>,
     /// `bit`, `crowd_work` or `banter`.
@@ -508,6 +518,8 @@ pub struct SetJoke {
     pub rating_by: Option<String>,
     /// Start.
     pub start_ms: Option<i64>,
+    /// `mmss(start_ms)` ("3:07"); `null` without a start (T16).
+    pub at_label: Option<String>,
 }
 
 /// Every write's receipt: the line numbers appended and the lines (`POST /api/decision`, `/api/undo`,
