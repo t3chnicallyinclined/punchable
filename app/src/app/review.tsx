@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Step, decide, get, post, undo, useApi } from '@/lib/api';
-import { C, F, RATING, fmtDate, fmtMs, stageInfo } from '@/lib/theme';
+import { C, F, RATING, stageInfo } from '@/lib/theme';
+import { clockMs, fmtDate } from '@/rules/format';
 import { BAR_WORDS, Badge, Btn, Card, ErrorCard, LaughBars, List, ListRow, Sheet, T, TextBtn, s, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
@@ -220,7 +221,7 @@ function Run({ setId }: { setId: string }) {
       ) : (
         <Card testID="review-card" style={{ gap: 12 }}>
           <View style={[s.row, { gap: 8, flexWrap: 'wrap' }]}>
-            <Badge label={fmtMs(cur.perf?.start_ms ?? cur.punch.start_ms)} bordered />
+            <Badge label={clockMs(cur.perf?.start_ms ?? cur.punch.start_ms)} bordered />
             <Badge label={kindBadge.label} fg={kindBadge.fg} bg={kindBadge.bg} />
             {cur.rating && <Badge label={`rated ${RATING[cur.rating].label}`} fg={RATING[cur.rating].fg} bordered />}
           </View>
@@ -246,7 +247,7 @@ function Run({ setId }: { setId: string }) {
           </View>
           <LaughStrip step={cur} />
           <HearIt testID="hear-it" audio={data.audio?.opus || null} play={cur.play} k={cur.key} reference={data.set?.reference}
-            sub={`${fmtMs(cur.play.start_ms)}–${fmtMs(cur.play.end_ms)} · the punch and the laugh`} />
+            sub={`${clockMs(cur.play.start_ms)}–${clockMs(cur.play.end_ms)} · the punch and the laugh`} />
           {cur.kind === 'joke' && cur.match && cur.match.bucket === 'proposed' && (
             <View style={[s.row, { flexWrap: 'wrap' }]}>
               <T v="small" style={{ flex: 1, minWidth: 180 }}>Matched automatically: {cur.match.reason}</T>
@@ -263,13 +264,13 @@ function Run({ setId }: { setId: string }) {
           <T v="h2">What you said</T>
           <TextBtn label="Done" onPress={() => setSpan(false)} />
         </View>
-        <T v="mut" style={{ marginBottom: 8 }}>{fmtMs(cur?.perf?.start_ms ?? cur?.punch.start_ms)}–{fmtMs(cur?.perf?.end_ms ?? cur?.punch.end_ms)} · punch highlighted · laughs in amber</T>
+        <T v="mut" style={{ marginBottom: 8 }}>{clockMs(cur?.perf?.start_ms ?? cur?.punch.start_ms)}–{clockMs(cur?.perf?.end_ms ?? cur?.punch.end_ms)} · punch highlighted · laughs in amber</T>
         <View style={{ gap: 6 }}>
           {(cur?.punch.segments || []).map((g, k) => {
             const l = cur.laughs.find((x) => x.start_ms >= g.end_ms - 300 && x.start_ms <= g.end_ms + 1500);
             return (
               <Text key={k} style={{ fontFamily: F.body, fontSize: 16, lineHeight: 24, color: C.text }}>
-                <Text style={{ color: C.dim, fontFamily: F.g6, fontSize: 13 }}>{fmtMs(g.start_ms)}  </Text>
+                <Text style={{ color: C.dim, fontFamily: F.g6, fontSize: 13 }}>{clockMs(g.start_ms)}  </Text>
                 {g.punch ? <Text style={s.rv}>{g.text}</Text> : g.text}
                 {l ? <Text style={{ color: C.amber, fontFamily: F.g7 }}>{`  ${'▮'.repeat(l.bars)}`}</Text> : null}
               </Text>

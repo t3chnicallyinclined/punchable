@@ -1,5 +1,5 @@
 // Bits › Map › the cloud on the web: every bit placed by what it SAYS (GET /api/map/cloud), drawn as SVG paths, one
-// per cluster × depth band (lib/cloudMath), re-projected every ~33 ms while turning. The phone draws the same cloud
+// per cluster × depth band (rules/cloudMath), re-projected every ~33 ms while turning. The phone draws the same cloud
 // with Skia on the GPU (lib/Cloud.native). The chrome (states, card, chips) is lib/CloudChrome.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
@@ -11,7 +11,7 @@ import { haptics } from './haptics';
 import { PanZoom } from './PanZoom';
 import type { View_ } from './PanZoom';
 import { slotColor } from './Galaxy';
-import * as M from './cloudMath';
+import * as M from '@/rules/cloudMath';
 import { C, F } from './theme';
 import { useReduceMotion } from './ui';
 

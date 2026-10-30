@@ -16,7 +16,7 @@ import { AddJokeSheet, Pick } from '@/lib/AddJokeSheet';
 import { BridgeSheet, Gap } from '@/lib/bridge';
 import { DragList } from '@/lib/DragList';
 import { haptics } from '@/lib/haptics';
-import { fmtDur } from '@/lib/laughs';
+import { mmss } from '@/rules/format';
 import { useBoards } from '@/lib/boards';
 import { Build, Step, quoteText } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
@@ -37,7 +37,7 @@ function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; hand
   const name = x.short_name || shortNameOf(x.title);
   return (
     <View testID={`row-${i}`} style={{ borderRadius: 16, paddingVertical: 4 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${fmtDur(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={ios ? undefined : onMenu} delayLongPress={350}
+      <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${mmss(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={ios ? undefined : onMenu} delayLongPress={350}
         {...rowActions(items)}
         style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, paddingRight: 12, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
         {handle}
@@ -47,7 +47,7 @@ function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; hand
           {!!x.quote && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>“{quoteText(x)}”</Text>}
           {!!x.stage_line && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: x.proven ? C.green : C.mut2 }}>{x.stage_line}</Text>}
         </View>
-        <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{fmtDur(x.duration_s)}</Text>
+        <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{mmss(x.duration_s)}</Text>
         {/* HIG/context-menus: one of a context menu or an edit menu, not both; the phone has the long press (and the row's VoiceOver actions) */}
         {!native && <Pressable testID={`row-more-${i}`} accessibilityRole="button" accessibilityLabel={`More for ${name}`} onPress={onMenu} hitSlop={6} style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           <Text style={{ color: C.mut2, fontSize: 18, fontFamily: F.g7 }}>…</Text>
@@ -151,7 +151,7 @@ export default function SetListScreen() {
   const target = B.board.target_s;
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
-  const addLabel = `Add a joke${left != null ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`;
+  const addLabel = `Add a joke${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`;
   const stage = () => router.push(`/stage/${enc(id)}` as any);
 
   // the list's own menu: Rename… · Duplicate · Share… (the plain-text list, HIG/activity-views) · Delete (not undoable: an action sheet confirms)
@@ -217,8 +217,8 @@ export default function SetListScreen() {
           <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.black, fontSize: 24, letterSpacing: -0.4, color: C.text }}>{B.board.title} <Text style={{ color: C.amber, fontSize: 16, fontFamily: F.medium }}>Rename</Text></Text>
         </Pressable>}
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text testID="list-runtime" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.5, color: C.text, fontVariant: ['tabular-nums'] }}>{fmtDur(B.runtime_s)}</Text>
-          {!!target && <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 16, color: C.mut2 }}>/ {fmtDur(target)}</Text>}
+          <Text testID="list-runtime" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.5, color: C.text, fontVariant: ['tabular-nums'] }}>{mmss(B.runtime_s)}</Text>
+          {!!target && <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 16, color: C.mut2 }}>/ {mmss(target)}</Text>}
           <Text testID="list-status" maxFontSizeMultiplier={1.4} style={{ marginLeft: 8, fontFamily: F.semi, fontSize: 13, color: B.status === 'on' ? C.green : B.status === 'over' ? C.gapText : C.mut2 }}>{B.status_words}</Text>
         </View>
         <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }} accessibilityLabel={`${Math.round(pct)} percent of the slot`}>

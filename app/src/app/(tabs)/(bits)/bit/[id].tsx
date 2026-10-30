@@ -7,7 +7,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { EdgeView, decide, get, post, undo, useApi } from '@/lib/api';
 import { ConnGroup, ConnGroupKey, ConnItem, Connections, PunchUp, WSView, creative, useCreative } from '@/lib/creative';
-import { confWord, fmt1, fmtDur, fmtShortDate, fmtVs, mergeNights, trendWord } from '@/lib/laughs';
+import { confWord, fmt1, fmtVs, mergeNights, trendWord } from '@/rules/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { Sparkline } from '@/lib/metrics';
 import { useSets } from '@/lib/sets';
 import { simple } from '@/lib/simple';
@@ -203,7 +204,7 @@ export default function Joke() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <T v="small" testID="hero-caption" style={{ flex: 1, minWidth: 160 }}>{hero.caption}</T>
         {hero.kind === 'stage' && hero.audio && (
-          <Btn testID="hero-play" small label={`▶ ${fmtDur((hero.play?.start_ms || 0) / 1000)}`} onPress={() => playSegment(hero.audio, hero.play.start_ms, hero.play.end_ms, `hero-${id}`).catch((e) => ui.snack(e.message))} />
+          <Btn testID="hero-play" small label={`▶ ${mmss((hero.play?.start_ms || 0) / 1000)}`} onPress={() => playSegment(hero.audio, hero.play.start_ms, hero.play.end_ms, `hero-${id}`).catch((e) => ui.snack(e.message))} />
         )}
         <TextBtn testID="hero-full" label={full ? 'Less' : 'Full text'} color={C.mut} onPress={() => setFull((f) => !f)} />
       </View>

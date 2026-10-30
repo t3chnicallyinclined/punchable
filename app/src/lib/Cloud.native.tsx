@@ -17,7 +17,7 @@ import { haptics } from './haptics';
 import { PanZoom } from './PanZoom';
 import type { View_ } from './PanZoom';
 import { slotColor } from './Galaxy';
-import * as M from './cloudMath';
+import * as M from '@/rules/cloudMath';
 import { C, F } from './theme';
 import { useReduceMotion } from './ui';
 

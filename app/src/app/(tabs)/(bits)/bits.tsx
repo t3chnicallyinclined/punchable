@@ -13,10 +13,10 @@ import { Stack, router } from 'expo-router';
 import type { SearchBarProps } from 'react-native-screens';
 import { ApiError, JokeSummary, decide, get, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
-import { fmtDur } from '@/lib/laughs';
+import { mmss } from '@/rules/format';
 import { VoiceMemos } from '@/lib/memos';
 import { MomentRow } from '@/lib/MomentRow';
-import type { SearchResult } from '@/lib/searchRows';
+import type { SearchResult } from '@/rules/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
 import { Avatar, Btn, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
@@ -72,7 +72,7 @@ const Row = memo(function Row({ j, selecting, selected, onToggle }: { j: JokeSum
         <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.semi, fontSize: 16, color: C.text }}>{j.short_title || shortNameOf(j.title)}</Text>
         <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{subOf(j, st)}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{j.duration_s != null && j.sets ? fmtDur(j.duration_s) : j.duration_s != null ? `~${fmtDur(j.duration_s)}` : '—'}</Text>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{j.duration_s != null && j.sets ? mmss(j.duration_s) : j.duration_s != null ? `~${mmss(j.duration_s)}` : '—'}</Text>
     </Pressable>
   );
 });

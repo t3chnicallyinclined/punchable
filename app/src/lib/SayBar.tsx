@@ -55,7 +55,7 @@ export const BAR_SIZES = {
  */
 export function useSayBar(cfg: SayBarProps): React.ReactNode {
   const ui = useUI();
-  // the accessory needs the system's glass (ACCESSORY) AND the remote switch (lib/flags: /api/health flags.glass_accessory)
+  // the accessory needs the system's glass (ACCESSORY) AND the remote switch (rules/flags: /api/health flags.glass_accessory)
   const accessory = ACCESSORY && useFlags().glassAccessory;
   const ref = useRef(cfg);
   ref.current = cfg;

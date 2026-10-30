@@ -3,7 +3,7 @@
 //   node --experimental-strip-types tests/laughs.test.mjs      (npm run test:unit)
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import * as L from "../src/lib/laughs.ts";
+import * as L from "../src/rules/laughs.ts";
 
 const CORPUS = process.env.REAL_CORPUS || (process.env.HOME || process.env.USERPROFILE || ".") + "/punchable-data/corpus";
 const fails = [];
@@ -64,7 +64,7 @@ check(L.trendWord([{ v: 3 }, { v: 4 }, { v: 0.6, excluded: true }, { v: 5 }]) ==
 const m = L.mergeNights([{ set: "r24", laugh_s: 3.72, window_s: 60 }, { set: "r24", laugh_s: 0.15, window_s: 60 }, { set: "ac", laugh_s: 9, window_s: 60 }]);
 check(m.length === 2 && m[0].fragments === 2 && Math.abs(m[0].laugh_s_per_min - 1.935) < 0.01, "split fragments of one bit in one set merge into one night");
 // formatting and words
-check(L.fmt1(9.94) === "9.9" && L.fmtPct(8.5) === "9%" && L.fmtDur(103.2) === "1:43", "rounding: 1 dp, integer %, m:ss");
+check(L.fmt1(9.94) === "9.9" && L.fmtPct(8.5) === "9%", "rounding: 1 dp, integer % (m:ss is rules/format, tests/format.test.mjs)");
 check(L.confWord(0.95) === "sure" && L.confWord(0.8) === "likely" && L.confWord(0.6) === "maybe" && L.confWord(0.3) === "long shot", "confidence words");
 check(L.stabilityWord(0.2, 5) === "steady" && L.stabilityWord(0.4, 5) === "settling" && L.stabilityWord(0.9, 5) === "swinging" && L.stabilityWord(0.1, 2) === "too early", "stability words");
 check(L.venueShort("Unknown (title 'Beach jokes'; maybe Seaside)").name === "Seaside?" && L.venueShort("Mabel's Comedy Club, Springfield").name === "Mabel's" && L.venueShort("Comix at Lakeside Mall, CT").name === "Comix Lakeside Mall", "venue short names");

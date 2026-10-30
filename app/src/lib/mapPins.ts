@@ -1,6 +1,6 @@
 // Map pins from /api/venues.geojson: colour = average room heat in 3 steps (one amber ramp), size = sets (1, 2–4, 5+).
 import type { GeoJSON } from './creative';
-import { heatStep, heatWord } from './laughs';
+import { heatStep, heatWord } from '@/rules/laughs';
 import { C } from './theme';
 
 export type MapPin = {

@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { API_URL, UploadMeta, setOnline } from './api';
 import { getAccessToken } from './auth';
-import { QueuedUpload, backoffMs, runQueue } from './uploadsCore';
+import { QueuedUpload, backoffMs, runQueue } from '@/rules/uploadsCore';
 import type { Recording } from './recorder';
 
 export type Sent = { status: string; file?: string };

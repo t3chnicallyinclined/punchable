@@ -3,8 +3,9 @@
 // `undefined` (a component that renders nothing, a function that is not a function) or Metro's "Require cycle" warning,
 // and it is the next of kin of the 2026-10-28 self-import crash (Metro resolved './Icon' to Icon.native.tsx itself).
 //
-// The graph is resolved the way Metro resolves it, once per platform (ios: .ios > .native > plain; web: .web > plain),
-// over value imports only (`import type` / `export type` vanish at build time). Strongly connected components with more
+// The graph is resolved the way Metro resolves it, once per platform (the path as written first, then per extension
+// `.ts` before `.tsx`: ios `.ios` > `.native` > plain; web `.web` > plain, never `.native`; ENGINEERING.md §1), over
+// value imports only (`import type` / `export type` vanish at build time). Strongly connected components with more
 // than one file, or a self-edge, are cycles. KNOWN_CYCLES is the baseline: a cycle not in it fails; a baseline entry
 // that no longer exists also fails (delete the entry, so the list stays true). The goal is an empty baseline.
 //   node --experimental-strip-types --no-warnings tests/static.cycles.test.mjs [--list]
@@ -40,14 +41,17 @@ function resolveSpec(fromFile, spec, platform) {
   if (spec.startsWith('@/')) base = join(SRC, spec.slice(2));
   else if (spec.startsWith('.')) base = resolve(dirname(fromFile), spec);
   else return null; // a package: not part of this graph
-  for (const plat of PLATFORM_EXT[platform]) {
-    for (const ext of ['.tsx', '.ts']) {
+  // Metro's order (metro-resolver resolveSourceFile): the path exactly as written first (so './format.ts' is the file,
+  // never 'format.ts.tsx'), then for each source extension (.ts before .tsx) the platform suffix, .native, then plain.
+  if (existsSync(base) && statSync(base).isFile()) return base;
+  for (const ext of ['.ts', '.tsx']) {
+    for (const plat of PLATFORM_EXT[platform]) {
       const f = base + plat + ext;
       if (existsSync(f)) return f;
     }
   }
-  for (const plat of PLATFORM_EXT[platform]) {
-    for (const ext of ['.tsx', '.ts']) {
+  for (const ext of ['.ts', '.tsx']) {
+    for (const plat of PLATFORM_EXT[platform]) {
       const f = join(base, 'index' + plat + ext);
       if (existsSync(f)) return f;
     }
@@ -118,7 +122,11 @@ if (process.argv.includes('--self-test')) {
   const specs = specifiers(["import type { A } from './a';", "import { B } from './b';", "export * from './c';", "export type { D } from './d';", "const e = require('./e');", "const f = await import('./f');"].join('\n'));
   const ok2 = specs.join() === './b,./c,./e,./f';
   console.log(`${ok2 ? 'PASS' : 'FAIL'} self-test: value imports only -> ${specs.join(' ')}`);
-  process.exit(ok && ok2 ? 0 : 1);
+  // an explicit '.ts' specifier resolves to the file as written (the rules layer imports that way)
+  const fmt = join(SRC, 'rules', 'format.ts');
+  const ok3 = resolveSpec(join(SRC, 'rules', 'searchRows.ts'), './format.ts', 'ios') === fmt && resolveSpec(join(SRC, 'rules', 'searchRows.ts'), './format.ts', 'web') === fmt;
+  console.log(`${ok3 ? 'PASS' : 'FAIL'} self-test: './format.ts' resolves as written on ios and web`);
+  process.exit(ok && ok2 && ok3 ? 0 : 1);
 }
 
 const fails = [];

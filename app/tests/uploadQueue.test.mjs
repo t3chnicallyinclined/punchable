@@ -1,8 +1,8 @@
-// Unit test for the upload retry queue rules (src/lib/sayRules.ts: backoffMs, dueUploads, afterFailure, isPermanent) and
+// Unit test for the upload retry queue rules (src/rules/sayRules.ts: backoffMs, dueUploads, afterFailure, isPermanent) and
 // the queue driver (src/lib/uploads.ts runQueue) with the recorder and the uploader stubbed.
 //   node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs
-import { parseCommand, guessKind } from "../src/lib/sayRules.ts";
-import { afterFailure, backoffMs, dueUploads, isPermanent, runQueue } from "../src/lib/uploadsCore.ts";
+import { parseCommand, guessKind } from "../src/rules/sayRules.ts";
+import { afterFailure, backoffMs, dueUploads, isPermanent, runQueue } from "../src/rules/uploadsCore.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

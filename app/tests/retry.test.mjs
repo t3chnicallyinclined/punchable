@@ -1,5 +1,5 @@
-// Unit test for src/lib/retry.ts.   node --experimental-strip-types --no-warnings tests/retry.test.mjs
-import { retry } from "../src/lib/retry.ts";
+// Unit test for src/rules/retry.ts.   node --experimental-strip-types --no-warnings tests/retry.test.mjs
+import { retry } from "../src/rules/retry.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

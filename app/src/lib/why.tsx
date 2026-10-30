@@ -7,8 +7,9 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { get } from './api';
 import { playSegment } from './media';
-import { C, F, fmtMs } from './theme';
-import { confWord } from './laughs';
+import { C, F } from './theme';
+import { clockMs } from '@/rules/format';
+import { confWord } from '@/rules/laughs';
 import { AIBadge, Btn, Sheet, T, Yours, s, useUI } from './ui';
 
 export type WhyEvidence = { node: string; quote: string; start_ms?: number | null; field?: string; jokeId?: string; label?: string };
@@ -104,7 +105,7 @@ function EvidenceRow({ ev, i, close }: { ev: WhyEvidence; i: number; close: () =
     <View testID={`why-ev-${i}`} style={[s.inner, { gap: 8 }]}>
       <T style={{ fontSize: 15 }}>“{ev.quote}”</T>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <T v="small" style={{ flex: 1, minWidth: 120 }}>{evidenceSource(ev)}{at != null ? ` · ${fmtMs(at)}` : ''}</T>
+        <T v="small" style={{ flex: 1, minWidth: 120 }}>{evidenceSource(ev)}{at != null ? ` · ${clockMs(at)}` : ''}</T>
         {audio && (
           <Btn testID={`why-hear-${i}`} small label="▶ Hear" onPress={() => hearEvidence(ev, `why-${ev.node}-${i}`).then((m) => setAt(m.at_ms)).catch((e) => ui.snack(e.message))} />
         )}

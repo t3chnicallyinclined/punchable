@@ -1,5 +1,5 @@
 // Laugh-metric rules (UX_SPEC section 5). Pure functions, no imports, so `tests/laughs.test.mjs` can run them
-// with `node --experimental-strip-types` against every real analysis.json.
+// with `node --experimental-strip-types` against every real analysis.json. Times and dates as words: rules/format.ts.
 //
 // The rules the UI enforces:
 // - laugh-s/min leads (1 dp). Raw detector laughs/min is shown only inside the Why sheet.
@@ -21,12 +21,6 @@ export const r1 = (x: number | null | undefined): number | null => (isNum(x) ? M
 export const fmt1 = (x: number | null | undefined, empty = '–') => (isNum(x) ? (Math.round(x * 10) / 10).toFixed(1) : empty);
 /** "9%" — integer percent. */
 export const fmtPct = (x: number | null | undefined) => (isNum(x) ? `${Math.round(x)}%` : '–');
-/** Seconds as m:ss. */
-export const fmtDur = (s: number | null | undefined) => {
-  if (!isNum(s)) return '–';
-  const t = Math.max(0, Math.round(s));
-  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-};
 /** Whole seconds: "5 s". */
 export const fmtSec = (s: number | null | undefined) => (isNum(s) ? `${Math.round(s)} s` : '–');
 /** "1.8× room". */
@@ -180,7 +174,6 @@ export function confWord(c: number | null | undefined): 'sure' | 'likely' | 'may
 }
 
 // ------------------------------------------------------------------ show dates
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /**
  * The date of the show, not the upload: a date written in the title or description ("8-16-2017", "5/8/23",
  * "6/20") wins over the upload date, and is marked as inferred. A year-less date takes the upload's year
@@ -207,11 +200,6 @@ export function showDate(s: { date?: string | null; title?: string | null; descr
   }
   return { date: up, inferred: false, source: 'upload' };
 }
-export const fmtShortDate = (iso?: string | null) => {
-  if (!iso) return '';
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  return `${MON[(m || 1) - 1]} ${d} '${String(y).slice(2)}`;
-};
 
 // ------------------------------------------------------------------ venue short names
 /** "Mabel's Comedy Club, Springfield" -> "Mabel's"; "Unknown (title 'Beach jokes'; maybe Seaside)" -> "Seaside?" */

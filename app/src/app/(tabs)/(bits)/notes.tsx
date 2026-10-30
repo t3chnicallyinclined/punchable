@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useApi } from '@/lib/api';
-import { C, F, fmtDate, fmtMs } from '@/lib/theme';
+import { C, F } from '@/lib/theme';
+import { clockMs, fmtDate } from '@/rules/format';
 import { Badge, Btn, Card, Empty, ErrorCard, List, ListRow, T, s, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { useRecorder } from '@/lib/recorder';
@@ -41,7 +42,7 @@ export default function NotesScreen() {
     try {
       const out = await x.stop();
       const res = await enqueueUpload(out, { kind: 'note', filename: out.name, title: `Voice note ${new Date().toLocaleString()}`, durationS: out.durationMs / 1000, recordedAt: new Date().toISOString() });
-      ui.snack(res.queued ? `Note saved on this device (${fmtMs(out.durationMs)}) · it goes up when Punchable is back` : `Note saved (${fmtMs(out.durationMs)}) · queued for processing`);
+      ui.snack(res.queued ? `Note saved on this device (${clockMs(out.durationMs)}) · it goes up when Punchable is back` : `Note saved (${clockMs(out.durationMs)}) · queued for processing`);
       await reload();
       if (res.file) setSel(res.file);
     } catch (e: any) {
@@ -69,7 +70,7 @@ export default function NotesScreen() {
         <Card style={{ borderWidth: 2, borderColor: C.amber, gap: 12 }} testID="talking">
           <View style={s.row}>
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.red }} />
-            <T v="eb" style={{ color: C.amber }}>Listening · <Text style={{ fontFamily: F.g6 }}>{fmtMs(ms)}</Text></T>
+            <T v="eb" style={{ color: C.amber }}>Listening · <Text style={{ fontFamily: F.g6 }}>{clockMs(ms)}</Text></T>
           </View>
           <View style={{ height: 8, borderRadius: 4, backgroundColor: C.surface2, overflow: 'hidden' }}>
             <View style={{ width: `${Math.max(3, level * 100)}%`, height: '100%', backgroundColor: C.amber }} />
@@ -87,7 +88,7 @@ export default function NotesScreen() {
             <List>
               {notes.map((n) => (
                 <ListRow key={n.file} onPress={() => setSel(n.file)} titleColor={cur?.file === n.file ? C.amber : undefined}
-                  title={n.title} sub={`Voice · ${n.duration_s ? fmtMs(n.duration_s * 1000) : '—'} · ${fmtDate(n.received_at)} · ${n.status}`} />
+                  title={n.title} sub={`Voice · ${n.duration_s ? clockMs(n.duration_s * 1000) : '—'} · ${fmtDate(n.received_at)} · ${n.status}`} />
               ))}
             </List>
             {data && !notes.length && <Empty text="No voice notes yet. Tap Talk it out." />}
@@ -99,7 +100,7 @@ export default function NotesScreen() {
                 <List>
                   {other.map((n) => (
                     <ListRow key={n.file} onPress={() => setSel(n.file)} title={n.title}
-                      sub={`${n.kind === 'set' ? 'Set' : 'Upload'} · ${n.duration_s ? fmtMs(n.duration_s * 1000) : `${Math.round(n.bytes / 1024)} KB`} · ${fmtDate(n.received_at)}`}
+                      sub={`${n.kind === 'set' ? 'Set' : 'Upload'} · ${n.duration_s ? clockMs(n.duration_s * 1000) : `${Math.round(n.bytes / 1024)} KB`} · ${fmtDate(n.received_at)}`}
                       right={<Badge label={n.status} fg={C.blue} bg={C.blueSoft} />} />
                   ))}
                 </List>

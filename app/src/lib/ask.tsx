@@ -9,6 +9,7 @@ import { get, patch, post } from './api';
 import { C, F } from './theme';
 import { AIBadge, Btn, Card, Chip, Empty, ErrorCard, List, ListRow, T, s } from './ui';
 import { Screen } from './Screen';
+import { MONTHS } from '@/rules/format';
 
 export type AskChip = {
   n: number; kind: 'bit' | 'idea' | 'note' | 'moment'; source: string; label: string; sub: string; href: string;
@@ -265,11 +266,10 @@ export function AskHome({ first }: { first?: string }) {
   );
 }
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function shortDay(iso: string) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
   const now = new Date();
   if (d.toDateString() === now.toDateString()) return 'Today';
-  return `${MON[d.getMonth()]} ${d.getDate()}${d.getFullYear() !== now.getFullYear() ? `, ${d.getFullYear()}` : ''}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear() !== now.getFullYear() ? `, ${d.getFullYear()}` : ''}`;
 }

@@ -1,6 +1,6 @@
-// Unit test for lib/cloudMath.ts (the cloud's turn, depth, projection, hit test, batching).
+// Unit test for rules/cloudMath.ts (the cloud's turn, depth, projection, hit test, batching).
 // node --experimental-strip-types tests/cloudMath.test.mjs   (npm run test:unit)
-import * as M from "../src/lib/cloudMath.ts";
+import * as M from "../src/rules/cloudMath.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

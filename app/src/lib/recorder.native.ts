@@ -1,5 +1,5 @@
 // iOS/Android: the recorder over expo-audio (useAudioRecorder). The options, the meter maths, the clock and the mic
-// choice are pure, in lib/recorderLogic (tested); this file is the wiring:
+// choice are pure, in rules/recorderLogic (tested); this file is the wiring:
 //   - SET_RECORDING: 48 kHz AAC in an .m4a (api-dev/server.py AUDIO_EXT takes it; engine/audio.py normalises through
 //     ffmpeg), two channels, 160 kbps, metering on, written straight to the document directory.
 //   - The audio session records in the background (app.json UIBackgroundModes: audio) and does not mix, so a locked
@@ -18,8 +18,8 @@ import { AudioModule, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import type { RecordingStatus } from 'expo-audio';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import type { Rec, Recording } from './recorderBase';
-import { KEEP_AWAKE_TAG, SET_RECORDING, clockElapsed, clockObserve, clockPause, clockResume, clockStart, meterLevel, pickInput } from './recorderLogic';
-import type { Clock } from './recorderLogic';
+import { KEEP_AWAKE_TAG, SET_RECORDING, clockElapsed, clockObserve, clockPause, clockResume, clockStart, meterLevel, pickInput } from '@/rules/recorderLogic';
+import type { Clock } from '@/rules/recorderLogic';
 
 export type { Rec, Recording } from './recorderBase';
 

@@ -9,7 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { Bridge } from '@/lib/creative';
 import { DragList, move } from '@/lib/DragList';
-import { fmtDur, fmtShortDate } from '@/lib/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { Action, LABEL_WORD, SetBit, SetView, Spot, Trim, labelColor, lengthWords, mysets } from '@/lib/mysets';
 import { draft, quoteText } from '@/lib/simple';
 import { C, F } from '@/lib/theme';
@@ -117,7 +117,7 @@ export default function MySet() {
                       <Pressable style={{ flexShrink: 1 }} onPress={() => router.push(`/joke/${encodeURIComponent(b.joke_id)}` as any)} accessibilityRole="link">
                         <T v="semi" numberOfLines={1}>{b.title}</T>
                       </Pressable>
-                      <T v="small">{b.estimated ? `~${fmtDur(b.duration_s)}` : fmtDur(b.duration_s)}</T>
+                      <T v="small">{b.estimated ? `~${mmss(b.duration_s)}` : mmss(b.duration_s)}</T>
                     </View>
                     <LabelLine testID={`label-line-${i}`} label={b.label} words={b.label_words} />
                   </View>

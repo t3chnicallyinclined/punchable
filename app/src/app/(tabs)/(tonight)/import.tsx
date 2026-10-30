@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { ApiError, post, upload, useApi } from '@/lib/api';
 import { GeoJSON, creative, useCreative } from '@/lib/creative';
 import { Clip, SET_MIN_S, ShowGroup, alignDefault, clipTime, groupShows, splitGroup } from '@/lib/importgroup';
-import { fmtDur } from '@/lib/laughs';
+import { mmss } from '@/rules/format';
 import * as Photos from '@/lib/photos';
 import { C, F } from '@/lib/theme';
 import { AIBadge, Btn, Card, Empty, Icon, T, TextBtn, s, useUI } from '@/lib/ui';
@@ -102,7 +102,7 @@ export default function Import() {
       </View>
       <View style={{ padding: 8, gap: 2 }}>
         <T v="small" style={{ color: C.text }}>{c.imported ? 'Imported' : clipTime(c.creationTime)}</T>
-        <T v="small">{c.duration ? fmtDur(c.duration) : 'length unknown'}{status[c.id] ? ` · ${status[c.id]}` : ''}</T>
+        <T v="small">{c.duration ? mmss(c.duration) : 'length unknown'}{status[c.id] ? ` · ${status[c.id]}` : ''}</T>
       </View>
     </View>
   );
@@ -111,7 +111,7 @@ export default function Import() {
     <View key={gr.key} testID={`group-${gr.key}`} style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 }}>{gr.clips.map(tile)}</View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <T v="small" testID={`group-line-${gr.key}`} style={{ color: C.text2 }}>↳ {gr.clips.length > 1 ? `grouped: one show · ${gr.clips.length} clips` : 'one show'} · {gr.total_s ? fmtDur(gr.total_s) : ''}</T>
+        <T v="small" testID={`group-line-${gr.key}`} style={{ color: C.text2 }}>↳ {gr.clips.length > 1 ? `grouped: one show · ${gr.clips.length} clips` : 'one show'} · {gr.total_s ? mmss(gr.total_s) : ''}</T>
         {gr.venue && <><T v="small" style={{ color: C.text2 }}>· {gr.venue.name}? </T><AIBadge /><T v="small">· {gr.venue.distance_m} m away</T></>}
         {gr.clips.length > 1 && <TextBtn testID={`split-${gr.key}`} label="Split" onPress={() => setSplit((x) => [...x, gr.key])} />}
       </View>

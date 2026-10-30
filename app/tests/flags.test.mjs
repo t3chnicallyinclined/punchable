@@ -1,6 +1,6 @@
-// Unit test for src/lib/flags.ts: the /api/health `flags` object -> switches, default on, build-time env override.
+// Unit test for src/rules/flags.ts: the /api/health `flags` object -> switches, default on, build-time env override.
 //   node --experimental-strip-types --no-warnings tests/flags.test.mjs
-import * as F from "../src/lib/flags.ts";
+import * as F from "../src/rules/flags.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

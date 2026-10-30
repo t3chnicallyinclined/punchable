@@ -1,6 +1,6 @@
-// Unit test for src/lib/layoutRules.ts: the Tonight header's two-row shape at every text size (docs/design/HIG.md §0).
+// Unit test for src/rules/layoutRules.ts: the Tonight header's two-row shape at every text size (docs/design/HIG.md §0).
 //   node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs
-import { LARGE_TITLE_PT, STACK_AT, headerTopPadding, rowFits, tonightTitleRow } from "../src/lib/layoutRules.ts";
+import { LARGE_TITLE_PT, STACK_AT, headerTopPadding, rowFits, tonightTitleRow } from "../src/rules/layoutRules.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

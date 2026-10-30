@@ -9,10 +9,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { BoardView, Bridge, creative, useCreative } from '@/lib/creative';
 import { DragList, move } from '@/lib/DragList';
-import { fmtDur } from '@/lib/laughs';
+import { mmss, monthYear } from '@/rules/format';
 import { useBoards } from '@/lib/boards';
 import { mysets } from '@/lib/mysets';
-import { Build, Step, monthYear, quoteText } from '@/lib/simple';
+import { Build, Step, quoteText } from '@/lib/simple';
 import { C, F } from '@/lib/theme';
 import { AddBtn, Btn, Card, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, Sheet, T, TextBtn, s, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -130,7 +130,7 @@ export default function SetBuilder() {
                     <Pressable style={{ flexShrink: 1 }} onPress={() => router.push(`/joke/${encodeURIComponent(x.joke_id)}` as any)} accessibilityRole="link">
                       <T v="semi" numberOfLines={1}>{x.title}</T>
                     </Pressable>
-                    <T v="small" testID={`dur-${i}`}>{x.estimated ? `~${fmtDur(x.duration_s)} est.` : fmtDur(x.duration_s)}</T>
+                    <T v="small" testID={`dur-${i}`}>{x.estimated ? `~${mmss(x.duration_s)} est.` : mmss(x.duration_s)}</T>
                   </View>
                   {!!x.quote && <T v="small" numberOfLines={1} style={{ color: C.text2 }}>{quoteText(x)}</T>}
                   {!!x.stage_line && <T v="small" numberOfLines={2} style={{ color: x.proven ? C.green : C.mut }}>{x.stage_line}</T>}
@@ -251,12 +251,12 @@ function PromoteSheet({ visible, onClose, boardId, runtime, target, onDone }: { 
   return (
     <Sheet visible={visible} onClose={onClose} label="Make this a set" testID="promote-sheet">
       <T v="h2">Make this a set</T>
-      <T v="mut" style={{ marginVertical: 6 }}>It joins Your sets: you work on it, perform it, and every show you import that looks like it lines up with it. It runs {fmtDur(runtime)} now, aiming for {band(target)}. The board stays as it is.</T>
+      <T v="mut" style={{ marginVertical: 6 }}>It joins Your sets: you work on it, perform it, and every show you import that looks like it lines up with it. It runs {mmss(runtime)} now, aiming for {band(target)}. The board stays as it is.</T>
       <Btn testID="promote-go" label="Make it a set" v="primary" onPress={async () => {
         onClose();
         try {
           const v = await mysets.fromBoard(boardId, target);
-          ui.setWorkingSet({ id: v.set.id, title: v.set.title, sub: `v${v.set.version} · ${v.bits.length} bits · ${fmtDur(target)}`, target_s: target });
+          ui.setWorkingSet({ id: v.set.id, title: v.set.title, sub: `v${v.set.version} · ${v.bits.length} bits · ${mmss(target)}`, target_s: target });
           ui.snack(`${v.set.title} is in Your sets`, undefined, { label: 'Open', run: () => router.push(`/myset/${encodeURIComponent(v.set.id)}` as any) });
           onDone();
         } catch (e: any) {

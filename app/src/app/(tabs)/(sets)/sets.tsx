@@ -9,7 +9,7 @@ import { get, patch } from '@/lib/api';
 import { Build } from '@/lib/simple';
 import { actionSheet } from '@/lib/actionSheet';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
-import { fmtDur, fmtShortDate } from '@/lib/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { CreateSheet } from '@/lib/CreateSheet';
@@ -44,7 +44,7 @@ export function PaperCard({ b, current, onPress, onLongPress, a11y, testID }: {
         {!names.length && <Text style={{ fontFamily: F.semi, fontSize: 14, color: '#6B6660' }}>(empty)</Text>}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text style={{ flex: 1, fontFamily: F.medium, fontSize: 12, color: '#6B6660' }}>{current ? 'tonight · ' : ''}{b.target_s ? `${fmtDur(b.target_s)} slot · ` : ''}{fmtShortDate(b.updated)}</Text>
+        <Text style={{ flex: 1, fontFamily: F.medium, fontSize: 12, color: '#6B6660' }}>{current ? 'tonight · ' : ''}{b.target_s ? `${mmss(b.target_s)} slot · ` : ''}{fmtShortDate(b.updated)}</Text>
         {b.source === 'inferred' && <Text style={{ fontFamily: F.semi, fontSize: 11, color: '#6B6660', borderWidth: 1, borderColor: '#C9C2B2', borderRadius: 4, paddingHorizontal: 5 }}>draft · found for you</Text>}
       </View>
     </Pressable>
@@ -155,7 +155,7 @@ export default function Sets() {
           <List>
             {sets.list.map((x) => (
               <ListRow key={x.id} testID={`performed-${x.id}`} title={<T v="semi" numberOfLines={1}>{x.venue.name}</T>}
-                sub={`${fmtShortDate(x.show.date)} · ${fmtDur(x.card.duration_s)}${x.best ? ` · ${x.best.title.split(' (')[0]}` : ''}`}
+                sub={`${fmtShortDate(x.show.date)} · ${mmss(x.card.duration_s)}${x.best ? ` · ${x.best.title.split(' (')[0]}` : ''}`}
                 onPress={() => router.push(`/set/${encodeURIComponent(x.id)}` as any)} />
             ))}
           </List>

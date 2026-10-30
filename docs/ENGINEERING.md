@@ -11,15 +11,24 @@ and performance plan is `docs/design/ARCHITECTURE.md`.
 
 ## 1. Platform splits
 
-Metro picks a file per platform by extension, most specific first:
+Metro picks a file per platform by extension. The loop is **extensions outside, platforms inside** (metro-resolver
+`resolveSourceFile`: the path exactly as written first, then for each source extension the platform suffix, `.native`,
+then plain; Expo's source extensions put `ts` before `tsx`; Expo's resolver turns `.native` off for the web,
+`preferNativePlatform: platform !== 'web'`). Corrected 2026-10-29 (the first table had the loops the other way round):
 
 | Platform | Resolution order for `import './X'` |
 |---|---|
-| iOS | `X.ios.tsx` → `X.native.tsx` → `X.tsx` |
-| Android | `X.android.tsx` → `X.native.tsx` → `X.tsx` |
-| Web | `X.web.tsx` → `X.tsx` |
+| iOS | `X.ios.ts` → `X.native.ts` → `X.ts` → `X.ios.tsx` → `X.native.tsx` → `X.tsx` |
+| Android | `X.android.ts` → `X.native.ts` → `X.ts` → `X.android.tsx` → `X.native.tsx` → `X.tsx` |
+| Web | `X.web.ts` → `X.ts` → `X.web.tsx` → `X.tsx` (the web never sees `.native`) |
 
-(`.ts` after `.tsx` at each step; `index.*` inside a directory last.)
+(`import './X.ts'` resolves `X.ts` as written and nothing else; `index.*` inside a directory last.)
+
+**A split pair shares one extension.** `X.native.tsx` beside `X.ts` means the phone loads `X.ts` (every `.ts` comes
+before any `.tsx`) and the `.native` file is dead; `tests/static.twins.test.mjs` fails on a pair whose twins differ in
+extension. The same order is why `src/rules/` (the pure layer, docs/ARCHITECTURE.md §7.1) imports with explicit `.ts`
+extensions and forbids platform twins (`tests/static.rules.test.mjs`): an explicit `./format.ts` is found as written
+and would never reach a `format.native.ts`.
 
 **The convention: `<Name>Base.tsx` + `<Name>.tsx` shim + `<Name>.native.tsx`.**
 
@@ -29,7 +38,8 @@ Metro picks a file per platform by extension, most specific first:
 | `<Name>.tsx` | **a shim only**: `export * from './<Name>Base';` (plus `export { X as default }` if needed) | nothing else |
 | `<Name>.native.tsx` | the phone implementation | `./<Name>Base` for the shared parts; **never `./<Name>`** |
 
-Examples on disk: `src/lib/RowMenu*.tsx`, `src/lib/SwipeRow*.tsx`, `src/lib/PanZoom*.tsx`, `src/lib/recorder*.ts`.
+Examples on disk: `src/lib/RowMenu*.tsx`, `src/lib/SwipeRow*.tsx`, `src/lib/PanZoom*.tsx`, `src/lib/recorder*.ts`
+(its pure half is `src/rules/recorderLogic.ts`).
 The screen shell (`Screen.tsx` / `Screen.native.tsx`) and the icons (`Icon.tsx` → `IconSvg.tsx`
 / `Icon.native.tsx`) are the two pairs still to be brought to the pattern (ARCHITECTURE.md, S1).
 
@@ -63,7 +73,8 @@ Pinned by `tests/selfImport.test.mjs` (the `.native` case) and `tests/static.twi
 A cycle (`a` imports `b` imports `a`) is read-before-initialised: a component that is `undefined` at render, or a
 function that is not a function, on the phone only and only on a cold start. Metro prints "Require cycle" to the
 console nobody reads on the device. `tests/static.cycles.test.mjs` resolves the graph the way Metro does (once for iOS,
-once for the web; value imports only) and fails on any cycle. Today there are none; `KNOWN_CYCLES` stays empty.
+once for the web; the path as written first, then `.ts` before `.tsx` per platform as in §1; value imports only) and
+fails on any cycle. Today there are none; `KNOWN_CYCLES` stays empty.
 
 Barrel files (`index.ts` that re-exports a directory) are the usual way cycles arrive: two siblings importing each
 other through the barrel. The policy is in ARCHITECTURE.md §1: a barrel per **layer** (`src/ui`, `src/api`), never per
@@ -107,7 +118,7 @@ and pull request that touches `app/`:
 | 1 | `npm ci` | a lockfile out of step with `package.json` |
 | 2 | `npx tsc --noEmit` | types |
 | 3 | `npm run test:unit` | the laugh rules, routes, session, say, uploads, the self-import rule |
-| 4 | `node --experimental-strip-types --no-warnings tests/static.<cycles,twins,routes,platform>.test.mjs` | cycles, missing twins, route shape, console/Platform forks (until `test:unit` lists them, §7) |
+| 4 | `node --experimental-strip-types --no-warnings tests/static.<cycles,twins,routes,platform,rules>.test.mjs` | cycles, missing or mismatched twins, route shape, console/Platform forks, the rules layer's purity (until `test:unit` lists them, §7) |
 | 5 | `npx expo-doctor` → N/N | dependency and config issues, missing native peers |
 | 6 | `npx expo export --platform web` | every route bundles on the web; a bad import fails here |
 | 7 | `npx expo export --platform ios` | **the iOS JS bundle + Hermes bytecode, with the `.ios`/`.native` resolution, no Xcode** (no `ios/` directory needed; proven on a machine without Xcode, 2026-10-28: 2011 modules, one `.hbc`) |

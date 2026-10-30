@@ -15,7 +15,8 @@ import { HearIt } from '@/lib/hear';
 import { Memo, MemosResp, memoTitle } from '@/lib/memos';
 import { SwipeRow } from '@/lib/SwipeRow';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
-import { C, F, fmtDate, fmtMs } from '@/lib/theme';
+import { C, F } from '@/lib/theme';
+import { clockMs, fmtDate } from '@/rules/format';
 import { WorkerLine } from '@/lib/worker';
 import { AIBadge, Btn, Empty, ErrorCard, List, ListRow, MenuItem, MenuSheet, Skeleton, T, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -77,9 +78,9 @@ function Card({ x, memo, like, onDone, onMenu }: { x: NotJoke; memo: Memo | null
         {...rowActions(menu)} style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <T v="eb" style={{ flex: 1 }}>{memo ? 'Voice memo' : 'Jot'}</T>
-          <T v="small">{memo?.recorded_at ? `${fmtDate(memo.recorded_at.slice(0, 10))}` : ''}{memo?.duration_s ? ` · ${fmtMs(memo.duration_s * 1000)}` : ''}</T>
+          <T v="small">{memo?.recorded_at ? `${fmtDate(memo.recorded_at.slice(0, 10))}` : ''}{memo?.duration_s ? ` · ${clockMs(memo.duration_s * 1000)}` : ''}</T>
         </View>
-        {memo && <HearIt audio={memo.audio} reference={memo.reference} play={{ start_ms: 0, end_ms: (memo.duration_s || 0) * 1000 + 1000 }} k={`inbox:${memo.id}`} sub={memo.duration_s ? fmtMs(memo.duration_s * 1000) : 'the recording'} testID={`inbox-play-${x.joke_id}`} />}
+        {memo && <HearIt audio={memo.audio} reference={memo.reference} play={{ start_ms: 0, end_ms: (memo.duration_s || 0) * 1000 + 1000 }} k={`inbox:${memo.id}`} sub={memo.duration_s ? clockMs(memo.duration_s * 1000) : 'the recording'} testID={`inbox-play-${x.joke_id}`} />}
         <Text maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 16, lineHeight: 24, color: C.text }}>“{x.text}”</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <AIBadge />
@@ -162,7 +163,7 @@ export default function Inbox() {
           <List>
             {filed.map((m) => (
               <ListRow key={m.id} testID={`filed-${m.id}`} title={<T v="semi" numberOfLines={1}>{memoTitle(m)} <Text style={{ color: C.mut2 }}>→</Text> {m.attached_to!.title}</T>}
-                sub={[m.date ? fmtDate(m.date) : null, m.duration_s ? fmtMs(m.duration_s * 1000) : null].filter(Boolean).join(' · ')}
+                sub={[m.date ? fmtDate(m.date) : null, m.duration_s ? clockMs(m.duration_s * 1000) : null].filter(Boolean).join(' · ')}
                 chevron={false} onPress={() => router.push(`/joke/${encodeURIComponent(m.attached_to!.joke_id)}` as any)}
                 right={<Pressable testID={`filed-undo-${m.id}`} accessibilityRole="button" accessibilityLabel={`Undo: take ${memoTitle(m)} out of ${m.attached_to!.title}`} onPress={() => unfile(m)} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}><T style={{ color: C.amber }}>Undo</T></Pressable>} />
             ))}

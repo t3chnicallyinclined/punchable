@@ -3,12 +3,13 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { GeoJSON, creative, useCreative } from '@/lib/creative';
-import { fmt1, fmtDur, fmtShortDate, heatWord } from '@/lib/laughs';
+import { fmt1, heatWord } from '@/rules/laughs';
+import { fmtShortDate, mmss, MONTHS_LONG } from '@/rules/format';
 import { pinsOf } from '@/lib/mapPins';
 import { HeatDot } from '@/lib/metrics';
 import { SetInfo, useSets } from '@/lib/sets';
 import { VenueMap } from '@/lib/VenueMap';
-import { C, F, MONTHS_LONG } from '@/lib/theme';
+import { C, F } from '@/lib/theme';
 import { AIBadge, Btn, Card, Empty, ErrorCard, FixtureBanner, List, Seg, Sheet, T, s, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 
@@ -23,7 +24,7 @@ function ShowRow({ x }: { x: SetInfo }) {
           {x.show.inferred && <AIBadge />}
           <T v="semi" numberOfLines={1} style={{ flex: 1 }}>{x.venue.name}</T>
           {x.venue.guessed && <AIBadge />}
-          <T v="small">{fmtDur(x.card.duration_s)}</T>
+          <T v="small">{mmss(x.card.duration_s)}</T>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 84 }}>
           {x.unreliable ? (

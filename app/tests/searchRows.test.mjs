@@ -1,6 +1,6 @@
-// Unit test for lib/searchRows.ts (the rows under a search and on a bit's page: where-and-when, the deep link,
+// Unit test for rules/searchRows.ts (the rows under a search and on a bit's page: where-and-when, the deep link,
 // closeness in words). node --experimental-strip-types tests/searchRows.test.mjs   (npm run test:unit)
-import * as S from "../src/lib/searchRows.ts";
+import * as S from "../src/rules/searchRows.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

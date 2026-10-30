@@ -6,7 +6,7 @@ import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useBoards } from './boards';
 import { slotColor } from './Galaxy';
-import * as M from './cloudMath';
+import * as M from '@/rules/cloudMath';
 import { C, F } from './theme';
 import { Btn, Empty, ErrorCard, Skeleton, T, TextBtn, useWide } from './ui';
 import { Screen } from './Screen';

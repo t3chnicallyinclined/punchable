@@ -7,7 +7,8 @@ import { router } from 'expo-router';
 import { post, undo, upload, useApi } from './api';
 import { HearIt, Reference } from './hear';
 import { pickRecordings } from './media';
-import { C, fmtDate, fmtMs } from './theme';
+import { C } from './theme';
+import { clockMs, fmtDate } from '@/rules/format';
 import { Btn, Card, List, ListRow, T, TextBtn, useUI } from './ui';
 import { WorkerLine } from './worker';
 
@@ -161,14 +162,14 @@ export function VoiceMemos() {
               <View key={m.id}>
                 <ListRow testID={`memo-${m.id}`} title={memoTitle(m)} chevron={false}
                   titleColor={open === m.id ? C.amber : undefined}
-                  sub={[m.date ? fmtDate(m.date) : null, m.duration_s ? fmtMs(m.duration_s * 1000) : null, statusWord(m)].filter(Boolean).join(' · ')}
+                  sub={[m.date ? fmtDate(m.date) : null, m.duration_s ? clockMs(m.duration_s * 1000) : null, statusWord(m)].filter(Boolean).join(' · ')}
                   onPress={m.status === 'done' ? () => setOpen(open === m.id ? null : m.id) : undefined} />
                 {open === m.id && (
                   <View style={{ gap: 10, paddingBottom: 12 }} testID={`memo-open-${m.id}`}>
                     {m.text ? <T style={{ color: C.text }}>“{m.text}”</T> : <T v="mut">No words in this one.</T>}
                     {m.text_cut && <T v="small">The full transcript is in the note.</T>}
                     <HearIt audio={m.audio} reference={m.reference} play={{ start_ms: 0, end_ms: (m.duration_s || 0) * 1000 + 1000 }} k={`memo:${m.id}`}
-                      sub={m.duration_s ? fmtMs(m.duration_s * 1000) : 'the recording'} testID={`memo-play-${m.id}`} />
+                      sub={m.duration_s ? clockMs(m.duration_s * 1000) : 'the recording'} testID={`memo-play-${m.id}`} />
                     {m.joke_id && (
                       <Pressable accessibilityRole="link" onPress={() => router.push(`/joke/${encodeURIComponent(m.attached_to?.joke_id || m.joke_id!)}` as any)}>
                         <T style={{ color: C.amber }}>{m.attached_to ? `In ${m.attached_to.title} ›` : 'Open the idea ›'}</T>

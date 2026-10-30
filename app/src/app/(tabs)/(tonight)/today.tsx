@@ -5,7 +5,8 @@ import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { post, undo, useApi } from '@/lib/api';
 import { TodayFeed, WSView, creative, useCreative } from '@/lib/creative';
-import { fmt1, fmtDur, fmtShortDate, fmtVs, heatWord } from '@/lib/laughs';
+import { fmt1, fmtVs, heatWord } from '@/rules/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { LaughHeadline } from '@/lib/metrics';
 import { newTonight, setMetrics, useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
@@ -13,10 +14,10 @@ import { C, F } from '@/lib/theme';
 import { AIBadge, AddBtn, Avatar, Btn, Card, Eb, ErrorCard, FixtureBanner, T, TextBtn, s, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { useWhy } from '@/lib/why';
+import { MONTHS } from '@/rules/format';
 
 type Mode = 'after_show' | 'show_day' | 'writing';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
 
 function modeOf(now: Date, lastSetAt: number | null, nextShow: string | null, newVideos: number): Mode {
@@ -71,7 +72,7 @@ export default function Today() {
   const header = (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg }}>
       <View style={{ flex: 1 }}>
-        <T v="eb">{DAYS[now.getDay()]}, {MON[now.getMonth()]} {now.getDate()}</T>
+        <T v="eb">{DAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}</T>
         <T v="h1">Today</T>
       </View>
       <Avatar />
@@ -113,7 +114,7 @@ export default function Today() {
           onPress={() => why.why({
             title: 'Last set · laughs', who: 'measured',
             claim: `${fmt1(ls?.laugh_s_per_min ?? info?.lspm)} seconds of laughter per minute of material`,
-            reason: `${heatWord(ls?.room_heat ?? info?.roomHeat) || ''}${m ? ` · over ${fmtDur(m.material_s)} of material` : ''} · room heat compares it with your median set.`,
+            reason: `${heatWord(ls?.room_heat ?? info?.roomHeat) || ''}${m ? ` · over ${mmss(m.material_s)} of material` : ''} · room heat compares it with your median set.`,
             detail: m ? <T v="small" testID="why-raw">Detector count: {an.data?.summary?.laughs ?? m.roomLaughs} laughs ({fmt1(an.data?.summary?.laughs_per_min)} raw laughs/min; a long rolling laugh can count as several).</T> : null,
             whoLine: 'Measured automatically from the tape · not hand-checked yet.',
           })} />
@@ -138,7 +139,7 @@ export default function Today() {
             {r.row.saved_as ? <T v="small" style={{ color: C.amber }}>Saved</T> : <Btn testID="today-save-new" small label="Save" onPress={() => saveLine(r)} />}
           </View>
         ))}
-        {m?.quiet && m.quiet.s >= 60 && <T v="small">Quiet {fmtDur(m.quiet.s)} at {fmtDur(m.quiet.at_ms / 1000)}</T>}
+        {m?.quiet && m.quiet.s >= 60 && <T v="small">Quiet {mmss(m.quiet.s)} at {mmss(m.quiet.at_ms / 1000)}</T>}
     </Card>
   ) : null;
 
@@ -148,7 +149,7 @@ export default function Today() {
       <Card style={{ gap: 6, borderColor: mode === 'show_day' ? C.addBorder : C.border }}>
         <View style={s.row}>
           <T v="eb" style={{ color: C.amber, flex: 1 }}>{mode === 'show_day' ? 'Tonight · ' : ''}★ Working set v{st.version}</T>
-          <T v="num" style={{ fontSize: 14 }}>{ws.data ? `${fmtDur(ws.data.version.bits.reduce((a, b) => a + b.target_s, 0))} / ${fmtDur(st.target_s)}` : fmtDur(st.target_s)}</T>
+          <T v="num" style={{ fontSize: 14 }}>{ws.data ? `${mmss(ws.data.version.bits.reduce((a, b) => a + b.target_s, 0))} / ${mmss(st.target_s)}` : mmss(st.target_s)}</T>
         </View>
         <T v="semi" numberOfLines={1}>{st.title}</T>
         {st.last_night && (

@@ -4,7 +4,8 @@ import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Alignment, BitHistory, WSBitRow, WSView, creative, useCreative } from '@/lib/creative';
 import { DragList, move } from '@/lib/DragList';
-import { fmt1, fmtDur, fmtShortDate, fmtVs, stabilityWord, vsBand } from '@/lib/laughs';
+import { fmt1, fmtVs, stabilityWord, vsBand } from '@/rules/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { MiniStrip, PerfectedMeter } from '@/lib/metrics';
 import { C, F } from '@/lib/theme';
 import { AIBadge, Btn, Card, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, Sheet, T, TextBtn, s, useUI, useWide } from '@/lib/ui';
@@ -76,7 +77,7 @@ export default function WorkingSetPage() {
       <T v="eb" style={{ color: C.amber }}>★ Working set · v{ws.current}</T>
       <T v="h1" testID="ws-title">{ws.title}</T>
       <T v="mut">{W.version.note}</T>
-      <T testID="ws-length" style={{ fontSize: 15 }}>{fmtDur(planned)} planned / {fmtDur(W.version.target_s)} light{Math.abs(over) >= 5 ? `  ${over > 0 ? '▲' : '▼'} ${fmtDur(Math.abs(over))} ${over > 0 ? 'long' : 'short'}` : ''}</T>
+      <T testID="ws-length" style={{ fontSize: 15 }}>{mmss(planned)} planned / {mmss(W.version.target_s)} light{Math.abs(over) >= 5 ? `  ${over > 0 ? '▲' : '▼'} ${mmss(Math.abs(over))} ${over > 0 ? 'long' : 'short'}` : ''}</T>
       <PerfectedMeter testID="perfected" segments={rows.map((b) => ({ key: b.joke_id, s: b.target_s, locked: b.locked }))} lockedShare={planned ? locked.reduce((a, b) => a + b.target_s, 0) / planned : 0}
         word={`${locked.length} of ${rows.length} locked · ${word}`} />
     </View>
@@ -113,7 +114,7 @@ export default function WorkingSetPage() {
         <Pressable testID={`ws-open-${i}`} style={{ flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center', gap: 3, paddingVertical: 6 }} accessibilityRole="button" onPress={() => setBit(b)}>
           <T v="semi" numberOfLines={1}>{b.title.split(' (')[0]}</T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <T v="small">{fmtDur(b.target_s)}{last?.time_s != null ? ` · last ${fmtDur(last.time_s)}${last.time_s > b.target_s * 1.15 ? ' ▲ long' : ''}` : ''}</T>
+            <T v="small">{mmss(b.target_s)}{last?.time_s != null ? ` · last ${mmss(last.time_s)}${last.time_s > b.target_s * 1.15 ? ' ▲ long' : ''}` : ''}</T>
             <MiniStrip testID={`strip-${i}`} bands={strip(b.joke_id)} size={12} />
           </View>
         </Pressable>

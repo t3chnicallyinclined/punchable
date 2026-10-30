@@ -2,7 +2,7 @@
 // builder. The merge spot is lib/MergeHint.tsx.
 import { get, post } from './api';
 import { Job, creative } from './creative';
-import { retry } from './retry';
+import { retry } from '@/rules/retry';
 
 /** A bit as the app shows it anywhere: short title, his line (verbatim), its date, one stage line in words. */
 export type BitCard = {
@@ -62,15 +62,5 @@ export async function draft<T extends { status?: string }>(call: () => Promise<a
   return { status: 'queued', job: r.job } as unknown as T;
 }
 
-/** "Mon YYYY" from an ISO date; just the year when that's all there is. */
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function monthYear(d?: string | null) {
-  if (!d) return '';
-  const m = Number(d.slice(5, 7));
-  return m >= 1 && m <= 12 ? `${MON[m - 1]} ${d.slice(0, 4)}` : d.slice(0, 4);
-}
 /** The verbatim line with the "…" the server says it cut. */
 export const quoteText = (b: Pick<BitCard, 'quote' | 'cut_start' | 'cut_end'>) => (b.quote ? `${b.cut_start ? '…' : ''}${b.quote}${b.cut_end ? '…' : ''}` : '');
-
-/** A question reads as Ask: ends with "?" or starts with what/when/where/did/have/which/how/who/why/do/was/is. */
-export const isQuestion = (q: string) => /\?\s*$/.test(q.trim()) || /^(what|when|where|did|have|which|how|who|why|do|was|is)\b/i.test(q.trim());

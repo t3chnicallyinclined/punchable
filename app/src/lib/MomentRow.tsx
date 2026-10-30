@@ -1,9 +1,9 @@
-// One taped moment as a row (lib/searchRows): where and when, the line he said, the bit it belongs to if any; tap =
+// One taped moment as a row (rules/searchRows): where and when, the line he said, the bit it belongs to if any; tap =
 // the set screen at that second, playing. Used under a Bits search ("In your sets") and on a bit's page ("Elsewhere").
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Moment, momentHref, oneLine, whenWhere } from './searchRows';
+import { Moment, momentHref, oneLine, whenWhere } from '@/rules/searchRows';
 import { C, F } from './theme';
 
 export function MomentRow({ m, testID, showBit = true }: { m: Moment; testID?: string; showBit?: boolean }) {

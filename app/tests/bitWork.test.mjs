@@ -1,5 +1,5 @@
-// Unit test for lib/bitWorkRules.ts (the workbench's pure rules). node --experimental-strip-types tests/bitWork.test.mjs
-import * as B from "../src/lib/bitWorkRules.ts";
+// Unit test for rules/bitWorkRules.ts (the workbench's pure rules). node --experimental-strip-types tests/bitWork.test.mjs
+import * as B from "../src/rules/bitWorkRules.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

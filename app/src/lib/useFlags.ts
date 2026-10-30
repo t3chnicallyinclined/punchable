@@ -1,9 +1,9 @@
-// The remote switches on the phone (lib/flags.ts has the pure part). Read once per launch from /api/health (no auth
+// The remote switches on the phone (rules/flags.ts has the pure part). Read once per launch from /api/health (no auth
 // needed: the API answers it signed out too), kept in memory, pushed to every mounted useFlags(). A build-time
 // EXPO_PUBLIC_GLASS_ACCESSORY=0 is final: the server cannot turn a feature back on that the build turned off.
 import { useEffect, useState } from 'react';
 import { get } from './api';
-import { Flags, flagsFromEnv, readFlags } from './flags';
+import { Flags, flagsFromEnv, readFlags } from '@/rules/flags';
 
 const ENV = flagsFromEnv(process.env as Record<string, string | undefined>);
 let flags: Flags = { ...ENV };

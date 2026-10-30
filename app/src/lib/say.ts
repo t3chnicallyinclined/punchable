@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, get, post, useOnline } from './api';
 import type { Chat, Worker } from './ask';
 
-import type { SayKind } from './sayRules';
+import type { SayKind } from '@/rules/sayRules';
 export type { SayKind };
 /** A command's outcome (say_api.run_command): done (with Undo = the inverse board op), or a question back
  *  (`ask`: which bit, or none matched) with the candidates for his one tap (`choice`). */
@@ -48,7 +48,7 @@ export const say = {
   tonight: () => get<TonightScreen>('/api/tonight/screen'),
 };
 
-export { guessKind, isQuestion, parseCommand, positionIn, shortNameOf } from './sayRules';
+export { guessKind, isQuestion, parseCommand, positionIn, shortNameOf } from '@/rules/sayRules';
 
 // ---------------------------------------------------------------- the outbox (per-device; flushed when the API is back)
 const OUTBOX = 'pk.say.outbox.v1';

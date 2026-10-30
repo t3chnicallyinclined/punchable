@@ -4,7 +4,7 @@ import React, { memo, useState } from 'react';
 import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, Pattern, Rect, Path } from 'react-native-svg';
 import { C, F } from './theme';
-import { BAR_WORDS, RECEPTION_WORDS, Rating, fmt1, heatStep, heatWord, receptionBars } from './laughs';
+import { BAR_WORDS, RECEPTION_WORDS, Rating, fmt1, heatStep, heatWord, receptionBars } from '@/rules/laughs';
 import { T } from './ui';
 
 // ------------------------------------------------------------------ headline

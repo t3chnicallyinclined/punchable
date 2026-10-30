@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { WSView, creative, useCreative } from '@/lib/creative';
-import { fmtDur } from '@/lib/laughs';
+import { mmss } from '@/rules/format';
 import { C, F } from '@/lib/theme';
 import { Btn, Empty, T } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -29,12 +29,12 @@ export default function SetList() {
       dock={<Btn label="Done" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/boards' as any))} />}>
       {!W ? <Empty text="Loading…" /> : (
         <View style={{ gap: 18 }}>
-          <T v="small" testID="awake">Screen stays on · {fmtDur(W.bits.reduce((a, b) => a + b.target_s, 0))} of {fmtDur(W.version.target_s)}</T>
+          <T v="small" testID="awake">Screen stays on · {mmss(W.bits.reduce((a, b) => a + b.target_s, 0))} of {mmss(W.version.target_s)}</T>
           {W.bits.map((b, i) => (
             <View key={b.joke_id} testID={`cue-${i}`} style={{ gap: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12 }}>
                 <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.g7, fontSize: 40, lineHeight: 46, color: C.text, flex: 1 }}>{cue(b.title)}</Text>
-                <Text style={{ fontFamily: F.g6, fontSize: 20, color: C.mut, fontVariant: ['tabular-nums'] }}>{fmtDur(b.target_s)}</Text>
+                <Text style={{ fontFamily: F.g6, fontSize: 20, color: C.mut, fontVariant: ['tabular-nums'] }}>{mmss(b.target_s)}</Text>
               </View>
               {!!b.notes[0] && <Text style={{ fontFamily: F.body, fontSize: 16, color: C.amber }}>try: {b.notes[0].text.replace(/^[^:]+:\s*/, '').slice(0, 70)}</Text>}
             </View>

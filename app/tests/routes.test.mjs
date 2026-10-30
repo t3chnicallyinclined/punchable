@@ -4,7 +4,7 @@
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REQUIRED_URLS, STATIC_URLS, duplicates, matches, patternOf, resolve } from "../src/lib/routeTable.ts";
+import { REQUIRED_URLS, STATIC_URLS, duplicates, matches, patternOf, resolve } from "../src/rules/routeTable.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

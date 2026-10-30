@@ -5,11 +5,11 @@ import React, { useCallback, useState } from 'react';
 import { PixelRatio, Platform, Pressable, Text, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useApi } from '@/lib/api';
-import { fmtDur } from '@/lib/laughs';
+import { mmss } from '@/rules/format';
 import { TonightScreen, useOutbox } from '@/lib/say';
 import { CreateSheet } from '@/lib/CreateSheet';
 import { C, F } from '@/lib/theme';
-import { tonightTitleRow } from '@/lib/layoutRules';
+import { tonightTitleRow } from '@/rules/layoutRules';
 import { noteWorker } from '@/lib/worker';
 import { Avatar, Icon, Skeleton, T, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -107,7 +107,7 @@ export default function Tonight() {
         style={{ padding: 16, borderRadius: 20, backgroundColor: C.card, gap: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <Text numberOfLines={1} style={{ flex: 1, fontFamily: F.bold, fontSize: 15, color: C.text }}>{b ? `Your ${Math.round(b.target_s / 60)} for tonight` : 'No set list yet'}</Text>
-          <Text testID="tonight-runtime" style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{b ? fmtDur(b.runtime_s) : ''}</Text>
+          <Text testID="tonight-runtime" style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{b ? mmss(b.runtime_s) : ''}</Text>
         </View>
         <SetBar segments={b?.segments || []} testID="tonight-bar" />
         <Text numberOfLines={2} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>

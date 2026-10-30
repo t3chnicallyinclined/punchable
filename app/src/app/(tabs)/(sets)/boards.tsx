@@ -6,7 +6,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { get, useApi } from '@/lib/api';
 import { BoardListItem, creative, useCreative } from '@/lib/creative';
-import { fmtDur, fmtShortDate } from '@/lib/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { SetSummary, Trim, lengthWords, mysets } from '@/lib/mysets';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
@@ -54,7 +54,7 @@ export default function Boards() {
         <List>
           {mine.map((x) => (
             <ListRow key={x.id} testID={`board-${x.id}`} title={<View style={s.row}><T v="semi" style={{ flexShrink: 1 }} numberOfLines={1}>{x.title}</T>{cur.current?.id === x.id && <T v="small" style={{ color: C.amber }}>current</T>}</View>}
-              sub={`${x.n} bits · ${x.runtime}${x.target_s ? ` of ${fmtDur(x.target_s)}` : ''} · ${fmtShortDate(x.updated)}`} onPress={() => router.push(`/board/${encodeURIComponent(x.id)}` as any)} />
+              sub={`${x.n} bits · ${x.runtime}${x.target_s ? ` of ${mmss(x.target_s)}` : ''} · ${fmtShortDate(x.updated)}`} onPress={() => router.push(`/board/${encodeURIComponent(x.id)}` as any)} />
           ))}
         </List>
       </Card>

@@ -15,11 +15,12 @@ import { actionSheet } from '@/lib/actionSheet';
 import { isWeb } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
 import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordControl';
-import { type RecordState, nextRecordState, statusWord } from '@/lib/recorderLogic';
+import { type RecordState, nextRecordState, statusWord } from '@/rules/recorderLogic';
 import { enqueueUpload } from '@/lib/uploads';
 import { Build } from '@/lib/simple';
+import { clockMs } from '@/rules/format';
 import { shortNameOf } from '@/lib/say';
-import { C, F, fmtMs } from '@/lib/theme';
+import { C, F } from '@/lib/theme';
 import { Btn, Empty, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
@@ -91,7 +92,7 @@ export default function Stage() {
       const r = await recorder.stop();
       const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt: new Date(Date.now() - r.durationMs).toISOString(), showGroup: id });
       haptics.success();
-      ui.snack(res.queued ? `Saved · ${fmtMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${fmtMs(r.durationMs)}`);
+      ui.snack(res.queued ? `Saved · ${clockMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${clockMs(r.durationMs)}`);
       setRec(nextRecordState('saving', 'saved'));
       back();
     } catch (e: any) {
@@ -115,7 +116,7 @@ export default function Stage() {
   const close = () => {
     if (!taping) return back();
     if (!native) return setAsk(true);
-    actionSheet({ title: 'Leave the stage?', message: `${fmtMs(ms)} on tape.`, options: [
+    actionSheet({ title: 'Leave the stage?', message: `${clockMs(ms)} on tape.`, options: [
       { label: 'Discard the recording', destructive: true, onPress: discard },
       { label: 'Save the set', onPress: save },
       { label: 'Keep going', cancel: true },
@@ -152,7 +153,7 @@ export default function Stage() {
       )}
       <Sheet visible={ask} onClose={() => setAsk(false)} label="Leave the stage" testID="stage-stop-sheet">
         <SheetHead title="Leave the stage?" onCancel={() => setAsk(false)} cancelLabel="Keep going" testID="stage-stop" />
-        <T v="mut" style={{ marginBottom: 12 }}>{fmtMs(ms)} on tape.</T>
+        <T v="mut" style={{ marginBottom: 12 }}>{clockMs(ms)} on tape.</T>
         <View style={{ gap: 8 }}>
           <Btn testID="stage-save" v="primary" label="Save the set" onPress={save} />
           <Btn testID="stage-discard" v="danger" label="Discard the recording" onPress={discard} />

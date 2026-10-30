@@ -3,7 +3,7 @@
 // uploadsCore until the tab closes. The phone build (uploads.native.ts) keeps the file and the queue on disk.
 import { useEffect, useState } from 'react';
 import { ApiError, UploadMeta, setOnline, upload } from './api';
-import { QueuedUpload, backoffMs, runQueue } from './uploadsCore';
+import { QueuedUpload, backoffMs, runQueue } from '@/rules/uploadsCore';
 import type { Recording } from './recorder';
 
 const blobs = new Map<string, Blob>();

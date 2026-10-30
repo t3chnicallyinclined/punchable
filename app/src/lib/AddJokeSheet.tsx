@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { JokeSummary, post, useApi } from './api';
-import { fmtDur } from './laughs';
+import { mmss } from '@/rules/format';
 import { Memo, MemosResp, memoTitle } from './memos';
 import { BitCard, Build, Related, quoteText } from './simple';
 import { isQuestion, positionIn, shortNameOf } from './say';
@@ -32,7 +32,7 @@ export type AddJokeProps = {
 };
 
 /** The sheet's title (the wrapper's row, or the native sheet's bar). */
-export const addJokeTitle = (mode: 'add' | 'swap', left: number | null) => (mode === 'swap' ? 'Swap it for' : `Add a joke${left != null ? ` · ${left > 0 ? `${fmtDur(left)} left` : 'full'}` : ''}`);
+export const addJokeTitle = (mode: 'add' | 'swap', left: number | null) => (mode === 'swap' ? 'Swap it for' : `Add a joke${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`);
 
 /** The content. `chrome` draws the Cancel · title row (the Modal sheet); the native form sheet owns the bar (chrome={false}). */
 export function AddJokeBody({ onClose, boardId, inSet, fits, onPick, left, mode = 'add', chrome = true }: AddJokeProps & { chrome?: boolean }) {
@@ -84,7 +84,7 @@ export function AddJokeBody({ onClose, boardId, inSet, fits, onPick, left, mode 
         <Pressable style={{ flex: 1, minWidth: 0, gap: 2 }} accessibilityRole="link" accessibilityLabel={`${r.title}. Open`} onPress={() => router.push(`/joke/${encodeURIComponent(r.joke_id)}` as any)}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
             <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>{r.short_name}</Text>
-            {r.duration_s != null && <Text style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{r.estimated ? '~' : ''}{fmtDur(r.duration_s)}</Text>}
+            {r.duration_s != null && <Text style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{r.estimated ? '~' : ''}{mmss(r.duration_s)}</Text>}
           </View>
           {!!r.sub && <Text numberOfLines={2} style={{ fontFamily: F.body, fontSize: 14, color: C.text2 }}>{r.sub}</Text>}
           <Text numberOfLines={1} style={{ fontFamily: F.body, fontSize: 13, color: inside ? C.mut2 : C.amber }}>{inside ? `Already in this set at #${at! + 1}` : r.why || ''}</Text>

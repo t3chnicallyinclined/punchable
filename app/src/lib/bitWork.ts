@@ -1,6 +1,6 @@
 // The bit workbench's writes (2026-10-29; owner: "open a bit, edit and speak to my material, brainstorm, then
 // organize the joke live"). Every call here is undoable: a version is two decisions (their indexes), a merge or an
-// attach has a merge_id for POST /api/merge/undo. The pure rules (pickMain, answerLine) live in lib/bitWorkRules.ts, tested in tests/bitWork.test.mjs.
+// attach has a merge_id for POST /api/merge/undo. The pure rules (pickMain, answerLine) live in rules/bitWorkRules.ts, tested in tests/bitWork.test.mjs.
 import { post } from './api';
 
 export type Version = { key: string; label: string; date: string | null; text: string; doc?: string | null };
@@ -23,4 +23,4 @@ export const attachNote = (note: string, into: string, reason?: string) =>
 
 export const undoMerge = (merge_id: string) => post<{ ok: boolean }>('/api/merge/undo', { merge_id });
 
-export { answerLine, pickMain } from './bitWorkRules';
+export { answerLine, pickMain } from '@/rules/bitWorkRules';

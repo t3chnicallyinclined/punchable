@@ -7,7 +7,8 @@ import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { decide, post, setRow, undo, useApi } from '@/lib/api';
 import { Alignment, ClipsView, creative, useCreative } from '@/lib/creative';
-import { BAR_WORDS, RATINGS, Rating, fmt1, fmtDur, fmtPct, fmtSec, fmtShortDate, fmtVs, heatWord, nonBitWord, ratingFromVsRoom } from '@/lib/laughs';
+import { BAR_WORDS, RATINGS, Rating, fmt1, fmtPct, fmtSec, fmtVs, heatWord, nonBitWord, ratingFromVsRoom } from '@/rules/laughs';
+import { fmtShortDate, mmss } from '@/rules/format';
 import { DensityStrip, LaughHeadline, RatingTag, ReceptionLegend, ReceptionMeter, VsRoomBar } from '@/lib/metrics';
 import { RowM, editSet, newTonight, setMetrics, useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
@@ -18,7 +19,6 @@ import { Screen } from '@/lib/Screen';
 import { WhyLine, useWhy } from '@/lib/why';
 import { SayBar } from '@/lib/SayBar';
 
-const mmss = (ms: number) => fmtDur(ms / 1000);
 
 export default function SetScreen() {
   const p = useLocalSearchParams<{ id: string; row?: string; at?: string; play?: string }>();
@@ -84,7 +84,7 @@ export default function SetScreen() {
 
   const headlineWhy = () => why.why({
     title: 'Laughs in this set', who: 'measured', claim: `${fmt1(m.rate)} seconds of laughter per minute of material`,
-    reason: `${heatWord(info?.roomHeat) || 'room heat unknown'} · over ${fmtDur(m.material_s)} of material.`,
+    reason: `${heatWord(info?.roomHeat) || 'room heat unknown'} · over ${mmss(m.material_s)} of material.`,
     detail: (
       <View style={{ gap: 6 }}>
         <T v="small" testID="why-raw">Detector: {S.laughs ?? m.roomLaughs} laughs = {fmt1(S.laughs_per_min)} raw laughs/min. One long rolling laugh can count as several, so it isn’t the headline.</T>
@@ -109,7 +109,7 @@ export default function SetScreen() {
       {unreliable ? (
         <View testID="audio-unreliable" style={{ gap: 6 }}>
           <T v="semi">⚠ Audio unreliable · not in trends</T>
-          <T v="mut">We heard almost no laughs: {m.roomLaughs} in {fmtDur(m.material_s)}. That’s usually the recording, not you.</T>
+          <T v="mut">We heard almost no laughs: {m.roomLaughs} in {mmss(m.material_s)}. That’s usually the recording, not you.</T>
         </View>
       ) : (
         <LaughHeadline testID="set-headline" value={m.rate} roomHeat={info?.roomHeat} onPress={headlineWhy}
@@ -120,7 +120,7 @@ export default function SetScreen() {
           ['stat-pct', '% laughing', fmtPct(m.pct)],
           ['stat-rolling', 'rolling laughs/min', fmt1(m.rolling)],
           ['stat-longest', 'longest laugh', m.longest ? `${fmt1(m.longest.s)} s` : '–', m.longest?.title?.split(' (')[0]],
-          ['stat-quiet', 'longest quiet', m.quiet ? fmtDur(m.quiet.s) : '–', m.quiet ? `at ${mmss(m.quiet.at_ms)}` : null],
+          ['stat-quiet', 'longest quiet', m.quiet ? mmss(m.quiet.s) : '–', m.quiet ? `at ${mmss(m.quiet.at_ms / 1000)}` : null],
         ].map(([tid, label, v, sub]) => (
           <View key={tid as string} testID={tid as string} style={{ width: wide ? '25%' : '50%', paddingRight: 8 }}>
             <T v="num" style={{ fontSize: 20 }}>{v}</T>
@@ -132,7 +132,7 @@ export default function SetScreen() {
       <DensityStrip testID="timeline" durationMs={m.durationMs} laughs={an.data.laughs || []} quiet={m.quiet ? { at_ms: m.quiet.at_ms, dur_s: m.quiet.s } : null}
         segs={m.rows.map((r) => ({ idx: r.idx, start_ms: r.row.start_ms, end_ms: r.row.end_ms, lspm: r.lspm, nonBit: r.nonBit, word: r.shown.word }))}
         onPress={(idx) => jump(idx)} />
-      <T v="small">{fmtDur(m.material_s)} of material in a {fmtDur(recS)} recording</T>
+      <T v="small">{mmss(m.material_s)} of material in a {mmss(recS)} recording</T>
     </Card>
   );
 
@@ -145,7 +145,7 @@ export default function SetScreen() {
           <View key={b.joke_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40 }}>
             <T v="num" style={{ width: 22, fontSize: 13, color: C.mut }}>{b.planned_pos}</T>
             <T style={{ flex: 1 }} numberOfLines={1}>{b.title.split(' (')[0]}</T>
-            <T v="small">{b.performed ? `${fmtDur(b.time_s)} vs ${fmtDur(b.target_s)}` : 'dropped'}</T>
+            <T v="small">{b.performed ? `${mmss(b.time_s)} vs ${mmss(b.target_s)}` : 'dropped'}</T>
           </View>
         ))}
       </List>
@@ -186,7 +186,7 @@ export default function SetScreen() {
         <Pressable key={i} testID={`clip-${i}`} accessibilityRole="button" accessibilityLabel={`Play ${c.title}`} onPress={() => playSegment(audio, c.start_ms, c.end_ms, `clip-${i}`).catch((e) => ui.snack(e.message))}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48 }}>
           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.amber, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.bg }}>▶</Text></View>
-          <View style={{ flex: 1 }}><T numberOfLines={1}>{c.title}</T><T v="small">{mmss(c.start_ms)} · {fmtSec((c.end_ms - c.start_ms) / 1000)}{c.why ? ` · ${c.why}` : ''}</T></View>
+          <View style={{ flex: 1 }}><T numberOfLines={1}>{c.title}</T><T v="small">{mmss(c.start_ms / 1000)} · {fmtSec((c.end_ms - c.start_ms) / 1000)}{c.why ? ` · ${c.why}` : ''}</T></View>
         </Pressable>
       ))}
     </Card>
@@ -257,7 +257,7 @@ const SetRowView = memo(function SetRowView({ r, open, audio, setId, onToggle, o
     const first = (row.transcript || '').split(/\s+/).slice(0, 7).join(' ');
     return (
       <View testID={`row-${r.idx}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderTopWidth: 1, borderTopColor: C.border }}>
-        <T v="num" style={{ width: 44, fontSize: 13, color: C.dim }}>{mmss(row.start_ms)}</T>
+        <T v="num" style={{ width: 44, fontSize: 13, color: C.dim }}>{mmss(row.start_ms / 1000)}</T>
         <Pressable testID={`title-${r.idx}`} accessibilityRole="button" accessibilityLabel={`${nonBitWord(row)}. Change what this was`} onPress={onThisWas} style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}>
           <Text numberOfLines={1} style={{ fontFamily: F.body, fontSize: 14, color: C.dim }}>{nonBitWord(row)}{first ? ` · “${first}…”` : ''}{yoursKind ? ' · yours' : ''}</Text>
         </Pressable>
@@ -271,7 +271,7 @@ const SetRowView = memo(function SetRowView({ r, open, audio, setId, onToggle, o
   return (
     <View testID={`row-${r.idx}`} style={{ borderTopWidth: 1, borderTopColor: C.border, paddingVertical: 8, gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <T v="num" style={{ width: 44, fontSize: 13, color: C.mut }}>{mmss(row.start_ms)}</T>
+        <T v="num" style={{ width: 44, fontSize: 13, color: C.mut }}>{mmss(row.start_ms / 1000)}</T>
         <Pressable testID={`title-${r.idx}`} accessibilityRole="button" accessibilityLabel={`${t}. This was…`} onPress={onThisWas} style={{ flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={{ flexShrink: 1, fontFamily: F.semi, fontSize: 16, color: row.status === 'new' ? C.amber : C.text }}>{t}</Text>
           {matchAi && row.status !== 'new' ? <AIBadge testID={`ai-${r.idx}`} /> : row.match?.state && row.match.state !== 'ai' ? <Yours /> : null}
@@ -294,7 +294,7 @@ const SetRowView = memo(function SetRowView({ r, open, audio, setId, onToggle, o
             <Pressable key={i} testID={`punch-${r.idx}-${i}`} accessibilityRole="button" accessibilityLabel={`Hear: ${pl.text}`} onPress={() => audio && playSegment(audio, Math.max(0, pl.at_ms - 4000), pl.at_ms + 6000, `pl-${r.idx}-${i}`).catch((e) => ui.snack(e.message))}
               style={[s.punch, { gap: 4, paddingVertical: 4 }]}>
               <T style={{ fontSize: 15 }}>{pl.text}</T>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ReceptionMeter bars={pl.bars} size={12} word={BAR_WORDS[pl.bars] || ''} /><T v="small">▶ {mmss(pl.at_ms)}</T></View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ReceptionMeter bars={pl.bars} size={12} word={BAR_WORDS[pl.bars] || ''} /><T v="small">▶ {mmss(pl.at_ms / 1000)}</T></View>
             </Pressable>
           ))}
           {!!row.rating_basis && <WhyLine testID={`basis-${r.idx}`} text={row.rating_basis.replace(/\d+\.\d{2,}/g, (x: string) => fmt1(Number(x)))} onPress={() => why.why({
@@ -365,7 +365,7 @@ function ThisWasSheet({ r, onClose, act }: { r: RowM | null; onClose: () => void
   );
   return (
     <Sheet visible onClose={onClose} label="This was…" testID="this-was-sheet">
-      <T v="eb">{mmss(row.start_ms)} · {row.match?.state === 'ai' ? 'the AI read' : 'yours'}</T>
+      <T v="eb">{mmss(row.start_ms / 1000)} · {row.match?.state === 'ai' ? 'the AI read' : 'yours'}</T>
       <T v="h2" style={{ marginBottom: 4 }}>This was…</T>
       {!!row.match_reason && <T v="mut" style={{ marginBottom: 8 }}>{row.match_reason}</T>}
       <View style={{ gap: 8 }}>

@@ -5,15 +5,16 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { JokeSummary, decide, get, undo, useApi } from '@/lib/api';
-import { strengthDots } from '@/lib/laughs';
+import { strengthDots } from '@/rules/laughs';
 import { StrengthDots } from '@/lib/metrics';
 import { useBoards } from '@/lib/boards';
 import { C, F, STAGE, STAGES, WIDE, stageInfo, stageWord } from '@/lib/theme';
 import { AddBtn, Avatar, Btn, Chip, Chips, Empty, ErrorCard, Icon, List, ListRow, Seg, Sheet, StageWord, T, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { MergeGroups } from '@/lib/MergeHint';
+import { isQuestion } from '@/lib/say';
 import { useSets } from '@/lib/sets';
-import { fmtShortDate } from '@/lib/laughs';
+import { fmtShortDate } from '@/rules/format';
 import { WhyLine } from '@/lib/why';
 import { VoiceMemos } from '@/lib/memos';
 
@@ -34,8 +35,6 @@ export function shortTitle(j: { title: string; short_title?: string }) {
   const t = j.title.split(' (')[0].trim();
   return t.length > 28 ? `${t.slice(0, 27).trimEnd()}…` : t;
 }
-/** A question reads as Ask: starts with what/when/where/did/have/which/how/who/why, or ends with "?". */
-export const isQuestion = (q: string) => /\?\s*$/.test(q) || /^(what|when|where|did|have|which|how|who|why|do|was|is)\b/i.test(q.trim());
 
 const Row = memo(function Row({ j, onAdd, onPick, onStage }: { j: JokeSummary; onAdd: (j: JokeSummary) => void; onPick: (j: JokeSummary) => void; onStage: (j: JokeSummary) => void }) {
   const performed = (j.sets || 0) > 0;

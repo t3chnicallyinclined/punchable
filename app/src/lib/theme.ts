@@ -197,15 +197,3 @@ export const RATING: Record<string, { label: string; fg: string }> = {
 
 export const WIDE = 900;
 
-export const fmtMs = (ms: number | null | undefined) => {
-  const s = Math.max(0, Math.floor((ms || 0) / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-};
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-export const fmtDate = (iso?: string | null) => {
-  if (!iso) return '';
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  return `${MONTHS[(m || 1) - 1]} ${d}, ${y}`;
-};

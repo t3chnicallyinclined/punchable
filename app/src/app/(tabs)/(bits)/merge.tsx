@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { decide, get, post, useApi } from '@/lib/api';
-import { monthYear } from '@/lib/simple';
+import { monthYear } from '@/rules/format';
 import { C, F } from '@/lib/theme';
 import { AIBadge, Btn, Empty, ErrorCard, T, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';

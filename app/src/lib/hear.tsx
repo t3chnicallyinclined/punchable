@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { onPlayState, playSegment, youtubeAt } from './media';
-import { C, fmtMs } from './theme';
+import { C } from './theme';
+import { clockMs } from '@/rules/format';
 import { T, s, useUI } from './ui';
 
 function usePlaying() {
@@ -27,7 +28,7 @@ export function HearIt({ audio, play, k, sub, testID, reference }: { audio: stri
           <Text style={{ color: C.bg, fontSize: 16 }}>▶</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <T>{reference.kind === 'youtube' ? `Watch on YouTube at ${fmtMs(play.start_ms)}` : 'Open the recording in Google Drive'}</T>
+          <T>{reference.kind === 'youtube' ? `Watch on YouTube at ${clockMs(play.start_ms)}` : 'Open the recording in Google Drive'}</T>
           <T v="small">{reference.kind === 'youtube' ? sub : reference.name || 'your voice memo'}</T>
         </View>
       </Pressable>
@@ -41,7 +42,7 @@ export function HearIt({ audio, play, k, sub, testID, reference }: { audio: stri
         <Text style={{ color: C.bg, fontSize: 16 }}>{on ? '❚❚' : '▶'}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <T>{on ? `Playing · ${fmtMs(p.at)}` : 'Hear it'}</T>
+        <T>{on ? `Playing · ${clockMs(p.at)}` : 'Hear it'}</T>
         <T v="small">{audio ? sub : reference?.kind === 'file' ? `On your phone: ${reference.name || 'the recording'}` : 'No audio for this set'}</T>
       </View>
     </Pressable>

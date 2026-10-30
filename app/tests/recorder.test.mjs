@@ -1,6 +1,6 @@
-// Unit test for src/lib/recorderLogic.ts: the set-recording options, the dB meter, the clock with his pauses and the
+// Unit test for src/rules/recorderLogic.ts: the set-recording options, the dB meter, the clock with his pauses and the
 // system's, and which mic tapes the room.   node --experimental-strip-types --no-warnings tests/recorder.test.mjs
-import * as R from "../src/lib/recorderLogic.ts";
+import * as R from "../src/rules/recorderLogic.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };

@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { ApiError } from './api';
 import { BoardListItem, creative } from './creative';
 import { C, F } from './theme';
-import { fmtDur } from './laughs';
+import { mmss } from '@/rules/format';
 import { Btn, Sheet, T, s, useUI } from './ui';
 
 const KEY = 'pk.board.current';
@@ -58,7 +58,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     let alive = true;
     creative.workingsets().then((r) => {
       const w = r.working_sets[0];
-      if (alive && w) ui.setWorkingSet({ id: w.id, title: w.title, sub: `v${w.version} · ${w.n} bits · ${fmtDur(w.target_s)}`, target_s: w.target_s });
+      if (alive && w) ui.setWorkingSet({ id: w.id, title: w.title, sub: `v${w.version} · ${w.n} bits · ${mmss(w.target_s)}`, target_s: w.target_s });
     }).catch(() => {});
     return () => {
       alive = false;

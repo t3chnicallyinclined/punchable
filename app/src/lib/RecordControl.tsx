@@ -3,11 +3,12 @@
 // red square that STOPS AND SAVES (Voice Memos: stopping is not loss, so no sheet); Discard is the hard path, behind
 // Close. Pause is a secondary control; a phone call shows as "Paused by a call" with the same Resume. 92 pt hit region
 // on the centre control, 60 pt on the sides, all above the home indicator: one-handed in the dark.
-// The state machine is pure (lib/recorderLogic nextRecordState) and tested in tests/recorder.test.mjs.
+// The state machine is pure (rules/recorderLogic nextRecordState) and tested in tests/recorder.test.mjs.
 import React from 'react';
 import { Platform, PlatformColor, Pressable, Text, View } from 'react-native';
-import { C, F, fmtMs } from './theme';
-import type { RecordState } from './recorderLogic';
+import { C, F } from './theme';
+import { clockMs } from '@/rules/format';
+import type { RecordState } from '@/rules/recorderLogic';
 
 const RED = Platform.OS === 'ios' ? (PlatformColor('systemRed') as any) : C.rec;
 const RING = 92;
@@ -73,9 +74,9 @@ export function RecordClock({ ms, status, targetS, lightS, level, interrupted, t
   return (
     <View style={{ gap: 10 }}>
       <View style={{ alignItems: 'center', gap: 2 }}>
-        <Text testID={`${testID}-clock`} maxFontSizeMultiplier={1.2} style={{ fontFamily: F.black, fontSize: 84, lineHeight: 90, letterSpacing: -2, color: lit ? C.gapText : C.text, fontVariant: ['tabular-nums'] }}>{fmtMs(ms)}</Text>
+        <Text testID={`${testID}-clock`} maxFontSizeMultiplier={1.2} style={{ fontFamily: F.black, fontSize: 84, lineHeight: 90, letterSpacing: -2, color: lit ? C.gapText : C.text, fontVariant: ['tabular-nums'] }}>{clockMs(ms)}</Text>
         <Text testID={`${testID}-status`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 15, color: status === 'Recording' ? RED : C.mut2 }}>
-          {status}{target ? ` · of ${fmtMs(target * 1000)} · light at ${fmtMs(light * 1000)}` : ''}
+          {status}{target ? ` · of ${clockMs(target * 1000)} · light at ${clockMs(light * 1000)}` : ''}
         </Text>
       </View>
       {!!target && (

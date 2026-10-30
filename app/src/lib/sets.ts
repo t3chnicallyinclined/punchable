@@ -5,9 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SetCard, decide, undo, useApi } from './api';
 import { VenuesView, creative, useCreative } from './creative';
-import {
-  audioUnreliable, displayRating, isNonBit, roomComparable, showDate, venueShort,
-} from './laughs';
+import { audioUnreliable, displayRating, isNonBit, roomComparable, showDate, venueShort } from '@/rules/laughs';
 
 export type SetInfo = {
   id: string; card: SetCard; title: string;
