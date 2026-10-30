@@ -114,11 +114,33 @@ Every route in the contract, serving creative/'s JSON as-is. Additions the contr
 - `GET /api/today` = the existing Today payload **plus** `today.build`'s keys (`date`, `working_set`, `try_tonight`,
   `serendipity`, `new_material`, `minutes`, `his_tonight_list`). `latest_set` is the SetCard plus today.build's set
   fields (SetCard keys win: title, date, venue). The working set is the most recently changed one.
-- Lists: `GET /api/boards` -> `{boards:[{id,title,n,runtime_s,runtime,target_s,updated,source}]}`,
-  `GET /api/workingsets` -> `{workingsets:[...]}`.
+- Lists: `GET /api/boards` -> `{boards:[{id,title,n,runtime_s,runtime,target_s,updated,source,names,archived,seed,by}],
+  archived:false}`, newest first, **archived boards left out**; `GET /api/boards?archived=1` lists the archived ones
+  instead (`archived:true` on the envelope). `source` is `"his"` once he made or touched a board, else `"inferred"`;
+  `by` is who created it (`PK_OWNER_ID`, `ai:seed`, `ai:demo`) and `seed` is `{from:"insights.chunks", chunk,
+  minutes_est}` on a draft seeded from his Insights, else `null`: the Set lists screen labels the machine-made ones
+  from these two ("drafts from your Insights") and shows his own. `GET /api/workingsets` -> `{workingsets:[...]}`.
 - `PATCH /api/boards/{id}` takes any of `title, notes, target_s, joke_ids (reorder/replace), add:{joke_id,at?},
-  remove, move:{from,to}, delete: true` (the inverse of creating a list; answers `{ok, board: {id, title, deleted}}`);
-  all are checked before any is written.
+  remove, move:{from,to}, archive: true, unarchive: true, delete: true`; all are checked before any is written.
+  - `{"archive": true}` puts a set list away: it stays in the log, leaves `GET /api/boards`, appears under
+    `?archived=1`, still opens (`GET /api/boards/{id}`, `/build`), and answers the board view with
+    `board.archived: true`. **Undo is `{"unarchive": true}`** (same answer, `archived: false`); a body may bring a
+    list back and edit it in one go (`{"unarchive": true, "title": "..."}`: unarchive runs first). Neither changes
+    `source`: archiving a seeded draft does not make it his.
+  - On an archived board every other change (and `POST .../items`) is refused `400 {"error": "\"<title>\" is
+    archived: unarchive it first"}`; archiving twice is `"\"<title>\" is already archived"`, unarchiving a live one
+    `"\"<title>\" is not archived"`. Nothing is written on a refusal.
+  - `delete: true` is the inverse of creating a list and is **terminal** (an archived board can be deleted; a
+    deleted one is `404` to every op, `unarchive` included); answers `{ok, board: {id, title, deleted}}`.
+- Tonight's list (`GET /api/tonight/screen` `board`, the "put X in tonight" command in `POST /api/say`) is **one of
+  his own boards** (the one he touched last, with bits, not archived) or `null` ("no list yet"); a seeded draft is
+  never tonight's. With no board of his, "put X in tonight" creates `"<Weekday> · tonight"` by him, as before.
+- `GET /api/boards/{id}/build` (the stage view): each step carries, besides the card (`quote`, `quote_node`,
+  `stage_line`, `proven`, `nights`, `duration_s`, `transition_in`, ...), the bit's notes so the stage screen opens one
+  without a call per bit: `text: {setup, reveal, from}` = the newest written version as the joke page shows it (the
+  same function, `server.joke_text`: at most ~900 characters, `from: {unit, date, doc_title}`; with no written
+  version the split of his typed idea and `from: null`), and `idea` = his typed idea (the node's `summary`) when
+  there is no written version, else `null`. Additive: no existing key changes type.
 - `GET /api/map?cap=400` (1-2000): every bit as a node (the top `cap` by nights, laughs, recency; names only) and the
   links between them grouped like the per-joke map (`next, tags, same_world, callbacks, versions`; at most 6 per bit,
   4×nodes overall): `{rev, cap, nodes:[{id, short_name, title, stage, nights, heat, last_seen, degree}], edges:[{a, b,

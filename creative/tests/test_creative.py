@@ -51,6 +51,19 @@ def test_seed_reorders_only_untouched_ai_boards(corpus, tmp_path):
     assert again["joke_ids"] == ["joke:d", "joke:a", "joke:b"] and again["source"] == "his"
 
 
+def test_seed_leaves_an_archived_draft_alone(corpus, tmp_path):
+    corpus.insights = {"chunks": {"chunks": [{"name": "kids", "fits_5_15": True, "minutes_est": 6,
+                                               "jokes": ["joke:b", "joke:d", "joke:a"]}]}}
+    bs = S.board_store(tmp_path)
+    b = S.seed_from_insights(corpus, bs, ts=TS)[0]
+    S.set_jokes(bs, b["id"], ["joke:d", "joke:a", "joke:b"], by="ai:seed", ts=TS)  # still untouched by him
+    S.archive(bs, b["id"], ts=TS)  # he puts the draft away: the seeder must not try to reorder it (a refused op)
+    again = S.seed_from_insights(corpus, bs, ts=TS)[0]
+    assert again["archived"] is True and again["joke_ids"] == ["joke:d", "joke:a", "joke:b"]
+    assert again["source"] == "inferred" and again["by"] == "ai:seed"  # archiving is not building: source unchanged
+    assert bs.n_events == 3
+
+
 def test_rejected_edge_is_not_a_link():
     g = make_graph()
     decisions = [{"target": "edge", "id": "e:seg_bc", "action": "reject", "by": "owner"}]
@@ -117,6 +130,52 @@ def test_storyboard_ops_and_replay(tmp_path):
     assert len((tmp_path / "storyboards.jsonl").read_text(encoding="utf-8").splitlines()) == 5
     (tmp_path / "storyboards.json").unlink()
     assert S.board_store(tmp_path).get("sb:run") == bs.get("sb:run")  # snapshot = replayed log
+
+
+def test_storyboard_archive_is_undoable_and_delete_is_terminal(tmp_path):
+    bs = S.board_store(tmp_path)
+    S.create(bs, "Run", ["joke:a", "joke:b"], 600, ts=TS, id_="sb:run")
+    assert "archived" not in bs.get("sb:run")  # the key appears once archive/unarchive has touched the board
+    later = "2026-10-27T12:00:00+00:00"
+    b = S.archive(bs, "sb:run", ts=later)
+    assert b["archived"] is True and b["updated_at"] == later and b["source"] == "his" and b["deleted"] is False
+    # every other op on an archived board is refused, in plain words, and nothing reaches the log
+    n = bs.n_events
+    for fn in (lambda: S.add(bs, "sb:run", "joke:c", ts=TS), lambda: S.remove(bs, "sb:run", "joke:a", ts=TS),
+               lambda: S.move(bs, "sb:run", 0, 1, ts=TS), lambda: S.update(bs, "sb:run", title="x", ts=TS),
+               lambda: S.set_jokes(bs, "sb:run", ["joke:b"], ts=TS)):
+        with pytest.raises(ValueError, match=r'^"Run" is archived: unarchive it first$'):
+            fn()
+    with pytest.raises(ValueError, match=r'^"Run" is already archived$'):
+        S.archive(bs, "sb:run", ts=TS)
+    assert bs.n_events == n and bs.get("sb:run")["joke_ids"] == ["joke:a", "joke:b"]
+    # undo = unarchive; the board is whole again and editable
+    b = S.unarchive(bs, "sb:run", ts=TS)
+    assert b["archived"] is False and b["joke_ids"] == ["joke:a", "joke:b"]
+    with pytest.raises(ValueError, match=r'^"Run" is not archived$'):
+        S.unarchive(bs, "sb:run", ts=TS)
+    S.add(bs, "sb:run", "joke:c", ts=TS)
+    # the log replays to the same state (archive and unarchive are events like any other)
+    assert [e["op"] for e in bs.events()] == ["create", "archive", "unarchive", "add"]
+    (tmp_path / "storyboards.json").unlink()
+    assert S.board_store(tmp_path).get("sb:run") == bs.get("sb:run")
+    # an old item (a snapshot or event written before `archived` existed) reads as not archived
+    old = {"sb:old": {"id": "sb:old", "title": "Old", "joke_ids": [], "target_s": 300, "notes": "", "source": "his",
+                      "by": "owner", "seed": None, "created_at": TS, "updated_at": TS, "deleted": False}}
+    S._apply(old, {"ts": TS, "op": "add", "id": "sb:old", "by": "owner", "data": {"joke_id": "joke:a"}})
+    assert old["sb:old"]["joke_ids"] == ["joke:a"]
+    # archiving a seeded draft does not make it his
+    S.create(bs, "Kids", ["joke:a"], 300, by="ai:seed", ts=TS, id_="sb:seed", seed={"from": "insights.chunks"})
+    b = S.archive(bs, "sb:seed", ts=TS)
+    assert b["source"] == "inferred" and b["by"] == "ai:seed" and b["seed"] == {"from": "insights.chunks"}
+    assert S.unarchive(bs, "sb:seed", ts=TS)["source"] == "inferred"
+    # delete works on an archived board and stays terminal: no unarchive, no restore
+    S.archive(bs, "sb:run", ts=TS)
+    bs.append("delete", "sb:run", {})
+    assert bs.get("sb:run")["deleted"] is True
+    for op in ("unarchive", "archive", "add", "update"):
+        with pytest.raises(ValueError, match=r"^no storyboard sb:run$"):
+            bs.append(op, "sb:run", {"joke_id": "joke:a", "title": "x"})
 
 
 # ---------------------------------------------------------------- alignment on a synthetic set

@@ -3,6 +3,11 @@
     python -m creative story list|show|create|add|remove|move|update|health|next|bridge|seed|export
 
 Store: comedy/kb/creative/storyboards.jsonl (append-only events) + storyboards.json (snapshot).
+Ops: create, update, set_jokes, add, remove, move, archive, unarchive, delete. `archive` puts a board away (it
+stays in the log, replays, and `unarchive` brings it back; every other op on it is refused in plain words);
+`delete` is terminal. Neither archive nor unarchive changes `source`: putting a draft away is not building it.
+`archived` is on an item only once one of the two ops has touched it (absent = live; read it with `.get`), so
+every item written before the ops existed, and the create golden the Rust reducer is held to, are unchanged.
 """
 from __future__ import annotations
 
@@ -41,6 +46,16 @@ def _apply(items: dict, ev: dict) -> None:
     b = items.get(i)
     if b is None or b.get("deleted"):
         raise ValueError(f"no storyboard {i}")
+    if op in ("archive", "unarchive"):  # never changes `source`: putting a draft away is not building it
+        if op == "archive" and b.get("archived"):
+            raise ValueError(f"\"{b['title']}\" is already archived")
+        if op == "unarchive" and not b.get("archived"):
+            raise ValueError(f"\"{b['title']}\" is not archived")
+        b["archived"] = op == "archive"
+        b["updated_at"] = ev["ts"]
+        return
+    if b.get("archived") and op != "delete":
+        raise ValueError(f"\"{b['title']}\" is archived: unarchive it first")
     ids = b["joke_ids"]
     if op == "update":
         for k in ("title", "target_s", "notes"):
@@ -101,6 +116,14 @@ def move(store, id_, frm, to, by=OWNER_ID, ts=None):
 
 def set_jokes(store, id_, joke_ids, by=OWNER_ID, ts=None):
     return store.append("set_jokes", id_, {"joke_ids": list(joke_ids)}, by=by, ts=ts)
+
+
+def archive(store, id_, by=OWNER_ID, ts=None):
+    return store.append("archive", id_, {}, by=by, ts=ts)
+
+
+def unarchive(store, id_, by=OWNER_ID, ts=None):
+    return store.append("unarchive", id_, {}, by=by, ts=ts)
 
 
 # ============================================================== transitions
@@ -521,8 +544,8 @@ def seed_from_insights(c: Corpus, store: Store, only_fits: bool = True, ts: str 
         if sid in store.items:
             b = store.items[sid]
             order = _order_chain(c, ids)
-            # re-order an AI seed only while the comic has never touched it
-            if b.get("source") != "his" and not b.get("deleted") and b["joke_ids"] != order:
+            # re-order an AI seed only while the comic has never touched it (an archived one is left as he put it away)
+            if b.get("source") != "his" and not b.get("deleted") and not b.get("archived") and b["joke_ids"] != order:
                 b = set_jokes(store, sid, order, by="ai:seed", ts=ts)
             out.append(b)
             continue
@@ -550,4 +573,5 @@ def export_setlist(c: Corpus, board: dict) -> dict:
 def board_view(c: Corpus, board: dict) -> dict:
     """Everything the Storyboard screen needs in one payload."""
     h = health(c, board)
-    return {"board": board, "health": h, "best_next": best_next(c, board), "setlist": export_setlist(c, board)}
+    return {"board": {**board, "archived": bool(board.get("archived"))}, "health": h,
+            "best_next": best_next(c, board), "setlist": export_setlist(c, board)}

@@ -674,10 +674,22 @@ def _joke(c: Corpus, jid) -> str:
 
 
 def _board(st, bid: str) -> dict:
+    """A board by id; an archived one is still found (to show it, bring it back or delete it)."""
     b = st["storyboards"].get(bid)
     if not b or b.get("deleted"):
         raise HttpError(404, "no such storyboard")
     return b
+
+
+def _joke_text_fn(h):
+    """`server.joke_text`, the function the joke page builds its text with (reused, not copied). server.py runs as a
+    script, so its module is `__main__` in the API process and `server` when imported (tests, the goldens)."""
+    for m in (sys.modules.get(type(h).__module__), sys.modules.get("server"), sys.modules.get("__main__")):
+        fn = getattr(m, "joke_text", None)
+        if callable(fn):
+            return fn
+    import server  # creative_api used on its own, without the API process around it
+    return server.joke_text
 
 
 def _ws(st, wid: str) -> dict:
@@ -699,17 +711,27 @@ def board_summary(c: Corpus, b: dict) -> dict:
     run = sum(c.duration(j)[0] for j in b["joke_ids"])
     # `names`: each joke's short name in order (the Sets tab draws the list on its card without a call per board)
     names = [N.short_name_of(c.jokes[j].get("title"), c.jokes[j].get("short_name")) for j in b["joke_ids"] if j in c.jokes]
+    # `seed` ({from: "insights.chunks", ...} or null) and `by` say where a board came from, so the app can label the
+    # machine-made ones from the data ("drafts from your Insights"); `source` stays ("his" once he touches one).
     return {"id": b["id"], "title": b["title"], "n": len(b["joke_ids"]), "runtime_s": round(run, 1), "runtime": mmss(run),
-            "target_s": b["target_s"], "updated": b["updated_at"], "source": b["source"], "names": names}
+            "target_s": b["target_s"], "updated": b["updated_at"], "source": b["source"], "names": names,
+            "archived": bool(b.get("archived")), "seed": b.get("seed"), "by": b.get("by")}
+
+
+def own_boards(st) -> list[dict]:
+    """His set lists: the boards he built or touched (`source` "his"), not deleted, not archived."""
+    return [b for b in st["storyboards"].items.values()
+            if not b.get("deleted") and not b.get("archived") and b.get("source") == "his"]
 
 
 def tonight_board(c: Corpus, st) -> dict | None:
-    """The set list for tonight: the board he touched last (his own first, else the newest seeded chunk), built
-    once here so the Tonight screen needs no second request. One segment per bit; `gap` = a weak transition in."""
-    bs = [b for b in st["storyboards"].items.values() if not b.get("deleted") and b.get("joke_ids")]
+    """The set list for tonight: the one of HIS boards he touched last, built once here so the Tonight screen needs
+    no second request. None when he has no board of his own (a seeded draft is never tonight's list: the routes
+    then answer "no list yet", and "put X in tonight" makes him one). One segment per bit; `gap` = a weak transition."""
+    bs = [b for b in own_boards(st) if b.get("joke_ids")]
     if not bs:
         return None
-    b = max(bs, key=lambda x: (x.get("source") == "his", x["updated_at"], x["id"]))
+    b = max(bs, key=lambda x: (x["updated_at"], x["id"]))
     out = N.build(c, b, cap=0)
     segs = [{"joke_id": s["joke_id"], "short_name": s["short_name"], "duration_s": s["duration_s"],
              "gap": bool((s.get("transition_in") or {}).get("weak"))} for s in out["steps"]]
@@ -949,6 +971,14 @@ class Routes:
         out = N.build(c, b)
         ws = [w for w in st["workingsets"].items.values() if not w.get("deleted") and w.get("storyboard_id") == bid]
         out["working_set"] = max(ws, key=lambda w: w["updated_at"])["id"] if ws else None
+        # each step carries the bit's notes, so the stage screen opens one without a call per bit: `text` = the
+        # newest written version as the workbench shows it (server.joke_text, the joke page's own function), `idea` =
+        # his typed idea (the node's summary) when there is no written version yet
+        joke_text = _joke_text_fn(self.h)
+        a = self.kb.app()
+        for s in out["steps"]:
+            s["text"] = joke_text(a, s["joke_id"])
+            s["idea"] = ((a.v.nodes.get(s["joke_id"]) or {}).get("summary") or None) if s["text"].get("from") is None else None
         return 200, out
 
     def facts(self):
@@ -972,10 +1002,12 @@ class Routes:
         return self.cr.enqueue(self.st(), "riff", key, inp, fresh=bool(self.b.get("fresh")), kb=self.kb)
 
     def boards(self):
+        """GET /api/boards: the live set lists, newest first; `?archived=1` lists the archived ones instead."""
         c, st = self.c, self.st()
-        bs = [b for b in st["storyboards"].items.values() if not b.get("deleted")]
+        archived = self.arg("archived") in ("1", "true")
+        bs = [b for b in st["storyboards"].items.values() if not b.get("deleted") and bool(b.get("archived")) == archived]
         bs.sort(key=lambda b: (b["updated_at"], b["id"]), reverse=True)
-        return 200, {"boards": [board_summary(c, b) for b in bs]}
+        return 200, {"boards": [board_summary(c, b) for b in bs], "archived": archived}
 
     def board(self, bid):
         st = self.st()
@@ -1104,10 +1136,15 @@ class Routes:
         if "move" in self.b:
             mv = self.b["move"] if isinstance(self.b["move"], dict) else {}
             ops.append(("move", {"from": _int(mv.get("from"), "move.from", 0, 200), "to": _int(mv.get("to"), "move.to", 0, 200)}))
+        if self.b.get("unarchive") is True:  # first, so a body that brings a list back and edits it works in one go
+            ops.insert(0, ("unarchive", {}))
+        if self.b.get("archive") is True:  # put away, undoable: the app's Undo sends {unarchive: true}
+            ops.append(("archive", {}))
         if self.b.get("delete") is True:  # the inverse of creating a set list (the "new 7 for friday" Undo)
             ops.append(("delete", {}))
         if not ops:
-            raise HttpError(400, "nothing to change (title, notes, target_s, joke_ids, add, remove, move, delete)")
+            raise HttpError(400, "nothing to change (title, notes, target_s, joke_ids, add, remove, move, archive, "
+                                 "unarchive, delete)")
         probe = json.loads(json.dumps(store.items))  # all or nothing: every op is checked before any is written
         for op, data in ops:
             try:
