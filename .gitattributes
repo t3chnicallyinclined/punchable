@@ -1,0 +1,24 @@
+# One line-ending rule for the whole repo: text files are stored and checked out with LF, on every platform.
+# Before 2026-10-29 the tree was mixed (209 files carried CRLF) and three lanes that night rewrote whole files by
+# accident just by saving them on Windows. `git add --renormalize .` applied this once; from here git keeps it.
+* text=auto eol=lf
+
+# Binary: never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.onnx binary
+*.wav binary
+*.m4a binary
+*.mp3 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.bin binary
