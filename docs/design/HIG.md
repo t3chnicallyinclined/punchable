@@ -4,12 +4,20 @@ Status: design spec, 2026-10-27. Written against the live HIG pages (cited per r
 that shipped TestFlight build 3. Tags: **CONFIRMED** = read on the HIG page or in the code at file:line;
 **INFERRED** = a measurement, device figure or library behaviour not read on a page. Sample copy in this document is
 invented. Nothing here is a commit, a push or a deploy; the builder brief at the end is the order of work.
+Pointers refreshed 2026-10-29 (lane A0): §0 is done; §4's "Punchable today" column and §5's file cites match the
+`(tabs)/` tree; the values (colour roles with ratios, the type scale and its caps, space, radius, size, the kit, the
+mark, the login theme, the gate) live in `docs/design/DESIGN.md`. This file keeps the rules and the screen spec.
 
 HIG base URL: `https://developer.apple.com/design/human-interface-guidelines/` (pages cited as `HIG/<page>`).
 
 ---
 
-## 0. The header overflow on the iPhone 17 (fix first)
+## 0. The header overflow on the iPhone 17 (DONE: shipped in build 4+, kept as the record)
+
+**Status 2026-10-29: done.** Step A shipped in build 4 (the two-row header; the rule is `layoutRules.ts` with
+`tests/layoutRules.test.mjs`); step B shipped with the native stack (Tonight is `app/src/app/(tabs)/(tonight)/index.tsx`
+under the system large title, `lib/Screen.native.tsx`). The paths below are the build-3 tree (`app/src/app/index.tsx`
+is now `app/src/app/(tabs)/(tonight)/index.tsx`; `today.tsx` and `write.tsx` moved under `(tabs)/` too).
 
 **Claim: the Tonight header draws under the status bar and its title row is ~45 pt too narrow; both are layout
 bugs in our custom header, not a font problem.** The web never showed either: the web's top inset is 0 and the window
@@ -342,14 +350,14 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 
 | HIG component | Page | Punchable today | Build with | Exact options (CONFIRMED in node_modules unless noted) |
 |---|---|---|---|---|
-| Tab bar | HIG/tab-bars | custom `BottomNav` (`ui.tsx`), SVG icons, 64 pt | `NativeTabs` from `expo-router/native-tabs` | `<NativeTabs tintColor={C.amber} minimizeBehavior="onScrollDown" backBehavior="history">`; `<NativeTabs.Trigger name="(tonight)"><NativeTabs.Trigger.Label>Tonight</NativeTabs.Trigger.Label><NativeTabs.Trigger.Icon sf="moon.stars.fill" /></NativeTabs.Trigger>`; props `tintColor`, `iconColor {default, selected}`, `labelStyle`, `minimizeBehavior 'automatic' \| 'never' \| 'onScrollDown'`, `blurEffect`, `disableTransparentOnScrollEdge`, per-trigger `badgeValue`, `hidden`, `role: 'search'` (`native-tabs/types.d.ts`) |
-| Toolbar / navigation bar | HIG/toolbars | custom `TopBar` | `Stack.Screen` options + `Stack.Toolbar` | `headerLargeTitle`, `headerLargeTitleShadowVisible`, `headerTransparent`, `headerBlurEffect`, `headerTintColor`, `headerTitle`, `headerBackTitle`, `headerBackButtonDisplayMode`, `headerSearchBarOptions`, `headerRight`, `unstable_headerRightItems`; `<Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="plus" onPress variant="plain" /><Stack.Toolbar.Menu icon="ellipsis.circle"><Stack.Toolbar.MenuAction title="Rename…" icon="pencil" onPress /><Stack.Toolbar.MenuAction title="Delete" destructive /></Stack.Toolbar.Menu></Stack.Toolbar>` (`layouts/stack-utils/toolbar/*.d.ts`) |
-| Large title | HIG/toolbars | `largeTitle` prop in `Screen` (JS collapse) | `headerLargeTitle: true` + `contentInsetAdjustmentBehavior="automatic"` | as above |
-| Search field | HIG/search-fields | custom pill `bits.tsx:87-96` | `headerSearchBarOptions` | `placeholder`, `placement`, `hideWhenScrolling`, `obscureBackground`, `autoFocus`, `cancelButtonText`, `onChangeText`, `onSearchButtonPress`, `onCancelButtonPress`, `tintColor`, `textColor`, `barTintColor` |
-| Sheet | HIG/sheets | RN `Modal` + hand-rolled grabber (`ui.tsx` `Sheet`) | a route with `presentation: 'formSheet'` | `sheetAllowedDetents: number[] \| 'fitToContents'`, `sheetGrabberVisible`, `sheetInitialDetentIndex: number \| 'last'`, `sheetLargestUndimmedDetentIndex`, `sheetCornerRadius`, `sheetExpandsWhenScrolledToEdge`, `unstable_sheetFooter`, `keyboardHandlingEnabled` |
-| Action sheet | HIG/action-sheets | `Sheet` with buttons (`stage/[id].tsx:112`) | `ActionSheetIOS.showActionSheetWithOptions` (RN core) or `@expo/ui/swift-ui` `ConfirmationDialog` | `options`, `destructiveButtonIndex`, `cancelButtonIndex`, `title`, `message` (standard RN API; INFERRED, not read here) |
+| Tab bar | HIG/tab-bars | **done**: `lib/TabsShell.native.tsx` (`NativeTabs`, the to-sort badge on Tonight); the web keeps its `BottomNav` in `lib/Screen.tsx:33` | `NativeTabs` from `expo-router/native-tabs` | `<NativeTabs tintColor={C.amber} minimizeBehavior="onScrollDown" backBehavior="history">`; `<NativeTabs.Trigger name="(tonight)"><NativeTabs.Trigger.Label>Tonight</NativeTabs.Trigger.Label><NativeTabs.Trigger.Icon sf="moon.stars.fill" /></NativeTabs.Trigger>`; props `tintColor`, `iconColor {default, selected}`, `labelStyle`, `minimizeBehavior 'automatic' \| 'never' \| 'onScrollDown'`, `blurEffect`, `disableTransparentOnScrollEdge`, per-trigger `badgeValue`, `hidden`, `role: 'search'` (`native-tabs/types.d.ts`) |
+| Toolbar / navigation bar | HIG/toolbars | **done**: `lib/Screen.native.tsx:69` sets the `Stack.Screen` options; `Stack.Toolbar` in `bits.tsx`, `joke/[id].tsx`, `list/[id].tsx`, `sets.tsx`, `(tonight)/index.tsx`, `create.tsx`, `add/[board].tsx`; `lib/TopBar.tsx` is the web's | `Stack.Screen` options + `Stack.Toolbar` | `headerLargeTitle`, `headerLargeTitleShadowVisible`, `headerTransparent`, `headerBlurEffect`, `headerTintColor`, `headerTitle`, `headerBackTitle`, `headerBackButtonDisplayMode`, `headerSearchBarOptions`, `headerRight`, `unstable_headerRightItems`; `<Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="plus" onPress variant="plain" /><Stack.Toolbar.Menu icon="ellipsis.circle"><Stack.Toolbar.MenuAction title="Rename…" icon="pencil" onPress /><Stack.Toolbar.MenuAction title="Delete" destructive /></Stack.Toolbar.Menu></Stack.Toolbar>` (`layouts/stack-utils/toolbar/*.d.ts`) |
+| Large title | HIG/toolbars | **done**: the `largeTitle` prop sets `headerLargeTitle` (`lib/Screen.native.tsx:69`) | `headerLargeTitle: true` + `contentInsetAdjustmentBehavior="automatic"` | as above |
+| Search field | HIG/search-fields | **done**: the `search` prop becomes `headerSearchBarOptions` (`lib/Screen.native.tsx`, `placement: 'stacked'`); the pill stays on the web | `headerSearchBarOptions` | `placeholder`, `placement`, `hideWhenScrolling`, `obscureBackground`, `autoFocus`, `cancelButtonText`, `onChangeText`, `onSearchButtonPress`, `onCancelButtonPress`, `tintColor`, `textColor`, `barTintColor` |
+| Sheet | HIG/sheets | **done** for Create, Add a joke, Voice profile: `formSheet` routes (`app/_layout.tsx:55`, `(tonight)/_layout.tsx:20`); the RN `Modal` `Sheet` (`ui.tsx:393`) remains for the small sheets and the web | a route with `presentation: 'formSheet'` | `sheetAllowedDetents: number[] \| 'fitToContents'`, `sheetGrabberVisible`, `sheetInitialDetentIndex: number \| 'last'`, `sheetLargestUndimmedDetentIndex`, `sheetCornerRadius`, `sheetExpandsWhenScrolledToEdge`, `unstable_sheetFooter`, `keyboardHandlingEnabled` |
+| Action sheet | HIG/action-sheets | **done**: `lib/actionSheet.ts` (`ActionSheetIOS`; destructive first, Cancel last) | `ActionSheetIOS.showActionSheetWithOptions` (RN core) or `@expo/ui/swift-ui` `ConfirmationDialog` | `options`, `destructiveButtonIndex`, `cancelButtonIndex`, `title`, `message` (standard RN API; INFERRED, not read here) |
 | Alert | HIG/alerts | none needed | `Alert.alert` (RN core) | title ≤2 lines; buttons `style: 'cancel' \| 'destructive'` |
-| Context menu | HIG/context-menus | `MenuSheet` on long press | `@expo/ui/swift-ui` `ContextMenu` (installed, `@expo/ui` 58.0.23; API INFERRED, read `node_modules/@expo/ui/build/swift-ui/ContextMenu` before use) | destructive item last; keep `accessibilityActions` on the row |
+| Context menu | HIG/context-menus | **done** on iOS: `lib/RowMenu.native.tsx` (expo-router `Link.Menu`, not `@expo/ui`); `MenuSheet` stays for the web and Android | `@expo/ui/swift-ui` `ContextMenu` (installed, `@expo/ui` 58.0.23; API INFERRED, read `node_modules/@expo/ui/build/swift-ui/ContextMenu` before use) | destructive item last; keep `accessibilityActions` on the row |
 | Menu / pull-down | HIG/menus, HIG/pull-down-buttons | "…" buttons opening a sheet | `Stack.Toolbar.Menu` (header) | `title`, `icon` (SF name), `destructive`, `disabled`, `inline`, `subtitle` |
 | Lists | HIG/lists-and-tables | `FlatList` + custom rows | keep `FlatList`; disclosure via `SymbolView chevron.right` | row ≥44 pt scaled (`bits.tsx:22`) |
 | Swipe actions | HIG/accessibility (gestures need alternatives) | `SwipeRow.native.tsx` | keep (labelled, full swipe on the main action, back-swipe edge respected at 24 pt: `SwipeRow.native.tsx:49`) | — |
@@ -359,8 +367,8 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 | Toggle | HIG/toggles | RN `Switch` in rows | keep | only in list rows |
 | Progress | HIG/progress-indicators | `Skeleton`, `RefreshControl`, `ActivityIndicator` | keep | a determinate bar for the upload queue (the count is known) |
 | Activity view | HIG/activity-views | none | RN `Share.share` | from the list menu "Share…" |
-| SF Symbols | HIG/sf-symbols | SVG path map `ui.tsx` `P` | `SymbolView` from `expo-symbols` (58.0.4) | `name`, `size`, `weight 'regular' \| 'semibold' \| 'bold' …`, `scale 'small' \| 'medium' \| 'large'`, `type 'monochrome' \| 'hierarchical' \| 'palette' \| 'multicolor'`, `tintColor`, `fallback` (`SymbolModule.types.d.ts`) |
-| Liquid Glass (custom) | HIG/materials | `expo-glass-effect` installed, unused | only the floating input bar (navigation layer), never a card | `<GlassView glassEffectStyle="regular" isInteractive colorScheme="auto">`; `isLiquidGlassAvailable()` guard (`expo-glass-effect/build`) |
+| SF Symbols | HIG/sf-symbols | **done**: `lib/Icon.native.tsx` (`SymbolView`; the SVG map `lib/IconSvg.tsx` is the fallback and the web) | `SymbolView` from `expo-symbols` (58.0.4) | `name`, `size`, `weight 'regular' \| 'semibold' \| 'bold' …`, `scale 'small' \| 'medium' \| 'large'`, `type 'monochrome' \| 'hierarchical' \| 'palette' \| 'multicolor'`, `tintColor`, `fallback` (`SymbolModule.types.d.ts`) |
+| Liquid Glass (custom) | HIG/materials | `isLiquidGlassAvailable()` gates the bottom accessory (`lib/accessory.native.ts`); no `GlassView` anywhere, which is right | only the floating input bar (navigation layer), never a card | `<GlassView glassEffectStyle="regular" isInteractive colorScheme="auto">`; `isLiquidGlassAvailable()` guard (`expo-glass-effect/build`) |
 | Haptics | HIG/playing-haptics | `lib/haptics.ts` | keep | `selection` (values changing), impact `light`/`medium` (lift, snap), notification `success`/`warning`/`error` (outcomes only) |
 | Pull to refresh | HIG/progress-indicators | `RefreshControl` amber | keep; consider dropping the custom `tintColor` under the glass bar (INFERRED preference) | — |
 
@@ -376,6 +384,8 @@ platform" in tab bars; "The outline variant works well in toolbars, lists" (HIG/
 
 ## 5. Appearance
 
+Values: `docs/design/DESIGN.md` §3 (every colour role with its ratio in both schemes, the light rule, the fixed colours) and §5.4 (layers). This section keeps the rules.
+
 Rules (CONFIRMED):
 - "Ensure that your app looks good in both appearance modes." HIG/dark-mode
 - "Prefer the system background colors. Dark Mode is dynamic, which means that the background color automatically changes from base to elevated when an interface is in the foreground, such as a popover or modal sheet." HIG/dark-mode
@@ -385,17 +395,17 @@ Rules (CONFIRMED):
 - "Apply color sparingly to the Liquid Glass material, and to symbols or text on the material … To emphasize primary actions, apply color to the background rather than to symbols or text." HIG/color
 - "Soften the color of white backgrounds." HIG/dark-mode (the paper cards are `#F2EEE4`, already off-white).
 
-Token mapping (`app/src/lib/theme.ts`, values CONFIRMED):
+Token mapping (`app/src/lib/theme.ts`, values CONFIRMED; the full role table with computed ratios is DESIGN.md §3.1):
 
 | Role | Dark | Light | HIG counterpart | Note |
 |---|---|---|---|---|
 | ground `bg` | `#0B0B0D` | `#f6f6f4` | systemBackground (base) | the owner's approved ground; keep |
 | `surface` / `card` | `#161618` / `#1C1C1F` | `#ffffff` | secondary / elevated background | native sheets get the system elevated background; our card tokens stay in content |
 | text / `mut2` / `dim` | `#f3f4f6` / `#A1A1A8` / `#878d97` | `#111214` / `#5d6169` / `#6b7079` | label / secondaryLabel / tertiaryLabel | ratios documented in the file |
-| accent `amber` | `#FFB340` | `#b47a0e` (mark); text uses `amberDeep` | tint | `headerTintColor` and `NativeTabs tintColor`; never a bar background (HIG/branding; HIG/tab-bars colour rule) |
+| accent `amber` | `#FFB340` | `#b47a0e` (mark; 3.7:1 on white, so never text: DESIGN.md §3.2); text uses `amberDeep` | tint | `headerTintColor` and `NativeTabs tintColor`; never a bar background (HIG/branding; HIG/tab-bars colour rule) |
 | destructive `red` | `#FF453A` | `#b91c1c` | systemRed | matches systemRed dark (INFERRED) |
-| separators `border` / `hairline` | `#2d3139` / `#1F1F22` | `#d9d9d4` / `#e4e4df` | separator | `bits.tsx:43` hardcodes `#1F1F22`; use `C.hairline` |
-| status dots | `#30D158`, `#64D2FF` (hardcoded) | none | systemGreen / systemCyan | move into tokens with light variants (`bits.tsx:17`, `map/index.tsx:22`) |
+| separators `border` / `hairline` | `#2d3139` / `#1F1F22` | `#d9d9d4` / `#e4e4df` | separator | done: no hex left in `(tabs)/(bits)/bits.tsx` or `map/index.tsx` (checked 2026-10-29) |
+| status dots `statusKills` / `statusWorking` / `statusFresh` / `statusResting` | `#30D158` / `#FFB340` / `#64D2FF` / `#8E8E93` | `#248a3d` / `#b47a0e` / `#0a6e9e` / `#6b6f78` | systemGreen / tint / systemCyan / systemGray | done: tokens with light twins (`theme.ts:45-48`); light kills is 4.1:1, a mark beside ★, never a word (DESIGN.md §3.1) |
 
 Where glass applies: the native tab bar, native headers and native form sheets (automatic). The floating input bar is a
 navigation-layer control, so it may use `GlassView regular` on iOS 26 with the amber record ring on top. Cards, the paper
@@ -408,6 +418,8 @@ setting). `GlassView colorScheme` must follow `C.scheme` so an in-app Light over
 
 ## 6. Typography
 
+Values: `docs/design/DESIGN.md` §4 (the type scale by HIG style, the family per role, the Dynamic Type cap per class, the 11 pt floor and its two violations, the mapping from today's `TV` names).
+
 Rules (CONFIRMED, HIG/typography): default body 17 pt, minimum 11 pt on iOS; "Consider using the built-in text styles";
 "If you use a custom font, make sure it implements the same behaviors" (Dynamic Type, Bold Text); "Keep text truncation to
 a minimum as font size increases"; "In general, avoid light font weights". HIG/branding: "It can work well to use a custom
@@ -416,17 +428,18 @@ font for headlines and subheadings while using system fonts for body copy and ca
 | SF text style (Large) | pt / leading | Punchable style | File | Verdict |
 |---|---|---|---|---|
 | Large Title | 34 / 41, Bold emphasized | `F.black` 34, ls −0.7 (`index.tsx:48`; `ui.tsx` `largeTitle`) | custom header | → the system large title via `headerLargeTitle`; Inter ExtraBold stays for in-content headings |
-| Title 1 | 28 / 34 | `h1` Space Grotesk 700 30/35 | `ui.tsx` `tv.h1` | content headings; the bit title 30 → 28 |
+| Title 1 | 28 / 34 | `h1` Space Grotesk 700 30/35 | `ui.tsx` `tv.h1` | content headings; the bit title 30 → 28 (owner signed 2026-10-29) |
 | Title 2 | 22 / 28 | — | | "Ask your material" (now 20 bold) |
 | Title 3 | 20 / 25 | `h2` SG 600 20/26 | | ok |
 | Headline | 17 / 22 Semibold | `semi` Inter 600 17/24 | | ok |
 | Body | 17 / 22 | `body` Inter 400 17/24 (`BODY = 17` on iOS, `ui.tsx:22`) | | ok |
 | Subhead | 15 / 20 | row subs at 15 | | ok |
 | Footnote | 13 / 18 | `small` 13/18, `mut` 14/20 | | ok |
-| Caption 1 / 2 | 12 / 16, 11 / 13 | `eb` 12, badges 11 | | 11 is the floor; nothing below in the screens read |
+| Caption 1 / 2 | 12 / 16, 11 / 13 | `eb` 12, badges 11 | | 11 is the floor. **Two known violations (CONFIRMED 2026-10-29): `lib/SayBar.tsx:129` draws "● REC" at 9 pt in the accessory and inline variants (`variant === 'dock' ? 11 : 9`), and `lib/metrics.tsx:201` draws the chart's axis labels at 10 pt.** Fix: both become Caption 2 (11 / 13); the inline REC shows the glyph alone with its existing `accessibilityLabel`, the 68-pt axis label box grows to 76 or wraps to two lines (DESIGN.md §4). |
 
-Dynamic Type: `T` caps at 1.6× (`ui.tsx:35`); rows scale with `PixelRatio.getFontScale()` (`bits.tsx:22`); the stage
-clock caps at 1.2× (a clock, not prose). The native header and tab bar scale themselves. Bold Text: custom fonts don't
+Dynamic Type: `T` caps at 1.6× today (`ui.tsx:36`); the owner signed (2026-10-29) the caps per class in DESIGN.md §4:
+prose 2.0×, titles 1.8×, captions and controls 1.6×, the clock 1.2× (`lib/RecordControl.tsx:76`). Rows scale with
+`PixelRatio.getFontScale()` (`bits.tsx:22`). The native header and tab bar scale themselves. Bold Text: custom fonts don't
 respond; INFERRED that `AccessibilityInfo.isBoldTextEnabled()` can switch `F.body` → `Inter_600SemiBold` and `F.semi` →
 `Inter_700Bold` at start, next to the Reduce Motion read in `ui.tsx`.
 

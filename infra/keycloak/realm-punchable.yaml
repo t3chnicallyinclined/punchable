@@ -9,7 +9,7 @@
 realm: punchable
 enabled: true
 displayName: "Punchable"
-# Login look: infra/keycloak/theme (docs/DESIGN.md section 9). Lives on the shared Keycloak only after
+# Login look: infra/keycloak/theme (docs/design/DESIGN.md section 9). Lives on the shared Keycloak only after
 # `infra/ship.sh keycloak-theme`; until then apply.sh imports the realm WITHOUT this line (Keycloak's default look).
 loginTheme: punchable
 # Personal app: no self sign-up. The owner's account is created by first-login.sh.

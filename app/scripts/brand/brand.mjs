@@ -3,7 +3,7 @@
 //   node scripts/brand/brand.mjs --png      also renders every PNG with headless Chrome (CDP, no deps) + favicon.ico
 //                                           with ImageMagick (`magick`), which is already on the PC.
 // The geometry lives here, on a 512 grid. The wordmark is Space Grotesk Bold outlined by outline.py (glyphs.json),
-// so no SVG depends on a font. Docs: docs/DESIGN.md §7 (logo).
+// so no SVG depends on a font. Docs: docs/design/DESIGN.md §7 (logo).
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,7 +17,7 @@ const REPO = resolve(APP, "..");
 const BRAND = join(REPO, "docs", "brand");
 const G = JSON.parse(readFileSync(join(HERE, "glyphs.json"), "utf8"));
 
-// ---- tokens (app/src/lib/theme.ts; light values from docs/DESIGN.md §3.2)
+// ---- tokens (app/src/lib/theme.ts; light values from docs/design/DESIGN.md §3.2)
 const T = { bg: "#111214", surface: "#1a1c20", text: "#f3f4f6", mut: "#9ca3af", amber: "#f5b544", lightBg: "#f6f6f4", ink: "#111214", amberMark: "#b47a0e" };
 
 // ---- small path helpers
