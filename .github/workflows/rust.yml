@@ -173,6 +173,7 @@ jobs:
         # one line per generator under rust/tools (rust/CLAUDE.md); add `python rust/tools/gen_wire_goldens.py` here
         # when T13 lands it on main (absent on 2026-10-29)
         run: |
+          python rust/tools/gen_core_goldens.py
           python rust/tools/gen_kb_goldens.py
           python rust/tools/gen_creative_goldens.py
           python rust/tools/gen_obs_goldens.py
