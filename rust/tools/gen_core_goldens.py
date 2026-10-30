@@ -83,8 +83,7 @@ def main():
         "truthy": [[v, bool(v)] for v in values()],
         "type_name": [[v, type(v).__name__] for v in values()],
     }
-    (OUT / "py.json").write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8", newline="
-")
+    (OUT / "py.json").write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
     print("wrote", OUT, "values", len(values()), "floats", len(FLOATS), "ints", len(INT_INPUTS))
 
 
