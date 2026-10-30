@@ -28,7 +28,17 @@
    "duration_s": 60.0,
    "estimated": false,
    "position": 0,
-   "transition_in": null
+   "transition_in": null,
+   "text": {
+    "setup": "Bravo setup about the dog. The purple monkey dishwasher line here.",
+    "reveal": "Bravo closer words.",
+    "from": {
+     "unit": "unit:b1",
+     "date": "2023-05-01",
+     "doc_title": "Notes"
+    }
+   },
+   "idea": null
   },
   {
    "joke_id": "joke:a",
@@ -52,7 +62,17 @@
     "kind": "proven",
     "from": "joke:b",
     "to": "joke:a"
-   }
+   },
+   "text": {
+    "setup": "Alpha opener line one.",
+    "reveal": "The alpha punch lands here every time.",
+    "from": {
+     "unit": "unit:a1",
+     "date": "2024-01-10",
+     "doc_title": "Notes"
+    }
+   },
+   "idea": null
   },
   {
    "joke_id": "joke:c",
@@ -76,7 +96,17 @@
     "kind": "jump",
     "from": "joke:a",
     "to": "joke:c"
-   }
+   },
+   "text": {
+    "setup": "Charlie premise about cars and traffic",
+    "reveal": "and more traffic today.",
+    "from": {
+     "unit": "unit:c1",
+     "date": "2024-04-04",
+     "doc_title": "Notes"
+    }
+   },
+   "idea": null
   },
   {
    "joke_id": "joke:d",
@@ -100,7 +130,17 @@
     "kind": "jump",
     "from": "joke:c",
     "to": "joke:d"
-   }
+   },
+   "text": {
+    "setup": "Delta bit about my niece",
+    "reveal": "and the laundromat place.",
+    "from": {
+     "unit": "unit:d1",
+     "date": "2015-03-03",
+     "doc_title": "Notes"
+    }
+   },
+   "idea": null
   }
  ],
  "next": [

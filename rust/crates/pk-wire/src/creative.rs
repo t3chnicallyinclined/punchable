@@ -367,9 +367,14 @@ pub struct Check {
     pub status: String,
     /// In plain words.
     pub text: String,
-    /// A bit to try (the closer rule).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub suggest: Option<Value>,
+    /// A bit to try (the closer rule): a joke id, `null` when the rule fired with nothing better to close on, absent
+    /// on the other rules.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::nullable::deserialize"
+    )]
+    pub suggest: Nullable<Value>,
     /// Offending pairs (the jumps rule).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pairs: Option<Value>,
@@ -396,14 +401,30 @@ pub struct Board {
     pub source: Source,
     /// The actor.
     pub by: String,
-    /// What seeded it (an insight chunk), or `null`.
-    pub seed: Option<Value>,
+    /// What seeded it (an Insights chunk), or `null`.
+    pub seed: Option<Seed>,
     /// When it was created.
     pub created_at: String,
     /// When it last changed.
     pub updated_at: String,
     /// It was deleted.
     pub deleted: bool,
+    /// It is put away (`archive`, undone by `unarchive`). Always present on a board view and a list row; absent on the
+    /// raw store item (`GET /api/worker/creative?store=storyboards&snapshot=1`) until one of the two ops touched it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<bool>,
+}
+
+/// What seeded an AI draft (`creative/story.py` `seed_from_insights`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct Seed {
+    /// Always `"insights.chunks"`.
+    pub from: String,
+    /// The chunk's name.
+    pub chunk: Option<String>,
+    /// The chunk's estimated minutes.
+    pub minutes_est: f64,
 }
 
 /// A bit that could come next on a board.
@@ -485,6 +506,12 @@ pub struct BoardListItem {
     pub source: Source,
     /// Each bit's short name, in order.
     pub names: Vec<String>,
+    /// It is put away (listed only under `?archived=1`).
+    pub archived: bool,
+    /// What seeded it, or `null`.
+    pub seed: Option<Seed>,
+    /// The actor that created it (the owner, or `ai:seed`).
+    pub by: String,
     /// The working set promoted from it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub working_set: Option<String>,
@@ -494,8 +521,10 @@ pub struct BoardListItem {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct Boards {
-    /// Newest first.
+    /// Newest first: the live lists, or with `?archived=1` the archived ones.
     pub boards: Vec<BoardListItem>,
+    /// This is the archived list.
+    pub archived: bool,
 }
 
 /// A bridge draft (`creative/story.py` `bridge_draft`), cached (`cached`, `job`) or fresh. A queued answer is

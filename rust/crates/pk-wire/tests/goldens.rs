@@ -235,6 +235,23 @@ fn creative_shapes_round_trip() {
     roundtrip::<Boards>("creative_boards");
     roundtrip::<BoardView>("creative_board_view");
     roundtrip::<BoardView>("creative_board_view_read");
+    assert_eq!(
+        roundtrip::<BoardView>("creative_board_view_archived").board.archived,
+        Some(true)
+    );
+    assert_eq!(
+        roundtrip::<BoardView>("creative_board_view_unarchived").board.archived,
+        Some(false)
+    );
+    let archived = roundtrip::<Boards>("creative_boards_archived");
+    assert!(archived.archived && archived.boards.iter().all(|b| b.archived));
+    assert!(
+        roundtrip::<Boards>("creative_boards")
+            .boards
+            .iter()
+            .any(|b| b.seed.is_some())
+    );
+    roundtrip::<ErrorBody>("creative_error_archived");
     roundtrip::<WorkingSets>("creative_workingsets");
     roundtrip::<WSView>("creative_ws_view");
     roundtrip::<Nights>("creative_nights");

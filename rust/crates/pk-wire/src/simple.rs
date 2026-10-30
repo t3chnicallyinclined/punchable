@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::nullable::Nullable;
 use crate::worker::JobBrief;
-use crate::worker::kb::IdeaResponse;
+use crate::worker::kb::{IdeaResponse, JokeText};
 use crate::worker::voice::LearnedCounts;
 
 /// A bit as the app shows it anywhere (`creative/notebook.py` `card`): short title, his line verbatim, its date,
@@ -152,6 +152,10 @@ pub struct Step {
     pub position: i64,
     /// The transition into it; `null` on the first.
     pub transition_in: Option<TransitionIn>,
+    /// The bit's newest written version, split (the joke page's `text`; `from` is `null` without a unit).
+    pub text: JokeText,
+    /// His typed idea's words, when the bit is one; `null` otherwise.
+    pub idea: Option<String>,
 }
 
 /// `GET /api/boards/<id>/build` (`creative/notebook.py` `build`).

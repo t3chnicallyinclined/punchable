@@ -14,7 +14,49 @@
     "Bravo bit",
     "Charlie bit",
     "Delta bit"
-   ]
+   ],
+   "archived": false,
+   "seed": null,
+   "by": "owner"
+  },
+  {
+   "id": "sb:seed-kids-0f0f0f0f",
+   "title": "kids",
+   "n": 2,
+   "runtime_s": 6.8,
+   "runtime": "0:07",
+   "target_s": 300,
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "inferred",
+   "names": [
+    "Delta bit",
+    "Echo bit"
+   ],
+   "archived": false,
+   "seed": {
+    "from": "insights.chunks",
+    "chunk": "kids",
+    "minutes_est": 5
+   },
+   "by": "ai:seed"
+  },
+  {
+   "id": "sb:friday-scratch-32051c6c",
+   "title": "Friday scratch",
+   "n": 2,
+   "runtime_s": 7.2,
+   "runtime": "0:07",
+   "target_s": 120,
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "his",
+   "names": [
+    "Echo bit",
+    "Foxtrot bit"
+   ],
+   "archived": false,
+   "seed": null,
+   "by": "owner"
   }
- ]
+ ],
+ "archived": false
 }

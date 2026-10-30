@@ -1,8 +1,12 @@
 {
  "store": "storyboards",
- "total": 1,
+ "total": 5,
  "lines": [
-  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"create\", \"id\": \"sb:tuesday-run-7507883e\", \"by\": \"owner\", \"data\": {\"title\": \"Tuesday run\", \"joke_ids\": [\"joke:a\", \"joke:b\", \"joke:c\", \"joke:d\"], \"target_s\": 300, \"notes\": \"the four taped bits\", \"seed\": null}}"
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"create\", \"id\": \"sb:tuesday-run-7507883e\", \"by\": \"owner\", \"data\": {\"title\": \"Tuesday run\", \"joke_ids\": [\"joke:a\", \"joke:b\", \"joke:c\", \"joke:d\"], \"target_s\": 300, \"notes\": \"the four taped bits\", \"seed\": null}}",
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"create\", \"id\": \"sb:seed-kids-0f0f0f0f\", \"by\": \"ai:seed\", \"data\": {\"title\": \"kids\", \"joke_ids\": [\"joke:d\", \"joke:e\"], \"target_s\": 300, \"notes\": \"Seeded from your Insights chunk 'kids' (5 min estimated)\", \"seed\": {\"from\": \"insights.chunks\", \"chunk\": \"kids\", \"minutes_est\": 5}}}",
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"create\", \"id\": \"sb:friday-scratch-32051c6c\", \"by\": \"owner\", \"data\": {\"title\": \"Friday scratch\", \"joke_ids\": [\"joke:e\", \"joke:f\"], \"target_s\": 120, \"notes\": \"\", \"seed\": null}}",
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"archive\", \"id\": \"sb:friday-scratch-32051c6c\", \"by\": \"owner\", \"data\": {}}",
+  "{\"ts\": \"2026-10-29T12:00:00+00:00\", \"op\": \"unarchive\", \"id\": \"sb:friday-scratch-32051c6c\", \"by\": \"owner\", \"data\": {}}"
  ],
  "items": {
   "sb:tuesday-run-7507883e": {
@@ -22,6 +26,43 @@
    "created_at": "2026-10-29T12:00:00+00:00",
    "updated_at": "2026-10-29T12:00:00+00:00",
    "deleted": false
+  },
+  "sb:seed-kids-0f0f0f0f": {
+   "id": "sb:seed-kids-0f0f0f0f",
+   "title": "kids",
+   "joke_ids": [
+    "joke:d",
+    "joke:e"
+   ],
+   "target_s": 300,
+   "notes": "Seeded from your Insights chunk 'kids' (5 min estimated)",
+   "source": "inferred",
+   "by": "ai:seed",
+   "seed": {
+    "from": "insights.chunks",
+    "chunk": "kids",
+    "minutes_est": 5
+   },
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00",
+   "deleted": false
+  },
+  "sb:friday-scratch-32051c6c": {
+   "id": "sb:friday-scratch-32051c6c",
+   "title": "Friday scratch",
+   "joke_ids": [
+    "joke:e",
+    "joke:f"
+   ],
+   "target_s": 120,
+   "notes": "",
+   "source": "his",
+   "by": "owner",
+   "seed": null,
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00",
+   "deleted": false,
+   "archived": false
   }
  }
 }

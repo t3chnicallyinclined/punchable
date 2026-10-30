@@ -408,6 +408,28 @@ def main() -> int:
         expect(s, 201, "board create", board)
         gold("creative_board_view", board)
         bid = board["board"]["id"]
+        # an AI draft seeded from an Insights chunk (creative/story.py seed_from_insights; no route runs it, so the store op)
+        from creative import story as ST
+        with api.cr.lock:
+            ST.create(api.cr.stores(api.kb)["storyboards"], "kids", ["joke:d", "joke:e"], target_s=300,
+                      notes="Seeded from your Insights chunk 'kids' (5 min estimated)", by="ai:seed", ts=NOW, id_="sb:seed-kids-0f0f0f0f",
+                      seed={"from": "insights.chunks", "chunk": "kids", "minutes_est": 5})
+        # a second list, put away and brought back (archive / unarchive are undoable, the archived list is its own view)
+        s, scratch = c("POST", "/api/boards", {"title": "Friday scratch", "joke_ids": ["joke:e", "joke:f"], "target_s": 120})
+        expect(s, 201, "second board", scratch)
+        sid2 = scratch["board"]["id"]
+        s, r = c("PATCH", f"/api/boards/{q(sid2)}", {"archive": True})
+        expect(s, 200, "archive", r)
+        gold("creative_board_view_archived", r)
+        s, r = c("GET", "/api/boards?archived=1")
+        expect(s, 200, "archived boards", r)
+        gold("creative_boards_archived", r)
+        s, r = c("PATCH", f"/api/boards/{q(sid2)}", {"title": "Friday scratch"})
+        expect(s, 400, "an archived board refuses an edit", r)
+        gold("creative_error_archived", r)
+        s, r = c("PATCH", f"/api/boards/{q(sid2)}", {"unarchive": True})
+        expect(s, 200, "unarchive", r)
+        gold("creative_board_view_unarchived", r)
         s, ws = c("POST", "/api/workingsets", {"board_id": bid, "target_s": 300})
         expect(s, 201, "workingset create", ws)
         wid = ws["working_set"]["id"]
