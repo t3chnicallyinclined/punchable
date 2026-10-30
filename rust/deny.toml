@@ -1,19 +1,107 @@
-# cargo-deny (docs/RUST.md "Build, CI, images"): licenses we accept, no duplicate majors by surprise, known sources.
+# cargo-deny, run by `cargo xtask gate` (docs/RUST.md "Build, CI, images"; docs/ARCHITECTURE.md section 6): advisories,
+# licenses we accept, the ADR 0010 dependency bans, known sources. CI installs cargo-deny 0.20.2 (.github/workflows/
+# rust.yml); on a desk: a prebuilt from its GitHub release into ~/.cargo/bin, or `cargo install cargo-deny --locked`.
 [graph]
 all-features = false
 
 [advisories]
 version = 2
 yanked = "deny"
+# Each entry is a known advisory with no fix we can take; the reason says why it does not reach us. Re-check when the
+# dependency moves: a new surrealdb or tokenizers may drop the path.
+ignore = [
+    # rsa <- jsonwebtoken <- surrealdb-core: the client SDK's JWT support. pk-store signs in with root / a record
+    # user over a password; no RSA private key is held or used in this process, so the timing side channel has no
+    # key to leak. No patched rsa exists (the advisory says so).
+    { id = "RUSTSEC-2023-0071", reason = "rsa via surrealdb's jsonwebtoken; no RSA private key is used here" },
+    # crypto-bigint 0.5 <- rsa, the same path and the same argument: no secret integers are operated on.
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint via rsa via surrealdb; no secret integers are used here" },
+    # paste <- tokenizers 0.22.1: a compile-time macro crate, archived by its author; tokenizers is pinned to the
+    # Python wheel's version so the goldens hold (rust/Cargo.toml), so it moves when the Python pin moves.
+    { id = "RUSTSEC-2024-0436", reason = "paste is a proc-macro used at compile time by the pinned tokenizers" },
+]
 
 [licenses]
 version = 2
-allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib", "MPL-2.0", "CDLA-Permissive-2.0", "BSL-1.0", "OpenSSL"]
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+    "BSL-1.0",
+    "OpenSSL",
+    # SurrealDB's own license, on the client SDK (surrealdb, surrealdb-core, -types, -protocol, ...): the same terms
+    # the server we run is under; its additional use grant covers everything but offering SurrealDB as a service.
+    "BUSL-1.1",
+]
 confidence-threshold = 0.9
+# our own crates carry `license = "UNLICENSED"` (not SPDX) and `publish = false`
+private = { ignore = true }
+
+# crates that ship a LICENSE file but no SPDX `license` field in their manifest (read from the file, 2026-10-29)
+[[licenses.clarify]]
+crate = "surrealdb"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-core"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-types"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-types-derive"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-strand"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-collections"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "tokio-tungstenite-wasm"
+expression = "MIT"
+license-files = []
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# the workspace's `{ path = "../pk-kb" }` lines carry no version on purpose (rust/CLAUDE.md); a path is not a wildcard
+allow-wildcard-paths = true
+# The crate DAG (docs/adr/0010-crate-dag-rule.md): `wrappers` names the only crates allowed to depend on the banned
+# one directly. IO crates and binaries only, so pk-core / pk-wire land without touching this file.
+#   surrealdb      only through pk-store (the one store)
+#   ort, tokenizers only through pk-embed (the one model host)
+#   pk-store       only by pk-api (the worker goes through the API; IO crates never depend on each other)
+#   pk-llm         only by pk-worker (the API never depends on the model client)
+#   axum           by the two binaries (and tonic, which surrealdb-protocol pulls in under pk-store: not our edge)
+# Red arm (the ADR): `pk-store = { path = "../pk-store" }` in pk-creative's Cargo.toml must fail `cargo deny check bans`.
+deny = [
+    { crate = "surrealdb", wrappers = ["pk-store"] },
+    { crate = "ort", wrappers = ["pk-embed"] },
+    { crate = "tokenizers", wrappers = ["pk-embed"] },
+    { crate = "pk-store", wrappers = ["pk-api"] },
+    { crate = "pk-llm", wrappers = ["pk-worker"] },
+    { crate = "axum", wrappers = ["pk-api", "pk-worker", "tonic"] },
+]
 
 [sources]
 unknown-registry = "deny"

@@ -128,7 +128,6 @@ def main():
 
         # every joke: DB Working == the files backend's Python computation
         _, page = api.get("/api/pipeline?limit=5000&backend=files")
-        allw = {x["id"] for x in r.last("SELECT id FROM joke WHERE working = true;") for _ in [0]} if False else None
         rows = r.last("SELECT id, working, array::len(working_sets) AS n FROM joke;")
         dbw = {f"joke:{x['id'].key}": (bool(x["working"]), x["n"]) for x in rows}
         files = {}

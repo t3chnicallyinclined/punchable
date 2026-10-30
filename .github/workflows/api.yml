@@ -1,8 +1,12 @@
-# The server side's gate: the API (api-dev) and the worker test suites, and the static checks on the Keycloak login
-# theme. No SurrealDB and no knowledge base on the runner: api-dev/tests/conftest.py skips every test that needs a real
-# KB (TempKB / the `api` fixture), and the SurrealDB-backed tests skip themselves when no scratch server answers; what
-# remains is the fixture-backed logic (auth, say, memos, merge rules, metrics, the worker's text pipeline on the
-# engine's mock provider). Locally: `python -m pytest api-dev/tests worker -q` and
+# The server side's gate: ruff (E9 + F over the shipped Python, ruff.toml at the root), the API (api-dev) and worker
+# test suites, the oracle's suites the Rust port is golden against until T11 (creative, engine, infer, gsync;
+# docs/ARCHITECTURE.md section 6), and the static checks on the Keycloak login theme. No SurrealDB and no knowledge
+# base on the runner: api-dev/tests/conftest.py skips every test that needs a real KB (TempKB / the `api` fixture), the
+# SurrealDB-backed tests skip themselves when no scratch server answers, and creative's five "real KB" cases and
+# infer's clips case skip too (-rs lists every skip); what remains is the fixture-backed logic (auth, say, memos, merge
+# rules, metrics, the worker's text pipeline on the engine's mock provider, the oracle's rules). tools/audio stays out
+# (it hears audio). Locally: `ruff check .`, then
+# `python -m pytest api-dev/tests worker creative/tests engine/tests infer/tests gsync/tests -q` and
 # `python infra/keycloak/test_theme_static.py`.
 name: api
 
@@ -17,8 +21,11 @@ on:
       - 'creative/**'
       - 'db/**'
       - 'infer/**'
+      - 'gsync/**'
+      - 'tools/explorer/kb.py'
       - 'infra/keycloak/**'
       - 'conftest.py'
+      - 'ruff.toml'
       - '.github/workflows/api.yml'
   pull_request:
     paths:
@@ -29,8 +36,11 @@ on:
       - 'creative/**'
       - 'db/**'
       - 'infer/**'
+      - 'gsync/**'
+      - 'tools/explorer/kb.py'
       - 'infra/keycloak/**'
       - 'conftest.py'
+      - 'ruff.toml'
       - '.github/workflows/api.yml'
 
 permissions:
@@ -57,14 +67,21 @@ jobs:
             infra/worker/requirements.txt
 
       - name: Install
-        # the API image's pins, plus: jsonschema (the engine validates every provider answer; pinned as in
-        # infra/worker/requirements.txt), cryptography (test_auth signs test JWTs), pyyaml (test_manifest reads k8s)
+        # the API image's pins and the worker image's pins (anthropic for engine/providers, jsonschema: the engine
+        # validates every provider answer, httpx), plus: cryptography (test_auth signs test JWTs), pyyaml (test_manifest
+        # reads k8s), the Google client libraries gsync/auth.py and gsync/drive.py import inside their functions (the
+        # four gsync/tests/test_auth.py cases reach them through fakes; pure-python wheels, pinned to what resolved on
+        # 2026-10-29), and ruff pinned to the version the hits were counted with
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r api/requirements.txt jsonschema==4.26.0 pytest cryptography pyyaml
+          python -m pip install -r api/requirements.txt -r infra/worker/requirements.txt pytest cryptography pyyaml \
+            google-auth==2.62.0 google-auth-oauthlib==1.5.0 google-api-python-client==2.201.0 ruff==0.17.3
 
-      - name: API and worker tests
-        run: python -m pytest api-dev/tests worker -q -p no:cacheprovider
+      - name: ruff (E9 + F over the shipped Python; ruff.toml)
+        run: ruff check --output-format concise .
+
+      - name: API, worker and the oracle's tests (creative, engine, infer, gsync)
+        run: python -m pytest api-dev/tests worker creative/tests engine/tests infer/tests gsync/tests -q -p no:cacheprovider -rs
 
       - name: Keycloak theme static checks
         run: python infra/keycloak/test_theme_static.py

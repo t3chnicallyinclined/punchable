@@ -1,7 +1,15 @@
-# The Rust services' gate (docs/RUST.md "Build, CI, images"): format, clippy with warnings denied, the tests, per
-# crate, through `cargo xtask gate`, so CI and a laptop run the same thing. The goldens under crates/*/tests/goldens
-# are committed (synthetic fixtures); the "goldens are current" job regenerates them with the repo's Python and
-# fails if they drift, so a change to the Python replay cannot land without the Rust side seeing it.
+# The Rust services' gate (docs/RUST.md "Build, CI, images"; docs/ARCHITECTURE.md sections 5 and 6): format, cargo deny
+# (advisories, licenses, the ADR 0010 dependency bans), clippy with warnings denied, the tests, per crate, through
+# `cargo xtask gate`, so CI and a laptop run the same thing.
+#
+# A skipped test is a failed test: the gate job runs with PK_REQUIRE_EXTERNAL=1, a pinned, sha256-checked `surreal`
+# binary (the server the pk-store scratch tests start: crates/pk-store/tests/scratch.rs) and the bge model fetched by
+# tools/kb/fetch_bge.py (hash-checked against the hub, fingerprinted) and cached by the model file's sha256. With that
+# variable set, the pk-store and pk-embed suites panic where they used to return early, so a missing external is red.
+#
+# The goldens under crates/*/tests/goldens are committed (synthetic fixtures); the "goldens are current" job regenerates
+# them with the repo's Python and fails if they drift, so a change to the Python replay cannot land without the Rust side
+# seeing it.
 name: rust
 
 on:
@@ -10,21 +18,28 @@ on:
     paths:
       - 'rust/**'
       - 'tools/explorer/kb.py'
+      - 'tools/kb/fetch_bge.py'
       - 'creative/**'
       - 'engine/**'
       - 'api-dev/metrics.py'
       - 'api-dev/scrub.py'
       - 'api-dev/search_api.py'
+      # include_str!-compiled into the crates (docs/ARCHITECTURE.md section 6)
+      - 'db/schema*.surql'
+      - 'engine/config.hosted.toml'
       - '.github/workflows/rust.yml'
   pull_request:
     paths:
       - 'rust/**'
       - 'tools/explorer/kb.py'
+      - 'tools/kb/fetch_bge.py'
       - 'creative/**'
       - 'engine/**'
       - 'api-dev/metrics.py'
       - 'api-dev/scrub.py'
       - 'api-dev/search_api.py'
+      - 'db/schema*.surql'
+      - 'engine/config.hosted.toml'
       - '.github/workflows/rust.yml'
 
 permissions:
@@ -34,15 +49,42 @@ concurrency:
   group: rust-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # The externals, pinned. Every hash below was taken on 2026-10-29 from the file the URL serves (sha256sum); change
+  # a version and its hash together, never one without the other.
+  # surreal: the server the scratch tests start (crates/pk-store/tests/scratch.rs asserts >= 3.3.1; db/DB.md: 3.3.4).
+  # SurrealDB publishes no checksum file, so the hash is ours.
+  SURREAL_VERSION: '3.3.4'
+  SURREAL_SHA256: 6593071833ad9c85cf533cf70b1643eb08966c868f8624001e30839ea29a2689
+  # cargo-deny (rust/deny.toml): the hash is the one in the release's .sha256 file
+  CARGO_DENY_VERSION: '0.20.2'
+  CARGO_DENY_SHA256: 9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f
+  # bge-small-en-v1.5 (Xenova's ONNX export, tools/kb/fetch_bge.py): model.onnx's hash is its LFS object id on the
+  # hub (the one fetch_bge.py checks); tokenizer.json is served small, so its hash is ours
+  BGE_MODEL_SHA256: 828e1496d7fabb79cfa4dcd84fa38625c0d3d21da474a00f08db0f559940cf35
+  BGE_TOKENIZER_SHA256: d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66
+
 jobs:
   gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: rust
+    env:
+      # a skipped pk-store / pk-embed test fails (docs/ARCHITECTURE.md section 5)
+      PK_REQUIRE_EXTERNAL: '1'
+      # the scratch servers sign in as root with this (crates/pk-store/src/config.rs reads SURREAL_* from the
+      # environment on top of a secrets file that does not exist here); a throwaway in-memory server, not a secret
+      SURREAL_USER: root
+      SURREAL_PASS: scratch-ci
     steps:
       - uses: actions/checkout@v5
+
+      - name: Where the externals live
+        run: |
+          echo "PUNCH_SURREAL=$HOME/.punchable/bin/surreal" >> "$GITHUB_ENV"
+          echo "PK_BGE_DIR=$HOME/.punchable/models/bge-small-en-v1.5" >> "$GITHUB_ENV"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -53,7 +95,62 @@ jobs:
         with:
           workspaces: rust
 
-      - name: Gate (fmt, clippy -D warnings, tests, per crate)
+      - name: cargo-deny (pinned, sha256-checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cargo-deny.tar.gz" \
+            "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${CARGO_DENY_SHA256}  $RUNNER_TEMP/cargo-deny.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/cargo-deny.tar.gz" -C "$RUNNER_TEMP"
+          install -m 755 "$RUNNER_TEMP/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl/cargo-deny" "$HOME/.cargo/bin/cargo-deny"
+          cargo deny --version
+
+      - name: surreal (cached by version and hash)
+        id: surreal
+        uses: actions/cache@v4
+        with:
+          path: ~/.punchable/bin
+          key: surreal-${{ env.SURREAL_VERSION }}-${{ env.SURREAL_SHA256 }}
+
+      - name: surreal (pinned, sha256-checked)
+        if: steps.surreal.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/surreal.tgz" \
+            "https://github.com/surrealdb/surrealdb/releases/download/v${SURREAL_VERSION}/surreal-v${SURREAL_VERSION}.linux-amd64.tgz"
+          echo "${SURREAL_SHA256}  $RUNNER_TEMP/surreal.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.punchable/bin"
+          tar -xzf "$RUNNER_TEMP/surreal.tgz" -C "$HOME/.punchable/bin" surreal
+
+      - name: surreal is the version the scratch tests start
+        run: |
+          "$PUNCH_SURREAL" version
+          "$PUNCH_SURREAL" version | grep -F "${SURREAL_VERSION}"
+
+      - name: bge model (cached by the model file's hash)
+        id: bge
+        uses: actions/cache@v4
+        with:
+          path: ~/.punchable/models/bge-small-en-v1.5
+          key: bge-small-en-v1.5-${{ env.BGE_MODEL_SHA256 }}
+
+      - uses: actions/setup-python@v6
+        if: steps.bge.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.13'
+
+      - name: Fetch the bge model (tools/kb/fetch_bge.py, the hub hashes and then the fingerprint)
+        if: steps.bge.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}
+        # the engine's embedder pins (api/requirements.txt) for the fingerprint check
+        run: |
+          python -m pip install onnxruntime==1.27.0 tokenizers==0.22.1 numpy==2.2.6
+          python tools/kb/fetch_bge.py --dest "$PK_BGE_DIR"
+
+      - name: The model on disk is the one the goldens were made with
+        run: |
+          echo "${BGE_MODEL_SHA256}  $PK_BGE_DIR/onnx/model.onnx" | sha256sum -c -
+          echo "${BGE_TOKENIZER_SHA256}  $PK_BGE_DIR/tokenizer.json" | sha256sum -c -
+
+      - name: Gate (fmt, cargo deny, clippy -D warnings, tests, per crate; a skipped external test is red)
         run: cargo xtask gate
 
   goldens-current:
@@ -73,6 +170,8 @@ jobs:
         run: python -m pip install -r api/requirements.txt anthropic==0.104.1 jsonschema==4.26.0 httpx==0.28.1
 
       - name: Regenerate the goldens from the Python they replace
+        # one line per generator under rust/tools (rust/CLAUDE.md); add `python rust/tools/gen_wire_goldens.py` here
+        # when T13 lands it on main (absent on 2026-10-29)
         run: |
           python rust/tools/gen_kb_goldens.py
           python rust/tools/gen_creative_goldens.py

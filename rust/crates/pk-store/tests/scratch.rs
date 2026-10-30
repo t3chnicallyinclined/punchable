@@ -51,16 +51,26 @@ fn free_port() -> u16 {
     l.local_addr().expect("addr").port()
 }
 
+/// A skipped test is a failed test where the externals are promised: with `PK_REQUIRE_EXTERNAL` set (CI), a missing
+/// binary or password panics instead of skipping (docs/ARCHITECTURE.md section 5).
+fn skip(tag: &str, why: &str) {
+    assert!(
+        std::env::var_os("PK_REQUIRE_EXTERNAL").is_none_or(|v| v.is_empty()),
+        "PK_REQUIRE_EXTERNAL is set and the scratch test {tag} cannot run: {why}"
+    );
+    eprintln!("SKIP {tag}: {why}");
+}
+
 /// A scratch server plus a store on `punchable_test/t_<tag>` with the schema applied; `None` (after a message) when
-/// the binary or the password is missing.
+/// the binary or the password is missing and `PK_REQUIRE_EXTERNAL` is unset.
 async fn scratch(tag: &str) -> Option<(Scratch, Store)> {
     let Some(exe) = surreal_exe() else {
-        eprintln!("SKIP {tag}: no surreal binary (PUNCH_SURREAL or ~/.punchable/bin/surreal.exe)");
+        skip(tag, "no surreal binary (PUNCH_SURREAL or ~/.punchable/bin/surreal.exe)");
         return None;
     };
     let secrets = pk_store::secrets();
     let Some(pass) = secrets.get("SURREAL_PASS").filter(|p| !p.is_empty()) else {
-        eprintln!("SKIP {tag}: no SURREAL_PASS in the secrets file");
+        skip(tag, "no SURREAL_PASS in the secrets file or the environment");
         return None;
     };
     let user = secrets

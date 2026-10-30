@@ -19,7 +19,6 @@ import re
 import sys
 import time
 from collections import OrderedDict
-from pathlib import Path
 from urllib.parse import quote
 
 from common import DESK, Api, TempDB, TempKB, diff

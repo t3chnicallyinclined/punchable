@@ -44,13 +44,18 @@ fn golden<T: for<'a> Deserialize<'a>>(name: &str) -> T {
     serde_json::from_str(&text).expect("golden is JSON")
 }
 
-/// The model, or `None` with a line on stderr saying why the test did nothing.
+/// The model, or `None` with a line on stderr saying why the test did nothing. A skipped test is a failed test where
+/// the model is promised: with `PK_REQUIRE_EXTERNAL` set (CI), a missing model panics instead (docs/ARCHITECTURE.md
+/// section 5).
 fn model() -> Option<Bge> {
     let Some(dir) = bge_dir() else {
-        eprintln!(
-            "pk-embed: PK_BGE_DIR unset or without the model; skipping (python tools/kb/fetch_bge.py --dest DIR, \
-             then PK_BGE_DIR=DIR)"
+        let why =
+            "PK_BGE_DIR unset or without the model (python tools/kb/fetch_bge.py --dest DIR, then PK_BGE_DIR=DIR)";
+        assert!(
+            std::env::var_os("PK_REQUIRE_EXTERNAL").is_none_or(|v| v.is_empty()),
+            "PK_REQUIRE_EXTERNAL is set and the model tests cannot run: {why}"
         );
+        eprintln!("pk-embed: {why}; skipping");
         return None;
     };
     Some(Bge::load(&dir).expect("the model loads"))

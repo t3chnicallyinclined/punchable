@@ -6,7 +6,6 @@ Standard library only. See docs/KB_SCHEMA.md for the contract.
 """
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import math

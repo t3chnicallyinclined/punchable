@@ -15,7 +15,6 @@ import pytest
 DESK = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(DESK))
 import worker.__main__ as WM  # noqa: E402
-from engine.tests.conftest import env  # noqa: E402,F401  (the engine's temp config + mock provider fixture)
 
 
 class ClaimApi:

@@ -8,7 +8,7 @@ The mapping is exact, so the API's SurrealDB backend reproduces the files backen
 """
 from __future__ import annotations
 
-from sdb import NONE, RecordID, TYPE_OF_TABLE, edge_key, node_rid, rid_str, strip_none
+from sdb import RecordID, TYPE_OF_TABLE, edge_key, node_rid, rid_str, strip_none
 
 DB_ONLY_NODE = {"ord", "working", "working_sets", "embedding", "embedded_sha"}
 DB_ONLY_EDGE = {"ord", "run_id"}
