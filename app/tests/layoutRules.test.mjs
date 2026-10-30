@@ -1,6 +1,6 @@
 // Unit test for src/rules/layoutRules.ts: the Tonight header's two-row shape at every text size (docs/design/HIG.md §0).
 //   node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs
-import { LARGE_TITLE_PT, STACK_AT, headerTopPadding, rowFits, tonightTitleRow } from "../src/rules/layoutRules.ts";
+import { LARGE_TITLE_PT, STACK_AT, bottomClearance, footerBottomPad, headerTopPadding, rowFits, tonightTitleRow } from "../src/rules/layoutRules.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };
@@ -22,6 +22,14 @@ check(rowFits(362, 125, [100, 44, 70]) === false, "putting Ask back in the title
 
 // the inset is the system's; a missing value is 0, never a guessed device number
 check(headerTopPadding(62) === 62 && headerTopPadding(0) === 0 && headerTopPadding(undefined) === 0 && headerTopPadding(-3) === 0, "header top padding = the safe-area inset");
+
+// bottom-anchored controls (build 18 on an iPhone 16: the map cards, the legend row and the groups row sat at a fixed 12 pt,
+// inside the 34-pt home-indicator zone and under the floating tab bar). The inset is measured, never a device number.
+check(bottomClearance(34) === 46 && bottomClearance(83) === 95, "dock: the measured inset + 12 (the home indicator alone; the home indicator + the tab bar)");
+check(bottomClearance(0) === 12 && bottomClearance(undefined) === 12 && bottomClearance(-3) === 12 && bottomClearance(NaN) === 12, "no inset (the web, an unmeasured provider) = the gap alone");
+check(bottomClearance(34, 20) === 54 && bottomClearance(34, 0) === 34, "the gap is the caller's");
+check(12 < 34 && bottomClearance(34) > 34 && bottomClearance(34) - 12 >= 34, "the old fixed 12 pt was inside the 34-pt home-indicator zone; the clearance keeps the control above it");
+check(footerBottomPad(34) === 34 && footerBottomPad(0) === 12 && footerBottomPad(undefined) === 12 && footerBottomPad(8) === 12, "a sheet footer: the inset, never under 12");
 
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");
 process.exit(fails.length ? 1 : 0);

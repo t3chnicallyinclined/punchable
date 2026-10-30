@@ -3,11 +3,13 @@
 // here with Stack.Screen; a full-screen task (`task`) or a screen with its own `header` keeps a custom bar under
 // the safe-area inset. The tab bar is the system's too (app/(tabs)/_layout.tsx). The insets come from a
 // SafeAreaProvider nested inside the tab's content, so `bottom` includes the tab bar (and shrinks as it minimises on
-// iOS 26): no fixed device number anywhere (docs/design/HIG.md §12). The web shell is Screen.tsx.
+// iOS 26): no fixed device number anywhere (docs/design/HIG.md §12). A screen that pins its own row at the bottom
+// reads the same number through lib/ui useBottomInset (rules/layoutRules bottomClearance). The web shell is Screen.tsx.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { bottomClearance } from '@/rules/layoutRules';
 import { C } from './theme';
 import type { NativeHeaderOptions, ScreenProps } from './screenTypes';
 import { OfflineStrip, TopBar } from './TopBar';
@@ -104,7 +106,7 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
           </View>
         )}
         {dock && (
-          <View testID="dock" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: ins.bottom + 12, backgroundColor: deep ? C.bgDeep : C.surface, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
+          <View testID="dock" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: bottomClearance(ins.bottom, 12), backgroundColor: deep ? C.bgDeep : C.surface, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
             <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', gap: 8 }}>{dock}</View>
           </View>
         )}

@@ -8,7 +8,7 @@ import { useBoards } from './boards';
 import { slotColor } from './Galaxy';
 import * as M from '@/rules/cloudMath';
 import { C, F } from './theme';
-import { Btn, Empty, ErrorCard, Skeleton, T, TextBtn, useWide } from './ui';
+import { Btn, Empty, ErrorCard, Skeleton, T, TextBtn, useBottomInset, useWide } from './ui';
 import { Screen } from './Screen';
 
 const native = Platform.OS !== 'web';
@@ -48,6 +48,7 @@ export function countsLine(d: M.CloudMap | null): string {
 
 export function CloudFrame({ st, canvas, onSize }: { st: CloudState; canvas: (w: number, h: number) => React.ReactNode; onSize: (w: number, h: number) => void }) {
   const wide = useWide();
+  const bottom = useBottomInset();
   const boards = useBoards();
   const slow = useSlow(st.data, st.error);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -112,7 +113,9 @@ export function CloudFrame({ st, canvas, onSize }: { st: CloudState; canvas: (w:
               </View>
             )}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }} style={{ flexGrow: 0 }}>
+          {/* the frame's last row clears the home indicator and the floating tab bar (useBottomInset: build 18 drew it, and
+              the card and zoom buttons in the canvas above it, under the bar on an iPhone 16); 0 on the web, whose shell pads */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }} style={{ flexGrow: 0, marginBottom: bottom }}>
             {d.clusters.map((c) => (
               <Pressable key={c.id} testID={`cloud-cluster-${c.id}`} accessibilityRole="button" accessibilityLabel={`${c.label}, ${c.size} bits. Turn it to the front.`} onPress={() => st.face(c)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: C.card }}>

@@ -227,6 +227,7 @@ export default function Desk() {
       {view === 'jokes' ? (
         <FlatList
           testID="joke-list"
+          contentInsetAdjustmentBehavior="automatic"
           data={items}
           keyExtractor={(j) => j.id}
           renderItem={({ item }) => <View style={{ paddingHorizontal: wide ? 0 : 16 }}><Row j={item} onAdd={onAdd} onPick={onPick} onStage={onStage} /></View>}
@@ -246,7 +247,7 @@ export default function Desk() {
           keyboardShouldPersistTaps="handled"
         />
       ) : (
-        <FlatList data={[0]} keyExtractor={() => 'x'} ListHeaderComponent={header} contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: wide ? 32 : 16, width: '100%', maxWidth: wide ? 1120 : 720, alignSelf: 'center' }}
+        <FlatList data={[0]} keyExtractor={() => 'x'} contentInsetAdjustmentBehavior="automatic" ListHeaderComponent={header} contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: wide ? 32 : 16, width: '100%', maxWidth: wide ? 1120 : 720, alignSelf: 'center' }}
           renderItem={() => (view === 'notes' ? <NotesList /> : <ShowsList />)} />
       )}
 

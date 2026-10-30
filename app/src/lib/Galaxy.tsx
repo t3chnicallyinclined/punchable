@@ -23,7 +23,7 @@ import { actionSheet } from './actionSheet';
 import { getPrefs, setPrefs } from './prefs';
 import type { MapGroupKey } from './simple';
 import { C, F } from './theme';
-import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useReduceMotion, useUI, useWide } from './ui';
+import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useBottomInset, useReduceMotion, useUI, useWide } from './ui';
 import { Screen } from './Screen';
 import * as G from './galaxyLayout';
 
@@ -62,6 +62,7 @@ function LegendRow({ wide, column, children }: { wide: boolean; column: boolean;
 
 export function Galaxy({ focusId, onCloud }: { focusId?: string; onCloud?: () => void }) {
   const wide = useWide();
+  const bottom = useBottomInset();
   const reduce = useReduceMotion();
   const ui = useUI();
   const boards = useBoards();
@@ -308,8 +309,10 @@ export function Galaxy({ focusId, onCloud }: { focusId?: string; onCloud?: () =>
     </View>
   ) : undefined;
 
+  // the frame's last row: it clears the home indicator and the floating tab bar, and so does the canvas above it with
+  // its card and zoom buttons (build 18 drew them at a fixed 12 pt, under the bar on an iPhone 16)
   const legend = m.data && lay ? (
-    <View style={{ paddingHorizontal: 16, gap: 6 }}>
+    <View style={{ paddingHorizontal: 16, gap: 6, paddingBottom: bottom }}>
       <Pressable testID="galaxy-legend-toggle" accessibilityRole="button" accessibilityState={{ expanded: legendOpen }} onPress={() => { setLegendOpen((v) => { setPrefs({ mapLegend: !v }); return !v; }); }} style={{ minHeight: 44, justifyContent: 'center' }}>
         <T v="small" style={{ color: C.amber }}>Legend {legendOpen ? '⌃' : '⌄'}</T>
       </Pressable>

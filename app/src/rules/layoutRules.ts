@@ -36,3 +36,21 @@ export function rowFits(width: number, title: number, fixed: number[], gap = 8):
 export function headerTopPadding(safeAreaTop: number | undefined): number {
   return Math.max(0, safeAreaTop || 0);
 }
+
+/**
+ * A bottom-anchored control's clearance from the screen's bottom edge: the measured bottom safe-area inset plus a gap.
+ * The inset is whatever the nearest SafeAreaProvider measured (lib/ui useBottomInset): the home indicator (34 pt on an
+ * iPhone 16) in a full-screen modal; the home indicator PLUS the floating tab bar inside a tab's content, where
+ * lib/Screen.native nests the provider (UIKit's safe area counts the bar; expo-router has no tab-bar-height API:
+ * "Cannot measure the tab bar height", docs.expo.dev/router/advanced/native-tabs); 0 on the web. A missing or negative
+ * inset reads as 0, never a guessed device number (HIG/layout: respect the safe area).
+ */
+export function bottomClearance(safeAreaBottom: number | undefined, gap = 12): number {
+  return Math.max(0, safeAreaBottom || 0) + gap;
+}
+
+/** A footer's bottom padding (a form sheet's footer): the inset itself, or `min` where there is none. A sheet at the
+ *  medium detent still ends at the device's bottom edge, so the window's inset applies there as on a full screen. */
+export function footerBottomPad(safeAreaBottom: number | undefined, min = 12): number {
+  return Math.max(min, safeAreaBottom || 0);
+}

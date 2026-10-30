@@ -6,8 +6,9 @@ import {
   AccessibilityInfo, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleProp, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions,
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { bottomClearance } from '@/rules/layoutRules';
 import { C, F, WIDE, onSchemeChange, stageInfo, stageWord } from './theme';
 import { AskButton } from './AskButton';
 import { upload } from './api';
@@ -396,7 +397,6 @@ export function useRefresh(onRefresh?: () => Promise<any> | void) {
  * so a sheet with an autofocused field keeps its buttons reachable (the iPhone blocker in the HIG audit).
  */
 export function Sheet({ visible, onClose, children, label, testID }: { visible: boolean; onClose: () => void; children: React.ReactNode; label: string; testID?: string }) {
-  const ins = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const y0 = useRef<number | null>(null);
   const reduce = useReduceMotion();
@@ -410,20 +410,33 @@ export function Sheet({ visible, onClose, children, label, testID }: { visible: 
   };
   return (
     <Modal visible={visible} transparent animationType={reduce ? 'fade' : Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <Pressable accessibilityLabel="Close" onPress={onClose} style={{ flex: 1, backgroundColor: C.scrim, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Pressable testID={testID} accessibilityRole={'dialog' as any} aria-modal accessibilityLabel={label} onPress={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 640, maxHeight: height * 0.88, backgroundColor: C.surface, borderWidth: 1, borderBottomWidth: 0, borderColor: C.border, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-            <View {...grabberTouch} accessibilityRole="button" accessibilityLabel="Close the sheet" accessibilityHint="Swipe down or double tap" style={{ alignItems: 'center', minHeight: 28, justifyContent: 'center' }}>
-              <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: C.borderStrong }} />
-            </View>
-            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: ins.bottom + 20 }} keyboardShouldPersistTaps="handled">
-              {children}
-            </ScrollView>
+      {/* a Modal is its own window: a provider at its root measures that window's insets (react-native-safe-area-context
+          SafeAreaContext.tsx: a nested provider starts from its parent's insets, then reports its own view's), so the
+          body clears the home indicator by 20 pt and not the home indicator plus a tab bar the Modal covers */}
+      <SafeAreaProvider>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <Pressable accessibilityLabel="Close" onPress={onClose} style={{ flex: 1, backgroundColor: C.scrim, justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Pressable testID={testID} accessibilityRole={'dialog' as any} aria-modal accessibilityLabel={label} onPress={(e) => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 640, maxHeight: height * 0.88, backgroundColor: C.surface, borderWidth: 1, borderBottomWidth: 0, borderColor: C.border, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+              <View {...grabberTouch} accessibilityRole="button" accessibilityLabel="Close the sheet" accessibilityHint="Swipe down or double tap" style={{ alignItems: 'center', minHeight: 28, justifyContent: 'center' }}>
+                <View style={{ width: 36, height: 5, borderRadius: 3, backgroundColor: C.borderStrong }} />
+              </View>
+              <SheetScroll>{children}</SheetScroll>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaProvider>
     </Modal>
+  );
+}
+
+/** The sheet's scrolling body; its bottom padding is the Modal window's own inset (the provider above), via useBottomInset. */
+function SheetScroll({ children }: { children: React.ReactNode }) {
+  const bottom = useBottomInset();
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: bottomClearance(bottom, 20) }} keyboardShouldPersistTaps="handled">
+      {children}
+    </ScrollView>
   );
 }
 
@@ -640,11 +653,25 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Pads its content by the bottom inset the screen's shell measures (the system tab bar on the phone, 0 on the web).
- *  For a screen that owns its layout (`scroll={false}`) and puts a row at the very bottom. */
+/**
+ * The clearance anything pinned to the bottom of a screen needs: the nearest SafeAreaProvider's bottom inset, in pt.
+ * lib/Screen.native nests a provider inside the tab's content, so on a tab screen (and every screen pushed in a tab's
+ * stack) the number already includes the floating tab bar: UIKit's safe area counts the bar, and shrinks as it
+ * minimises on iOS 26 (expo-router has no tab-bar-height API: "Cannot measure the tab bar height",
+ * docs.expo.dev/router/advanced/native-tabs). In a full-screen modal (stage, record, review) it is the home indicator
+ * alone (34 pt on an iPhone 16); inside a form sheet or a Modal `Sheet` it is that window's; 0 on the web, whose shell
+ * (Screen.tsx) pads for its own BottomNav. Combine with rules/layoutRules bottomClearance / footerBottomPad; never a
+ * fixed device number (docs/design/HIG.md §12).
+ */
+export function useBottomInset(): number {
+  return useSafeAreaInsets().bottom;
+}
+
+/** Pads its content by `useBottomInset()`: for a screen that owns its layout (`scroll={false}`) and puts a row at the
+ *  very bottom (the maps' legend and groups rows do the same inline). */
 export function SafeBottom({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  const ins = useSafeAreaInsets();
-  return <View style={[{ paddingBottom: ins.bottom }, style]}>{children}</View>;
+  const bottom = useBottomInset();
+  return <View style={[{ paddingBottom: bottom }, style]}>{children}</View>;
 }
 
 // small shared glyphs

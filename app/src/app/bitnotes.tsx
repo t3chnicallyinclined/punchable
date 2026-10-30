@@ -9,15 +9,15 @@
 import React from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SideButton } from '@/lib/RecordControl';
 import { useStageNotes } from '@/lib/stageNotes';
 import type { Step } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { mmss } from '@/rules/format';
+import { footerBottomPad } from '@/rules/layoutRules';
 import { notesFooter, notesFor } from '@/rules/setListRules';
 import { C, F } from '@/lib/theme';
-import { Sheet, SheetHead, T } from '@/lib/ui';
+import { Sheet, SheetHead, T, useBottomInset } from '@/lib/ui';
 
 const enc = encodeURIComponent;
 const nameOf = (x: Step) => x.short_name || shortNameOf(x.title);
@@ -43,7 +43,9 @@ function Words({ step, i, n }: { step: Step; i: number; n: number }) {
 
 export default function BitNotesRoute() {
   const notes = useStageNotes();
-  const ins = useSafeAreaInsets();
+  // the root provider's inset (this route is not inside lib/Screen): the sheet's own window, the home indicator alone;
+  // react-native-screens lays unstable_sheetFooter flush with the sheet's bottom edge and adds no inset of its own
+  const bottom = useBottomInset();
   const close = () => (router.canGoBack() ? router.back() : router.navigate('/sets' as any));
   const steps = notes?.steps || [];
   const i = Math.max(0, Math.min(steps.length - 1, notes?.index ?? 0));
@@ -76,7 +78,7 @@ export default function BitNotesRoute() {
         title,
         // the sheet's own footer: pinned under the content at every detent (react-native-screens ScreenFooter)
         unstable_sheetFooter: () => (
-          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(ins.bottom, 12), backgroundColor: C.surface }}>{footer}</View>
+          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: footerBottomPad(bottom), backgroundColor: C.surface }}>{footer}</View>
         ),
       }} />
       {/* HIG/sheets: Close on the leading edge; no Done (nothing to save) */}

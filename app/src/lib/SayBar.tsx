@@ -6,7 +6,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from './theme';
 import { haptics } from './haptics';
 import { holdHaptic } from './feedback';
@@ -83,7 +82,6 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
   const [text, setText] = useState('');
   const [interim, setInterim] = useState('');
   const input = useRef<any>(null);
-  const ins = useSafeAreaInsets();
   const ui = useUI();
   const heard = useCallback((t: string) => { setInterim(''); setText(''); onSay(t, 'spoken'); }, [onSay]);
   const noted = useCallback((r: { status: string; queued?: boolean; error?: string }) => {
@@ -105,8 +103,10 @@ export function SayBar({ onSay, placeholder = 'Jot it or ask it', hint, worker, 
   const talkLabel = !talk.supported ? 'Type it (this device can’t listen)' : talk.mode === 'record'
     ? (recording ? 'Recording; let go to send the voice note' : 'Hold to record a voice note')
     : (listening ? 'Listening; let go to send' : 'Hold to talk');
+  // no bottom inset here: the container owns it (Screen's say-dock sits at the measured inset, lib/ui useBottomInset;
+  // the iOS 26 accessory is the system's)
   return (
-    <View testID={`${testID}-bar`} style={{ paddingHorizontal: pad ? Z.padX : 0, paddingTop: Z.padY, paddingBottom: pad ? Z.padY + ins.bottom * 0 : 0, gap: Z.gap, alignItems: 'center' }}>
+    <View testID={`${testID}-bar`} style={{ paddingHorizontal: pad ? Z.padX : 0, paddingTop: Z.padY, paddingBottom: pad ? Z.padY : 0, gap: Z.gap, alignItems: 'center' }}>
       {!!line && Z.hint && <Text testID={`${testID}-hint`} maxFontSizeMultiplier={1.4} style={{ fontSize: 13, fontFamily: F.body, color: worker && !worker.online ? C.amber : C.mut2, textAlign: 'center' }}>{line}</Text>}
       <View style={{ width: '100%', maxWidth: 720, flexDirection: 'row', alignItems: 'center', gap: Z.gap }}>
         <View style={{ flex: 1, minWidth: 0, minHeight: Z.field, borderRadius: Z.field / 2, backgroundColor: C.card, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
