@@ -1254,13 +1254,13 @@
    },
    "labels": [
     {
-     "id": "label:topic:money",
-     "name": "Money",
+     "id": "label:device:callback",
+     "name": "Callback",
      "bucket": "confirmed"
     },
     {
-     "id": "label:device:callback",
-     "name": "Callback",
+     "id": "label:topic:money",
+     "name": "Money",
      "bucket": "confirmed"
     }
    ],
@@ -1299,14 +1299,14 @@
    },
    "labels": [
     {
-     "id": "label:topic:money",
-     "name": "Money",
-     "bucket": "confirmed"
-    },
-    {
      "id": "label:device:callback",
      "name": "Callback",
      "bucket": "proposed"
+    },
+    {
+     "id": "label:topic:money",
+     "name": "Money",
+     "bucket": "confirmed"
     }
    ],
    "units": 1,

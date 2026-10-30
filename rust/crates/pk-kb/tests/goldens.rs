@@ -114,7 +114,15 @@ fn read_models_match_the_python_view() {
         })
         .collect();
     same("edge_views_focus", &Value::Object(evf), &g["edge_views_focus"]);
-    same("summaries", &json!(v.joke_summaries()), &g["summaries"]);
+    // a summary's label order is PYTHONHASHSEED-dependent in Python (`joke_scope` is a set); the golden sorts
+    // them by id and so do we. Everything else in the summary is compared in order.
+    let mut summaries = json!(v.joke_summaries());
+    for s in summaries.as_array_mut().expect("summaries") {
+        if let Some(labels) = s.get_mut("labels").and_then(Value::as_array_mut) {
+            labels.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+        }
+    }
+    same("summaries", &summaries, &g["summaries"]);
     let searches: serde_json::Map<String, Value> = g["search"]
         .as_object()
         .expect("search")

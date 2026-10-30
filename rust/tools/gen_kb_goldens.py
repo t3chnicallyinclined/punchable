@@ -167,7 +167,10 @@ def dump_view(v: K.View) -> dict:
         "briefs": {nid: v.brief(nid) for nid in list(v.nodes) + ["missing:x"]},
         "edge_views": {eid: v.edge_view(e) for eid, e in v.edges.items()},
         "edge_views_focus": {eid: v.edge_view(e, e.get("src")) for eid, e in v.edges.items()},
-        "summaries": v.joke_summaries(),
+        # a summary's labels come out of joke_edges, which walks joke_scope (a set): their order follows
+        # PYTHONHASHSEED and differs run to run (RUST.md "label tie order"). The golden carries them by id, and the
+        # Rust test sorts its own the same way before comparing; everything else in the view is order-exact.
+        "summaries": [{**s, "labels": sorted(s["labels"], key=lambda l: l["id"])} for s in v.joke_summaries()],
         "search": {q: v.search(q) for q in ("", "meter", "METER pronouns", "cat job", "money", "runner", "nothing-here", "joke:cat")},
         "details": {j["id"]: v.joke_detail(j["id"]) for j in v.jokes},
         "detail_missing": v.joke_detail("unit:m1"),
