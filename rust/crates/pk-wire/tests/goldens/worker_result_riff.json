@@ -1,0 +1,43 @@
+{
+ "ok": true,
+ "result": {
+  "idea": "parking meters",
+  "draft": true,
+  "label": "DRAFT · AI · not your words yet",
+  "status": "ok",
+  "ideas": [
+   {
+    "text": "The meter wants a tip now.",
+    "built_on": [
+     "riff",
+     "joke:a"
+    ],
+    "move": "escalation",
+    "draft": true,
+    "label": "DRAFT · AI · not your words yet"
+   },
+   {
+    "text": "It only takes quarters and apologies.",
+    "built_on": [
+     "riff"
+    ],
+    "move": null,
+    "draft": true,
+    "label": "DRAFT · AI · not your words yet"
+   }
+  ],
+  "grounded_in": [
+   {
+    "id": "B1",
+    "joke_id": "joke:a",
+    "title": "Alpha bit",
+    "quote": "The alpha punch lands here every time.",
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "stage_line": "Worked at Mabel's, Mar 2024 · 3 nights",
+    "last_night": "last night at Mabel's, Mar 2024: worked, 4 s of laughs"
+   }
+  ],
+  "provider": "anthropic",
+  "model": "claude-synthetic"
+ }
+}

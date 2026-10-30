@@ -1,0 +1,20 @@
+{
+ "boards": [
+  {
+   "id": "sb:tuesday-run-7507883e",
+   "title": "Tuesday run",
+   "n": 4,
+   "runtime_s": 183.4,
+   "runtime": "3:03",
+   "target_s": 300,
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "his",
+   "names": [
+    "Alpha bit",
+    "Bravo bit",
+    "Charlie bit",
+    "Delta bit"
+   ]
+  }
+ ]
+}

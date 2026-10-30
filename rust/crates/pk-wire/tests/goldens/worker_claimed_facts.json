@@ -1,0 +1,20 @@
+{
+ "job": {
+  "id": "job:facts-c5b857fdc52d",
+  "kind": "facts",
+  "key": "facts|3bd79f50d35b0fd1",
+  "input": {
+   "text": "parking meters"
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 2,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": "TimeoutError: the provider did not answer in 120 s",
+  "waiting_for": null
+ }
+}

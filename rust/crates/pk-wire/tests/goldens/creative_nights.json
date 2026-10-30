@@ -1,0 +1,432 @@
+{
+ "working_set": "ws:tuesday-run-14d826f7",
+ "nights": [
+  {
+   "working_set": "ws:tuesday-run-14d826f7",
+   "version": 1,
+   "set": "2024-01-01_x",
+   "date": "2024-01-01",
+   "venue": "The Corner Room",
+   "venue_label": "The Corner Room '24",
+   "order": {
+    "planned": [
+     "joke:a",
+     "joke:b",
+     "joke:c",
+     "joke:d"
+    ],
+    "performed": [
+     "joke:a",
+     "joke:b",
+     "joke:c"
+    ],
+    "in_order": [
+     "joke:a",
+     "joke:b",
+     "joke:c"
+    ],
+    "moved": [],
+    "same_order": true
+   },
+   "dropped": [
+    "joke:d"
+   ],
+   "added": [
+    {
+     "idx": 3,
+     "title": "T3",
+     "status": "crowd_work",
+     "joke_id": null,
+     "time_s": 20.0,
+     "laugh_s_per_min": 0.0,
+     "vs_room": 0.0,
+     "ai_rating": "died"
+    }
+   ],
+   "bits": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "planned_pos": 1,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 1,
+     "segments": [
+      1
+     ],
+     "time_s": 60.0,
+     "delta_s": 0.0,
+     "laugh_s": 9.0,
+     "laugh_s_per_min": 9.0,
+     "vs_room": 1.5,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 5.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:a1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "planned_pos": 2,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 2,
+     "segments": [
+      2
+     ],
+     "time_s": 60.0,
+     "delta_s": 0.0,
+     "laugh_s": 6.0,
+     "laugh_s_per_min": 6.0,
+     "vs_room": 1.0,
+     "ai_rating": "killed",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 5.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:b1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#2",
+       "quote": "Bravo setup about the dog. The purple monkey dishwasher line"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "planned_pos": 3,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 4,
+     "segments": [
+      4
+     ],
+     "time_s": 60.0,
+     "delta_s": 0.0,
+     "laugh_s": 6.0,
+     "laugh_s_per_min": 6.0,
+     "vs_room": 1.0,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 5.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:c1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#4",
+       "quote": "Charlie premise about cars and traffic and more traffic today."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "planned_pos": 4,
+     "target_s": 5,
+     "locked": false,
+     "performed": false
+    }
+   ],
+   "totals": {
+    "planned_target_s": 185,
+    "performed_planned_s": 180.0,
+    "added_s": 20.0,
+    "bits_performed": 3,
+    "bits_planned": 4,
+    "ws_laugh_s_per_min": 7.0,
+    "set_laugh_s_per_min": 6.0,
+    "room_heat": 1.0,
+    "material_s": 300.0
+   }
+  },
+  {
+   "working_set": "ws:tuesday-run-14d826f7",
+   "version": 1,
+   "set": "2024-02-01_y",
+   "date": "2024-02-01",
+   "venue": "Seaside Comedy Club",
+   "venue_label": "Seaside '24",
+   "order": {
+    "planned": [
+     "joke:a",
+     "joke:b",
+     "joke:c",
+     "joke:d"
+    ],
+    "performed": [
+     "joke:a",
+     "joke:b"
+    ],
+    "in_order": [
+     "joke:a",
+     "joke:b"
+    ],
+    "moved": [],
+    "same_order": true
+   },
+   "dropped": [
+    "joke:c",
+    "joke:d"
+   ],
+   "added": [
+    {
+     "idx": 3,
+     "title": "T3",
+     "status": "new",
+     "joke_id": null,
+     "time_s": 60.0,
+     "laugh_s_per_min": 3.0,
+     "vs_room": 0.5,
+     "ai_rating": "worked"
+    }
+   ],
+   "bits": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "planned_pos": 1,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 1,
+     "segments": [
+      1
+     ],
+     "time_s": 60.0,
+     "delta_s": 0.0,
+     "laugh_s": 8.4,
+     "laugh_s_per_min": 8.4,
+     "vs_room": 1.4,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 5.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:a1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#1",
+       "quote": "Alpha opener line one. The alpha punch lands here every"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "planned_pos": 2,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 2,
+     "segments": [
+      2
+     ],
+     "time_s": 90.0,
+     "delta_s": 30.0,
+     "laugh_s": 2.0,
+     "laugh_s_per_min": 1.33,
+     "vs_room": 0.22,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 40.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:b1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-02-01_y#2",
+       "quote": "Bravo setup about the dog. Bravo closer words."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "planned_pos": 3,
+     "target_s": 60,
+     "locked": false,
+     "performed": false
+    },
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "planned_pos": 4,
+     "target_s": 5,
+     "locked": false,
+     "performed": false
+    }
+   ],
+   "totals": {
+    "planned_target_s": 185,
+    "performed_planned_s": 150.0,
+    "added_s": 60.0,
+    "bits_performed": 2,
+    "bits_planned": 4,
+    "ws_laugh_s_per_min": 4.16,
+    "set_laugh_s_per_min": 6.0,
+    "room_heat": 1.0,
+    "material_s": 300.0
+   }
+  },
+  {
+   "working_set": "ws:tuesday-run-14d826f7",
+   "version": 1,
+   "set": "2024-03-01_z",
+   "date": "2024-03-01",
+   "venue": "Mabel's (upstairs)",
+   "venue_label": "Mabel's '24",
+   "order": {
+    "planned": [
+     "joke:a",
+     "joke:b",
+     "joke:c",
+     "joke:d"
+    ],
+    "performed": [
+     "joke:b",
+     "joke:a"
+    ],
+    "in_order": [
+     "joke:b"
+    ],
+    "moved": [
+     "joke:a"
+    ],
+    "same_order": false
+   },
+   "dropped": [
+    "joke:c",
+    "joke:d"
+   ],
+   "added": [],
+   "bits": [
+    {
+     "joke_id": "joke:a",
+     "title": "Alpha bit",
+     "planned_pos": 1,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 2,
+     "segments": [
+      2
+     ],
+     "time_s": 30.0,
+     "delta_s": -30.0,
+     "laugh_s": 4.0,
+     "laugh_s_per_min": 8.0,
+     "vs_room": 1.6,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 5.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:a1",
+     "in_order": false,
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "planned_pos": 2,
+     "target_s": 60,
+     "locked": false,
+     "performed": true,
+     "performed_pos": 1,
+     "segments": [
+      1
+     ],
+     "time_s": 40.0,
+     "delta_s": -20.0,
+     "laugh_s": 1.5,
+     "laugh_s_per_min": 2.25,
+     "vs_room": 0.45,
+     "ai_rating": "worked",
+     "max_bars": 2,
+     "time_to_first_laugh_s": 30.0,
+     "script_diff": {
+      "on_script_pct": 50,
+      "dropped": [],
+      "added": []
+     },
+     "script_diff_basis": "vs written version unit:b1",
+     "in_order": true,
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#1",
+       "quote": "Bravo setup about the dog. Bravo closer words about the"
+      }
+     ]
+    },
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "planned_pos": 3,
+     "target_s": 60,
+     "locked": false,
+     "performed": false
+    },
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "planned_pos": 4,
+     "target_s": 5,
+     "locked": false,
+     "performed": false
+    }
+   ],
+   "totals": {
+    "planned_target_s": 185,
+    "performed_planned_s": 70.0,
+    "added_s": 0,
+    "bits_performed": 2,
+    "bits_planned": 4,
+    "ws_laugh_s_per_min": 4.71,
+    "set_laugh_s_per_min": 5.0,
+    "room_heat": 1.0,
+    "material_s": 300.0
+   }
+  }
+ ]
+}

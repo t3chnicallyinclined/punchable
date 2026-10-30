@@ -1,0 +1,23 @@
+{
+ "ok": true,
+ "result": {
+  "status": "analyzed_text",
+  "kind": "set",
+  "set_dir": "20240501_ph0123456ab",
+  "units": 2,
+  "funny_units": 1,
+  "audio": {
+   "status": "unavailable",
+   "why": "transcribed on the phone; laughs, room heat and timing need the recording",
+   "timestamps": "device"
+  },
+  "run_id": "set_text-1",
+  "ideas": [
+   {
+    "unit": "u1",
+    "joke_id": "joke:the-meter-wants-a-tip-now",
+    "attach": "attach"
+   }
+  ]
+ }
+}

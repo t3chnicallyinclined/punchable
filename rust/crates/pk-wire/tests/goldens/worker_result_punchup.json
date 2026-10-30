@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "result": {
+  "joke_id": "joke:a",
+  "title": "Alpha bit",
+  "draft": true,
+  "label": "DRAFT · AI · not your words yet",
+  "drafts": [
+   {
+    "target_line": "Alpha opener line one.",
+    "target_evidence": {
+     "node": "perf:2024-01-01_x@0",
+     "quote": "Alpha opener line one."
+    },
+    "alt": "Alpha opener, line one, take two.",
+    "move": "rule of three",
+    "draft": true,
+    "label": "DRAFT · AI · not your words yet"
+   }
+  ],
+  "status": "ok",
+  "blocked_locked": 0,
+  "based_on": "set:2024-01-01_x",
+  "provider": "anthropic",
+  "model": "claude-synthetic",
+  "call_id": "c-2",
+  "task": "creative_punchup"
+ }
+}

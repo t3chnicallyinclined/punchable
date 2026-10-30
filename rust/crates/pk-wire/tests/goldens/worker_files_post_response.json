@@ -1,0 +1,12 @@
+{
+ "ok": true,
+ "written": [
+  "corpus/memos/2024-01-05_a1b2c3d4/transcript.json",
+  "corpus/memos/2024-01-05_a1b2c3d4/meta.json"
+ ],
+ "removed": [],
+ "unchanged": 1,
+ "synced": null,
+ "files_rev": null,
+ "actor": "ai:memolink"
+}

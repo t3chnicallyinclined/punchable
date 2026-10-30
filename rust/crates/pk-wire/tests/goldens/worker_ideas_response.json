@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "indexes": [
+  5
+ ],
+ "id": "joke:meter-note",
+ "decisions": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:meter-note",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "joke",
+    "title": "meter note",
+    "stage": "idea",
+    "summary": "A note about the meter and the quarters.",
+    "first_seen": "2026-10-29",
+    "last_seen": "2026-10-29",
+    "from": {
+     "note": "Voice note 'meter note', recorded 2024-01-05"
+    }
+   },
+   "reason": "[upload] voice note 'meter note' (upload a1b2c3d4, recorded 2024-01-05)",
+   "by": "import:upload"
+  }
+ ],
+ "attach": {
+  "decision": "new",
+  "reasons": [
+   "too short to place (3 content words)"
+  ]
+ }
+}

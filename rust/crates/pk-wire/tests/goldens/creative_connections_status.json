@@ -1,0 +1,40 @@
+{
+ "google_docs": {
+  "status": "not_set_up",
+  "last_sync": null,
+  "last_ok": null,
+  "docs_linked": 0,
+  "joke_docs": 0,
+  "boards": 0,
+  "conflicts": 0,
+  "errors_last_run": 0,
+  "last_mode": null,
+  "where": "your PC"
+ },
+ "youtube": {
+  "sets": 0,
+  "import": "link"
+ },
+ "ai": {
+  "provider": "hosted",
+  "worker": {
+   "online": true,
+   "last_seen": "2026-10-29T12:00:00+00:00",
+   "name": "api-worker-7f9c",
+   "where": "the server",
+   "hosted": true,
+   "model": "Anthropic API · claude-synthetic",
+   "paused": null,
+   "online_window_s": 120
+  }
+ },
+ "transcriber": {
+  "where": "your phone",
+  "waiting": 0,
+  "note": null
+ },
+ "audio_storage": {
+  "status": "not_set_up",
+  "provider": "Cloudflare R2"
+ }
+}

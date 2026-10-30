@@ -1,0 +1,252 @@
+{
+ "board": {
+  "id": "sb:tuesday-run-7507883e",
+  "title": "Tuesday run",
+  "joke_ids": [
+   "joke:a",
+   "joke:b",
+   "joke:c",
+   "joke:d"
+  ],
+  "target_s": 300,
+  "notes": "the four taped bits",
+  "source": "his",
+  "by": "owner",
+  "seed": null,
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "updated_at": "2026-10-29T12:00:00+00:00",
+  "deleted": false
+ },
+ "health": {
+  "board": "sb:tuesday-run-7507883e",
+  "title": "Tuesday run",
+  "runtime_s": 183.4,
+  "runtime": "3:03",
+  "target_s": 300,
+  "bits": [
+   {
+    "joke_id": "joke:a",
+    "title": "Alpha bit",
+    "stage": "working",
+    "duration_s": 60.0,
+    "duration_basis": "tape (3 nights)",
+    "energy": 1.5,
+    "heat": 4,
+    "nights": 3,
+    "devices": [
+     "D-one"
+    ]
+   },
+   {
+    "joke_id": "joke:b",
+    "title": "Bravo bit (the dog one)",
+    "stage": "working",
+    "duration_s": 60.0,
+    "duration_basis": "tape (3 nights)",
+    "energy": 0.56,
+    "heat": 2,
+    "nights": 3,
+    "devices": [
+     "D-one"
+    ]
+   },
+   {
+    "joke_id": "joke:c",
+    "title": "Charlie bit",
+    "stage": "working",
+    "duration_s": 60.0,
+    "duration_basis": "tape (1 night)",
+    "energy": 1.0,
+    "heat": 3,
+    "nights": 1,
+    "devices": [
+     "D-two"
+    ]
+   },
+   {
+    "joke_id": "joke:d",
+    "title": "Delta bit",
+    "stage": "to_try",
+    "duration_s": 3.4,
+    "duration_basis": "estimate from 9 written words at 157 wpm",
+    "energy": null,
+    "heat": null,
+    "nights": 0,
+    "devices": []
+   }
+  ],
+  "transitions": [
+   {
+    "from": "joke:a",
+    "to": "joke:b",
+    "label": "proven",
+    "why": "Done back-to-back 2x (The Corner Room '24, Seaside '24)",
+    "via": [],
+    "needs_bridge": false,
+    "shared_topics": [],
+    "nights": [
+     {
+      "set": "2024-01-01_x",
+      "date": "2024-01-01",
+      "venue": "The Corner Room"
+     },
+     {
+      "set": "2024-02-01_y",
+      "date": "2024-02-01",
+      "venue": "Seaside Comedy Club"
+     }
+    ],
+    "reverse_order_nights": 1,
+    "evidence": [
+     {
+      "node": "seg:2024-01-01_x#2",
+      "quote": "Bravo setup about the dog. The purple monkey dishwasher line"
+     },
+     {
+      "node": "seg:2024-02-01_y#2",
+      "quote": "Bravo setup about the dog. Bravo closer words."
+     }
+    ]
+   },
+   {
+    "from": "joke:b",
+    "to": "joke:c",
+    "label": "link",
+    "why": "segue: dog leads to cars",
+    "via": [
+     {
+      "kind": "segue",
+      "edge": "e:seg_bc",
+      "source": "proposed",
+      "why": "dog leads to cars",
+      "reverse": false
+     }
+    ],
+    "needs_bridge": false,
+    "shared_topics": [],
+    "nights": [],
+    "reverse_order_nights": 0,
+    "evidence": [
+     {
+      "node": "unit:b1",
+      "quote": "Bravo closer words."
+     }
+    ]
+   },
+   {
+    "from": "joke:c",
+    "to": "joke:d",
+    "label": "jump",
+    "why": "topic jump · no link yet",
+    "via": [],
+    "needs_bridge": true,
+    "shared_topics": [],
+    "nights": [],
+    "reverse_order_nights": 0,
+    "evidence": []
+   }
+  ],
+  "energy_curve": [
+   {
+    "joke_id": "joke:a",
+    "energy": 1.5,
+    "heat": 4
+   },
+   {
+    "joke_id": "joke:b",
+    "energy": 0.56,
+    "heat": 2
+   },
+   {
+    "joke_id": "joke:c",
+    "energy": 1.0,
+    "heat": 3
+   },
+   {
+    "joke_id": "joke:d",
+    "energy": null,
+    "heat": null
+   }
+  ],
+  "checks": [
+   {
+    "rule": "runtime",
+    "status": "info",
+    "text": "3:03 of 5:00: 1:57 to fill"
+   },
+   {
+    "rule": "jumps",
+    "status": "warn",
+    "text": "1 topic jump with no bridge: Charlie bit -> Delta bit",
+    "pairs": [
+     [
+      "joke:c",
+      "joke:d"
+     ]
+    ]
+   },
+   {
+    "rule": "repeated_devices",
+    "status": "warn",
+    "text": "\"D-one\" twice in a row (Alpha bit -> Bravo bit (the dog one))",
+    "repeats": [
+     {
+      "pair": [
+       "joke:a",
+       "joke:b"
+      ],
+      "devices": [
+       "D-one"
+      ]
+     }
+    ]
+   },
+   {
+    "rule": "closer",
+    "status": "warn",
+    "text": "closer untested: Delta bit has no tape (try Alpha bit, 1.50x)",
+    "suggest": "joke:a"
+   },
+   {
+    "rule": "energy_dip",
+    "status": "ok",
+    "text": "no two low bits in a row"
+   }
+  ],
+  "untaped": [
+   "Delta bit"
+  ],
+  "notes": "energy = mean vs_room over taped nights (1.0 = the room's own laugh rate); heat 1-4 for bars."
+ },
+ "best_next": [
+  {
+   "joke_id": "joke:e",
+   "title": "Echo bit",
+   "stage": "idea",
+   "score": 0.2,
+   "why": "same world as Delta bit (Dad)",
+   "source": "proposed",
+   "transition": "link",
+   "energy": null,
+   "nights": 0,
+   "evidence": [
+    {
+     "node": "unit:d1",
+     "quote": "my niece"
+    }
+   ]
+  }
+ ],
+ "setlist": {
+  "board": "sb:tuesday-run-7507883e",
+  "title": "Tuesday run",
+  "lines": [
+   "1. Alpha bit (1:00)",
+   "2. Bravo bit (the dog one) (1:00)",
+   "3. Charlie bit (1:00)",
+   "4. Delta bit (0:03)"
+  ],
+  "runtime": "3:03",
+  "text": "Tuesday run · 3:03\n1. Alpha bit (1:00)\n2. Bravo bit (the dog one) (1:00)\n3. Charlie bit (1:00)\n4. Delta bit (0:03)"
+ }
+}

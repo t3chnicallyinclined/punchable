@@ -1,0 +1,3 @@
+{
+ "error": "a worker write must name its actor: import:<source> or ai:<what>"
+}

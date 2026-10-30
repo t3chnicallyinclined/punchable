@@ -1,0 +1,23 @@
+{
+ "job": {
+  "id": "job:riff-746cc8acc339",
+  "kind": "riff",
+  "key": "riff|807d8067e3878d0d",
+  "input": {
+   "idea": "parking meters",
+   "lines": [
+    "The meter asked for my pronouns before my card."
+   ]
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

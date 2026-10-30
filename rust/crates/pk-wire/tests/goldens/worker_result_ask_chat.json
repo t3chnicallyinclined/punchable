@@ -1,0 +1,18 @@
+{
+ "ok": true,
+ "result": {
+  "status": "answered",
+  "data": {
+   "found": true,
+   "answer": "At the Corner Room, and it worked [S1].",
+   "citations": [
+    {
+     "source": "S1",
+     "quote": "Alpha opener line one."
+    }
+   ]
+  },
+  "provider": "anthropic",
+  "model": "claude-synthetic"
+ }
+}

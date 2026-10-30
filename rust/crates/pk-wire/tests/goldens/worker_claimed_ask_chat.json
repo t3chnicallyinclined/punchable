@@ -1,0 +1,29 @@
+{
+ "job": {
+  "id": "job:ask_chat-2a66e321a02c",
+  "kind": "ask_chat",
+  "key": "ask_chat|chat:776814d4|t1",
+  "input": {
+   "messages": [
+    {
+     "role": "system",
+     "content": "You answer a stand-up comic's questions about his OWN material: his written bits, his ideas, his voice notes and the transcripts of his recorded sets (with the room, the date and the laughs). Use ONLY the numbered SOURCES in the latest message. Earlier answers in this conversation only tell you what 'those' or 'it' refers to; they are not evidence. Never use outside knowledge, never guess, never invent a line, a show or a laugh.\n\nRules:\n- Answer in plain, short sentences, the way a friend who read his notebook would. No tables, no ratios. Say dates the way a person would (Jun 20, 2015).\n- Put the source after each claim like [S3]. Every claim needs one.\n- The line under each source header is computed from his tapes (room, date, how it went, laughs). You may state it, citing that source.\n- Quotes go ONLY in `citations`: copy a short line (under 25 words) character for character from that source's TEXT. Never quote the header line, never fix typos or transcription errors, never join two passages. Do not put quotation marks in `answer`.\n- One citation per source you used; `source` is its id, like S3.\n- If the sources do not answer the question, set found=false, leave `answer` empty and `citations` empty."
+    },
+    {
+     "role": "user",
+     "content": "QUESTION: what did I write about the purple monkey dishwasher?\n\nSOURCES:\n\n[S1] set moment · The Corner Room · 2024-01-01 · at 1:00 · bit: Bravo bit · Killed · 1 laugh\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\n[S2] written bit · \"Bravo bit\" · 2023-05-01 · on stage: Killed at The Corner Room, Jan 2024 · 3 nights\nTEXT: Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.\n\nAnswer by the rules above."
+    }
+   ]
+  },
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:00+00:00",
+  "worker": "api-worker-7f9c",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ }
+}

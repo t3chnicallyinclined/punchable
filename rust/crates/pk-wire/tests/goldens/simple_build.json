@@ -1,0 +1,134 @@
+{
+ "board": {
+  "id": "sb:tuesday-run-7507883e",
+  "title": "Tuesday run v2",
+  "target_s": 300,
+  "target_lo_s": 240
+ },
+ "runtime_s": 183.4,
+ "runtime": "3:03",
+ "estimated_n": 1,
+ "status": "short",
+ "status_words": "0:57 to fill",
+ "weak_n": 2,
+ "steps": [
+  {
+   "joke_id": "joke:b",
+   "title": "Bravo bit",
+   "short_name": "Bravo bit",
+   "stage": "working",
+   "quote": "The purple monkey dishwasher line here.",
+   "quote_node": "seg:2024-01-01_x#2",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2024-01-01",
+   "stage_line": "Killed at The Corner Room, Jan 2024 · 3 nights",
+   "proven": true,
+   "nights": 3,
+   "duration_s": 60.0,
+   "estimated": false,
+   "position": 0,
+   "transition_in": null
+  },
+  {
+   "joke_id": "joke:a",
+   "title": "Alpha bit",
+   "short_name": "Alpha bit",
+   "stage": "working",
+   "quote": "The alpha punch lands here every time.",
+   "quote_node": "seg:2024-01-01_x#1",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2024-01-01",
+   "stage_line": "Worked at Mabel's, Mar 2024 · 3 nights",
+   "proven": true,
+   "nights": 3,
+   "duration_s": 60.0,
+   "estimated": false,
+   "position": 1,
+   "transition_in": {
+    "words": "Done back to back on stage",
+    "weak": false,
+    "kind": "proven",
+    "from": "joke:b",
+    "to": "joke:a"
+   }
+  },
+  {
+   "joke_id": "joke:c",
+   "title": "Charlie bit",
+   "short_name": "Charlie bit",
+   "stage": "working",
+   "quote": "and more traffic today.",
+   "quote_node": "seg:2024-01-01_x#4",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2024-01-01",
+   "stage_line": "Worked at The Corner Room, Jan 2024",
+   "proven": true,
+   "nights": 1,
+   "duration_s": 60.0,
+   "estimated": false,
+   "position": 2,
+   "transition_in": {
+    "words": "No link yet",
+    "weak": true,
+    "kind": "jump",
+    "from": "joke:a",
+    "to": "joke:c"
+   }
+  },
+  {
+   "joke_id": "joke:d",
+   "title": "Delta bit",
+   "short_name": "Delta bit",
+   "stage": "to_try",
+   "quote": "Delta bit about my niece and the laundromat place.",
+   "quote_node": "unit:d1",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2015-03-03",
+   "stage_line": null,
+   "proven": false,
+   "nights": 0,
+   "duration_s": 3.4,
+   "estimated": true,
+   "position": 3,
+   "transition_in": {
+    "words": "No link yet",
+    "weak": true,
+    "kind": "jump",
+    "from": "joke:c",
+    "to": "joke:d"
+   }
+  }
+ ],
+ "next": [
+  {
+   "joke_id": "joke:e",
+   "title": "Echo bit",
+   "short_name": "Echo bit",
+   "stage": "idea",
+   "quote": "Echo bit about my niece and her soccer schedule.",
+   "quote_node": "unit:e1",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2024-08-08",
+   "stage_line": null,
+   "proven": false,
+   "nights": 0,
+   "duration_s": 3.4,
+   "estimated": true,
+   "why": "Same world: Dad",
+   "proven_pair": false
+  }
+ ],
+ "notes": [
+  {
+   "rule": "closer",
+   "text": "The ending could be stronger: try closing on Alpha bit",
+   "suggest": "joke:a"
+  }
+ ],
+ "working_set": "ws:tuesday-run-14d826f7"
+}

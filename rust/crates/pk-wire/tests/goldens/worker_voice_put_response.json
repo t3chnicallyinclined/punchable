@@ -1,0 +1,20 @@
+{
+ "kind": "voice",
+ "text": "# Voice\n\nShort sentences. Sits on the punch word. Never explains the joke.\n",
+ "updated_at": "2026-10-29T12:00:00+00:00",
+ "by": "import:profile",
+ "chars": 75,
+ "learned": {
+  "kept": [
+   {
+    "text": "The meter wants a tip now.",
+    "bit": "joke:the-meter-wants-a-tip-now",
+    "date": "2026-10-29",
+    "edited": true
+   }
+  ],
+  "dropped": [],
+  "updated_at": "2026-10-29T12:00:00+00:00"
+ },
+ "previous": null
+}

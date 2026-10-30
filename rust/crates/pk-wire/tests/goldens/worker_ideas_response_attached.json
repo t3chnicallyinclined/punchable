@@ -1,0 +1,61 @@
+{
+ "ok": true,
+ "indexes": [
+  6
+ ],
+ "id": "joke:alpha-opener-line-one-the-alpha-punch",
+ "decisions": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "node",
+   "id": "joke:alpha-opener-line-one-the-alpha-punch",
+   "action": "add",
+   "before": null,
+   "after": {
+    "type": "joke",
+    "title": "Alpha opener line one. The alpha punch",
+    "stage": "idea",
+    "summary": "Alpha opener line one. The alpha punch lands here every time.",
+    "first_seen": "2026-10-29",
+    "last_seen": "2026-10-29",
+    "from": {
+     "set": "20240201_y"
+    }
+   },
+   "reason": "[set_text] bit from 'Seaside open mic' (2024-02-01), transcribed on the phone; no audio",
+   "by": "ai:set_text"
+  }
+ ],
+ "attach": {
+  "decision": "attach",
+  "id": "at:d7b92b53",
+  "into": "joke:a",
+  "title": "Alpha bit",
+  "reasons": [
+   "reads like your bit \"Alpha bit\"",
+   "same words: \"alpha opener line\", \"alpha punch lands\", \"lands here every\""
+  ],
+  "undo": {
+   "POST": "/api/merge/undo",
+   "merge_id": "at:d7b92b53"
+  },
+  "record": {
+   "id": "at:d7b92b53",
+   "kind": "attach",
+   "status": "attached",
+   "joke": "joke:alpha-opener-line-one-the-alpha-punch",
+   "into": "joke:a",
+   "text": "Alpha opener line one. The alpha punch lands here every time.",
+   "date": "2026-10-29",
+   "score": null,
+   "reasons": [
+    "reads like your bit \"Alpha bit\"",
+    "same words: \"alpha opener line\", \"alpha punch lands\", \"lands here every\""
+   ],
+   "source": "app",
+   "by": "ai:attach",
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00"
+  }
+ }
+}

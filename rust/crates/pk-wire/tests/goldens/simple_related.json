@@ -1,0 +1,42 @@
+{
+ "query": "my niece and the laundromat",
+ "items": [
+  {
+   "joke_id": "joke:d",
+   "title": "Delta bit",
+   "short_name": "Delta bit",
+   "stage": "to_try",
+   "quote": "Delta bit about my niece and the laundromat place.",
+   "quote_node": "unit:d1",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2015-03-03",
+   "stage_line": null,
+   "proven": false,
+   "nights": 0,
+   "duration_s": 3.4,
+   "estimated": true,
+   "rank": 0,
+   "why": "Shares: laundromat, niece"
+  },
+  {
+   "joke_id": "joke:e",
+   "title": "Echo bit",
+   "short_name": "Echo bit",
+   "stage": "idea",
+   "quote": "Echo bit about my niece and her soccer schedule.",
+   "quote_node": "unit:e1",
+   "cut_start": false,
+   "cut_end": false,
+   "date": "2024-08-08",
+   "stage_line": null,
+   "proven": false,
+   "nights": 0,
+   "duration_s": 3.4,
+   "estimated": true,
+   "rank": 1,
+   "why": "Shares: niece"
+  }
+ ],
+ "total": 2
+}

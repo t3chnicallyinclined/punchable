@@ -1,0 +1,39 @@
+{
+ "kind": "voice",
+ "text": "# Voice v2\n\nEven shorter.\n",
+ "updated_at": "2026-10-29T12:00:00+00:00",
+ "by": "import:profile",
+ "chars": 26,
+ "learned": {
+  "kept": [
+   {
+    "text": "The meter wants a tip now.",
+    "bit": "joke:the-meter-wants-a-tip-now",
+    "date": "2026-10-29",
+    "edited": true
+   }
+  ],
+  "dropped": [],
+  "updated_at": "2026-10-29T12:00:00+00:00"
+ },
+ "laugh_lines": [
+  {
+   "text": "The alpha punch lands here every time.",
+   "bit": "joke:a",
+   "date": "2024-01-01",
+   "laugh_s": 3.0
+  },
+  {
+   "text": "The purple monkey dishwasher line here.",
+   "bit": "joke:b",
+   "date": "2024-01-01",
+   "laugh_s": 3.0
+  },
+  {
+   "text": "and more traffic today.",
+   "bit": "joke:c",
+   "date": "2024-01-01",
+   "laugh_s": 1.0
+  }
+ ]
+}

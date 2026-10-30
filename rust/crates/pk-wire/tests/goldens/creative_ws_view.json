@@ -1,0 +1,403 @@
+{
+ "working_set": {
+  "id": "ws:tuesday-run-14d826f7",
+  "title": "Tuesday run",
+  "storyboard_id": "sb:tuesday-run-7507883e",
+  "by": "owner",
+  "source": "his",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "updated_at": "2026-10-29T12:00:00+00:00",
+  "current": 1,
+  "locks": {
+   "joke:b": {
+    "bit": false,
+    "lines": [
+     {
+      "text": "Bravo closer words.",
+      "node": "seg:2024-02-01_y#2",
+      "ts": "2026-10-29T12:00:00+00:00"
+     }
+    ]
+   }
+  },
+  "deleted": false,
+  "versions": [
+   {
+    "v": 1,
+    "created_at": "2026-10-29T12:00:00+00:00",
+    "note": "v1: promoted from storyboard 'Tuesday run'",
+    "target_s": 300,
+    "bits": [
+     {
+      "joke_id": "joke:a",
+      "title": "Alpha bit",
+      "target_s": 60,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:b",
+      "title": "Bravo bit (the dog one)",
+      "target_s": 60,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:c",
+      "title": "Charlie bit",
+      "target_s": 60,
+      "target_basis": "tape (1 night)"
+     },
+     {
+      "joke_id": "joke:d",
+      "title": "Delta bit",
+      "target_s": 5,
+      "target_basis": "estimate from 9 written words at 157 wpm"
+     }
+    ],
+    "by": "owner"
+   }
+  ],
+  "try_notes": [
+   {
+    "id": "try:ea835408",
+    "joke_id": "joke:a",
+    "text": "slow the opener down",
+    "done": false,
+    "created_at": "2026-10-29T12:00:00+00:00",
+    "done_at": null,
+    "by": "owner"
+   }
+  ]
+ },
+ "version": {
+  "v": 1,
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "note": "v1: promoted from storyboard 'Tuesday run'",
+  "target_s": 300,
+  "bits": [
+   {
+    "joke_id": "joke:a",
+    "title": "Alpha bit",
+    "target_s": 60,
+    "target_basis": "tape (3 nights)"
+   },
+   {
+    "joke_id": "joke:b",
+    "title": "Bravo bit (the dog one)",
+    "target_s": 60,
+    "target_basis": "tape (3 nights)"
+   },
+   {
+    "joke_id": "joke:c",
+    "title": "Charlie bit",
+    "target_s": 60,
+    "target_basis": "tape (1 night)"
+   },
+   {
+    "joke_id": "joke:d",
+    "title": "Delta bit",
+    "target_s": 5,
+    "target_basis": "estimate from 9 written words at 157 wpm"
+   }
+  ],
+  "by": "owner"
+ },
+ "status": {
+  "working_set": "ws:tuesday-run-14d826f7",
+  "title": "Tuesday run",
+  "version": 1,
+  "target_s": 185,
+  "last_night": {
+   "set": "2024-03-01_z",
+   "date": "2024-03-01",
+   "venue": "Mabel's '24",
+   "ws_laugh_s_per_min": 4.71,
+   "bits_performed": 2,
+   "bits_planned": 4
+  },
+  "vs_previous": "up",
+  "line": "Tuesday run v1 · 3:05 · last night 4.7 laugh-s/min ▲ · 3 things to try tonight"
+ },
+ "perfected": {
+  "locked_share": 0.08,
+  "stability": 0.59,
+  "perfected": 0.33,
+  "formula": "0.5 x locked share (by target time) + 0.5 x stability; stability = 1 - CV of laugh-s/min across nights (sample sd / mean, floor 0), target-time weighted over bits with 2+ nights",
+  "bits": [
+   {
+    "joke_id": "joke:a",
+    "title": "Alpha bit",
+    "locked_share": 0.0,
+    "cv_laugh_s_per_min": 0.06,
+    "stability": 0.94,
+    "nights": 3,
+    "low_n": false
+   },
+   {
+    "joke_id": "joke:b",
+    "title": "Bravo bit (the dog one)",
+    "locked_share": 0.25,
+    "cv_laugh_s_per_min": 0.77,
+    "stability": 0.23,
+    "nights": 3,
+    "low_n": false
+   },
+   {
+    "joke_id": "joke:c",
+    "title": "Charlie bit",
+    "locked_share": 0.0,
+    "cv_laugh_s_per_min": null,
+    "stability": null,
+    "nights": 1,
+    "low_n": true
+   },
+   {
+    "joke_id": "joke:d",
+    "title": "Delta bit",
+    "locked_share": 0.0,
+    "cv_laugh_s_per_min": null,
+    "stability": null,
+    "nights": 0,
+    "low_n": true
+   }
+  ]
+ },
+ "try_tonight": [
+  {
+   "joke_id": "joke:a",
+   "title": "Alpha bit",
+   "kind": "his",
+   "score": 1.0,
+   "text": "slow the opener down",
+   "evidence": [],
+   "source": "his",
+   "low_n": false,
+   "id": "try:ea835408",
+   "done": false,
+   "created_at": "2026-10-29T12:00:00+00:00"
+  },
+  {
+   "joke_id": "joke:b",
+   "title": "Bravo bit (the dog one)",
+   "kind": "put_back",
+   "score": 0.53,
+   "text": "Bravo bit (the dog one): put back \"The purple monkey dishwasher line here.\". +4.2 laugh-s over 1 night with it vs 2 without (vs room +0.67) · low n, a hunch not a finding.",
+   "evidence": [
+    {
+     "node": "seg:2024-01-01_x#2",
+     "quote": "The purple monkey dishwasher line here.",
+     "punchline": true
+    }
+   ],
+   "source": "inferred",
+   "low_n": true,
+   "id": "joke:b|put_back",
+   "done": false
+  },
+  {
+   "joke_id": "joke:c",
+   "title": "Charlie bit",
+   "kind": "dropped",
+   "score": 0.5,
+   "text": "Charlie bit: you skipped it last night (Mabel's '24); it's #3 in v1.",
+   "evidence": [],
+   "source": "inferred",
+   "low_n": false,
+   "id": "joke:c|dropped",
+   "done": false
+  },
+  {
+   "joke_id": "joke:d",
+   "title": "Delta bit",
+   "kind": "dropped",
+   "score": 0.5,
+   "text": "Delta bit: you skipped it last night (Mabel's '24); it's #4 in v1.",
+   "evidence": [],
+   "source": "inferred",
+   "low_n": false,
+   "id": "joke:d|dropped",
+   "done": false
+  },
+  {
+   "joke_id": "joke:b",
+   "title": "Bravo bit (the dog one)",
+   "kind": "slow_start",
+   "score": 0.35,
+   "text": "Bravo bit (the dog one): the first laugh came 30s in last night; your fastest night got one in 5s.",
+   "evidence": [
+    {
+     "node": "seg:2024-03-01_z#1",
+     "quote": "Bravo setup about the dog. Bravo closer words about the"
+    }
+   ],
+   "source": "inferred",
+   "low_n": false,
+   "id": "joke:b|slow_start",
+   "done": false
+  }
+ ],
+ "bits": [
+  {
+   "joke_id": "joke:a",
+   "title": "Alpha bit",
+   "target_s": 60,
+   "target_basis": "tape (3 nights)",
+   "locked": false,
+   "locked_lines": [],
+   "nights": 3,
+   "best_night": {
+    "date": "2024-01-01",
+    "venue": "The Corner Room '24",
+    "laugh_s_per_min": 9.0,
+    "vs_room": 1.5
+   },
+   "trend": "flat",
+   "stability": 0.94,
+   "low_n": false,
+   "last_night": {
+    "performed": true,
+    "time_s": 30.0,
+    "delta_s": -30.0,
+    "laugh_s_per_min": 8.0,
+    "vs_room": 1.6,
+    "ai_rating": "worked"
+   },
+   "notes": []
+  },
+  {
+   "joke_id": "joke:b",
+   "title": "Bravo bit (the dog one)",
+   "target_s": 60,
+   "target_basis": "tape (3 nights)",
+   "locked": false,
+   "locked_lines": [
+    {
+     "text": "Bravo closer words.",
+     "node": "seg:2024-02-01_y#2",
+     "ts": "2026-10-29T12:00:00+00:00"
+    }
+   ],
+   "nights": 3,
+   "best_night": {
+    "date": "2024-01-01",
+    "venue": "The Corner Room '24",
+    "laugh_s_per_min": 6.0,
+    "vs_room": 1.0
+   },
+   "trend": "down",
+   "stability": 0.23,
+   "low_n": false,
+   "last_night": {
+    "performed": true,
+    "time_s": 40.0,
+    "delta_s": -20.0,
+    "laugh_s_per_min": 2.25,
+    "vs_room": 0.45,
+    "ai_rating": "worked"
+   },
+   "notes": [
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "kind": "put_back",
+     "score": 0.53,
+     "text": "Bravo bit (the dog one): put back \"The purple monkey dishwasher line here.\". +4.2 laugh-s over 1 night with it vs 2 without (vs room +0.67) · low n, a hunch not a finding.",
+     "evidence": [
+      {
+       "node": "seg:2024-01-01_x#2",
+       "quote": "The purple monkey dishwasher line here.",
+       "punchline": true
+      }
+     ],
+     "source": "inferred",
+     "low_n": true
+    },
+    {
+     "joke_id": "joke:b",
+     "title": "Bravo bit (the dog one)",
+     "kind": "slow_start",
+     "score": 0.35,
+     "text": "Bravo bit (the dog one): the first laugh came 30s in last night; your fastest night got one in 5s.",
+     "evidence": [
+      {
+       "node": "seg:2024-03-01_z#1",
+       "quote": "Bravo setup about the dog. Bravo closer words about the"
+      }
+     ],
+     "source": "inferred",
+     "low_n": false
+    }
+   ]
+  },
+  {
+   "joke_id": "joke:c",
+   "title": "Charlie bit",
+   "target_s": 60,
+   "target_basis": "tape (1 night)",
+   "locked": false,
+   "locked_lines": [],
+   "nights": 1,
+   "best_night": {
+    "date": "2024-01-01",
+    "venue": "The Corner Room '24",
+    "laugh_s_per_min": 6.0,
+    "vs_room": 1.0
+   },
+   "trend": null,
+   "stability": null,
+   "low_n": true,
+   "last_night": {
+    "performed": false,
+    "time_s": null,
+    "delta_s": null,
+    "laugh_s_per_min": null,
+    "vs_room": null,
+    "ai_rating": null
+   },
+   "notes": [
+    {
+     "joke_id": "joke:c",
+     "title": "Charlie bit",
+     "kind": "dropped",
+     "score": 0.5,
+     "text": "Charlie bit: you skipped it last night (Mabel's '24); it's #3 in v1.",
+     "evidence": [],
+     "source": "inferred",
+     "low_n": false
+    }
+   ]
+  },
+  {
+   "joke_id": "joke:d",
+   "title": "Delta bit",
+   "target_s": 5,
+   "target_basis": "estimate from 9 written words at 157 wpm",
+   "locked": false,
+   "locked_lines": [],
+   "nights": 0,
+   "best_night": null,
+   "trend": null,
+   "stability": null,
+   "low_n": true,
+   "last_night": {
+    "performed": false,
+    "time_s": null,
+    "delta_s": null,
+    "laugh_s_per_min": null,
+    "vs_room": null,
+    "ai_rating": null
+   },
+   "notes": [
+    {
+     "joke_id": "joke:d",
+     "title": "Delta bit",
+     "kind": "dropped",
+     "score": 0.5,
+     "text": "Delta bit: you skipped it last night (Mabel's '24); it's #4 in v1.",
+     "evidence": [],
+     "source": "inferred",
+     "low_n": false
+    }
+   ]
+  }
+ ]
+}

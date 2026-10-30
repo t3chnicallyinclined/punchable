@@ -179,6 +179,7 @@ jobs:
           python rust/tools/gen_obs_goldens.py
           python rust/tools/gen_llm_goldens.py
           python rust/tools/gen_embed_goldens.py
+          python rust/tools/gen_wire_goldens.py
 
       - name: The committed goldens match
         run: git diff --exit-code -- rust/crates/*/tests/goldens

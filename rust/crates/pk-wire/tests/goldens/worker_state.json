@@ -1,0 +1,8 @@
+{
+ "decisions": 5,
+ "files_rev": null,
+ "files_mode": "disk",
+ "backend": "files",
+ "online_first": false,
+ "legal_rules": "bb4a13179114"
+}

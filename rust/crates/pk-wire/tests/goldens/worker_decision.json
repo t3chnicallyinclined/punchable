@@ -1,0 +1,10 @@
+{
+ "target": "node",
+ "action": "edit",
+ "id": "joke:meter-note",
+ "after": {
+  "summary": "A note about the meter and the quarters, edited in the doc."
+ },
+ "reason": "[gdocs] edited",
+ "actor": "import:gsync"
+}

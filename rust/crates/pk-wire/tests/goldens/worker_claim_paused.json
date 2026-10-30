@@ -1,0 +1,17 @@
+{
+ "kinds": [
+  "bridge",
+  "punchup",
+  "facts",
+  "riff",
+  "ask_chat",
+  "set_text",
+  "embed",
+  "memolink",
+  "ask"
+ ],
+ "worker": "api-worker-7f9c",
+ "hosted": true,
+ "model": "Anthropic API · claude-synthetic",
+ "paused": "the day's AI budget ($4.00) is spent; back at midnight UTC"
+}

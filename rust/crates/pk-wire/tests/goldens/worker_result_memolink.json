@@ -1,0 +1,26 @@
+{
+ "ok": true,
+ "result": {
+  "status": "linked",
+  "embed": {
+   "summary_only": 0,
+   "embedded": 0,
+   "removed": 0,
+   "have": 9,
+   "file": "vectors/extra_summary.json"
+  },
+  "judge": {
+   "judged": 1,
+   "cached": 0,
+   "same": 1
+  },
+  "triage": {
+   "triaged": 1,
+   "cached": 0
+  },
+  "attached": [
+   "at:f00dbabe12"
+  ],
+  "same_idea_groups": 0
+ }
+}

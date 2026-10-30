@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "id": "at:f00dbabe12",
+ "record": {
+  "id": "at:f00dbabe12",
+  "kind": "attach",
+  "status": "attached",
+  "joke": "joke:f",
+  "into": "joke:a",
+  "text": "Foxtrot never performed idea about planes and pilots up there.",
+  "date": "2026-10-29",
+  "score": 0.91,
+  "reasons": [
+   "Claude: the same bit (0.91): the same opener",
+   "shares 4 rare words"
+  ],
+  "source": "memo",
+  "by": "ai:attach",
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "updated_at": "2026-10-29T12:00:00+00:00"
+ }
+}

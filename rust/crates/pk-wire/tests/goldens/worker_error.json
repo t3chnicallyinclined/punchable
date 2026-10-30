@@ -1,0 +1,3 @@
+{
+ "error": "a hosted worker must list its kinds and never a transcriber kind (['import_youtube', 'process_set']): transcription happens on the phone"
+}

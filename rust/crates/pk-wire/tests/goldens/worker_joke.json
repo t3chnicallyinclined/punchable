@@ -1,0 +1,719 @@
+{
+ "joke": {
+  "id": "joke:a",
+  "type": "joke",
+  "title": "Alpha bit",
+  "stage": "working",
+  "summary": "A bit about a.",
+  "first_seen": "2023-01-01",
+  "last_seen": "2024-01-10",
+  "lead_unit": "unit:a1"
+ },
+ "yours": false,
+ "text": {
+  "setup": "Alpha opener line one.",
+  "reveal": "The alpha punch lands here every time.",
+  "from": {
+   "unit": "unit:a1",
+   "date": "2024-01-10",
+   "doc_title": "Notes"
+  }
+ },
+ "rooms": {
+  "sets": 3,
+  "hit_sets": 0,
+  "ready_for_working": false,
+  "ai_hit_sets": 3
+ },
+ "ai": {
+  "stage_ai": true,
+  "stage_confidence": 0.8,
+  "stage_reason_ai": "three nights, two hits",
+  "from_stage": "testing",
+  "stage_confirmed": false
+ },
+ "who": "confirmed",
+ "ai_ratings": [
+  {
+   "set": "set:2024-01-01_x",
+   "date": "2024-01-01",
+   "title": "Corner Room, Tuesday",
+   "perf": "perf:2024-01-01_x@0",
+   "rating": "worked",
+   "rating_by": "ai",
+   "ai_rating": "worked",
+   "max_bars": 3
+  },
+  {
+   "set": "set:2024-02-01_y",
+   "date": "2024-02-01",
+   "title": "Seaside open mic",
+   "perf": "perf:2024-02-01_y@0",
+   "rating": "worked",
+   "rating_by": "ai",
+   "ai_rating": "worked",
+   "max_bars": 2
+  },
+  {
+   "set": "set:2024-03-01_z",
+   "date": "2024-03-01",
+   "title": "Mabel's, March",
+   "perf": "perf:2024-03-01_z@40000",
+   "rating": "worked",
+   "rating_by": "ai",
+   "ai_rating": "worked",
+   "max_bars": 2
+  }
+ ],
+ "versions": [
+  {
+   "date": "2023-02-02",
+   "units": [
+    {
+     "id": "unit:a0",
+     "type": "unit",
+     "kind": "setup+punch",
+     "text": "Alpha opener, first draft.",
+     "date": "2023-02-02",
+     "edge": {
+      "id": "e:pa0",
+      "src": "unit:a0",
+      "dst": "joke:a",
+      "kind": "part_of",
+      "status": "proposed",
+      "confidence": 0.6,
+      "evidence": [],
+      "bucket": "proposed",
+      "display_kind": "part_of",
+      "yours": false,
+      "edited": false,
+      "src_brief": {
+       "id": "unit:a0",
+       "type": "unit",
+       "title": "Alpha opener, first draft.",
+       "kind": "setup+punch",
+       "date": "2023-02-02",
+       "doc_title": null,
+       "joke": "joke:a",
+       "joke_title": "Alpha bit"
+      },
+      "dst_brief": {
+       "id": "joke:a",
+       "type": "joke",
+       "title": "Alpha bit",
+       "stage": "working",
+       "summary": "A bit about a."
+      },
+      "other": {
+       "id": "unit:a0",
+       "type": "unit",
+       "title": "Alpha opener, first draft.",
+       "kind": "setup+punch",
+       "date": "2023-02-02",
+       "doc_title": null,
+       "joke": "joke:a",
+       "joke_title": "Alpha bit"
+      },
+      "direction": "in",
+      "state": "suggested",
+      "ai": false
+     }
+    }
+   ]
+  },
+  {
+   "date": "2024-01-10",
+   "units": [
+    {
+     "id": "unit:a1",
+     "type": "unit",
+     "kind": "setup+punch",
+     "text": "Alpha opener line one. The alpha punch lands here every time.",
+     "date": "2024-01-10",
+     "source": "gdoc",
+     "doc_title": "Notes",
+     "edge": {
+      "id": "e:pa",
+      "src": "unit:a1",
+      "dst": "joke:a",
+      "kind": "part_of",
+      "status": "inferred",
+      "confidence": 0.9,
+      "evidence": [],
+      "bucket": "proposed",
+      "display_kind": "part_of",
+      "yours": false,
+      "edited": false,
+      "src_brief": {
+       "id": "unit:a1",
+       "type": "unit",
+       "title": "Alpha opener line one. The alpha punch lands here every time.",
+       "kind": "setup+punch",
+       "date": "2024-01-10",
+       "doc_title": "Notes",
+       "joke": "joke:a",
+       "joke_title": "Alpha bit"
+      },
+      "dst_brief": {
+       "id": "joke:a",
+       "type": "joke",
+       "title": "Alpha bit",
+       "stage": "working",
+       "summary": "A bit about a."
+      },
+      "other": {
+       "id": "unit:a1",
+       "type": "unit",
+       "title": "Alpha opener line one. The alpha punch lands here every time.",
+       "kind": "setup+punch",
+       "date": "2024-01-10",
+       "doc_title": "Notes",
+       "joke": "joke:a",
+       "joke_title": "Alpha bit"
+      },
+      "direction": "in",
+      "state": "ai",
+      "ai": true
+     }
+    }
+   ]
+  }
+ ],
+ "performances": [
+  {
+   "perf": {
+    "id": "perf:2024-01-01_x@0",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 0,
+    "end_ms": 60000,
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "kind": "bit",
+    "name": "Alpha",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "set": {
+    "id": "set:2024-01-01_x",
+    "type": "set",
+    "title": "Corner Room, Tuesday",
+    "venue": "The Corner Room",
+    "date": "2024-01-01",
+    "duration_s": 300
+   },
+   "edge": {
+    "id": "e:pa-a",
+    "src": "perf:2024-01-01_x@0",
+    "dst": "joke:a",
+    "kind": "performed_as",
+    "status": "superseded",
+    "confidence": 0.8,
+    "reason": "the alpha words",
+    "evidence": [
+     {
+      "node": "perf:2024-01-01_x@0",
+      "quote": "Alpha opener line one.",
+      "start_ms": 1000
+     }
+    ],
+    "bucket": "rejected",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-01-01_x@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "dst_brief": {
+     "id": "joke:a",
+     "type": "joke",
+     "title": "Alpha bit",
+     "stage": "working",
+     "summary": "A bit about a."
+    },
+    "other": {
+     "id": "perf:2024-01-01_x@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "direction": "in",
+    "state": "dismissed",
+    "ai": false
+   },
+   "laughs": [
+    {
+     "id": "l1",
+     "start_ms": 20500,
+     "end_ms": 23500,
+     "bars": 3,
+     "strength": 0.9,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 3,
+   "hits": 1,
+   "rating": null,
+   "ai_rating": "worked",
+   "rating_basis": "the laugh after the punch",
+   "effective_rating": "worked",
+   "rating_by": "ai",
+   "kind": "bit",
+   "suggested": "killed",
+   "punch": {
+    "text": "The alpha punch lands here every time.",
+    "start_ms": 8000,
+    "end_ms": 20000
+   },
+   "play": {
+    "start_ms": 4000,
+    "end_ms": 24700
+   },
+   "audio": null,
+   "reference": null
+  },
+  {
+   "perf": {
+    "id": "perf:2024-01-01_x@0",
+    "type": "performance",
+    "set": "set:2024-01-01_x",
+    "start_ms": 0,
+    "end_ms": 60000,
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "kind": "bit",
+    "name": "Alpha",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "set": {
+    "id": "set:2024-01-01_x",
+    "type": "set",
+    "title": "Corner Room, Tuesday",
+    "venue": "The Corner Room",
+    "date": "2024-01-01",
+    "duration_s": 300
+   },
+   "edge": {
+    "id": "e:f9fe21d137b5",
+    "src": "perf:2024-01-01_x@0",
+    "dst": "joke:a",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [
+     {
+      "node": "perf:2024-01-01_x@0",
+      "quote": "The alpha punch lands here every time.",
+      "start_ms": 8000
+     }
+    ],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-01-01_x@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "dst_brief": {
+     "id": "joke:a",
+     "type": "joke",
+     "title": "Alpha bit",
+     "stage": "working",
+     "summary": "A bit about a."
+    },
+    "other": {
+     "id": "perf:2024-01-01_x@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-01-01_x",
+     "date": "2024-01-01",
+     "venue": "The Corner Room",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "direction": "in",
+    "state": "ai",
+    "ai": true
+   },
+   "laughs": [
+    {
+     "id": "l1",
+     "start_ms": 20500,
+     "end_ms": 23500,
+     "bars": 3,
+     "strength": 0.9,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 3,
+   "hits": 1,
+   "rating": null,
+   "ai_rating": "worked",
+   "rating_basis": "the laugh after the punch",
+   "effective_rating": "worked",
+   "rating_by": "ai",
+   "kind": "bit",
+   "suggested": "killed",
+   "punch": {
+    "text": "The alpha punch lands here every time.",
+    "start_ms": 8000,
+    "end_ms": 20000
+   },
+   "play": {
+    "start_ms": 4000,
+    "end_ms": 24700
+   },
+   "audio": null,
+   "reference": null
+  },
+  {
+   "perf": {
+    "id": "perf:2024-02-01_y@0",
+    "type": "performance",
+    "set": "set:2024-02-01_y",
+    "start_ms": 0,
+    "end_ms": 60000,
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "kind": "bit",
+    "name": "T1",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "set": {
+    "id": "set:2024-02-01_y",
+    "type": "set",
+    "title": "Seaside open mic",
+    "venue": "Seaside Comedy Club",
+    "date": "2024-02-01",
+    "duration_s": 240
+   },
+   "edge": {
+    "id": "e:6595cc2db619",
+    "src": "perf:2024-02-01_y@0",
+    "dst": "joke:a",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-02-01_y@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-02-01_y",
+     "date": "2024-02-01",
+     "venue": "Seaside Comedy Club",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "dst_brief": {
+     "id": "joke:a",
+     "type": "joke",
+     "title": "Alpha bit",
+     "stage": "working",
+     "summary": "A bit about a."
+    },
+    "other": {
+     "id": "perf:2024-02-01_y@0",
+     "type": "performance",
+     "title": "Alpha opener line one. The alpha punch lands here every time.",
+     "set": "set:2024-02-01_y",
+     "date": "2024-02-01",
+     "venue": "Seaside Comedy Club",
+     "start_ms": 0,
+     "end_ms": 60000
+    },
+    "direction": "in",
+    "state": "ai",
+    "ai": true
+   },
+   "laughs": [
+    {
+     "id": "l2",
+     "start_ms": 20500,
+     "end_ms": 22500,
+     "bars": 2,
+     "strength": 0.8,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 2,
+   "hits": 1,
+   "rating": null,
+   "ai_rating": "worked",
+   "rating_basis": "the laugh after the punch",
+   "effective_rating": "worked",
+   "rating_by": "ai",
+   "kind": "bit",
+   "suggested": "worked",
+   "punch": {
+    "text": "The alpha punch lands here every time.",
+    "start_ms": 10000,
+    "end_ms": 20000
+   },
+   "play": {
+    "start_ms": 6000,
+    "end_ms": 23700
+   },
+   "audio": null,
+   "reference": {
+    "kind": "file",
+    "name": "seaside.m4a",
+    "recorded_at": "2024-02-01T21:00:00"
+   }
+  },
+  {
+   "perf": {
+    "id": "perf:2024-03-01_z@40000",
+    "type": "performance",
+    "set": "set:2024-03-01_z",
+    "start_ms": 40000,
+    "end_ms": 70000,
+    "text": "Alpha opener line one.",
+    "kind": "bit",
+    "name": "T2",
+    "ai_rating": "worked",
+    "rating_basis": "the laugh after the punch"
+   },
+   "set": {
+    "id": "set:2024-03-01_z",
+    "type": "set",
+    "title": "Mabel's, March",
+    "venue": "Mabel's (upstairs)",
+    "date": "2024-03-01",
+    "duration_s": 120
+   },
+   "edge": {
+    "id": "e:f8408522def6",
+    "src": "perf:2024-03-01_z@40000",
+    "dst": "joke:a",
+    "kind": "performed_as",
+    "status": "inferred",
+    "confidence": 0.9,
+    "reason": "same words",
+    "evidence": [],
+    "source": "auto:synthetic-1",
+    "bucket": "proposed",
+    "display_kind": "performed_as",
+    "yours": false,
+    "edited": false,
+    "src_brief": {
+     "id": "perf:2024-03-01_z@40000",
+     "type": "performance",
+     "title": "Alpha opener line one.",
+     "set": "set:2024-03-01_z",
+     "date": "2024-03-01",
+     "venue": "Mabel's (upstairs)",
+     "start_ms": 40000,
+     "end_ms": 70000
+    },
+    "dst_brief": {
+     "id": "joke:a",
+     "type": "joke",
+     "title": "Alpha bit",
+     "stage": "working",
+     "summary": "A bit about a."
+    },
+    "other": {
+     "id": "perf:2024-03-01_z@40000",
+     "type": "performance",
+     "title": "Alpha opener line one.",
+     "set": "set:2024-03-01_z",
+     "date": "2024-03-01",
+     "venue": "Mabel's (upstairs)",
+     "start_ms": 40000,
+     "end_ms": 70000
+    },
+    "direction": "in",
+    "state": "ai",
+    "ai": true
+   },
+   "laughs": [
+    {
+     "id": "l1",
+     "start_ms": 70500,
+     "end_ms": 72500,
+     "bars": 2,
+     "strength": 0.8,
+     "kind": "laugh",
+     "confidence": 0.9,
+     "segment": "set"
+    }
+   ],
+   "max_bars": 2,
+   "hits": 1,
+   "rating": null,
+   "ai_rating": "worked",
+   "rating_basis": "the laugh after the punch",
+   "effective_rating": "worked",
+   "rating_by": "ai",
+   "kind": "bit",
+   "suggested": "worked",
+   "punch": {
+    "text": "Thanks for coming out tonight folks.",
+    "start_ms": 70000,
+    "end_ms": 80000
+   },
+   "play": {
+    "start_ms": 66000,
+    "end_ms": 73700
+   },
+   "audio": null,
+   "reference": {
+    "kind": "drive",
+    "url": "https://drive.google.com/file/d/memo0001/view",
+    "name": "mabels-march.m4a"
+   }
+  }
+ ],
+ "labels": [
+  {
+   "id": "e:la-d1",
+   "src": "joke:a",
+   "dst": "label:device:d1",
+   "kind": "has_label",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "reason": "Alpha opener reads as d1",
+   "evidence": [
+    {
+     "node": "unit:a1",
+     "quote": "Alpha opener"
+    }
+   ],
+   "bucket": "confirmed",
+   "display_kind": "has_label",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:a",
+    "type": "joke",
+    "title": "Alpha bit",
+    "stage": "working",
+    "summary": "A bit about a."
+   },
+   "dst_brief": {
+    "id": "label:device:d1",
+    "type": "label",
+    "title": "D-one",
+    "kind": "device",
+    "definition": "D-one, as a label"
+   },
+   "other": {
+    "id": "label:device:d1",
+    "type": "label",
+    "title": "D-one",
+    "kind": "device",
+    "definition": "D-one, as a label"
+   },
+   "direction": "out",
+   "state": "confirmed",
+   "ai": false
+  }
+ ],
+ "links": [
+  {
+   "id": "e:cb_ad",
+   "src": "joke:a",
+   "dst": "joke:d",
+   "kind": "callback_to",
+   "status": "proposed",
+   "confidence": 0.5,
+   "reason": "the opener comes back",
+   "evidence": [
+    {
+     "node": "unit:a1",
+     "quote": "The alpha punch"
+    }
+   ],
+   "bucket": "proposed",
+   "display_kind": "callback_to",
+   "yours": false,
+   "edited": false,
+   "src_brief": {
+    "id": "joke:a",
+    "type": "joke",
+    "title": "Alpha bit",
+    "stage": "working",
+    "summary": "A bit about a."
+   },
+   "dst_brief": {
+    "id": "joke:d",
+    "type": "joke",
+    "title": "Delta bit",
+    "stage": "to_try",
+    "summary": "A bit about d."
+   },
+   "other": {
+    "id": "joke:d",
+    "type": "joke",
+    "title": "Delta bit",
+    "stage": "to_try",
+    "summary": "A bit about d."
+   },
+   "direction": "out",
+   "state": "suggested",
+   "ai": false
+  }
+ ],
+ "history": [
+  {
+   "ts": "2026-10-29T12:00:00+00:00",
+   "target": "edge",
+   "id": "e:la-d1",
+   "action": "confirm",
+   "before": {
+    "id": "e:la-d1",
+    "src": "joke:a",
+    "dst": "label:device:d1",
+    "kind": "has_label",
+    "status": "proposed",
+    "confidence": 0.9,
+    "reason": "Alpha opener reads as d1",
+    "evidence": [
+     {
+      "node": "unit:a1",
+      "quote": "Alpha opener"
+     }
+    ]
+   },
+   "after": {
+    "status": "confirmed"
+   },
+   "reason": "yes, that is the move",
+   "by": "owner",
+   "index": 0,
+   "undone": false
+  }
+ ]
+}

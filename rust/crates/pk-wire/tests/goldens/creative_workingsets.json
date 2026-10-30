@@ -1,0 +1,26 @@
+{
+ "workingsets": [
+  {
+   "id": "ws:tuesday-run-14d826f7",
+   "title": "Tuesday run",
+   "version": 1,
+   "target_s": 300,
+   "n": 4,
+   "storyboard_id": "sb:tuesday-run-7507883e",
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "his"
+  }
+ ],
+ "working_sets": [
+  {
+   "id": "ws:tuesday-run-14d826f7",
+   "title": "Tuesday run",
+   "version": 1,
+   "target_s": 300,
+   "n": 4,
+   "storyboard_id": "sb:tuesday-run-7507883e",
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "his"
+  }
+ ]
+}

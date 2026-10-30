@@ -1,0 +1,21 @@
+{
+ "joke_id": "joke:f",
+ "title": "Foxtrot bit",
+ "n_nights": 0,
+ "nights": [],
+ "best_night": null,
+ "trend": null,
+ "trend_rel_change": null,
+ "vs_room_trend": null,
+ "cv_laugh_s_per_min": null,
+ "stability": null,
+ "low_n": true,
+ "wording": {
+  "effects": [],
+  "changes": [],
+  "note": "needs 2+ nights"
+ },
+ "working_set": "ws:tuesday-run-14d826f7",
+ "locked": false,
+ "locked_lines": []
+}

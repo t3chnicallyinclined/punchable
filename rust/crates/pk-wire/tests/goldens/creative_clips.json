@@ -1,0 +1,91 @@
+{
+ "set": "20240101_x",
+ "run_id": "clips-1",
+ "generated_at": "2026-10-01T00:00:00+00:00",
+ "show_date": "2024-01-01",
+ "venue": "The Corner Room",
+ "signals_present": [
+  "laugh",
+  "vs_room"
+ ],
+ "signals_missing": [
+  "applause"
+ ],
+ "params": {
+  "weights": {
+   "laugh": 1.0,
+   "vs_room": 0.5
+  },
+  "scales": {
+   "laugh": 3.0
+  },
+  "min_s": 8,
+  "max_s": 40,
+  "max_overlap": 0.2,
+  "keep": 2,
+  "candidates": 3
+ },
+ "llm": null,
+ "clips": [
+  {
+   "rank": 1,
+   "start_ms": 60000,
+   "end_ms": 84000,
+   "duration_s": 24.0,
+   "joke_id": "joke:b",
+   "title": "Bravo bit (the dog one)",
+   "status": "known",
+   "ai_rating": "worked",
+   "score": 0.91,
+   "score_breakdown": {
+    "laugh": {
+     "raw": 3.0,
+     "norm": 1.0,
+     "weight": 1.0,
+     "contribution": 1.0
+    },
+    "vs_room": {
+     "raw": 1.0,
+     "norm": 0.5,
+     "weight": 0.5,
+     "contribution": 0.25
+    }
+   },
+   "why": "the biggest laugh of the night",
+   "punchline": "The purple monkey dishwasher line here.",
+   "punch_at_ms": 70000,
+   "laugh_id": "l2",
+   "transcript": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words."
+  },
+  {
+   "rank": 2,
+   "start_ms": 0,
+   "end_ms": 24000,
+   "duration_s": 24.0,
+   "joke_id": "joke:a",
+   "title": "Alpha bit",
+   "status": "known",
+   "ai_rating": "worked",
+   "score": 0.7,
+   "score_breakdown": {
+    "laugh": {
+     "raw": 3.0,
+     "norm": 1.0,
+     "weight": 1.0,
+     "contribution": 1.0
+    },
+    "vs_room": {
+     "raw": null,
+     "norm": 0.0,
+     "weight": 0.5,
+     "contribution": 0.0
+    }
+   },
+   "why": "a strong opener",
+   "punchline": "The alpha punch lands here every time.",
+   "punch_at_ms": 8000,
+   "laugh_id": "l1",
+   "transcript": "Alpha opener line one. The alpha punch lands here every time."
+  }
+ ]
+}
