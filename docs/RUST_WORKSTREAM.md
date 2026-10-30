@@ -37,7 +37,7 @@ plus the ticket's own proof. Nothing ships until T8 (the worker swap).
 | K | CI | `.github/workflows/rust.yml`, `api.yml`, `app.yml`, `rust/xtask`, `rust/deny.toml` | now | every ticket's proof |
 | L | the Python API | `api-dev` list rows: send `short_name`, `venue_short`, `when`, `at`, `by_kind` | now | the app lanes |
 | A0 | design values | `docs/design/DESIGN.md` (ios-design-expert): the five token scales with values, the kit index, the gate rule, the brand sections the code cites (§3.2, §7, §9); HIG.md pointers refreshed | now | A4 |
-| A1–A7 | the app (`app/` only) | `docs/ARCHITECTURE.md` §7 (reviewed by ios-dev-expert + ios-design-expert): rules layer + `format.ts`; the upload 401 fix + idempotency key; auth rename + `useCodeExchange`; `kv` platform split + fonts plugin (one native build); `Input` + tokens + the `static.values` gate; `ScreenBase` / `DragListBase` + the ENGINEERING §1 table fix; the folder move last | now, in that order | — |
+| A1–A7 | the app (`app/` only) | `docs/ARCHITECTURE.md` §7 (reviewed by ios-dev-expert + ios-design-expert): rules layer + `format.ts`; the upload 401 fix + idempotency key; auth rename + `useCodeExchange`; `kv` platform split + fonts plugin (one native build); `Input` + tokens + the `static.values` gate; `ScreenBase` / `DragListBase`; the folder move last. **Landed 2026-10-29: A1 `e40334e` (rules layer, format.ts, one isQuestion, the ENGINEERING §1 table fix and the twins/rules guards), A2 `f26d897` (401 transient, authHeaders/uploadHeaders, X-Idempotency-Key), A3 (this commit: tokenMachine, useCodeExchange, Reconnect Google web-only). Next: A4 (`kv` + fonts, one native build).** | A4 next | — |
 
 ## Tickets
 

@@ -13,7 +13,8 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Lockup } from '@/lib/Brand';
-import { AUTH_ENABLED, ISSUER, authRequestConfig, completeSignIn, getAccessToken, rememberWay } from '@/lib/auth';
+import { AUTH_ENABLED, ISSUER, authRequestConfig, getAccessToken, rememberWay } from '@/lib/auth';
+import { useCodeExchange } from '@/lib/useCodeExchange';
 import { safeNext } from '@/lib/session';
 import { C, F } from '@/lib/theme';
 import { crashText, type CrashRecord } from '@/lib/crashlog';
@@ -75,15 +76,11 @@ export default function Login() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (result?.type !== 'success' || !result.params.code) return;
-    completeSignIn(result.params.code, request?.codeVerifier)
-      .then(() => {
-        rememberWay(way);
-        router.replace(next as any);
-      })
-      .catch((e) => setFailed({ for: result, msg: plain(e?.message) }));
-  }, [result, request]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The code -> tokens, once per result (lib/useCodeExchange: a rebuilt request cannot re-exchange the same code).
+  useCodeExchange(result, request, () => {
+    rememberWay(way);
+    router.replace(next as any);
+  }, (e) => setFailed({ for: result, msg: plain(e?.message) }));
 
   const go = (w: Way) => {
     setWay(w);

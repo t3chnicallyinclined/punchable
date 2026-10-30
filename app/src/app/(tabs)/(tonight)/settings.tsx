@@ -5,7 +5,8 @@ import { Linking, Platform, Pressable, Switch, TextInput, View } from 'react-nat
 import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
 import { ApiError, del as apiDelete, get, patch, useApi } from '@/lib/api';
-import { AUTH_ENABLED, authRequestConfig, completeSignIn, getDiscovery, rememberWay } from '@/lib/auth';
+import { AUTH_ENABLED, authRequestConfig, getDiscovery, rememberWay } from '@/lib/auth';
+import { useCodeExchange } from '@/lib/useCodeExchange';
 import { creative } from '@/lib/creative';
 import { haptics } from '@/lib/haptics';
 import { getPrefs, onPrefs, setPrefs, SchemePref } from '@/lib/prefs';
@@ -15,6 +16,9 @@ import { Btn, Card, Dot, List, ListRow, Seg, Sheet, SheetHead, T, s, useUI } fro
 import { Screen } from '@/lib/Screen';
 
 const SITE = 'https://punchable.io';
+/** "Reconnect Google" is the web's (owner decision, docs/ARCHITECTURE.md: Google sign-in on the web only; the phone
+ *  signs in with email). The row still shows the Google Docs status on the phone; the action lives on punchable.io. */
+const RECONNECT_ON_WEB = Platform.OS === 'web';
 
 /** Appearance and haptics are THIS device's preferences (lib/prefs), never his material. */
 function DeviceCard() {
@@ -102,22 +106,20 @@ function ConnectionsCard() {
   const c = useApi<Connections>('/api/connections', { cache: false });
   const [discovery, setDiscovery] = useState<AuthSession.DiscoveryDocument | null>(null);
   useEffect(() => {
-    if (AUTH_ENABLED) getDiscovery().then(setDiscovery, () => {}); // local copy: no sign-in server to ask
+    if (AUTH_ENABLED && RECONNECT_ON_WEB) getDiscovery().then(setDiscovery, () => {}); // local copy: no sign-in server to ask; phone: no request at all
   }, []);
   // "Reconnect Google": the same sign-in as the login screen's Google button, but prompt=login makes Keycloak go to
   // Google again even with a live session, so Google grants Drive access afresh (realm IdP: offline + consent) and
   // Keycloak stores the new token that gsync reads.
   const [req, res, prompt] = AuthSession.useAuthRequest(authRequestConfig({ kc_idp_hint: 'google', prompt: 'login' }), discovery);
+  // The code -> tokens, once per result (lib/useCodeExchange: a rebuilt request cannot re-exchange the same code).
+  useCodeExchange(res, req, () => {
+    rememberWay('google');
+    ui.snack('Google reconnected. Your PC’s sync uses it on its next run if the old access had stopped, otherwise within a day.');
+    c.reload();
+  }, (e) => ui.snack(`Google sign-in didn’t finish: ${e?.message || 'try again'}`));
   useEffect(() => {
-    if (res?.type === 'success' && res.params.code) {
-      completeSignIn(res.params.code, req?.codeVerifier)
-        .then(() => {
-          rememberWay('google');
-          ui.snack('Google reconnected. Your PC’s sync uses it on its next run if the old access had stopped, otherwise within a day.');
-          c.reload();
-        })
-        .catch((e) => ui.snack(`Google sign-in didn’t finish: ${e?.message || 'try again'}`));
-    } else if (res?.type === 'error') ui.snack('Google sign-in didn’t finish. Try again.');
+    if (res?.type === 'error') ui.snack('Google sign-in didn’t finish. Try again.');
   }, [res]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const d = c.data;
@@ -132,10 +134,10 @@ function ConnectionsCard() {
       <T v="eb">Connections</T>
       <List>
         <ConnRow testID="src-gdocs" name="Google Docs" line={gLine} tone={gTone}
-          note={!AUTH_ENABLED ? <T v="small" testID="src-gdocs-why">Reconnect works on punchable.io. Sign-in is off on this local copy.</T> : undefined}
-          action={<Btn small testID="src-gdocs-reconnect" label="Reconnect Google" disabled={!AUTH_ENABLED || !req}
+          note={!RECONNECT_ON_WEB ? <T v="small" testID="src-gdocs-why">Reconnect Google on punchable.io in a browser.</T> : !AUTH_ENABLED ? <T v="small" testID="src-gdocs-why">Reconnect works on punchable.io. Sign-in is off on this local copy.</T> : undefined}
+          action={RECONNECT_ON_WEB ? <Btn small testID="src-gdocs-reconnect" label="Reconnect Google" disabled={!AUTH_ENABLED || !req}
             accessibilityLabel={AUTH_ENABLED ? 'Reconnect Google' : 'Reconnect Google: sign-in is off on this local copy'}
-            onPress={() => prompt().catch((e) => ui.snack(/popup/i.test(String(e?.message)) ? 'Your browser blocked the Google window. Allow pop-ups for this site and try again.' : 'Google sign-in didn’t start. Try again.'))} />} />
+            onPress={() => prompt().catch((e) => ui.snack(/popup/i.test(String(e?.message)) ? 'Your browser blocked the Google window. Allow pop-ups for this site and try again.' : 'Google sign-in didn’t start. Try again.'))} /> : undefined} />
         <ConnRow testID="src-youtube" name="YouTube" line={d ? (d.youtube.sets ? `${n(d.youtube.sets)} sets imported by link` : 'No sets yet · paste a video link') : 'Checking…'} tone={d?.youtube.sets ? 'ok' : 'off'}
           action={<Btn small testID="src-youtube-import" label="Import a link" onPress={() => router.push('/import' as any)} />} />
         <ConnRow testID="src-photos" name="Phone videos" line={photosLine} tone="off"

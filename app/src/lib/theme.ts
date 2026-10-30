@@ -1,5 +1,5 @@
 // "Backstage Amber": the design tokens from the approved prototype (App.dc.html <helmet> CSS).
-// Rules for using them (contrast, the draft rule, the laugh ramp, the light variant): docs/DESIGN.md.
+// Rules for using them (contrast, the draft rule, the laugh ramp, the light variant): docs/design/DESIGN.md.
 // 2026-10 (docs/UX_2026-10.md): the ground, the cards and the accent follow the approved Mix* artboards
 // (#0B0B0D ground, #1C1C1F cards, amber #FFB340, record red #FF453A). Every screen gets them through these tokens.
 //
@@ -72,7 +72,7 @@ export const DARK = {
 };
 export type Tokens = typeof DARK;
 
-/** The light variant (docs/DESIGN.md §3.2, extended to the full token set). Amber never carries text on light:
+/** The light variant (docs/design/DESIGN.md §3.2, extended to the full token set). Amber never carries text on light:
  *  text and links use amberInk; marks use amberMark. Buttons stay amber with ink text. The owner can swap the hues
  *  here; the structure (which role each token plays) is the same as DARK. */
 export const LIGHT_TOKENS: Tokens = {

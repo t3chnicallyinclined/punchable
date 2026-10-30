@@ -1,4 +1,4 @@
-// The Punchable mark (concept C, "Laugh meter", the comic's pick 2026-10-26: docs/DESIGN.md §7) and the wordmark. Geometry = app/scripts/brand/brand.mjs.
+// The Punchable mark (concept C, "Laugh meter", the comic's pick 2026-10-26: docs/design/DESIGN.md §7) and the wordmark. Geometry = app/scripts/brand/brand.mjs.
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { C, F } from './theme';

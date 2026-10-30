@@ -1,4 +1,4 @@
-// The token state machine (no React Native imports: tests/tokens.test.mjs drives it with a fake Keycloak and a fake
+// The token state machine (no React Native imports: tests/tokenMachine.test.mjs drives it with a fake Keycloak and a fake
 // keychain). lib/auth.ts owns the real pieces (expo-auth-session refreshAsync, expo-secure-store) and hands them in.
 //
 // Rules, each one a scenario the tests play:

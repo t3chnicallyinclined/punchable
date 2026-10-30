@@ -3,7 +3,7 @@
 //   native: client pk-mobile, redirect punchable://auth/callback
 // Tokens: the access token lives in memory only. The refresh token is kept in expo-secure-store on the phone and in
 // sessionStorage on the web (gone when the tab closes). The access token is refreshed 60 s before it expires; the
-// realm rotates refresh tokens, so each refresh stores the new one BEFORE it is used (lib/tokens.ts: one refresh in
+// realm rotates refresh tokens, so each refresh stores the new one BEFORE it is used (lib/tokenMachine.ts: one refresh in
 // flight; only Keycloak's invalid_grant signs him out, a network failure retries and keeps the session).
 // Wiring (no change to the screens): importing this module once (the root layout: `import '@/lib/auth';`)
 //   - registers the bearer with api.ts (setAuthHeaderProvider),
@@ -22,7 +22,7 @@ import { Platform } from 'react-native';
 import { API_URL, setAuthHeaderProvider } from './api';
 import { Profile, endSessionUrl, loginHref, originSlash, profileFrom } from './session';
 import { retry } from '@/rules/retry';
-import { Tokens } from './tokens';
+import { Tokens } from './tokenMachine';
 
 if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession(); // web only: the popup's /auth/callback hands the code back to the opener
 
@@ -114,7 +114,7 @@ export async function getDiscovery(): Promise<AuthSession.DiscoveryDocument> {
   return discovery;
 }
 
-// ---------------------------------------------------------------- the token state (lib/tokens.ts, unit-tested)
+// ---------------------------------------------------------------- the token state (lib/tokenMachine.ts, unit-tested)
 // Access token and ID token in memory, the refresh token in the store above. The machine persists a new refresh token
 // BEFORE publishing it, keeps one refresh in flight for every caller (headers, the live socket, uploads, a 401),
 // treats only Keycloak's invalid_grant as signed-out (a network failure retries, then keeps the session), and on

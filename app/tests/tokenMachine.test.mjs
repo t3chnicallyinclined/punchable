@@ -1,6 +1,6 @@
-// Unit test for src/lib/tokens.ts: the refresh state machine against a fake Keycloak and a fake keychain.
-//   node --experimental-strip-types --no-warnings tests/tokens.test.mjs
-import { Tokens, SKEW_S, isRevoked } from "../src/lib/tokens.ts";
+// Unit test for src/lib/tokenMachine.ts: the refresh state machine against a fake Keycloak and a fake keychain.
+//   node --experimental-strip-types --no-warnings tests/tokenMachine.test.mjs
+import { Tokens, SKEW_S, isRevoked } from "../src/lib/tokenMachine.ts";
 
 const fails = [];
 const check = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fails.push(m); };
