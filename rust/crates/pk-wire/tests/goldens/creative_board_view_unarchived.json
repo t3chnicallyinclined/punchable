@@ -1,0 +1,139 @@
+{
+ "board": {
+  "id": "sb:friday-scratch-32051c6c",
+  "title": "Friday scratch",
+  "joke_ids": [
+   "joke:e",
+   "joke:f"
+  ],
+  "target_s": 120,
+  "notes": "",
+  "source": "his",
+  "by": "owner",
+  "seed": null,
+  "created_at": "2026-10-29T12:00:00+00:00",
+  "updated_at": "2026-10-29T12:00:00+00:00",
+  "deleted": false,
+  "archived": false
+ },
+ "health": {
+  "board": "sb:friday-scratch-32051c6c",
+  "title": "Friday scratch",
+  "runtime_s": 7.2,
+  "runtime": "0:07",
+  "target_s": 120,
+  "bits": [
+   {
+    "joke_id": "joke:e",
+    "title": "Echo bit",
+    "stage": "idea",
+    "duration_s": 3.4,
+    "duration_basis": "estimate from 9 written words at 157 wpm",
+    "energy": null,
+    "heat": null,
+    "nights": 0,
+    "devices": []
+   },
+   {
+    "joke_id": "joke:f",
+    "title": "Foxtrot bit",
+    "stage": "idea",
+    "duration_s": 3.8,
+    "duration_basis": "estimate from 10 written words at 157 wpm",
+    "energy": null,
+    "heat": null,
+    "nights": 0,
+    "devices": []
+   }
+  ],
+  "transitions": [
+   {
+    "from": "joke:e",
+    "to": "joke:f",
+    "label": "jump",
+    "why": "topic jump · no link yet",
+    "via": [],
+    "needs_bridge": true,
+    "shared_topics": [],
+    "nights": [],
+    "reverse_order_nights": 0,
+    "evidence": []
+   }
+  ],
+  "energy_curve": [
+   {
+    "joke_id": "joke:e",
+    "energy": null,
+    "heat": null
+   },
+   {
+    "joke_id": "joke:f",
+    "energy": null,
+    "heat": null
+   }
+  ],
+  "checks": [
+   {
+    "rule": "runtime",
+    "status": "info",
+    "text": "0:07 of 2:00: 1:53 to fill"
+   },
+   {
+    "rule": "jumps",
+    "status": "warn",
+    "text": "1 topic jump with no bridge: Echo bit -> Foxtrot bit",
+    "pairs": [
+     [
+      "joke:e",
+      "joke:f"
+     ]
+    ]
+   },
+   {
+    "rule": "repeated_devices",
+    "status": "ok",
+    "text": "device variety: no move repeats back-to-back"
+   },
+   {
+    "rule": "closer",
+    "status": "warn",
+    "text": "closer untested: Foxtrot bit has no tape",
+    "suggest": null
+   },
+   {
+    "rule": "energy_dip",
+    "status": "ok",
+    "text": "no two low bits in a row"
+   }
+  ],
+  "untaped": [
+   "Echo bit",
+   "Foxtrot bit"
+  ],
+  "notes": "energy = mean vs_room over taped nights (1.0 = the room's own laugh rate); heat 1-4 for bars."
+ },
+ "best_next": [
+  {
+   "joke_id": "joke:a",
+   "title": "Alpha bit",
+   "stage": "working",
+   "score": 0.25,
+   "why": "strong on tape (1.50x the room over 3 nights)",
+   "source": "inferred",
+   "transition": "jump",
+   "energy": 1.5,
+   "nights": 3,
+   "evidence": []
+  }
+ ],
+ "setlist": {
+  "board": "sb:friday-scratch-32051c6c",
+  "title": "Friday scratch",
+  "lines": [
+   "1. Echo bit (0:03)",
+   "2. Foxtrot bit (0:04)"
+  ],
+  "runtime": "0:07",
+  "text": "Friday scratch · 0:07\n1. Echo bit (0:03)\n2. Foxtrot bit (0:04)"
+ }
+}

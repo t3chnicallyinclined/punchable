@@ -1,0 +1,22 @@
+{
+ "boards": [
+  {
+   "id": "sb:friday-scratch-32051c6c",
+   "title": "Friday scratch",
+   "n": 2,
+   "runtime_s": 7.2,
+   "runtime": "0:07",
+   "target_s": 120,
+   "updated": "2026-10-29T12:00:00+00:00",
+   "source": "his",
+   "names": [
+    "Echo bit",
+    "Foxtrot bit"
+   ],
+   "archived": true,
+   "seed": null,
+   "by": "owner"
+  }
+ ],
+ "archived": true
+}
