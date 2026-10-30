@@ -84,7 +84,8 @@ def test_store_keeps_the_previous_version_and_refuses_other_ops(tmp_path):
 
 def test_owner_puts_reads_and_undoes_by_the_previous_version(cr):
     assert call(cr, "GET", "/api/profile/voice") == (200, {"kind": "voice", "text": None, "updated_at": None, "by": None,
-                                                           "chars": 0, "learned": {"kept": [], "dropped": [], "updated_at": None},
+                                                           "chars": 0, "by_kind": None,
+                                                           "learned": {"kept": [], "dropped": [], "updated_at": None},
                                                            "previous": None})
     s, v1 = call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
     assert s == 200 and v1["text"] == PROFILE_V1 and v1["by"] == "owner" and v1["previous"] is None and v1["chars"] == len(PROFILE_V1)
@@ -106,7 +107,7 @@ def test_worker_reads_its_copy_without_history_and_must_name_an_import_actor(cr)
     call(cr, "PUT", "/api/profile/voice", {"text": PROFILE_V1})
     s, w = call(cr, "GET", "/api/worker/profile/voice", worker=True)
     assert s == 200 and w == {"kind": "voice", "text": PROFILE_V1, "updated_at": w["updated_at"], "by": "owner", "chars": len(PROFILE_V1),
-                              "learned": {"kept": [], "dropped": [], "updated_at": None}, "laugh_lines": []}
+                              "by_kind": "owner", "learned": {"kept": [], "dropped": [], "updated_at": None}, "laugh_lines": []}
     assert "previous" not in w
     # the loader: a worker write names import:<what>; without it, 400 and nothing changes
     s, _ = call(cr, "PUT", "/api/worker/profile/voice", {"text": PROFILE_V2}, worker=True)

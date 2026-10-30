@@ -225,6 +225,27 @@ Every row of the contract's "Requested by app" table. Both backends serve them; 
     (4) on the PC, if he asks for that too: `comedy/kb/v0/decisions.jsonl`, `comedy/kb/creative/`, `comedy/corpus/`,
     `comedy/tapes/`, `comedy/db/punchable/`; (5) record the date in infra/DEPLOY_LOG.md and tell him.
 
+## List rows carry the formatted values (2026-10-29, T16, docs/ARCHITECTURE.md section 4)
+
+The server sends what a list row shows, so the app stops computing it. **Additive only:** no existing key changed
+type or meaning; the shipped TestFlight build's read set (`app/src/lib/api.ts`) is the acceptance test
+(`api-dev/tests/test_list_rows.py` asserts those keys and types are still there). `when` and `at` are taken
+elsewhere, hence the `_label` names. The rules the two sides must agree on are pinned by `contracts/*.json`.
+
+| Field | Value | On |
+|---|---|---|
+| `venue_short` | the room name the Sets list shows: `creative/data.py venue_label`, the app's `venueShort` rule ported exactly, **no year** ("Mabel's Comedy Club, Springfield" -> "Mabel's"; "Unknown (title …; maybe Seaside)" -> "Seaside?"; "Comix at Riverside" -> "Comix Riverside"; nothing -> "Unknown venue"). `contracts/venue_short.json` | SetCard; Moment (`/api/search`, `/api/jokes/{id}/similar`); `/api/tonight/screen` `latest_set`; JokeDetail `ai_ratings[]` |
+| `venue_guessed` | `true` when the name is a guess (`unknown`, `maybe`, `likely`, `(show)`) | the same rows |
+| `when_label` | `month_year` of the row's date: "Jun 2015", "2015" for a bare year, `""` without a date. A SetCard uses its `show_date` when known, else `date` | SetCard; Moment; `latest_set`; `ai_ratings[]` |
+| `at_label` | `mmss(start_ms / 1000)`: "3:07" (ties to even, as the server's `mmss`); `null` without a start | SetCard `jokes[]`; Moment; SetAnalysis `Row`; `/api/today` `new_material[]` |
+| `short_name` | `short_name_of(title, his short_name)`: his own name for the bit when he set one, else the title cut at a word break inside 18 characters | already on JokeSummary; now also SetCard `jokes[]`, Moment (of the linked bit, else `null`), `brief_joke` (Tonight items, Row `joke`, Step `joke`), `/api/pipeline` items |
+| `by_kind` | `"owner"` \| `"import"` \| `"ai"` \| `null` from the row's actor (`creative/data.py by_kind`: the `his_material` rule in three words) | `/api/decisions` rows (next to `actor`); the voice profile view and its `previous` (`profile_api.view`) |
+
+The prose room name (`creative/data.py venue_short`, "Killed at Mabel's, Mar 2023", the ask prompt's headers) is an
+older, different rule the pk-creative goldens pin ("Mabel's (upstairs)" -> "Mabel's"; "maybe The Loft" -> "The Loft?";
+"Unknown" -> "Unknown room"); it is retired with the Python at T11 and is **not** what a list row carries.
+`mysets._where` ("Killed at Mabel's '24") now uses `venue_label` and adds the year itself.
+
 ## Settings > Connections (2026-10-26)
 - **`GET /api/connections`** (read-only, auth required hosted, both backends): one plain status per outside source.
   `{google_docs: {status, last_sync, last_ok, docs_linked, joke_docs, boards, conflicts, errors_last_run, last_mode,

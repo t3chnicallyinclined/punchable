@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -53,7 +54,52 @@ def set_key_from_dir(d: str) -> str:
     return d
 
 
+def by_kind(by: str | None) -> str | None:
+    """Who a row is by, in the three words the app shows: `owner` (his own action), `import` (his notes, docs, memos or
+    sets loaded in: `import:<source>`), `ai` (a machine judgment: `ai:<what>`). None when the row names nobody.
+    The same rule as `his_material`: owner and import are his material, ai is not."""
+    if not isinstance(by, str) or not by:
+        return None
+    if by == OWNER_ID:
+        return "owner"
+    if by.startswith("import:"):
+        return "import"
+    return "ai"
+
+
+UNKNOWN_VENUE = "Unknown venue"
+_MAYBE = re.compile(r"maybe ([^)';]+)", re.I)
+_UNKNOWN = re.compile(r"^unknown", re.I)
+_GUESSED = re.compile(r"\b(likely|maybe|\(show\))", re.I | re.A)
+_SHOW = re.compile(r"\(show\)", re.I)
+_LIKELY_TAIL = re.compile(r"\blikely\b.*\Z", re.I | re.A)
+_COMIX_AT = re.compile(r"^Comix at\s+", re.I)
+_CLUB_TAIL = re.compile(r"\s+(Comedy Club|Comedy Show)$", re.I)
+
+
+def venue_label(venue: str | None) -> dict:
+    """The one short room name the app shows on a list row: `{"name", "guessed"}`, no year. Ported line for line
+    from the app's `venueShort` (`laughs.ts`, under app/src/rules/) and pinned by contracts/venue_short.json, so the Sets list
+    reads exactly as it did when the app computed it: "Mabel's Comedy Club, Springfield" -> "Mabel's";
+    "Unknown (title 'Beach jokes'; maybe Seaside)" -> "Seaside?" (guessed); "Comix at Riverside" -> "Comix Riverside".
+    The word boundary is ASCII here as it is in JavaScript."""
+    r = (venue or "").strip()
+    if not r:
+        return {"name": UNKNOWN_VENUE, "guessed": True}
+    maybe = _MAYBE.search(r)
+    if _UNKNOWN.search(r):
+        return {"name": f"{maybe.group(1).strip()}?" if maybe else UNKNOWN_VENUE, "guessed": True}
+    guessed = bool(_GUESSED.search(r))
+    name = _LIKELY_TAIL.sub("", _SHOW.sub("", r.split(",")[0], count=1), count=1).strip()
+    name = _CLUB_TAIL.sub("", _COMIX_AT.sub("Comix ", name, count=1), count=1).strip()
+    return {"name": f"{name}?" if guessed else name, "guessed": guessed}
+
+
 def venue_short(venue: str | None, date: str | None) -> str:
+    """The room name in PROSE (the notebook's "Killed at Mabel's, Mar 2023", the ask prompt's source headers), with
+    the year when a date is given: "Mabel's '23". This is the older server rule, kept byte for byte because the
+    pk-creative goldens pin it ("Mabel's (upstairs)" -> "Mabel's"; "maybe The Loft" -> "The Loft?"; "Unknown" ->
+    "Unknown room"); it is retired with the Python at T11. List rows the app renders use `venue_label` instead."""
     v = (venue or "").strip()
     low = v.lower()
     if "maybe " in low:

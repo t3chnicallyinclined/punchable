@@ -33,6 +33,7 @@ if str(DESK) not in sys.path:
 import creative_api as CR  # noqa: E402
 import kb as K  # noqa: E402
 from creative import notebook as N  # noqa: E402
+from creative.data import venue_label  # noqa: E402
 from creative.store import Store  # noqa: E402
 from creative.util import now_iso, sha8  # noqa: E402
 
@@ -353,8 +354,13 @@ def tonight_screen(cr, h, kb) -> dict:
     latest_card = None
     if latest:
         sc = a.set_info(latest["id"]) if hasattr(a, "set_info") else {}
+        lab = venue_label(latest.get("venue"))
+        when = (sc or {}).get("show_date") or latest.get("date")
         latest_card = {"id": latest["id"], "title": latest.get("title"), "date": latest.get("date"),
-                       "venue": latest.get("venue"), "reviewed": bool(sc.get("reviewed")) if sc else None}
+                       "venue": latest.get("venue"), "reviewed": bool(sc.get("reviewed")) if sc else None,
+                       # T16: the formatted values the Tonight row shows (additive; the app's room rule, no year)
+                       "venue_short": lab["name"], "venue_guessed": lab["guessed"],
+                       "when_label": N.month_year(when) if isinstance(when, str) and when else ""}
     to_sort = len(SG.items(cr, kb))
     # suggested questions, from his own material (no model): the first gap, the closer, something never tried
     qs = []

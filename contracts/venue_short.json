@@ -1,0 +1,206 @@
+{
+ "rule": "venue_short",
+ "about": "The short room name on a list row: {name, guessed}, no year. Source of truth: app/src/lib/laughs.ts venueShort; the server's creative/data.py venue_label must give the same answer. Cases were produced by running the app's function under node; synthetic venue names only.",
+ "cases": [
+  {
+   "venue": "",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": null,
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "   ",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "unknown (title 'Beach jokes'; maybe Seaside)",
+   "name": "Seaside?",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown room",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown (maybe The Loft)",
+   "name": "The Loft?",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown; maybe Mabel's Comedy Club",
+   "name": "Mabel?",
+   "guessed": true
+  },
+  {
+   "venue": "maybe The Loft",
+   "name": "maybe The Loft?",
+   "guessed": true
+  },
+  {
+   "venue": "The Loft (likely)",
+   "name": "The Loft (?",
+   "guessed": true
+  },
+  {
+   "venue": "Mabel's Comedy Club, Springfield",
+   "name": "Mabel's",
+   "guessed": false
+  },
+  {
+   "venue": "Seaside Comedy Show",
+   "name": "Seaside",
+   "guessed": false
+  },
+  {
+   "venue": "The Corner Room",
+   "name": "The Corner Room",
+   "guessed": false
+  },
+  {
+   "venue": "Comix at Riverside",
+   "name": "Comix Riverside",
+   "guessed": false
+  },
+  {
+   "venue": "comix AT   Riverside, CT",
+   "name": "Comix Riverside",
+   "guessed": false
+  },
+  {
+   "venue": "Mabel's (upstairs)",
+   "name": "Mabel's (upstairs)",
+   "guessed": false
+  },
+  {
+   "venue": "Seaside Poets Cafe",
+   "name": "Seaside Poets Cafe",
+   "guessed": false
+  },
+  {
+   "venue": "Harbor Comedy",
+   "name": "Harbor Comedy",
+   "guessed": false
+  },
+  {
+   "venue": "The Cellar (show)",
+   "name": "The Cellar",
+   "guessed": false
+  },
+  {
+   "venue": "The Cellar (Show), Downtown",
+   "name": "The Cellar",
+   "guessed": false
+  },
+  {
+   "venue": "Likely Mabel's",
+   "name": "?",
+   "guessed": true
+  },
+  {
+   "venue": "Comedy Club",
+   "name": "Comedy Club",
+   "guessed": false
+  },
+  {
+   "venue": "Mabel's Comedy Club",
+   "name": "Mabel's",
+   "guessed": false
+  },
+  {
+   "venue": "  The Corner Room , Springfield ",
+   "name": "The Corner Room",
+   "guessed": false
+  },
+  {
+   "venue": "UNKNOWN VENUE",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown maybe",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "The Loft, maybe",
+   "name": "The Loft?",
+   "guessed": true
+  },
+  {
+   "venue": "Comix at Riverside Comedy Club",
+   "name": "Comix Riverside",
+   "guessed": false
+  },
+  {
+   "venue": "Unknown (maybe Mabel's; upstairs)",
+   "name": "Mabel?",
+   "guessed": true
+  },
+  {
+   "venue": "unknown — maybe the loft )",
+   "name": "the loft?",
+   "guessed": true
+  },
+  {
+   "venue": "Riverside comedy club",
+   "name": "Riverside",
+   "guessed": false
+  },
+  {
+   "venue": "O'Malley's Comedy Club, Harbor",
+   "name": "O'Malley's",
+   "guessed": false
+  },
+  {
+   "venue": "The Loft likely upstairs",
+   "name": "The Loft?",
+   "guessed": true
+  },
+  {
+   "venue": "Comix at",
+   "name": "Comix at",
+   "guessed": false
+  },
+  {
+   "venue": "Comix at Riverside, likely",
+   "name": "Comix Riverside?",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown venue (maybe)",
+   "name": "Unknown venue",
+   "guessed": true
+  },
+  {
+   "venue": "maybe",
+   "name": "maybe?",
+   "guessed": true
+  },
+  {
+   "venue": "Unknown (maybe  Two Spaces  )",
+   "name": "Two Spaces?",
+   "guessed": true
+  },
+  {
+   "venue": "The Loft\nComedy Club",
+   "name": "The Loft",
+   "guessed": false
+  },
+  {
+   "venue": "Seaside Comedy Club ",
+   "name": "Seaside",
+   "guessed": false
+  }
+ ]
+}

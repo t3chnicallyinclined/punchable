@@ -1,0 +1,21 @@
+{
+ "rule": "say_fillers",
+ "about": "Leading filler words the say classifier drops before it decides question / bit / command, in order: api-dev/say_api.py FILLERS and the app's sayRules.ts FILLERS regex.",
+ "fillers": [
+  "oh",
+  "and",
+  "so",
+  "um",
+  "uh",
+  "hey",
+  "ok",
+  "okay",
+  "also",
+  "wait",
+  "like",
+  "yeah",
+  "well",
+  "hmm",
+  "but"
+ ]
+}

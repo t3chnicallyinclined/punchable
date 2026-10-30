@@ -21,6 +21,11 @@ SENSITIVE_KEYS = frozenset({
     "token", "secret", "password", "authorization", "cookie", "cookies", "set-cookie", "api_key", "apikey", "key",
     "email", "user", "username", "sub", "ip_address",
 })
+# The app's crash.ts scrubs four more (a recording's marks, a set's segments, a punch line, an edge's evidence quotes).
+# CONTRACT_KEYS is what both sides scrub: contracts/sensitive_keys.json pins it (api-dev/tests/test_contracts.py).
+# SENSITIVE_KEYS itself stays as it was: the pk-obs golden (rust/tools/gen_obs_goldens.py) lists it by name.
+APP_KEYS = frozenset({"marks", "segments", "punch", "evidence"})
+CONTRACT_KEYS = SENSITIVE_KEYS | APP_KEYS
 HEADER_ALLOW = frozenset({"content-type", "content-length", "user-agent", "accept", "host", "x-request-id"})
 REDACTED = "[scrubbed]"
 MAX_MESSAGE = 300
@@ -30,7 +35,7 @@ _KEY_HINT = re.compile(r"(text|quote|transcript|query|title|secret|token|passwor
 
 def sensitive_key(k) -> bool:
     s = str(k).strip().lower().replace("-", "_")
-    return s in SENSITIVE_KEYS or s.replace("_", "-") in SENSITIVE_KEYS or bool(_KEY_HINT.search(s))
+    return s in CONTRACT_KEYS or s.replace("_", "-") in CONTRACT_KEYS or bool(_KEY_HINT.search(s))
 
 
 def scrub_text(s) -> str:

@@ -23,7 +23,7 @@ import os
 from . import notebook as N
 from . import story as S
 from . import workingset as W
-from .data import Corpus, venue_short
+from .data import UNKNOWN_VENUE, Corpus, venue_label
 from .store import Store
 from .util import median, mmss, sha8, slug
 
@@ -58,8 +58,11 @@ def night_outcome(p: dict) -> str | None:
 
 
 def _where(p: dict) -> str:
-    v = venue_short(p.get("venue"), p.get("date"))
-    return "on stage" + (f" '{p['date'][2:4]}" if p.get("date") else "") if v.startswith("Unknown") else f"at {v}"
+    """"at Mabel's '24" / "on stage '24": the app's room name (`venue_label`, the one list-row rule) with the year
+    added here, the way every prose caller adds its own."""
+    lab = venue_label(p.get("venue"))
+    yy = f" '{p['date'][2:4]}" if p.get("date") else ""
+    return ("on stage" if lab["name"] == UNKNOWN_VENUE else f"at {lab['name']}") + yy
 
 
 OUT_WORD = {"killed": "Killed", "good": "Worked", "some": "Some laughs", "quiet": "Quiet"}

@@ -1,0 +1,22 @@
+{
+ "rule": "ratings",
+ "about": "The rating vocabulary, best first. `order` is the app's button list (laughs.ts RATINGS) and the server's RATING_ORDER read high to low; `rank` is RATING_ORDER (creative/data.py); `words` is RATING_WORD (creative/notebook.py), the word a notebook line uses for each.",
+ "order": [
+  "killed",
+  "worked",
+  "meh",
+  "died"
+ ],
+ "rank": {
+  "killed": 3,
+  "worked": 2,
+  "meh": 1,
+  "died": 0
+ },
+ "words": {
+  "killed": "Killed",
+  "worked": "Worked",
+  "meh": "Got some laughs",
+  "died": "Went quiet"
+ }
+}

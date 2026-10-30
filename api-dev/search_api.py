@@ -41,6 +41,9 @@ for p in (DESK / "db", DESK / "tools" / "explorer", DESK):
         sys.path.insert(0, str(p))
 import sdb  # noqa: E402
 from kb import bucket  # noqa: E402
+from creative.data import venue_label  # noqa: E402  (the formatted values a moment row carries, T16)
+from creative.notebook import month_year, short_name_of  # noqa: E402
+from creative.util import mmss  # noqa: E402
 
 DIM = 384
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
@@ -325,10 +328,19 @@ def moment_item(v, pid: str, score=None) -> dict | None:
         return None
     s = v.nodes.get(n.get("set")) or {}
     j = linked_joke(v, pid)
+    jn = v.nodes.get(j) if j else None
+    date = s.get("show_date") or s.get("date")
+    lab = venue_label(s.get("venue"))
+    start = n.get("start_ms")
     return {"id": pid, "set": n.get("set"), "set_title": s.get("title"), "venue": s.get("venue"),
-            "date": s.get("show_date") or s.get("date"), "start_ms": n.get("start_ms"), "end_ms": n.get("end_ms"),
+            "date": date, "start_ms": start, "end_ms": n.get("end_ms"),
             "text": (n.get("text") or "").strip()[:SNIPPET], "joke": j,
-            "joke_title": (v.nodes.get(j) or {}).get("title") if j else None, "score": score}
+            "joke_title": jn.get("title") if jn else None, "score": score,
+            # T16: the formatted values the row shows (additive): the app's room name, the month, the place in the tape
+            "venue_short": lab["name"], "venue_guessed": lab["guessed"],
+            "when_label": month_year(date) if isinstance(date, str) and date else "",
+            "at_label": mmss(start / 1000) if isinstance(start, (int, float)) and not isinstance(start, bool) else None,
+            "short_name": short_name_of(jn.get("title") or j, jn.get("short_name")) if jn else None}
 
 
 def _snippet(text: str, words: list[str]) -> str | None:

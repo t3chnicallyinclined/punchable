@@ -40,6 +40,7 @@ if str(DESK / "tools" / "explorer") not in sys.path:
 import creative_api as CR  # noqa: E402
 import kb as K  # noqa: E402
 from creative import learned as L  # noqa: E402
+from creative.data import by_kind  # noqa: E402
 from creative.store import Store  # noqa: E402
 
 STORE = "profile"
@@ -100,11 +101,13 @@ def view(doc: dict | None, worker: bool = False, laughs: list | None = None) -> 
     else:
         out = {"kind": doc["kind"], "text": doc["text"], "updated_at": doc["updated_at"], "by": doc.get("by"),
                "chars": len(doc["text"])}
+    out["by_kind"] = by_kind(out["by"])  # T16: owner | import | ai | null, so the app stops testing the actor prefix
     out["learned"] = (doc or {}).get("learned") or L.empty()
     if worker:
         out["laugh_lines"] = laughs or []
     else:
-        out["previous"] = (doc or {}).get("previous")
+        prev = (doc or {}).get("previous")
+        out["previous"] = {**prev, "by_kind": by_kind(prev.get("by"))} if isinstance(prev, dict) else prev
     return out
 
 

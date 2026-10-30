@@ -34,8 +34,29 @@ import ai_overlay as AI  # noqa: E402  (inferred.json + analysis.json over graph
 import auth as AUTH  # noqa: E402  (Keycloak bearer tokens when PK_AUTH=1)
 import metrics as M  # noqa: E402  (GET /metrics: Prometheus text; infra/OBSERVABILITY.md)
 import crash as CRASH  # noqa: E402  (sentry-sdk -> the self-hosted Bugsink; off without SENTRY_DSN)
+from creative.data import by_kind, venue_label  # noqa: E402  (the formatted values list rows carry, T16)
+from creative.notebook import month_year  # noqa: E402
+from creative.util import mmss  # noqa: E402
 
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
+
+
+# ---- the formatted values a list row carries (docs/ARCHITECTURE.md section 4, T16) ----------------------------------
+# Additive only: no existing key changes type or meaning; the shipped app ignores keys it does not know.
+def venue_fields(venue) -> dict:
+    """`venue_short` + `venue_guessed`: the room name the Sets list shows (creative/data.py venue_label)."""
+    lab = venue_label(venue)
+    return {"venue_short": lab["name"], "venue_guessed": lab["guessed"]}
+
+
+def when_label(date) -> str:
+    """'2015-06-26' -> 'Jun 2015'; '' when there is no date."""
+    return month_year(date) if isinstance(date, str) and date else ""
+
+
+def at_label(start_ms) -> str | None:
+    """A moment's place in the tape, 'm:ss' (187000 -> '3:07'); None when the row has no start."""
+    return mmss(start_ms / 1000) if isinstance(start_ms, (int, float)) and not isinstance(start_ms, bool) else None
 
 
 def _app_flags() -> dict:
@@ -597,6 +618,7 @@ def brief_joke(a: AppIndex, jid: str) -> dict:
     j = a.v.nodes.get(jid) or {}
     rooms = a.joke_rooms(jid)
     return {"id": jid, "title": j.get("title") or jid, "stage": j.get("stage"), "summary": j.get("summary") or "",
+            "short_name": short_name_of(j.get("title") or jid, j.get("short_name")),
             "sets": rooms["sets"], "hit_sets": rooms["hit_sets"], "ai_hit_sets": rooms["ai_hit_sets"],
             "stage_ai": a.stage_ai(jid)["stage_ai"]}
 
@@ -751,7 +773,7 @@ def analysis_rows(kb: AppKB, a: AppIndex, sid: str) -> list[dict] | None:
                           "why": x.get("why") or "", "edge": {"id": he["id"], "state": a.edge_state(he)} if he else None})
         sv = saved.get(pid) or saved.get(f"@{s0}")
         out.append({
-            "idx": row.get("idx"), "perf": pid, "start_ms": s0, "end_ms": s1,
+            "idx": row.get("idx"), "perf": pid, "start_ms": s0, "end_ms": s1, "at_label": at_label(s0),
             "status": status, "ai_status": row.get("status"), "kind_by": "you" if "kind" in t["fields"] else "ai",
             "title": joke["title"] if joke else (p.get("name") if status in AI.NOT_COUNTED and p.get("name") else "New material"),
             "suggested_title": None if jid or status != "new" else (
@@ -835,6 +857,7 @@ def glance(kb: AppKB, a: AppIndex) -> dict:
     new, hints = [], []
     if rows:
         new = [{"set": s["id"], "idx": r["idx"], "perf": r["perf"], "start_ms": r["start_ms"], "end_ms": r["end_ms"],
+                "at_label": at_label(r["start_ms"]),
                 "title": r["suggested_title"], "punch": (r["punchlines"][-1]["text"] if r["punchlines"] else r["transcript"][:160]),
                 "rating": r["rating"], "saved_as": r["saved_as"]} for r in rows if r["status"] == "new"]
         ranked = sorted([r for r in rows if r["joke"]], key=lambda r: (-RANK.get(r["rating"] or "", -1), -(r["laughs"].get("total_s") or 0)))
@@ -929,14 +952,24 @@ def set_card(kb: AppKB, a: AppIndex, s: dict) -> dict:
     def live_joke(p):
         e = a.perf_edge.get(p["id"])
         return a.joke_of(p["id"]) if e and K.bucket(e.get("status")) != "rejected" else None
+
+    def row_title(p):
+        return (a.v.nodes.get(live_joke(p)) or {}).get("title") if live_joke(p) else (p.get("name") or "New material")
+
+    def row_short_name(p):
+        j = a.v.nodes.get(live_joke(p)) if live_joke(p) else None
+        return short_name_of(j.get("title") or j["id"], j.get("short_name")) if j else short_name_of(row_title(p))
+    info = a.set_info(s["id"])
     return {"id": s["id"], "title": s.get("title"), "date": s.get("date"), "venue": s.get("venue"),
-            **a.set_info(s["id"]),
+            **info,
+            # T16: the formatted values the list row shows (additive; the app's rule, no year; the show date when known)
+            **venue_fields(s.get("venue")), "when_label": when_label(info.get("show_date") or s.get("date")),
             "duration_s": s.get("duration_s"), "performances": len(perfs), "rateable": len(rateable), "rated": len(rated),
             "reviewed": bool(rateable) and len(rated) == len(rateable), "laughs": len((doc or {}).get("laughs", [])),
             "has_audio": kb.audio_path(s["id"]) is not None, "analysis": an,
-            "jokes": [{"perf": p["id"], "title": (a.v.nodes.get(live_joke(p)) or {}).get("title") if live_joke(p) else (p.get("name") or "New material"),
+            "jokes": [{"perf": p["id"], "title": row_title(p), "short_name": row_short_name(p),
                        "joke": live_joke(p), "kind": p.get("kind"), "rating": a.perf_rating(p)[0], "rating_by": a.perf_rating(p)[1],
-                       "start_ms": p.get("start_ms")} for p in perfs]}
+                       "start_ms": p.get("start_ms"), "at_label": at_label(p.get("start_ms"))} for p in perfs]}
 
 
 def tonight(a: AppIndex) -> dict:
@@ -1351,7 +1384,7 @@ class Handler(BaseHTTPRequestHandler):
                 out = {}
                 for st in K.STAGES:
                     xs = [x for x in a.summaries() if x["stage"] == st]
-                    out[st] = {"total": len(xs), "items": [{k: x[k] for k in ("id", "title", "stage", "sets", "hit_sets", "ai_hit_sets", "versions", "stage_ai")}
+                    out[st] = {"total": len(xs), "items": [{k: x[k] for k in ("id", "title", "short_name", "stage", "sets", "hit_sets", "ai_hit_sets", "versions", "stage_ai")}
                                                           for x in xs[: int(arg("limit", "60"))]]}
                 return self.send_json({"stages": out})
             m = re.match(r"^/api/jokes/(.+)/similar$", path)
@@ -1402,7 +1435,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.export(kb, a)
             if path == "/api/decisions":
                 n = min(int(arg("limit", "30")), 500)
-                ds = [dict(d, index=i, undone=i in v.undone, actor=K.actor_of(d)) for i, d in enumerate(v.decisions)][-n:][::-1]
+                ds = [dict(d, index=i, undone=i in v.undone, actor=K.actor_of(d), by_kind=by_kind(K.actor_of(d)))
+                      for i, d in enumerate(v.decisions)][-n:][::-1]
                 return self.send_json({"decisions": ds, "total": len(v.decisions)})
             return self.err(404, "not found")
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
@@ -1447,6 +1481,7 @@ class Handler(BaseHTTPRequestHandler):
         links = sorted([e for e in d["edges"] if e.get("kind") != "has_label"], key=lambda e: (order.get(e["state"], 2), -(e.get("confidence") or 0)))
         live = [p for p in perfs if p["edge"]["bucket"] != "rejected" and p.get("kind") not in AI.NOT_COUNTED]
         ai_ratings = [{"set": p["set"].get("id"), "date": p["set"].get("date"), "title": p["set"].get("title"), "perf": p["perf"]["id"],
+                       "when_label": when_label(p["set"].get("date")), **venue_fields(p["set"].get("venue")),
                        "rating": p["effective_rating"], "rating_by": p["rating_by"], "ai_rating": p["ai_rating"], "max_bars": p["max_bars"]}
                       for p in live]
         return self.send_json({"joke": d["joke"], "yours": d["yours"], "text": joke_text(a, jid), "rooms": a.joke_rooms(jid),

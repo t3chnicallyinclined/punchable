@@ -307,7 +307,7 @@ def test_sensitive_key_rule_is_case_and_separator_insensitive():
 def test_the_scrubber_test_goes_red_when_the_rule_is_broken(monkeypatch):
     """The proof the previous test is load-bearing: with `text` taken off the sensitive list, his words leak and the
     same assertion fails. (This is the "break the guard once" check, kept as a permanent test.)"""
-    monkeypatch.setattr(SC, "SENSITIVE_KEYS", frozenset(SC.SENSITIVE_KEYS - {"text"}))
+    monkeypatch.setattr(SC, "CONTRACT_KEYS", frozenset(SC.CONTRACT_KEYS - {"text"}))  # the set sensitive_key() reads
     monkeypatch.setattr(SC, "_KEY_HINT", re.compile(r"(quote|transcript|query|title|secret|token|password|cookie|auth)", re.I))
     out = SC.scrub_event(event_with_everything(), {})
     assert PRIVATE["text"] in json.dumps(out)   # the leak the real rule prevents (extra.nested / contexts / vars)
