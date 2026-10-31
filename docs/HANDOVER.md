@@ -79,7 +79,8 @@ writes them as a version of the main first.
 - TestFlight-only distribution; email-only sign-in on the phone; Google sign-in on the web only.
 - Jots and questions are typed. Voice records sets AND voice memos (owner 2026-10-31, replaces "voice is for sets only"):
   memos are recorded in Punchable, the audio stays on his phone, the words go to the server. A cloud backup of the
-  audio comes later as a paid add-on. Not built yet; the experts spec it first.
+  audio comes later as a paid add-on, so the same recordings play on the phone and the web/desktop (the words already
+  show everywhere). Not built yet; the experts spec it first.
 - HIG first on iPhone: standard, familiar, one-handed in the dark. Dark default, light must work.
 - No review step is ever required; AI inferences show as the current state with an AI badge and he edits.
 - No Sentry SaaS: crash reports go to the self-hosted Bugsink.
