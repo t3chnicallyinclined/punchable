@@ -14,6 +14,8 @@ import { Build } from '@/lib/simple';
 import { actionSheet } from '@/lib/actionSheet';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { SwipeRow } from '@/lib/SwipeRow';
+import { RecRows } from '@/lib/RecRows';
+import { useRecordings } from '@/lib/recordings';
 import { fmtShortDate, mmss } from '@/rules/format';
 import { draftsLabel, splitLists } from '@/rules/setListRules';
 import { useSets } from '@/lib/sets';
@@ -101,6 +103,7 @@ export default function Sets() {
   // a second list the same day gets "(2)" without another request; the tab re-reads once the list exists.
   const startList = async () => { if (await newSetList({ titles: (b.data?.boards || []).map((x) => x.title), setCurrent: cur.setCurrent, snack: ui.snack })) b.reload(); };
   const recordSet = () => ui.withMic(() => router.push('/record' as any));
+  const tapes = useRecordings().filter((r) => r.kind === 'set');
   const openArchived = () => router.push('/archived' as any);
   // the ⋯ menu's items, the same words on the phone's toolbar menu and the web's sheet (HIG/menus: "Archived" is navigation, no ellipsis)
   const moreItems: MenuItem[] = [
@@ -252,9 +255,16 @@ export default function Sets() {
         </>
       ) : (
         <View style={{ gap: 6 }}>
+          {/* the tapes on this phone, while they transcribe and after (SPEC 2026-10-31 §7): status, percent, play */}
+          {tapes.length > 0 && (
+            <View testID="sets-on-phone" style={{ gap: 2, marginBottom: 8 }}>
+              <T v="eb" accessibilityRole="header">On this iPhone</T>
+              <RecRows recs={tapes} testID="tape" />
+            </View>
+          )}
           {!!sets.list.length && <T v="small" testID="sets-count">{sets.list.length} {sets.list.length === 1 ? 'set' : 'sets'} on tape</T>}
           {sets.error && !sets.list.length ? <ErrorCard error={sets.error} /> : null}
-          {!sets.list.length && !sets.error && <Empty text="No recorded sets yet. Open a set list and tap Record, or pick Record a set from the ⋯ menu." />}
+          {!sets.list.length && !sets.error && !tapes.length && <Empty text="No recorded sets yet. Open a set list and tap Record, or pick Record a set from the ⋯ menu." />}
           <List>
             {sets.list.map((x) => (
               <ListRow key={x.id} testID={`performed-${x.id}`} title={<T v="semi" numberOfLines={1}>{x.venue.name}</T>}

@@ -1,6 +1,6 @@
 // Tonight (MixHome, docs/UX_2026-10.md): the home tab. The date line, "N to sort" (the morning inbox), "+" (a new
-// bit, at once: the same lib/newBit as the Bits tab, SPEC 2026-10-30), the ⋯ menu (New set list · Record a set ·
-// Import a recording…), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap),
+// bit, at once: the same lib/newBit as the Bits tab, SPEC 2026-10-30), the ⋯ menu (Record a memo, phone only, SPEC
+// 2026-10-31 · New set list · Record a set · Import a recording…), tonight's set list as one colour bar (a segment per bit, red where a transition is a gap),
 // three questions to ask his material. One request: GET /api/tonight/screen; changes arrive over /api/live.
 import React, { useCallback, useState } from 'react';
 import { PixelRatio, Platform, Pressable, Text, View } from 'react-native';
@@ -64,6 +64,8 @@ export default function Tonight() {
   const newBit = useNewBit('Tonight');
   const newList = () => { void newSetList({ setCurrent: boards.setCurrent, snack: ui.snack }); };
   const recordSet = () => ui.withMic(() => router.push('/record' as any));
+  // a voice memo (SPEC 2026-10-31 §4): recorded, kept and transcribed on the phone; the recorder starts as it opens
+  const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo' } } as any);
   // HIG/menus: an ellipsis only where more input follows (the import screen asks which recordings); no articles
   const moreItems: MenuItem[] = [
     { label: 'New set list', icon: 'list.bullet.rectangle', onPress: newList, testID: 'more-new-list' },
@@ -100,6 +102,7 @@ export default function Tonight() {
         // a view's primary action is never hidden in a menu); the face last. The title stays short so there is room.
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="list.bullet.rectangle" onPress={newList}>New set list</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="record.circle" onPress={recordSet}>Record a set</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="square.and.arrow.down" onPress={() => router.push('/import' as any)}>Import a recording…</Stack.Toolbar.MenuAction>

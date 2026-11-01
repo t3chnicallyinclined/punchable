@@ -1,16 +1,17 @@
-// Voice memos from the iPhone (Notebook › Notes). gsync on his PC pulls them from Google Drive › Punchable ›
-// Voice memos, transcribes them and files each one (GET /api/memos; gsync/memos.py). Here: the progress line,
-// how to send them, and each memo dated, with its words, its audio and where it was filed.
+// Voice memos (Bits › Memos; SPEC 2026-10-31). PhoneMemos: the memos recorded in Punchable, kept on this iPhone with
+// play, transcribed here and filed as ideas on the right bit (lib/recordings, lib/RecRows), plus "Import from Files…".
+// VoiceMemos: the earlier memos (the retired Drive + PC route, GET /api/memos; gsync/memos.py), dated, with their
+// words and where they were filed. Nothing here asks him to send recordings anywhere: the audio stays on the phone.
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
-import { post, undo, upload, useApi } from './api';
+import { post, undo, useApi } from './api';
 import { HearIt, Reference } from './hear';
-import { pickRecordings } from './media';
+import { importFiles, recordingsSupported, useRecordings } from './recordings';
+import { RecRows } from './RecRows';
 import { C } from './theme';
 import { clockMs, fmtDate } from '@/rules/format';
-import { Btn, Card, List, ListRow, T, TextBtn, useUI } from './ui';
-import { WorkerLine } from './worker';
+import { Btn, Card, Empty, List, ListRow, T, TextBtn, useUI } from './ui';
 
 export type Memo = {
   id: string; title: string; status: 'listed' | 'downloaded' | 'transcribing' | 'done' | 'failed';
@@ -24,15 +25,6 @@ export type MemosResp = {
   available: boolean; items: Memo[];
   progress: { line: string; total: number; transcribed: number; waiting: number; failed: number; working: boolean; paused: { reason: string; free_mb?: number } | null };
 };
-
-const STEPS = [
-  'On your iPhone, open Voice Memos.',
-  'All Recordings › Edit (top right) › tap every memo you want (or Select All, if it shows).',
-  'Tap the Share button (square with the arrow), then “Save to Files”.',
-  'Pick Google Drive › Punchable › Voice memos, then Save. (Drive shows up in Files once the Google Drive app is installed and signed in.)',
-  'That’s it. Your PC picks them up within a minute or two and transcribes them. Leave the PC on; it works through them one at a time.',
-  'Later, one memo: open it › ••• › Share › Drive (or Save to Files) › Punchable › Voice memos.',
-];
 
 // "New Recording 12", "Brooklyn, NY 3", "123 Main St": the phone's names, not his. Show his opening words instead.
 const GENERIC = /^(new recording|recording|voice memo|audio|memo|untitled)\b|^\d|,/i;
@@ -48,7 +40,7 @@ function statusWord(m: Memo) {
     if (m.long) return 'long recording · kept as a note';
     return m.attached_to ? `added to ${m.attached_to.title}` : 'saved as a new idea';
   }
-  return { listed: 'in Google Drive · waiting', downloaded: 'waiting to be transcribed', transcribing: 'transcribing…', failed: 'couldn’t transcribe this one' }[m.status] || m.status;
+  return { listed: 'not transcribed', downloaded: 'not transcribed', transcribing: 'not transcribed', failed: 'couldn’t transcribe this one' }[m.status] || m.status;
 }
 
 // "Not a joke?": memos Claude read as a conversation or a note. Only a suggestion: nothing is hidden until he taps Hide
@@ -94,67 +86,49 @@ export function NotAJoke() {
   );
 }
 
-// "Add from a file": voice memos (or a set recording) picked from the phone's Files or the computer. Each one goes up,
-// is transcribed by his PC, and the recording is deleted from the server afterwards; the words stay.
-export function AddRecordings({ onDone }: { onDone?: () => void }) {
+/** The memos on this phone (newest first) and Import from Files… (copied in under generated names, transcribed here).
+ *  The web shows where they come from instead: memos are recorded in the iPhone app. */
+export function PhoneMemos() {
   const ui = useUI();
-  const [n, setN] = useState<number | null>(null);
+  const recs = useRecordings().filter((r) => r.kind === 'memo');
+  const [busy, setBusy] = useState(false);
+  if (!recordingsSupported) return <T v="mut" testID="phone-memos-web">Voice memos are recorded in the iPhone app. Their words land on your bits here.</T>;
   const go = async () => {
-    const got = await pickRecordings();
-    if (!got.length) return;
-    let ok = 0;
-    for (const [i, f] of got.entries()) {
-      setN(i + 1);
-      try {
-        await upload(f.blob, { kind: 'note', filename: f.name, title: f.name.replace(/\.[^.]+$/, ''),
-          recordedAt: f.lastModified ? new Date(f.lastModified).toISOString() : undefined });
-        ok++;
-      } catch (e: any) {
-        ui.snack(`${f.name}: ${e.message}`);
-      }
+    setBusy(true);
+    try {
+      const n = await importFiles();
+      if (n) ui.snack(`Added ${n} · transcribing on this phone`);
+    } catch (e: any) {
+      ui.snack(`Couldn’t add them: ${e?.message || e}`);
+    } finally {
+      setBusy(false);
     }
-    setN(null);
-    ui.snack(`${ok} of ${got.length} uploaded · transcription happens on your phone for now; they wait. The recordings are not kept`);
-    onDone?.();
   };
-  return <TextBtn testID="memos-add-files" label={n ? `Uploading ${n}…` : 'Add voice memos from a file'} onPress={go} />;
+  return (
+    <View style={{ gap: 8 }} testID="phone-memos">
+      {recs.length ? (
+        <Card style={{ paddingVertical: 4 }}><RecRows recs={recs} testID="memo" /></Card>
+      ) : (
+        <Empty text="No voice memos yet. Tap the mic to record one." />
+      )}
+      <TextBtn testID="memos-import" label={busy ? 'Adding…' : 'Import from Files…'} onPress={() => { if (!busy) void go(); }} />
+    </View>
+  );
 }
 
 export function VoiceMemos() {
   // live-first like every other screen: changes arrive over /api/live; the health poll runs only while that
   // socket is down (useApi `poll`), never a timer of its own
-  const { data, reload } = useApi<MemosResp>('/api/memos', { cache: false, poll: 30000 });
+  const { data } = useApi<MemosResp>('/api/memos', { cache: false, poll: 30000 });
   const [open, setOpen] = useState<string | null>(null);
-  const [help, setHelp] = useState(false);
   const [all, setAll] = useState(false);
-  const p = data?.progress;
-  const busy = !!p && p.waiting > 0;
   if (!data) return null;
   const items = all ? data.items : data.items.slice(0, 40);
 
   return (
     <View style={{ gap: 12 }} testID="voice-memos">
-      <Card style={{ gap: 6 }} testID="memos-progress">
-        <T v="eb">Voice memos from your iPhone</T>
-        {data.available && p && p.total > 0 ? (
-          <>
-            <T v="semi" testID="memos-line">{p.line}</T>
-            {busy && !p.paused && <T v="small">{p.working ? 'Working through them now. New ones show up here as they finish.' : 'Waiting for a transcript: transcription happens on your phone for now.'}</T>}
-            {busy && <WorkerLine what={`Transcribing ${p.waiting} memo${p.waiting === 1 ? '' : 's'}`} testID="memos-worker" />}
-            {p.failed > 0 && <T v="small">{p.failed} couldn’t be transcribed; they stay in Google Drive.</T>}
-          </>
-        ) : (
-          <T v="mut">{data.available ? 'Send them to Google Drive › Punchable › Voice memos. Each one becomes a dated note here, or lands in the bit it belongs to.' : 'Voice memos are transcribed on your phone for now; the ones it has filed show here.'}</T>
-        )}
-        <AddRecordings onDone={reload} />
-        <TextBtn testID="memos-howto" label={help ? 'Hide the steps' : 'How to send them from your iPhone'} onPress={() => setHelp(!help)} />
-        {help && (
-          <View style={{ gap: 6 }} testID="memos-steps">
-            {STEPS.map((x, i) => <T key={i} v="small" style={{ color: C.text2 }}>{i + 1}. {x}</T>)}
-          </View>
-        )}
-      </Card>
       <NotAJoke />
+      {items.length > 0 && <T v="eb" accessibilityRole="header">Earlier memos</T>}
       {items.length > 0 && (
         <Card style={{ paddingVertical: 4 }} testID="memos-list">
           <List>

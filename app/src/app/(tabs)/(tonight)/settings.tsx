@@ -11,6 +11,8 @@ import { creative } from '@/lib/creative';
 import { haptics } from '@/lib/haptics';
 import { getPrefs, onPrefs, setPrefs, SchemePref } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
+import { recordingsSupported, useRecordings } from '@/lib/recordings';
+import { isPending } from '@/rules/memoRules';
 import { C, F } from '@/lib/theme';
 import { Btn, Card, Dot, List, ListRow, Seg, Sheet, SheetHead, T, s, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -104,6 +106,7 @@ function ConnRow({ name, line, tone, action, testID, note }: { name: string; lin
 function ConnectionsCard() {
   const ui = useUI();
   const c = useApi<Connections>('/api/connections', { cache: false });
+  const recs = useRecordings();
   const [discovery, setDiscovery] = useState<AuthSession.DiscoveryDocument | null>(null);
   useEffect(() => {
     if (AUTH_ENABLED && RECONNECT_ON_WEB) getDiscovery().then(setDiscovery, () => {}); // local copy: no sign-in server to ask; phone: no request at all
@@ -128,6 +131,15 @@ function ConnectionsCard() {
   const aiLine = !d ? 'Checking…' : w?.online && w.paused ? `Paused · ${w.paused}` : w?.online ? `Online · checked in ${ago(w.last_seen)}` : w?.last_seen ? `Offline · last seen ${ago(w.last_seen)}. Drafts wait until it’s back.` : 'Offline · not seen since Punchable started. Drafts wait until it’s on.';
   const aiWhere = w?.model ? `${w.model}` : w?.hosted || w?.where === 'the server' ? 'The writer, on the server' : 'The writer';
   const tr = d?.transcriber;
+  // transcription happens on this iPhone (lib/recordings, SPEC 2026-10-31); the server's count is older uploads and
+  // YouTube links that nothing transcribes yet
+  const localWaiting = recs.filter(isPending).length;
+  const speechOff = recs.some((r) => r.state === 'needs_permission');
+  const nw = tr?.waiting || 0;
+  const older = nw ? ` · ${nw} older ${nw === 1 ? 'upload or link waits' : 'uploads or links wait'} on the server` : '';
+  const trLine = !recordingsSupported ? `In the iPhone app: memos and sets are transcribed on the phone${older}`
+    : speechOff ? 'Off · turn on Speech Recognition for Punchable in Settings'
+    : `On this iPhone · ${localWaiting ? `${localWaiting} waiting` : 'nothing waiting'}${older}`;
   const photosLine = Photos.supportsLibrary ? 'Recent set videos from your Photos. Only the audio is uploaded.' : 'On the phone app it reads recent set videos from Photos. Here: pick video files.';
   return (
     <Card testID="connections" style={{ gap: 0 }}>
@@ -144,8 +156,9 @@ function ConnectionsCard() {
           action={<Btn small testID="src-photos-import" label="Import videos" onPress={() => router.push('/import' as any)} />} />
         <ConnRow testID="src-ai" name="AI for drafts" line={`${aiWhere} · ${aiLine}`} tone={!d ? 'off' : w?.online && !w.paused ? 'ok' : 'warn'}
           action={<Btn small testID="src-ai-check" label="Check again" onPress={() => c.reload()} />} />
-        <ConnRow testID="src-transcriber" name="Transcription" line={tr ? (tr.waiting ? `On your phone (coming) · ${tr.waiting} file${tr.waiting === 1 ? '' : 's'} waiting for a transcript` : 'On your phone (coming) · nothing waiting') : 'On your phone (coming)'} tone={tr?.waiting ? 'warn' : 'off'} />
-        <ConnRow testID="src-audio" name="Audio storage" line="Cloudflare R2 · not set up yet. No recording is kept on the server." tone="off" />
+        <ConnRow testID="src-transcriber" name="Transcription" line={trLine} tone={speechOff ? 'warn' : recordingsSupported ? 'ok' : 'off'}
+          action={speechOff ? <Btn small testID="src-transcriber-settings" label="Open Settings" onPress={() => void Linking.openSettings()} /> : undefined} />
+        <ConnRow testID="src-audio" name="Audio storage" line="Sets and memos recorded on this iPhone stay on it. Imported videos and sets taped on punchable.io send their audio to the server." tone="ok" />
       </List>
     </Card>
   );
@@ -161,7 +174,7 @@ const PROVIDERS: { k: Settings['provider']; title: string; sub: string }[] = [
   { k: 'custom', title: 'Custom endpoint', sub: 'Any OpenAI-compatible server you run' },
 ];
 const ROUTES: [string, string][] = [
-  ['Audio of your sets and notes', 'Your server: transcribed and laughs measured there. Video stays on your phone.'],
+  ['Audio of your sets and memos', 'Recorded in Punchable: stays on this iPhone and is transcribed here; only the words go to Punchable. An imported video sends only its audio to your server.'],
   ['Text for writing tasks (drafts, bridges, Ask)', 'The AI provider below, only the bit you’re working on.'],
   ['Map tiles', 'OpenStreetMap on the web, Apple Maps on iPhone: they see the area you look at, never your sets.'],
   ['Google Docs', 'Reads your docs to keep jokes in sync; writes only to the Punchable folder and docs it created. Court documents are never opened.'],

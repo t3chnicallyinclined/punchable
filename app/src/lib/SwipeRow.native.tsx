@@ -24,7 +24,7 @@ function ActionBtn({ a, align, testID }: { a: SwipeAction; align: 'left' | 'righ
   );
 }
 
-export function SwipeRow({ children, leading, trailing, second, testID, onLongPress }: SwipeRowProps) {
+export function SwipeRow({ children, leading, trailing, second, testID, onLongPress, a11yPassThrough }: SwipeRowProps) {
   const x = useSharedValue(0);
   const fired = useRef(false);
   const maxRight = leading ? W : 0;
@@ -82,11 +82,12 @@ export function SwipeRow({ children, leading, trailing, second, testID, onLongPr
       )}
       <GestureDetector gesture={pan}>
         <Animated.View style={[{ backgroundColor: C.bg }, style]}>
-          <Pressable onLongPress={onLongPress} delayLongPress={350} onPress={() => { if (x.value !== 0) close(); }} accessibilityActions={[
+          <Pressable onLongPress={onLongPress} delayLongPress={350} onPress={() => { if (x.value !== 0) close(); }} accessible={a11yPassThrough ? false : undefined}
+            accessibilityActions={a11yPassThrough ? undefined : [
             ...(leading ? [{ name: 'leading', label: leading.label }] : []),
             ...(trailing ? [{ name: 'trailing', label: trailing.label }] : []),
             ...(second ? [{ name: 'second', label: second.label }] : []),
-          ]} onAccessibilityAction={(e) => {
+          ]} onAccessibilityAction={a11yPassThrough ? undefined : (e) => {
             const n = e.nativeEvent.actionName;
             if (n === 'leading') run(leading);
             else if (n === 'trailing') run(trailing);

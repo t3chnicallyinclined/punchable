@@ -575,10 +575,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [showSnack]);
 
+  // a voice memo (SPEC 2026-10-31): recorded, kept and transcribed on the phone; the web has no memo recorder
   const voiceNote = useCallback(() => {
     setSheet('');
-    withMic(() => router.navigate({ pathname: '/notes', params: { talk: String(Date.now()) } } as any));
-  }, [withMic]);
+    if (isWeb) return showSnack('Voice memos are recorded in the iPhone app.');
+    router.navigate({ pathname: '/record', params: { kind: 'memo' } } as any);
+  }, [showSnack]);
 
   const value = useMemo<UIState>(() => ({
     snack: showSnack, openCapture: () => setSheet('cap'), openRecord: () => setSheet('cap'), quickVoiceNote: voiceNote, withMic, uploadFile,
@@ -624,7 +626,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
             sub={isWeb ? 'Pick set videos from this computer, or paste a YouTube link' : 'Your recent set videos, grouped by night'}
             icon={<Disc bg={C.amber}><Icon name="photos" color={C.bg} sw={2.2} /></Disc>}
             onPress={() => { setSheet(''); router.push('/import' as any); }} />
-          <Opt testID="cap-note" title="Voice note" sub="Talk out a premise. Funny lines get pulled out and filed. (Hold ● to start now.)"
+          <Opt testID="cap-note" title="Voice memo" sub="Talk out a premise. It starts recording as soon as it opens; the words go on the right bit."
             icon={<Disc bg={C.surface} border><Icon name="mic" color={C.amber} sw={2.2} /></Disc>} onPress={voiceNote} />
           <Opt testID="cap-record" title="Record a set" sub="Optional recorder: timer, the light, marks"
             icon={<Disc bg={C.red}><View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.text }} /></Disc>}

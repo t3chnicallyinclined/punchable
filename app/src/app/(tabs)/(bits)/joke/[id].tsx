@@ -28,6 +28,8 @@ import { useSayBar } from '@/lib/SayBar';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { actionSheet } from '@/lib/actionSheet';
+import { RecRows } from '@/lib/RecRows';
+import { useRecordings } from '@/lib/recordings';
 import { afterWrite } from '@/lib/feedback';
 import { Btn, Empty, ErrorCard, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, StageWord, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -71,6 +73,8 @@ export default function BitPage() {
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
   const reloadAll = useCallback(() => { d.reload(); sim.reload(); }, [d.reload, sim.reload]);
   const talk = useBitTalk(id, reloadAll);
+  // voice memos on this phone that are on this bit: started here, or filed here (SPEC 2026-10-31 §6)
+  const memos = useRecordings().filter((r) => r.kind === 'memo' && (r.bit?.id === id || r.filed_on?.id === id));
   const J = d.data?.joke;
   // a fresh bit (lib/newBit) carries a marker title until its first Save names it; the page says "New bit" meanwhile
   const fresh = isFreshBit(J?.title);
@@ -143,6 +147,8 @@ export default function BitPage() {
   const native = Platform.OS !== 'web';
   const bar = useSayBar({ onSay, placeholder: `Ask about ${shortName}, or add a line`, hint: null, testID: 'bit-say', busy: talk.sending || talk.thinking });
   const edit = () => router.push(`/bit/${encodeURIComponent(id)}` as any);
+  // a memo started here is filed on this bit (lib/recordings: POST /api/merge/attach after the idea)
+  const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
   const retire = async () => {
     try {
       const w = await decide({ target: 'node', action: 'edit', id, after: { stage: 'retired' } });
@@ -178,6 +184,7 @@ export default function BitPage() {
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button accessibilityLabel="Edit the bit" onPress={edit}>Edit</Stack.Toolbar.Button>
           <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setRename(true)}>Rename short name…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="plus" disabled={!boards.current} onPress={() => boards.add(id, title)}>{`Add to ${boards.current?.title || "tonight's set"}`}</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="list.bullet" onPress={() => boards.pick(id, title)}>Pick a set list…</Stack.Toolbar.MenuAction>
@@ -248,6 +255,13 @@ export default function BitPage() {
       <MergeHint jokeId={id} onMerged={(main) => (main === id ? d.reload() : router.replace(`/joke/${encodeURIComponent(main)}` as any))} />
       <BitTalk jokeId={id} shortName={shortName} talk={talk} />
       {!talk.chat && <T v="small">Ask anything about this bit below: “did I ever do this?”, “what else do I have like it?”, “tighten the second line”. Answers come with Keep as a line.</T>}
+
+      {memos.length > 0 && (
+        <View style={{ gap: 4 }} testID="bit-memos">
+          <T v="eb" accessibilityRole="header">Voice memos</T>
+          <RecRows recs={memos} testID="bit-memo" />
+        </View>
+      )}
 
       <View style={{ gap: 8 }} testID="bit-elsewhere">
         <T v="eb">Elsewhere</T>

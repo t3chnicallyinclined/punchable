@@ -56,7 +56,7 @@ export function WorkerLine({ what = 'This', testID, worker, waitingFor, note }: 
     return (
       <View testID={testID || 'waiting-transcriber'} accessibilityRole={'status' as any} style={{ padding: 10, borderRadius: 12, backgroundColor: C.warnBg, gap: 2 }}>
         <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 14, color: C.amber }}>Waiting for a transcript</Text>
-        <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut }}>{note || 'Transcription happens on your phone for now; this file is waiting.'}</Text>
+        <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut }}>{'Nothing transcribes this file yet. Sets you record in the iPhone app are transcribed there.'}</Text>
       </View>
     );
   }

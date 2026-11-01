@@ -3,8 +3,10 @@
 // on the phone, expo-audio in the background with the screen locked). NOTHING RECORDS UNTIL HE TAPS THE RED DISC
 // (lib/RecordControl): before that the clock reads 0:00 and Next bit runs the clock alone. While taping, the disc is a
 // red square: tap = stop AND save (Voice Memos; stopping is not loss). Discard is behind Close (top-leading): an action
-// sheet Discard / Save the set / Keep going. Saving hands the tape to the upload queue (retried if the venue has no
-// signal). A phone call reads "Paused by a call" and the disc reads Resume. The screen stays awake.
+// sheet Discard / Save the set / Keep going. Saving keeps the tape on the phone (Documents/recordings) and queues its
+// transcription there (lib/recordings, SPEC 2026-10-31 §7): only the words go up, as POST /api/sets/transcript. The
+// web cannot transcribe a file, so there the tape goes to the upload queue and waits on the server (ADR 0012). A
+// phone call reads "Paused by a call" and the disc reads Resume. The screen stays awake.
 // Notes (2026-10-29, SPEC §2): each bit row is its own 44-pt button that opens the notes sheet (/bitnotes, a nonmodal
 // form sheet over this screen, fed from lib/stageNotes); the clock and the hint are inert; Next bit lives ONLY on the
 // 60-pt dock control and in the sheet's footer, so a thumb aiming at Next can never land on a row.
@@ -21,6 +23,7 @@ import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordC
 import { type RecordState, nextRecordState, statusWord } from '@/rules/recorderLogic';
 import { stageRowLabel } from '@/rules/setListRules';
 import { enqueueUpload } from '@/lib/uploads';
+import { addRecording, recordingsSupported } from '@/lib/recordings';
 import { Build } from '@/lib/simple';
 import { stageNotes } from '@/lib/stageNotes';
 import { clockMs } from '@/rules/format';
@@ -108,9 +111,16 @@ export default function Stage() {
     setRec(nextRecordState(recRef.current, 'stop'));
     try {
       const r = await recorder.stop();
-      const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt: new Date(Date.now() - r.durationMs).toISOString(), showGroup: id });
-      haptics.success();
-      ui.snack(res.queued ? `Saved · ${clockMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${clockMs(r.durationMs)}`);
+      const recordedAt = new Date(Date.now() - r.durationMs).toISOString();
+      if (recordingsSupported) {
+        await addRecording(r, { kind: 'set', recordedAt, board: { id, title: B?.board.title || 'Set' }, title: B?.board.title || null });
+        haptics.success();
+        ui.snack(`Set saved · ${clockMs(r.durationMs)} · transcribing on this phone`);
+      } else {
+        const res = await enqueueUpload(r, { kind: 'set', filename: r.name, title: B?.board.title || 'Set', durationS: r.durationMs / 1000, recordedAt, showGroup: id });
+        haptics.success();
+        ui.snack(res.queued ? `Saved · ${clockMs(r.durationMs)} · it goes up when there’s signal` : `Saved · ${clockMs(r.durationMs)} · it waits on the server. Sets taped in the iPhone app get their words right away.`);
+      }
       setRec(nextRecordState('saving', 'saved'));
       back();
     } catch (e: any) {
@@ -118,7 +128,7 @@ export default function Stage() {
       // that cannot resume, so the disc goes back to a fresh take
       setRec(nextRecordState('saving', 'failed'));
       setMs(0);
-      ui.snack(`Couldn’t save the set: ${e?.message || e}. The tape is still on this phone.`);
+      ui.snack(`Couldn’t save the set: ${e?.message || e}. The tape is still on this ${native ? 'phone' : 'device'}.`);
     } finally {
       saving.current = false;
     }
@@ -132,6 +142,7 @@ export default function Stage() {
   };
   // Close while taping: the loss is the discard, so that is what the sheet is about (HIG/modality)
   const close = () => {
+    if (rec === 'saving') return;       // the save is already stopping the take and will leave on its own
     if (!taping) return back();
     if (!native) return setAsk(true);
     actionSheet({ title: 'Leave the stage?', message: `${clockMs(ms)} on tape.`, options: [

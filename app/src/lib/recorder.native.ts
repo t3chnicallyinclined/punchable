@@ -5,7 +5,8 @@
 //   - The audio session records in the background (app.json UIBackgroundModes: audio) and does not mix, so a locked
 //     phone at the stage edge keeps taping. expo-audio 58 does not expose the AVAudioSession mode: ios/AudioRecorder.swift
 //     sets `.playAndRecord, mode: .default` itself (measurement mode, AGC off, would be a config plugin: a follow-up).
-//   - The screen stays awake while a tape runs (expo-keep-awake, one tag, released on stop and cancel).
+//   - The screen stays awake while a tape runs (expo-keep-awake, one tag, released on stop and cancel). lib/audioBusy
+//     says a tape is running, so the transcription queue waits and a memo does not play over it.
 //   - A phone call: expo-audio pauses the recorder and resumes it when the call ends (ios/AudioModule.swift
 //     handleInterruptionBegan / resumeInterruptedPlayers). Here the clock notices the gap (interrupted() is true, the
 //     elapsed time holds) and his Resume tap restarts it if the system did not. The file is the same file throughout.
@@ -13,25 +14,25 @@
 //     one at the uri remembered at start, and stop() hands that one back.
 //   - A wired or USB mic is preferred over the built-in one; a Bluetooth headset is never the input while another
 //     exists (expo-audio opens the session with allowBluetoothHFP, which would tape the room at telephone quality).
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AudioModule, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import type { RecordingStatus } from 'expo-audio';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import type { Rec, Recording } from './recorderBase';
+import { setRecording } from './audioBusy';
+import { stopLocal } from './localPlay';
 import { KEEP_AWAKE_TAG, SET_RECORDING, clockElapsed, clockObserve, clockPause, clockResume, clockStart, meterLevel, pickInput } from '@/rules/recorderLogic';
 import type { Clock } from '@/rules/recorderLogic';
 
 export type { Rec, Recording } from './recorderBase';
 
-let modeSet = false;
 async function prepareSession() {
   const p = await AudioModule.requestRecordingPermissionsAsync();
   if (!p.granted) throw new Error('Microphone access is off. Allow it in Settings › Punchable.');
-  if (!modeSet) {
-    // AudioMode fields: docs.expo.dev/versions/v58.0.0/sdk/audio/#audiomode (no category/mode fields exist there)
-    await setAudioModeAsync({ allowsRecording: true, allowsBackgroundRecording: true, shouldPlayInBackground: true, playsInSilentMode: true, interruptionMode: 'doNotMix' });
-    modeSet = true;
-  }
+  // Set on EVERY start, never cached: playing a memo (lib/localPlay.native) switches the mode to playback.
+  // AudioMode fields: docs.expo.dev/versions/v58.0.0/sdk/audio/#audiomode (no category/mode fields exist there)
+  stopLocal();
+  await setAudioModeAsync({ allowsRecording: true, allowsBackgroundRecording: true, shouldPlayInBackground: true, playsInSilentMode: true, interruptionMode: 'doNotMix' });
 }
 
 const awake = (on: boolean) => (on ? activateKeepAwakeAsync(KEEP_AWAKE_TAG) : deactivateKeepAwake(KEEP_AWAKE_TAG)).catch(() => {});
@@ -45,6 +46,21 @@ export function useRecorder(): Rec {
   const starting = useRef(false);
   const clock = useRef<Clock>(clockStart(0));
   const firstUri = useRef<string | null>(null);
+  const alive = useRef(true);
+  // The screen went away (a start still opening the mic, or a take nobody saved): nothing may keep saying "recording",
+  // or the transcription queue would wait for good (lib/audioBusy) [review].
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (st.current === 'recording' || st.current === 'paused') {
+        recorder.stop().catch(() => {});
+        st.current = 'stopped';
+      }
+      setRecording(false);
+      void awake(false);
+    };
+  }, [recorder]);
 
   return useMemo<Rec>(() => {
     // One native getStatus per call; the clock learns whether the system paused or resumed the recorder.
@@ -79,9 +95,15 @@ export function useRecorder(): Rec {
             recorder.stop().catch(() => {});
             throw new Error('The microphone didn’t start. Close other audio apps and try again.');
           }
+          if (!alive.current) {          // the screen closed while the microphone opened
+            recorder.stop().catch(() => {});
+            st.current = 'stopped';
+            return;
+          }
           firstUri.current = recorder.uri;
           clock.current = clockStart(Date.now());
           st.current = 'recording';
+          setRecording(true);
           void awake(true);
         } finally {
           starting.current = false;
@@ -106,9 +128,13 @@ export function useRecorder(): Rec {
       },
       async stop(): Promise<Recording> {
         const durationMs = clockElapsed(clock.current, Date.now());
-        await recorder.stop();
-        st.current = 'stopped';
-        void awake(false);
+        st.current = 'stopped';          // before the await: nothing else may stop this take a second time [review]
+        try {
+          await recorder.stop();
+        } finally {
+          setRecording(false);
+          void awake(false);
+        }
         const reset = !!lastStatus.current?.mediaServicesDidReset || !!lastStatus.current?.hasError;
         const uri = (reset && firstUri.current) || recorder.uri || firstUri.current;
         if (!uri) throw new Error('The recording was not saved');
@@ -124,6 +150,7 @@ export function useRecorder(): Rec {
       cancel() {
         if (st.current === 'recording' || st.current === 'paused') recorder.stop().catch(() => {});
         st.current = 'stopped';
+        setRecording(false);
         void awake(false);
       },
       elapsedMs() {

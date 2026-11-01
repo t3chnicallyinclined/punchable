@@ -17,15 +17,17 @@ const SQUARE = 30;
 
 /** `busy`: the microphone is being opened (the tap landed; nothing to do but wait). The disc dims and ignores taps
  *  until the recorder answers, so a second tap cannot start a second take over the first. */
-export function RecordButton({ state, interrupted, busy, onStart, onStop, onResume, testID = 'rec' }: {
+export function RecordButton({ state, interrupted, busy, onStart, onStop, onResume, testID = 'rec', stopLabel = 'Stop and save the recording' }: {
   state: RecordState; interrupted?: boolean; busy?: boolean; onStart: () => void; onStop: () => void; onResume: () => void; testID?: string;
+  /** VoiceOver's word for the square ("Stop and save the memo" on the memo recorder) */
+  stopLabel?: string;
 }) {
   const recording = state === 'recording' && !interrupted;
   const paused = state === 'paused' || (state === 'recording' && !!interrupted);
   const saving = state === 'saving';
   const starting = !!busy && state === 'idle';
   const held = saving || starting;
-  const label = saving ? 'Saving' : starting ? 'Starting' : recording ? 'Stop and save the recording' : paused ? 'Resume recording' : 'Start recording';
+  const label = saving ? 'Saving' : starting ? 'Starting' : recording ? stopLabel : paused ? 'Resume recording' : 'Start recording';
   const press = () => { if (held) return; if (recording) onStop(); else if (paused) onResume(); else onStart(); };
   return (
     <Pressable testID={`${testID}-main`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: held, busy: held }} disabled={held} onPress={press}

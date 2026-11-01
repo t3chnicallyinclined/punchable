@@ -19,7 +19,7 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Punchable uses the microphone to record your sets and voice notes, so it can find each joke and measure the laughs. Audio goes only to your own server."
+        "NSMicrophoneUsageDescription": "Punchable records your sets and voice memos on this iPhone. The audio stays on your phone."
       },
       "associatedDomains": [
         "applinks:punchable.io"
@@ -94,7 +94,13 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Punchable records your sets and voice notes so it can find each joke and measure the laughs. Audio goes only to your own server."
+          "microphonePermission": "Punchable records your sets and voice memos on this iPhone. The audio stays on your phone."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "speechRecognitionPermission": "Punchable turns your memos and sets into text on this iPhone so it can file each idea on the right bit. Only the words leave your phone."
         }
       ],
       "expo-asset",

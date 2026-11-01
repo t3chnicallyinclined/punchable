@@ -618,7 +618,7 @@ function NotesTab({ J, conn }: { J: any; conn: Connections | null }) {
   return (
     <View testID="joke-notes" style={{ gap: 10 }}>
       {!!note && <View style={s.inner}><View style={s.row}><T v="small" style={{ flex: 1 }}>Note from the catalog pass</T><AIBadge /></View><T>{note}</T></View>}
-      <T v="mut">Voice notes that mention this bit show up here once a note is transcribed.</T>
+      <T v="mut">Voice memos that mention this bit show up here once they’re transcribed.</T>
       {!!conn?.notes?.length && <T v="small">{conn.notes[0]}</T>}
     </View>
   );

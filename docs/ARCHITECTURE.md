@@ -280,7 +280,7 @@ structure; visual values beyond the HIG's numbers are in `docs/design/DESIGN.md`
    resolution), and `tests/static.cycles.test.mjs` must try the bare specifier before appending extensions or edges
    inside `src/rules` vanish from the graph. Holds `format.ts` (one `mmss`, `monthYear`, `fmtDate`, `MONTHS`, replacing
    four formatters and six month arrays), `sayRules`, the rules half of `laughs`, `layoutRules`, `routeTable`, `retry`,
-   `flags`, `searchRows`, `cloudMath`, `bitWorkRules`, `recorderLogic`, `uploadsCore`.
+   `flags`, `searchRows`, `cloudMath`, `bitWorkRules`, `recorderLogic`, `uploadsCore`, `memoRules` (2026-10-31).
 2. **One API client, and the upload path's real bug** **[review]**: `src/api/client.ts` exports `authHeaders()` and
    `uploadHeaders()`; `uploads.native.ts` uses them instead of its own Bearer header (C). Today a 401 from the
    background upload is treated as permanent and **deletes the recording from the queue** (the file stays on disk,

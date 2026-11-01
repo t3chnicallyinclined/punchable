@@ -1,5 +1,6 @@
 // Bits (MixBits, docs/UX_2026-10.md): every bit as a list, a status dot (kills · working · fresh · resting) and how
-// long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Notes · Map;
+// long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Memos · Map
+// (Memos: the voice memos on this phone with play, then the earlier ones; its toolbar mic records one, SPEC 2026-10-31);
 // "N pairs look like the same idea → Review" when the merge judge found some. One list request, virtualized.
 // A search also asks /api/search for the taped moments that match ("In your sets": lib/MomentRow), so a word he half
 // remembers saying on stage comes back with where and when, not only the bits that carry it.
@@ -15,7 +16,7 @@ import { ApiError, JokeSummary, get, useApi } from '@/lib/api';
 import { haptics } from '@/lib/haptics';
 import { useNewBit } from '@/lib/newBit';
 import { mmss } from '@/rules/format';
-import { VoiceMemos } from '@/lib/memos';
+import { PhoneMemos, VoiceMemos } from '@/lib/memos';
 import { MomentRow } from '@/lib/MomentRow';
 import type { SearchResult } from '@/rules/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
@@ -151,7 +152,15 @@ export default function Bits() {
     onChangeText: (e) => setQ(e.nativeEvent.text), onSearchButtonPress: () => { if (question) askIt(); }, onCancelButtonPress: () => setQ(''),
   } : undefined;
   // HIG/segmented-controls: Map is a navigation, not a view, so it is a header button, not a third segment
-  const mapBtn = native ? (
+  const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo' } } as any);
+  const mapBtn = !native ? null : view === 'notes' ? (
+    // Memos: sorting is for bits, so the mic takes the sort menu's place (SPEC 2026-10-31 §4)
+    <Stack.Toolbar placement="right">
+      <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
+      <Stack.Toolbar.Button icon="mic" accessibilityLabel="Record a memo" onPress={recordMemo}>Record a memo</Stack.Toolbar.Button>
+      <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
+    </Stack.Toolbar>
+  ) : (
     <Stack.Toolbar placement="right">
       {/* HIG/toolbars: the primary action ("+") at the trailing end; a pop-up for the sort, labelled with the current choice */}
       <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
@@ -160,7 +169,7 @@ export default function Bits() {
       </Stack.Toolbar.Menu>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
     </Stack.Toolbar>
-  ) : null;
+  );
   const right = native ? undefined : (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <IconBtn testID="bits-new" label="New bit" onPress={newBit}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></IconBtn>
@@ -203,7 +212,7 @@ export default function Bits() {
           {moments.map((m, i) => <MomentRow key={m.id} m={m} testID={`bits-moment-${i}`} />)}
         </View>
       )}
-      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Notes']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
+      <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Memos']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
       {view === 'bits' && !dq && !native && (
         <View testID="bits-sort" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Sort">
           <T v="small" style={{ marginRight: 4 }}>Sort</T>
@@ -230,6 +239,7 @@ export default function Bits() {
       <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} onRefresh={list.reload}>
         {mapBtn}
         {header}
+        <PhoneMemos />
         <VoiceMemos />
       </Screen>
     );

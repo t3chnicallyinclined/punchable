@@ -1,4 +1,4 @@
-# Punchable: start here (handover, 2026-10-28, updated 2026-10-29 after T4 and the architecture decision)
+# Punchable: start here (handover, 2026-10-28, updated 2026-10-31: voice memos and on-device transcription, committed for the next build)
 
 Read this first in a new session. It says what is live, what learns, what is open, and the traps that cost time
 today. It is public-safe: no secrets, no server names, no material. Private operating state (deploy log with image
@@ -18,6 +18,7 @@ The Rust port of the services (the standing direction, the workspace, the migrat
 | Surface | State |
 |---|---|
 | Web | punchable.io, API and web images from `51bfdf1` (the workbench), rolled out 2026-10-29. Tabs Tonight · Bits · Sets. The cloud map computes in ~4 s on first request (1,576 bits, 14 groups), then from a 5-minute cache. |
+| iPhone, next build | **Not built yet (EAS free iOS quota until Nov 1; push and build need the owner's go).** On `main`, local commits of 2026-10-31: voice memos recorded in Punchable and **on-device transcription** of memos and taped sets (`docs/design/SPEC-2026-10-31-voice-memos.md`; the new native module `expo-speech-recognition` 58.0.1, so the next binary is required: an older dev client will not have it and treats transcription as unavailable). Plus six SDK 58 patch bumps for expo-doctor 20/20. Owner checks for that build: open item 4. |
 | iPhone | TestFlight **0.1.0 (18)**, built from `617ae81` and auto-submitted 2026-10-30 (Set lists are his with the drafts folded and archive/undo, notes on stage, the rules layer, the upload 401 fix, Reconnect Google web-only); 17 had the Skia cloud + pinch fix; 12 had the workbench. **Owner checks on 18** are the three in open item 0b. Older: TestFlight **0.1.0 (12)**, built from `51bfdf1` (the workbench), auto-submitted 2026-10-29; 11 had the record control, Set lists · Recorded, Bits Recent / + / sort and the cloud map; 10 had search over everything. Builds 4-6 crashed (self-import, see ENGINEERING.md §1); 7-11 are good. |
 | API + hosted worker | Python API behind Keycloak; the worker runs Claude (Opus 5.5 riff / punch-up / set analysis, Sonnet 5.5 ask / bridge, Haiku 5.5 merge / triage) with a daily budget. No home PC in the loop. |
 | Database | Hosted SurrealDB is the single source of truth (online-first since 2026-10-27). Nightly backup Job to R2 with a bucket-scoped token; the Bugsink database rides along. |
@@ -34,7 +35,16 @@ The Rust port of the services (the standing direction, the workspace, the migrat
 - **Bits**: opens on what he touched last (Recent; Performed / Strongest in the toolbar's sort menu), "+" opens a fresh bit as a document (created at once, the editor focused; the first Save names it from its first line); a search shows the matching bits and, under "In your sets", the taped moments that say it (tap = the set at that second, playing); a bit's page is the **workbench** (2026-10-29): tap the text to edit (Save = a NEW version, the old ones stay, undoable; `POST /api/jokes/<id>/versions`), the input bar talks to a conversation pinned to this bit (`lib/BitTalk`; `POST /api/ask/chats {question, joke}`: the bit's versions, idea and tapes lead every turn's sources) with **Keep as a line** and **Merge “X” into this** under each answer, or adds a typed line as a version; **Elsewhere** lists the tapes it is on, taped moments that sound like it (**link it**) and bits that sound like it (**merge it in**); a Bits search has **Select → Make these one bit** (`pickMain`: most versions, then nights); **Map** is the **cloud** by default (`/api/map/cloud`; on the phone `lib/Cloud.native` draws it with **react-native-skia** on the GPU and turns it on the UI thread with Reanimated, the web's `lib/Cloud` is SVG; every bit placed by its vector, 3-axis PCA, named k-means groups, a slow turn, depth as size) with the older links **galaxy map** (`/map`: clusters by likeness, edge kinds by
   colour and dash, status by shape, shuffle / centre / find / legend isolate); write + riff; merge same-idea notes.
 - **Sets**: segments **Set lists · Recorded** (a set exists once it is taped); set lists (boards) with timing, gaps, bridges; **Record** (`/stage/[id]`, the list's prominent action) and the free recorder (`/record`) share the Voice Memos control (`lib/RecordControl`, 2026-10-29): nothing tapes until the red disc, the square stops and saves, Discard behind Close.
-- **Recorder** (sets only; jots and questions are text): 48 kHz stereo AAC .m4a, keep-awake while taping, real dBFS
+- **Voice memos and on-device transcription (2026-10-31, committed, not yet in a build)**: Tonight ⋯, a bit's ⋯ and
+  Bits › Memos' mic open `/record?kind=memo`, which starts recording as it opens (a memo started on a bit is filed on
+  that bit). The audio stays in the phone's Documents (`lib/recordings.native`: one index, file names only); the phone
+  transcribes it (`lib/transcribe.native`, Apple's on-device recognizer only, never its servers) and sends only the
+  words: a memo → `POST /api/ideas` (auto-filed, or `merge/undo` + `merge/attach` onto the bit it came from), a taped
+  set or a memo over 4000 characters → `POST /api/sets/transcript`. Record and Stage now keep the set on the phone
+  instead of uploading it. Rows (`lib/RecRows`) in Bits › Memos, on a bit's page and in Sets › Recorded › On this
+  iPhone show the state, play the audio, Delete (confirms), Not this bit, Try again. All rules in
+  `rules/memoRules.ts` (tests/memoRules.test.mjs). **No server change.** Laughs still need audio processing (item 6).
+- **Recorder** (sets and memos; jots and questions are text): 48 kHz stereo AAC .m4a, keep-awake while taping, real dBFS
   meter on Record and Stage, a phone call pauses the clock ("Paused by a call", 60-pt Resume), a media-services reset
   keeps the partial file, built-in mic preferred over a Bluetooth headset mic. Logic in `app/src/lib/recorderLogic.ts`
   (32 unit checks). Measurement mode / AGC off needs a config plugin and is not done.
@@ -80,7 +90,7 @@ writes them as a version of the main first.
 - Jots and questions are typed. Voice records sets AND voice memos (owner 2026-10-31, replaces "voice is for sets only"):
   memos are recorded in Punchable, the audio stays on his phone, the words go to the server. A cloud backup of the
   audio comes later as a paid add-on, so the same recordings play on the phone and the web/desktop (the words already
-  show everywhere). Not built yet; the experts spec it first.
+  show everywhere). The memo recorder and on-device transcription are built (2026-10-31, item 4); the paid backup is not.
 - HIG first on iPhone: standard, familiar, one-handed in the dark. Dark default, light must work.
 - No review step is ever required; AI inferences show as the current state with an AI badge and he edits.
 - No Sentry SaaS: crash reports go to the self-hosted Bugsink.
@@ -152,12 +162,22 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    dead alerts work (config reload, no app downtime).
 3. Worker crash reporting is live; still unproven end to end: run the worker command under "Verifying a crash lands" in
    `infra/OBSERVABILITY.md` once and see the event in Bugsink.
-4. **Recorded sets are a dead end right now (found 2026-10-29).** A set taped on the phone is uploaded and queued as
-   `process_set`, which nothing runs: the server stopped transcribing on 2026-10-27 and the shipped app does not
-   transcribe (the SpeechTranscriber bridge exists only in a separate build). Eight test tapes sat there and fired the
-   alert; dropped (`POST /api/jobs/<id>/drop`). Owner decision needed: on-device transcription in the production build
-   (ios-dev-expert; the standing decision) or a cloud speech API from the hosted worker (audio leaves the box). Until
-   then the Record screen should say so.
+4. **Transcription is on the phone now (built 2026-10-31, committed locally, NOT pushed, NOT built; was: recorded
+   sets were a dead end since 2026-10-27).** Spec agreed by the iOS dev and design experts, both reviewed the diff and
+   their findings are fixed (`docs/design/SPEC-2026-10-31-voice-memos.md`). Route: `expo-speech-recognition` 58.0.1
+   (SFSpeechRecognizer, `requiresOnDeviceRecognition`; the JS refuses to start unless on-device is supported, because
+   the package would otherwise fall back to Apple's servers silently). **Uncompiled until the EAS build** (no Mac).
+   Owner checks on that build, in this order: (1) Tonight ⋯ › Record a memo: it records at once; the square saves;
+   Bits › Memos shows "Transcribing…" then "On <bit>" or "New idea"; the play button plays it through the speaker;
+   (2) the first transcription asks for Speech Recognition once; (3) a bit's ⋯ › Record a memo files it on that bit;
+   (4) tape a 1-2 minute set from a set list: Sets › Recorded › On this iPhone shows the percent, then "Sent · finding
+   the bits", and the set appears; (5) lock the phone mid-transcription of a set and come back: "Paused", then it
+   restarts; (6) Settings › Connections › Transcription reads "On this iPhone". Unverified until then: the pod
+   compiles; a 48 kHz stereo file transcribes; timestamps across long files; a 20-45 min set's time and memory
+   (a jetsam kill shows in Settings › Privacy › Analytics, not Bugsink). Still waiting on the server and saying so:
+   YouTube links, older uploads, sets taped in the web app. Follow-ups: spec §10 (locale patch, idea de-dupe key,
+   Voice Memos share extension, paid audio backup, quick action / Control Center, Recently deleted, background
+   processing task, marks on the transcript route, linking a phone tape to its server set for playback).
 5. **The architecture is signed off (owner, 2026-10-29 evening: "keep it going and all these fixes in") and the first
    six lanes are in: `docs/ARCHITECTURE.md`** (reviewed by the Punchable, iOS dev and iOS design experts, corrections
    marked [review]), the decisions in `docs/adr/`, the index `docs/README.md`, `CLAUDE.md` for agents, a PR template.
@@ -191,5 +211,6 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 11. Pin the Bugsink image by digest.
 12. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
 
-Done 2026-10-29: the bit workbench (edit as versions, the bit's conversation, merge/link from its page, Select → one bit), the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
+Done 2026-10-31 (local commits, not pushed): voice memos recorded in Punchable, on-device transcription of memos and
+taped sets, the copy that said "transcription happens on your phone for now" or sent him to Drive and the PC. Done 2026-10-29: the bit workbench (edit as versions, the bit's conversation, merge/link from its page, Select → one bit), the Voice Memos record control, Set lists · Recorded, Bits Recent/+/sort, the cloud map, Punchable's own alert route, the drop route for dead jobs. Done 2026-10-28: worker crash reporting wired and rolled out; `holdToTalk.native.ts` removed (the phone's input button
 now only focuses the field, jots are typed); search over everything shipped (API, web, worker, TestFlight 10).

@@ -27,7 +27,8 @@ run with `PK_REQUIRE_EXTERNAL=1` to make a missing one fail instead of skip.
 - Edition 2024, `unsafe` forbidden, `thiserror` in libraries, `anyhow` in binaries, clippy pedantic clean, rustfmt 120,
   `//!` module docs that say what a module is for.
 - The app: HIG first on iPhone (`docs/design/HIG.md`), the platform-split rules in `docs/ENGINEERING.md`, the layout in
-  `docs/ARCHITECTURE.md` section 7. Jots and questions are typed; voice is for recording sets only.
+  `docs/ARCHITECTURE.md` section 7. Jots and questions are typed; voice records sets and voice memos (owner 2026-10-31), transcribed on the phone
+  (`docs/design/SPEC-2026-10-31-voice-memos.md`); the audio stays on the phone.
 - Commit with the owner's git identity (from `git log -1 --format='%an <%ae>'`), stage paths explicitly (never
   `git add -A`), end the message with a `Co-Authored-By:` line for the agent that helped. No time estimates in docs.
 - Never on the server: `docker run`, `ship.sh test`, touching other namespaces beyond the agreed mounts.

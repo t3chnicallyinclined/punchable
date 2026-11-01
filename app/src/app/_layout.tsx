@@ -20,6 +20,7 @@ import * as Photos from '@/lib/photos';
 import { SET_MIN_S } from '@/lib/importgroup';
 import { installCrashReporter, setCrashContext } from '@/lib/crashReport';
 import { CrashScreen } from '@/lib/CrashScreen';
+import { startRecordings } from '@/lib/recordings';
 import type { ErrorBoundaryProps } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,6 +37,16 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 // A fatal JS error in a release build ends the process (RN: RCTExceptionsManager.reportFatal -> RCTFatal). This writes
 // the error to the phone first, so the next launch shows it on /login under "Last crash" (lib/crashReport.ts).
 installCrashReporter();
+
+/** The phone's recordings queue (lib/recordings, SPEC 2026-10-31): memos and taped sets are transcribed on the phone
+ *  and their words sent. Started once he is signed in (the words need his session); a no-op on the web. */
+function RecordingsQueue() {
+  const sess = useSession();
+  useEffect(() => {
+    if (!sess.enabled || sess.signedIn) startRecordings();
+  }, [sess.enabled, sess.signedIn]);
+  return null;
+}
 
 /** Every crash record carries where the app was. */
 function CrashContext() {
@@ -140,6 +151,7 @@ function RootLayout() {
             <BoardProvider>
               <PhotosBadge />
               <CrashContext />
+              <RecordingsQueue />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
                 {/* The three tabs, each its own stack: app/(tabs). Route groups keep every URL (/joke/x, /list/x, /inbox, ...). */}
                 <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />

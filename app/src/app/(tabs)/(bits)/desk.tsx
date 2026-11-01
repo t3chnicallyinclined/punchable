@@ -299,7 +299,7 @@ function NotesList() {
       {n.data && !n.data.items.length && <Empty text="Talk out a premise. Funny lines get pulled out and filed." />}
       <List>
         {(n.data?.items || []).map((it) => (
-          <ListRow key={it.file} title={it.title || 'Voice note'} sub={`${(it.received_at || '').slice(0, 10)}${it.duration_s ? ` · ${Math.round(it.duration_s)} s` : ''} · ${it.status === 'queued' ? 'queued for processing' : it.status}`} onPress={() => router.push('/notes' as any)} />
+          <ListRow key={it.file} title={it.title || 'Voice memo'} sub={`${(it.received_at || '').slice(0, 10)}${it.duration_s ? ` · ${Math.round(it.duration_s)} s` : ''} · ${it.status === 'queued' ? 'queued for processing' : it.status}`} onPress={() => router.push('/notes' as any)} />
         ))}
       </List>
     </View>

@@ -278,6 +278,10 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Sets tab: segments **Set lists · Recorded** (equal-width nouns, HIG/segmented-controls; the count in a header row);
   the list screen's prominent action is **Record** with `record.circle`, never `play.fill` (play means playback).
 - Audio session: record category, `doNotMix`, background recording (kept, `lib/recorder.native`).
+- **Memo mode** (`/record?kind=memo`, 2026-10-31, SPEC-2026-10-31-voice-memos.md §5): the one exception to "nothing
+  records until the disc": it starts as it opens (the tap on "Record a memo" is the decision, as in Voice Memos).
+  Title "Memo", "For <bit>" under the clock when started on a bit, no target chips or Mark, the same square and the
+  same Close sheet ("Leave the memo?").
 
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
 - **The cloud (default since 2026-10-29, `lib/Cloud.native.tsx` on Skia / `lib/Cloud.tsx` SVG on the web, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
