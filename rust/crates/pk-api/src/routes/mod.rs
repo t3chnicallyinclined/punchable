@@ -10,6 +10,8 @@ pub mod metrics;
 
 use std::sync::Arc;
 
+use pk_kb::View;
+
 use crate::error::ApiError;
 use crate::index::AppIndex;
 use crate::query::Query;
@@ -30,12 +32,27 @@ pub fn pick(q: &Query) -> Result<(), ApiError> {
     }
 }
 
-/// The data and the index a request reads.
+/// The data and the index (the view plus the Bits list rows) a request reads.
 pub async fn prepare(st: &AppState, q: &Query) -> Result<(Arc<Data>, Arc<AppIndex>), ApiError> {
     let d = st.data().await?;
     pick(q)?;
     let idx = d.index(q.include_hidden()).await?;
     Ok((d, idx))
+}
+
+/// The data and the view only, for a route that reads no Bits list row.
+pub async fn prepare_view(st: &AppState, q: &Query) -> Result<(Arc<Data>, Arc<View>), ApiError> {
+    let d = st.data().await?;
+    pick(q)?;
+    let v = d.view(q.include_hidden()).await?;
+    Ok((d, v))
+}
+
+/// The data alone, for a route that reads only the rows.
+pub async fn prepare_rows(st: &AppState, q: &Query) -> Result<Arc<Data>, ApiError> {
+    let d = st.data().await?;
+    pick(q)?;
+    Ok(d)
 }
 
 #[cfg(test)]

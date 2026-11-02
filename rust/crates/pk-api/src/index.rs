@@ -6,7 +6,7 @@
 //! its arithmetic (`display::py_sum`, `display::r2`), so the rows compare equal as values.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 use indexmap::IndexMap;
 use pk_core::py::truthy;
@@ -16,6 +16,7 @@ use regex::Regex;
 use serde_json::{Map, Value};
 
 use crate::display::{punch_line, py_sum, r2, short_name_of, short_title};
+use crate::snapshot::Rows;
 
 /// `STAGE_ORDER` (the Bits list's order).
 pub const STAGE_ORDER: [&str; 5] = ["working", "testing", "to_try", "idea", "retired"];
@@ -59,8 +60,8 @@ struct Touch {
 /// The per-view index.
 #[derive(Debug)]
 pub struct AppIndex {
-    /// The view it indexes (visible, or with hidden material on request).
-    pub view: View,
+    /// The view it indexes (visible, or with hidden material on request); shared with the routes that need only it.
+    pub view: Arc<View>,
     /// Set node ids, by date.
     pub sets: Vec<String>,
     /// How many performance nodes there are.
@@ -535,7 +536,7 @@ impl<'a> Builder<'a> {
 
 impl AppIndex {
     /// Index `view`; `working` is the database's Working per joke (`joke.working`, `joke.working_sets`).
-    pub fn build(view: View, ai: &Ai, working: &BTreeMap<String, (bool, Vec<String>)>, metas: &SetMetas) -> Self {
+    pub fn build(view: Arc<View>, ai: &Ai, working: &BTreeMap<String, (bool, Vec<String>)>, metas: &SetMetas) -> Self {
         let (summaries, sets, performances) = {
             let b = Builder::new(&view, ai, working, metas);
             let mut sets: Vec<(&str, &String)> = view
@@ -565,38 +566,111 @@ impl AppIndex {
     }
 }
 
-/// `visible_view`: the view without `hidden: true` jokes and units and the edges that touch them, re-indexed.
-///
-/// Built straight from the database rows (`None` when nothing is hidden: the whole view is the visible one), so a
-/// rebuild never builds the whole view first; the whole view is built only for `?include_hidden=1`.
-pub fn visible(snap: &pk_store::Snapshot, owner_id: &str) -> Option<View> {
-    let hidden: HashSet<&str> = snap
-        .nodes
+/// The ids of the `hidden: true` nodes (jokes and units the comic hid).
+pub fn hidden_ids(snap: &Rows) -> HashSet<&str> {
+    snap.nodes
         .iter()
         .filter(|n| n.get("hidden") == Some(&Value::Bool(true)))
         .filter_map(|n| n.get("id").and_then(Value::as_str))
-        .collect();
-    if hidden.is_empty() {
-        return None;
-    }
+        .collect()
+}
+
+/// The view over the database rows (`Snapshot::view`): everything, or `visible_view` (without `hidden: true` jokes
+/// and units and the edges that touch them, re-indexed) when `include_hidden` is false. Built straight from the rows
+/// with [`View::from_records`]: one clone of each record and no `graph.json` value in between.
+pub fn view_of(snap: &Rows, owner_id: &str, include_hidden: bool) -> View {
+    let hidden = if include_hidden {
+        HashSet::new()
+    } else {
+        hidden_ids(snap)
+    };
     let shown = |id: Option<&Value>| !id.and_then(Value::as_str).is_some_and(|s| hidden.contains(s));
-    let meta = snap.load_info.get("graph_meta").cloned().unwrap_or(Value::Null);
-    let g = serde_json::json!({
-        "version": meta.get("version").cloned().unwrap_or(Value::Null),
-        "generated_at": meta.get("generated_at").cloned().unwrap_or(Value::Null),
-        "runs": meta.get("runs").cloned().unwrap_or(Value::Null),
-        "nodes": snap.nodes.iter().filter(|n| shown(n.get("id"))).collect::<Vec<_>>(),
-        "edges": snap.edges.iter().filter(|e| shown(e.get("src")) && shown(e.get("dst"))).collect::<Vec<_>>(),
-    });
-    let mut v = View::new(&g, Vec::new(), Vec::new(), owner_id);
-    v.undone = snap.decisions.iter().filter_map(pk_kb::Decision::undo_of).collect();
-    v.decisions.clone_from(&snap.decisions);
-    Some(v)
+    let meta = snap.load_info.get("graph_meta").unwrap_or(&Value::Null);
+    let mut v = View::from_records(
+        meta,
+        snap.nodes.iter().filter(|n| shown(n.get("id"))).map(|n| (**n).clone()),
+        snap.edges
+            .iter()
+            .filter(|e| shown(e.get("src")) && shown(e.get("dst")))
+            .map(|e| (**e).clone()),
+        Vec::new(),
+        Vec::new(),
+        owner_id,
+    );
+    v.undone = snap.decisions.iter().filter_map(|d| d.undo_of()).collect();
+    v.decisions = snap.decisions.iter().map(|d| (**d).clone()).collect();
+    v
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn snap(hidden: bool) -> pk_store::Snapshot {
+        let rec = |v: Value| match v {
+            Value::Object(m) => m,
+            _ => unreachable!(),
+        };
+        let d = |v: Value| pk_kb::Decision(rec(v));
+        pk_store::Snapshot {
+            generation: Some(3),
+            loading: false,
+            orphans: 0,
+            load_info: serde_json::json!({"graph_meta": {"version": 2, "generated_at": "2026-01-01", "runs": ["r"]}}),
+            nodes: vec![
+                rec(serde_json::json!({"id": "joke:a", "type": "joke", "title": "A", "stage": "idea"})),
+                rec(serde_json::json!({"id": "joke:b", "type": "joke", "title": "B", "hidden": hidden})),
+                rec(serde_json::json!({"id": "label:x", "type": "label", "name": "x"})),
+                rec(serde_json::json!({"id": "unit:b1", "type": "unit", "text": "b one"})),
+            ],
+            edges: vec![
+                rec(serde_json::json!({"id": "e1", "src": "joke:a", "kind": "tagged", "dst": "label:x"})),
+                rec(serde_json::json!({"id": "e2", "src": "joke:b", "kind": "tagged", "dst": "label:x"})),
+                rec(serde_json::json!({"id": "e3", "src": "unit:b1", "kind": "part_of", "dst": "joke:b"})),
+            ],
+            decisions: vec![
+                d(serde_json::json!({"target": "node", "id": "joke:a", "action": "edit", "after": {"stage": "idea"}})),
+                d(serde_json::json!({"target": "node", "id": "joke:a", "action": "edit", "undo_of": 0})),
+            ],
+            working: BTreeMap::new(),
+        }
+    }
+
+    /// The previous build of the visible view: a `graph.json` value, then `View::new` (the reference `view_of` must
+    /// equal, field for field and in order).
+    fn visible_by_json(snap: &pk_store::Snapshot, owner: &str) -> View {
+        let rows = Rows::from(snap.clone());
+        let hidden = hidden_ids(&rows);
+        let shown = |id: Option<&Value>| !id.and_then(Value::as_str).is_some_and(|s| hidden.contains(s));
+        let meta = snap.load_info.get("graph_meta").cloned().unwrap_or(Value::Null);
+        let g = serde_json::json!({
+            "version": meta.get("version").cloned().unwrap_or(Value::Null),
+            "generated_at": meta.get("generated_at").cloned().unwrap_or(Value::Null),
+            "runs": meta.get("runs").cloned().unwrap_or(Value::Null),
+            "nodes": snap.nodes.iter().filter(|n| shown(n.get("id"))).collect::<Vec<_>>(),
+            "edges": snap.edges.iter().filter(|e| shown(e.get("src")) && shown(e.get("dst"))).collect::<Vec<_>>(),
+        });
+        let mut v = View::new(&g, Vec::new(), Vec::new(), owner);
+        v.undone = snap.decisions.iter().filter_map(pk_kb::Decision::undo_of).collect();
+        v.decisions.clone_from(&snap.decisions);
+        v
+    }
+
+    #[test]
+    fn view_of_is_the_json_built_view() {
+        for hidden in [true, false] {
+            let s = snap(hidden);
+            let rows = Rows::from(s.clone());
+            assert_eq!(hidden_ids(&rows).len(), usize::from(hidden));
+            let whole = format!("{:?}", view_of(&rows, "owner", true));
+            assert_eq!(whole, format!("{:?}", s.view(Vec::new(), "owner")));
+            let vis = view_of(&rows, "owner", false);
+            assert_eq!(format!("{vis:?}"), format!("{:?}", visible_by_json(&s, "owner")));
+            assert_eq!(vis.nodes.contains_key("joke:b"), !hidden);
+            assert_eq!(vis.edges.len(), if hidden { 1 } else { 3 });
+            assert_eq!(vis.undone, vec![0]);
+        }
+    }
 
     #[test]
     fn set_dirs() {

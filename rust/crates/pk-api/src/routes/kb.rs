@@ -34,8 +34,7 @@ fn key_of(v: Option<&Value>) -> String {
 /// `GET /api/labels`.
 pub async fn labels(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());
-    let (_, idx) = super::prepare(&st, &q).await?;
-    let v = &idx.view;
+    let (_, v) = super::prepare_view(&st, &q).await?;
     let get = |n: &Map<String, Value>, k: &str| n.get(k).cloned().unwrap_or(Value::Null);
     let labels: Vec<Value> = v
         .labels
@@ -49,25 +48,26 @@ pub async fn labels(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiR
 /// `GET /api/decisions?limit=`: the newest first, at most 500.
 pub async fn decisions(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());
-    let (_, idx) = super::prepare(&st, &q).await?;
+    // the decision log is the rows' (the same in both views): no view is built for it
+    let d = super::prepare_rows(&st, &q).await?;
     let limit = q.int("limit", "30")?.min(500);
-    let view = &idx.view;
+    let decisions = d.decisions();
     let owner = &st.config().owner_id;
-    let range = py_slice(view.decisions.len(), Some(limit.saturating_neg()), None);
+    let range = py_slice(decisions.len(), Some(limit.saturating_neg()), None);
     let ds: Vec<Value> = range
         .rev()
         .map(|i| {
-            let line = &view.decisions[i];
+            let line = &decisions[i];
             let actor = actor_of(line, owner);
             let mut m = line.0.clone();
             m.insert("index".into(), json!(i));
-            m.insert("undone".into(), json!(view.is_undone(i)));
+            m.insert("undone".into(), json!(d.is_undone(i)));
             m.insert("actor".into(), actor.map_or(Value::Null, |a| json!(a)));
             m.insert("by_kind".into(), by_kind(actor, owner));
             Value::Object(m)
         })
         .collect();
-    Ok(ok(&json!({"decisions": ds, "total": view.decisions.len()})))
+    Ok(ok(&json!({"decisions": ds, "total": decisions.len()})))
 }
 
 /// `GET /api/meta?labels=`: stage counts, who touched what, the top labels, the totals.

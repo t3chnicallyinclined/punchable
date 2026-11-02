@@ -4,17 +4,17 @@
 //! built over it. One [`Data`] per `(meta:state.gen, meta:state.files_rev)`; it is immutable once built, shared
 //! behind an `Arc`, and replaced whole when either changes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write as _;
 use std::sync::Arc;
 
-use pk_kb::Decision;
+use pk_kb::{Decision, View};
 use pk_store::{DecisionRow, EdgeRow, NodeRow, Snapshot, Store, StoreError, from_db, vars};
 use serde_json::{Map, Value, json};
-use tokio::sync::OnceCell;
+use tokio::sync::{OnceCell, Semaphore};
 
 use crate::error::ApiError;
-use crate::index::{Ai, AppIndex, SetMetas, visible};
+use crate::index::{Ai, AppIndex, SetMetas, hidden_ids, view_of};
 
 /// The srcfile path of the learning file (`kb/v0/learning.json` under the data folder).
 pub const LEARNING: &str = "kb/v0/learning.json";
@@ -38,6 +38,37 @@ impl State {
     /// The identity a [`Data`] is built for.
     pub fn key(&self) -> (Option<i64>, Value) {
         (self.generation, self.files_rev.clone())
+    }
+}
+
+/// The rows of one generation (`pk_store::Snapshot` without its state fields), each record behind an `Arc` so the
+/// next generation shares every record a patch did not touch: a patch copies pointers, not records.
+#[derive(Debug, Clone, Default)]
+pub struct Rows {
+    /// `meta:state.load_info`.
+    pub load_info: Value,
+    /// `meta:state.orphans`.
+    pub orphans: i64,
+    /// Every node as a KB dict, in `ord` order.
+    pub nodes: Vec<Arc<pk_kb::Rec>>,
+    /// Every edge as a KB dict, in `ord` order.
+    pub edges: Vec<Arc<pk_kb::Rec>>,
+    /// Every decision line, in `seq` order.
+    pub decisions: Vec<Arc<Decision>>,
+    /// `joke id -> (working, set ids)` for every joke.
+    pub working: BTreeMap<String, (bool, Vec<String>)>,
+}
+
+impl From<Snapshot> for Rows {
+    fn from(s: Snapshot) -> Self {
+        Self {
+            load_info: s.load_info,
+            orphans: s.orphans,
+            nodes: s.nodes.into_iter().map(Arc::new).collect(),
+            edges: s.edges.into_iter().map(Arc::new).collect(),
+            decisions: s.decisions.into_iter().map(Arc::new).collect(),
+            working: s.working,
+        }
     }
 }
 
@@ -71,50 +102,144 @@ pub struct Data {
     pub orphans: i64,
     /// The AI layer.
     pub ai: Arc<Ai>,
-    /// Working per joke, from the database.
-    pub working: BTreeMap<String, (bool, Vec<String>)>,
     /// `corpus/sets/<dir>/meta.json` by folder.
     pub metas: Arc<SetMetas>,
     /// The rows this generation was built from (the next one patches them).
-    snap: Arc<Snapshot>,
+    snap: Arc<Rows>,
     /// `kb/v0/learning.json` as stored, when there is one.
     pub learning: Option<String>,
     /// How long the database read took, seconds.
     pub fetch_s: f64,
-    visible: Arc<AppIndex>,
-    /// Some material is hidden, so the whole view differs from the visible one: it and its index are built on the
-    /// first `?include_hidden=1` only.
+    /// Indexes of the decisions a later line undid (`View.undone`, as a set).
+    undone: HashSet<usize>,
+    /// Some material is hidden, so the whole view differs from the visible one.
     has_hidden: bool,
-    full: OnceCell<Arc<AppIndex>>,
-    /// `PK_OWNER_ID`, for the lazy whole view.
+    /// `[visible, whole]`: each built on the first request that needs it, never with the rows.
+    lazy: [Lazy; 2],
+    /// `PK_OWNER_ID`, for the lazy views.
     owner: String,
+    /// The service's one-at-a-time bound on CPU builds (`AppState::cpu`).
+    cpu: Arc<Semaphore>,
+}
+
+/// One view of a generation and its index, each built at most once, on first use, in `spawn_blocking`.
+#[derive(Debug, Default)]
+struct Lazy {
+    view: OnceCell<Arc<View>>,
+    index: OnceCell<Arc<AppIndex>>,
 }
 
 impl Data {
-    /// The index a request reads: the visible view, or everything on `?include_hidden=1`.
-    pub async fn index(self: &Arc<Self>, include_hidden: bool) -> Result<Arc<AppIndex>, ApiError> {
-        if !include_hidden || !self.has_hidden {
-            return Ok(self.visible());
+    /// A generation over these rows. Cheap (a pass over the nodes and the decisions): the views and their indexes
+    /// are built by the first route that needs them ([`Data::view`], [`Data::index`]).
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one generation's parts, named; called from load and patch only"
+    )]
+    pub fn new(
+        snap: Arc<Rows>,
+        ai: Arc<Ai>,
+        metas: Arc<SetMetas>,
+        learning: Option<String>,
+        st: State,
+        fetch_s: f64,
+        owner_id: &str,
+        cpu: Arc<Semaphore>,
+    ) -> Self {
+        Self {
+            state: st,
+            load_info: snap.load_info.clone(),
+            orphans: snap.orphans,
+            ai,
+            metas,
+            learning,
+            fetch_s,
+            undone: snap.decisions.iter().filter_map(|d| d.undo_of()).collect(),
+            has_hidden: !hidden_ids(&snap).is_empty(),
+            lazy: [Lazy::default(), Lazy::default()],
+            owner: owner_id.to_string(),
+            cpu,
+            snap,
         }
-        let me = Arc::clone(self);
-        self.full
-            .get_or_try_init(|| async move {
-                tokio::task::spawn_blocking(move || {
-                    let v = me.snap.view(Vec::new(), &me.owner);
-                    Arc::new(AppIndex::build(v, &me.ai, &me.working, &me.metas))
-                })
-                .await
-                // a panic in the build is a bug: a 500 (as the Python's exception), and nothing cached, so the
-                // next request tries again
-                .map_err(|e| ApiError::internal("JoinError", e))
-            })
-            .await
-            .cloned()
     }
 
-    /// The index of the visible view (built with the data).
-    pub fn visible(&self) -> Arc<AppIndex> {
-        Arc::clone(&self.visible)
+    fn slot(&self, include_hidden: bool) -> usize {
+        // nothing hidden: the whole view is the visible one, built once
+        usize::from(include_hidden && self.has_hidden)
+    }
+
+    /// The view a request reads: the visible one, or everything on `?include_hidden=1`.
+    ///
+    /// Built once per generation, one CPU build at a time across the service, in a task of its own so a caller that
+    /// hangs up does not throw the work away (the next caller finds it built).
+    pub async fn view(self: &Arc<Self>, include_hidden: bool) -> Result<Arc<View>, ApiError> {
+        let slot = self.slot(include_hidden);
+        if let Some(v) = self.lazy[slot].view.get() {
+            return Ok(Arc::clone(v));
+        }
+        let me = Arc::clone(self);
+        let task = tokio::spawn(async move {
+            let it = Arc::clone(&me);
+            me.lazy[slot]
+                .view
+                .get_or_try_init(|| it.cpu_build(move |d| view_of(&d.snap, &d.owner, slot == 1)))
+                .await
+                .cloned()
+        });
+        task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
+    /// The view and its index (the Bits list rows): what `/api/meta`, `/api/pipeline` and the cloud read. Built like
+    /// [`Data::view`].
+    pub async fn index(self: &Arc<Self>, include_hidden: bool) -> Result<Arc<AppIndex>, ApiError> {
+        let slot = self.slot(include_hidden);
+        if let Some(i) = self.lazy[slot].index.get() {
+            return Ok(Arc::clone(i));
+        }
+        let view = self.view(include_hidden).await?;
+        let me = Arc::clone(self);
+        let task = tokio::spawn(async move {
+            let it = Arc::clone(&me);
+            me.lazy[slot]
+                .index
+                .get_or_try_init(|| {
+                    it.cpu_build(move |d| {
+                        let t = std::time::Instant::now();
+                        let idx = AppIndex::build(view, &d.ai, &d.snap.working, &d.metas);
+                        tracing::debug!(ms = t.elapsed().as_secs_f64() * 1000.0, slot, "index built");
+                        idx
+                    })
+                })
+                .await
+                .cloned()
+        });
+        task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
+    /// Run `f` over this generation in `spawn_blocking`, holding the service's CPU permit.
+    async fn cpu_build<T: Send + Sync + 'static>(
+        self: Arc<Self>,
+        f: impl FnOnce(&Self) -> T + Send + 'static,
+    ) -> Result<Arc<T>, ApiError> {
+        let _permit = Arc::clone(&self.cpu)
+            .acquire_owned()
+            .await
+            .map_err(|e| ApiError::internal("AcquireError", e))?;
+        tokio::task::spawn_blocking(move || Arc::new(f(&self)))
+            .await
+            // a panic in the build is a bug: a 500 (as the Python's exception), and nothing cached, so the next
+            // request tries again
+            .map_err(|e| ApiError::internal("JoinError", e))
+    }
+
+    /// Every decision line, in `seq` order (the same in both views).
+    pub fn decisions(&self) -> &[Arc<Decision>] {
+        &self.snap.decisions
+    }
+
+    /// Whether decision `i` was undone (`View.is_undone`).
+    pub fn is_undone(&self, i: usize) -> bool {
+        self.undone.contains(&i)
     }
 
     /// `rev` as `/api/health` and `/api/live` say it (`db:<gen>`).
@@ -137,7 +262,7 @@ fn rows(v: Value) -> Vec<Value> {
 }
 
 /// Read everything for `st` and build the index (the CPU half in `spawn_blocking`).
-pub async fn load(store: &Store, st: State, owner_id: &str) -> Result<Data, StoreError> {
+pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>) -> Result<Data, StoreError> {
     let t = std::time::Instant::now();
     let snap = store.fetch_snapshot().await?;
     let mut res = store
@@ -198,62 +323,22 @@ pub async fn load(store: &Store, st: State, owner_id: &str) -> Result<Data, Stor
             metas.insert(dir.to_string(), o);
         }
     }
-    build(
-        Arc::new(snap),
-        Arc::new(ai),
-        Arc::new(metas),
-        learning,
-        st,
-        fetch_s,
-        owner_id,
-    )
-    .await
-}
-
-/// The CPU half: the view, the visible view and the index, in `spawn_blocking`.
-async fn build(
-    snap: Arc<Snapshot>,
-    ai: Arc<Ai>,
-    metas: Arc<SetMetas>,
-    learning: Option<String>,
-    st: State,
-    fetch_s: f64,
-    owner_id: &str,
-) -> Result<Data, StoreError> {
     let owner = owner_id.to_string();
+    // the rows are parsed; what is left is a pass over them, off the runtime like every other CPU step here
     tokio::task::spawn_blocking(move || {
-        let t = std::time::Instant::now();
-        // one view per rebuild: the visible one (the whole one only on `?include_hidden=1`)
-        let (vis_view, has_hidden) = match visible(&snap, &owner) {
-            Some(v) => (v, true),
-            None => (snap.view(Vec::new(), &owner), false),
-        };
-        let t_view = t.elapsed();
-        let idx = AppIndex::build(vis_view, &ai, &snap.working, &metas);
-        tracing::info!(
-            fetch_ms = fetch_s * 1000.0,
-            view_ms = t_view.as_secs_f64() * 1000.0,
-            index_ms = t.elapsed().saturating_sub(t_view).as_secs_f64() * 1000.0,
-            "snapshot built"
-        );
-        Data {
-            state: st,
-            load_info: snap.load_info.clone(),
-            orphans: snap.orphans,
-            ai,
-            working: snap.working.clone(),
-            metas,
+        Data::new(
+            Arc::new(Rows::from(snap)),
+            Arc::new(ai),
+            Arc::new(metas),
             learning,
+            st,
             fetch_s,
-            visible: Arc::new(idx),
-            has_hidden,
-            full: OnceCell::new(),
-            snap,
-            owner,
-        }
+            &owner,
+            cpu,
+        )
     })
     .await
-    .map_err(|e| StoreError::mapping(format!("building the index failed: {e}")))
+    .map_err(|e| StoreError::mapping(format!("building the data failed: {e}")))
 }
 
 /// The next generation from the previous one when only decisions were appended since (each one bumps `gen` by
@@ -261,7 +346,7 @@ async fn build(
 /// each record they touched, and the Working flags, and rebuild the view over the patched rows. This is the
 /// Python's `surreal_kb._patch`, applied to every writer's lines. Anything else (a reload, new files, a gap) is
 /// `Ok(None)`: read everything.
-pub async fn patch(store: &Store, old: &Data, st: State, owner_id: &str) -> Result<Option<Data>, StoreError> {
+pub async fn patch(store: &Store, old: Arc<Data>, st: State, owner_id: &str) -> Result<Option<Data>, StoreError> {
     let (Some(g0), Some(g1)) = (old.state.generation, st.generation) else {
         return Ok(None);
     };
@@ -333,64 +418,94 @@ pub async fn patch(store: &Store, old: &Data, st: State, owner_id: &str) -> Resu
     if meta.get("gen").and_then(Value::as_i64) != Some(g1) {
         return Ok(None); // another write landed meanwhile: read everything
     }
-    let mut snap = (*old.snap).clone();
-    for (i, (edge, id)) in targets.iter().enumerate() {
+    // the touched records and Working as KB dicts (a few rows), then the copy of everything else off the runtime
+    let mut rows = Vec::with_capacity(targets.len());
+    for (i, (edge, _)) in targets.iter().enumerate() {
         let rec = &res[i * 2 + 1];
-        let list = if *edge { &mut snap.edges } else { &mut snap.nodes };
-        let pos = list
-            .iter()
-            .position(|r| r.get("id").and_then(Value::as_str) == Some(id.as_str()));
-        let row = if !from_db(rec.clone()).is_object() {
+        rows.push(if !from_db(rec.clone()).is_object() {
             None
         } else if *edge {
             Some(EdgeRow::from_record(rec.clone())?.into_edge())
         } else {
             Some(NodeRow::from_record(rec.clone())?.into_node())
-        };
-        match (pos, row) {
-            (Some(p), Some(r)) => list[p] = r,
-            (None, Some(r)) => {
-                if !*edge && r.get("type").and_then(Value::as_str) == Some("joke") {
-                    snap.working.insert(id.clone(), (false, Vec::new())); // a full read keys every joke
-                }
-                let list = if *edge { &mut snap.edges } else { &mut snap.nodes };
-                list.push(r);
-            }
-            // gone, or an orphan add: not a shape a patch reproduces
-            _ => return Ok(None),
-        }
+        });
     }
-    for w in snap.working.values_mut() {
-        *w = (false, Vec::new());
-    }
-    for r in pk_store::store::rows_of(res[res.len() - 2].clone()) {
-        let r = from_db(r);
-        if let Some(id) = r.get("id").and_then(Value::as_str) {
-            let sets = r
-                .get("working_sets")
-                .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).collect())
-                .unwrap_or_default();
-            snap.working
-                .insert(id.to_string(), (r.get("working") == Some(&Value::Bool(true)), sets));
-        }
-    }
-    snap.decisions.extend(new);
-    snap.generation = Some(g1);
-    snap.orphans = meta.get("orphans").and_then(Value::as_i64).unwrap_or(snap.orphans);
+    let working: Vec<Value> = pk_store::store::rows_of(res[res.len() - 2].clone())
+        .into_iter()
+        .map(from_db)
+        .collect();
     let fetch_s = t.elapsed().as_secs_f64();
-    let learning = old.learning.clone();
-    build(
-        Arc::new(snap),
-        Arc::clone(&old.ai),
-        Arc::clone(&old.metas),
-        learning,
-        st,
-        fetch_s,
-        owner_id,
-    )
-    .await
-    .map(Some)
+    let owner = owner_id.to_string();
+    let patch = Patch {
+        new,
+        targets,
+        rows,
+        working,
+        orphans: meta.get("orphans").and_then(Value::as_i64),
+    };
+    tokio::task::spawn_blocking(move || patch.apply(&old, st, fetch_s, &owner))
+        .await
+        .map_err(|e| StoreError::mapping(format!("patching the data failed: {e}")))
+}
+
+/// What a patch read: the new decisions, the touched records (`None` = gone), Working, and the orphan count.
+struct Patch {
+    new: Vec<Decision>,
+    targets: Vec<(bool, String)>,
+    rows: Vec<Option<pk_kb::Rec>>,
+    working: Vec<Value>,
+    orphans: Option<i64>,
+}
+
+impl Patch {
+    /// The CPU half: a copy of the previous rows (every node, edge and decision) with the patch applied.
+    fn apply(self, old: &Data, st: State, fetch_s: f64, owner_id: &str) -> Option<Data> {
+        // pointers to the previous generation's records; only the touched ones are replaced below
+        let mut snap = (*old.snap).clone();
+        for ((edge, id), row) in self.targets.iter().zip(self.rows) {
+            let list = if *edge { &mut snap.edges } else { &mut snap.nodes };
+            let pos = list
+                .iter()
+                .position(|r| r.get("id").and_then(Value::as_str) == Some(id.as_str()));
+            match (pos, row) {
+                (Some(p), Some(r)) => list[p] = Arc::new(r),
+                (None, Some(r)) => {
+                    if !*edge && r.get("type").and_then(Value::as_str) == Some("joke") {
+                        snap.working.insert(id.clone(), (false, Vec::new())); // a full read keys every joke
+                    }
+                    list.push(Arc::new(r));
+                }
+                // gone, or an orphan add: not a shape a patch reproduces
+                _ => return None,
+            }
+        }
+        for w in snap.working.values_mut() {
+            *w = (false, Vec::new());
+        }
+        for r in &self.working {
+            if let Some(id) = r.get("id").and_then(Value::as_str) {
+                let sets = r
+                    .get("working_sets")
+                    .and_then(Value::as_array)
+                    .map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).collect())
+                    .unwrap_or_default();
+                snap.working
+                    .insert(id.to_string(), (r.get("working") == Some(&Value::Bool(true)), sets));
+            }
+        }
+        snap.decisions.extend(self.new.into_iter().map(Arc::new));
+        snap.orphans = self.orphans.unwrap_or(snap.orphans);
+        Some(Data::new(
+            Arc::new(snap),
+            Arc::clone(&old.ai),
+            Arc::clone(&old.metas),
+            old.learning.clone(),
+            st,
+            fetch_s,
+            owner_id,
+            Arc::clone(&old.cpu),
+        ))
+    }
 }
 
 /// `ai_status` for `/api/health`.

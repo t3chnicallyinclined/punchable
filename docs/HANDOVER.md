@@ -225,6 +225,11 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    (same day): `/api/map/cloud` in Rust (67/67 equal, numpy's random stream ported bit for bit) and an incremental
    snapshot patch after writes; under a write-heavy load the Rust reads still rebuild ~130 ms per write, so
    `/api/health` is slower than the Python's there (RUST_WORKSTREAM T9 row has the numbers and the next fixes).
+   **Round 3 (branch `rust/t9-round3`, not merged, not deployed):** fixed: rebuilds coalesced with tickets, views and
+   the index built lazily per route, `pk_kb::View::from_records`, records shared between generations; under the same
+   write-heavy load `/api/health` is now p50 2.4 / p95 20.0 ms vs the Python's 17.6 / 39.1 (was 144.9 / 211.6), 67/67
+   still equal. Trap written down: never serve an older generation to "callers who did not write": the app refetches
+   once per `change` event, so a stale answer hides the change.
    **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and six of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge) over
    a `pk-creative` port of the notebook `Corpus`, proven equal to the Python worker over 29 recorded scenarios (the learned block second
    on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python

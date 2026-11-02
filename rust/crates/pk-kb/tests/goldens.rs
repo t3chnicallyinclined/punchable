@@ -215,3 +215,38 @@ fn helpers_match_python() {
         );
     }
 }
+
+/// `View::from_records` is `View::new` without the `graph.json` value: over the golden fixture (with its decisions
+/// replayed, and with none, as pk-api builds it from database rows) every field is the same, in the same order.
+#[test]
+fn from_records_is_new_without_the_json() {
+    let f = golden("fixture.json");
+    let decisions: Vec<Decision> = serde_json::from_value(f["decisions"].clone()).expect("decisions");
+    let report: Vec<String> = serde_json::from_value(f["report"].clone()).expect("report");
+    let recs = |k: &str| -> Vec<serde_json::Map<String, Value>> {
+        f["graph"][k]
+            .as_array()
+            .expect("records")
+            .iter()
+            .filter_map(|v| v.as_object().cloned())
+            .collect()
+    };
+    let (nodes, edges) = (recs("nodes"), recs("edges"));
+    assert!(nodes.len() > 3 && edges.len() > 3, "the fixture has records");
+    assert!(!decisions.is_empty(), "the fixture has decisions");
+    for ds in [decisions, Vec::new()] {
+        let a = View::new(&f["graph"], ds.clone(), report.clone(), "owner");
+        let b = View::from_records(&f["graph"], nodes.clone(), edges.clone(), ds, report.clone(), "owner");
+        assert_eq!(format!("{a:?}"), format!("{b:?}"));
+    }
+    // a meta object alone (no nodes or edges) gives the same graph_meta; records without an id are skipped
+    let meta = json!({
+        "version": f["graph"]["version"], "generated_at": f["graph"]["generated_at"], "runs": f["graph"]["runs"],
+    });
+    let mut with_junk = nodes;
+    with_junk.push(serde_json::Map::from_iter([("id".to_string(), json!(""))]));
+    with_junk.push(serde_json::Map::from_iter([("type".to_string(), json!("joke"))]));
+    let a = View::new(&f["graph"], Vec::new(), Vec::new(), "owner");
+    let b = View::from_records(&meta, with_junk, edges, Vec::new(), Vec::new(), "owner");
+    assert_eq!(format!("{a:?}"), format!("{b:?}"));
+}

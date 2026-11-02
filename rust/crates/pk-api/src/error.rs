@@ -85,7 +85,11 @@ impl IntoResponse for ApiError {
 /// A JSON answer the way `server.py` `send_json` writes one: UTF-8, `no-store`.
 pub fn json_response(status: StatusCode, body: &Value) -> Response {
     // Serialising a `Value` cannot fail (string keys only); an empty body would be the only fallback.
-    let bytes = serde_json::to_vec(body).unwrap_or_default();
+    json_bytes(status, serde_json::to_vec(body).unwrap_or_default().into())
+}
+
+/// A JSON body already serialised (a cached answer), with the same headers as [`json_response`].
+pub fn json_bytes(status: StatusCode, bytes: axum::body::Bytes) -> Response {
     let mut r = (status, bytes).into_response();
     let h = r.headers_mut();
     h.insert(
