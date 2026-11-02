@@ -1,0 +1,34 @@
+# T15: run the pk-embed memory probe once on the server, with the API pod's limits and securityContext
+# (infra/k8s/30-api.yaml), so its numbers are the ones the Rust API will live under. Not under k8s/: nothing applies
+# it by accident. The owner's go first, every time (infra/README.md "Memory"). __IMAGE__ is replaced by the pushed
+# digest when it is applied; the Job deletes itself ten minutes after it finishes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: punchable-memprobe
+  namespace: punchable
+  labels: { app: punchable-memprobe }
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: punchable-memprobe }
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: memprobe
+          image: __IMAGE__
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 320Mi }
+            limits: { cpu: "1", memory: 1Gi }

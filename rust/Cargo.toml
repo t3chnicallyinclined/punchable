@@ -12,6 +12,7 @@ members = [
     "crates/pk-worker",
     "crates/pk-wire",
     "xtask",
+    "tools/pk-load",
 ]
 
 # The Rust port of Punchable's services (docs/RUST.md). One workspace, a DAG of crates:
@@ -67,6 +68,9 @@ ndarray = "0.17"
 clap = { version = "4", features = ["derive"] }
 # pk-wire (feature `ts`, off by default): the app's TypeScript types from the wire structs after T9
 ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }
+# pk-load and the pk-embed memprobe example (T15, T17): a process's resident memory on Linux, Windows and macOS;
+# 0.38 is the last line that builds on the pinned 1.93.1 toolchain (0.39+ needs Rust 1.95)
+sysinfo = { version = "0.38", default-features = false, features = ["system"] }
 # tests
 insta = { version = "1", features = ["json"] }
 proptest = "1"

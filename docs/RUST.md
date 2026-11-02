@@ -179,6 +179,35 @@ becomes `pk-worker probe --max-age 20m`, and the API's `preStop: sleep 10` (`30-
 `db/tests/test_baseline.py` was not re-run on the server: the hosted pods carry no pytest and the files-backend oracle
 needs the knowledge base on disk; it runs on the PC that holds the data (its last green run is in the repo's history).
 
+**Step 0 load baseline, the Python API on the PC, 2026-11-02 (T17)** [C]. Machine: the owner's dev PC (AMD Ryzen 9
+5900XT, 16 cores / 32 threads, 64 GB, Windows 11 Pro, Python 3.13.5), so absolute times and memory are **not** the
+server's (no 1-CPU limit, Windows working set instead of cgroup memory); they are the number the Rust API is held to on
+the same machine with the same command. Taken with `tools/load/scratch_api.py -- --concurrency 8 --requests 2000`
+(`infra/README.md` "Memory"): the hosted entry `api/entry.py` with bge-small loaded, over a scratch in-memory SurrealDB
+3.3.4 holding synthetic data at production scale (1,576 bits, 2,849 versions, 60 sets, 660 moments, 5 set lists),
+loaded through `push_remote` as the `api` user; 2,150 calls (100 of them writes), **0 errors**, 133 s.
+
+| Measurement | Python |
+|---|---|
+| 1. Memory, resident (working set), MiB | idle 263.4 · after the cold cloud 280.8 · **peak under load 538.6** · 2 s after 523.1 |
+| 2. Latency p95 per group, ms (p50 in brackets) | health 29.9 (12.7) · bits 394 (51) · search 927 (215) · profile 348 (5) · sets **4,186** (89) · tonight **6,045** (295) · writes 520 (106) · all 3,564 (93) |
+| 3. Cold `/api/map/cloud?cap=1600` | **944 ms** first call, 8 ms cached (1,576 bits, 14 groups); an earlier attempt the same day, run while other builds shared the CPU, took 10,123 ms |
+| 4. Write-to-push (`/api/live`) | not measured: `cargo xtask live-probe` does not exist yet |
+
+The slow routes under 8 concurrent clients are `/api/today` (p95 7,056 ms, p50 4,142) and `/api/sets` (p95 5,273,
+p50 3,152); [I] CPU-bound Python work serialised by the GIL, not profiled. Per route, the writes: `POST /api/ideas` p95 750,
+`POST /api/boards` 236, the board `PATCH`es ~200. The full per-route table is in the run's `--json` report (not
+committed). Still owed: the same command against production (reads only, the owner's go; memory off Grafana's
+`container_memory_working_set_bytes`), and the Rust API's run when T9 has routes to serve.
+
+**The `pk-embed` probe (T15) on the same PC, 2026-11-02** [C] (`cargo run -p pk-embed --release --example memprobe`;
+one intra-op thread, no arena; Windows working set, so no `Anonymous:` line): model loaded 169.0 MiB (load 246 ms) ·
+after 1 query 170.3 · after 1,001 queries 170.3 (p50 10.9 ms, p95 12.3 ms per query) · after 1,000 passages in
+batches of 8, 176.5 (201 ms per batch) · after 20 batches at the token limit, 181.3 (2.35 s per batch). The model
+costs about 160 MiB over an empty process and grows by about 12 MiB under the worst batches. **The number that sets the
+API's target, `Anonymous:` in the distroless image on the server, is still owed** (the image and the Job are in
+`infra/probe/`; running them is the owner's call).
+
 ## Not ported; stays as is
 
 Not ported: `tools/audio` (whisper, VAD, laugh detection); `gsync` except `rules.py` (→ `pk-kb`); the transcriber

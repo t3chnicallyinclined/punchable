@@ -1,0 +1,10 @@
+# BuildKit reads this next to infra/probe/memprobe.Dockerfile: only what the probe needs goes to the daemon
+# (rust/target alone is gigabytes on a PC that builds the workspace).
+**
+!rust/
+rust/target/
+!db/schema.surql
+!db/schema_extra.surql
+!engine/
+!tools/kb/fetch_bge.py
+!api/requirements.txt

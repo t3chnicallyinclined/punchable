@@ -130,6 +130,64 @@ away (`microk8s kubectl -n punchable scale deploy/punchable-worker --replicas=0`
 "writer is offline" line, nothing is lost. The PC worker (`python -m worker --online`) still runs against the same API
 if ever needed; it is not the plan.
 
+## Memory
+
+How the API's memory and latency numbers are taken, the same way for the Python API and the Rust one (`docs/RUST.md`
+step 0, `docs/ARCHITECTURE.md` §8 "Four measurements"). The unit for memory is cAdvisor's
+`container_memory_working_set_bytes` on the server; on a PC it is the process's resident set (the working set on
+Windows), which `pk-load --pid` samples.
+
+**The load script** is `rust/tools/pk-load` (`cargo build --release -p pk-load` in `rust/`). It times the cold
+`/api/map/cloud?cap=1600` (first call, then the cached second), reads the bit, set and set-list ids, opens every
+pooled connection, then replays a fixed, weighted mix of the app's own GET routes (20 routes in 7 groups: health,
+tonight, bits, search, sets, profile, map) with `--concurrency` requests in flight, and prints p50 / p95 / max and
+errors per group and per route. The mix is deterministic, so two runs over the same data ask for the same things.
+With `--writes` (loopback only, never with a token) one step in 20 is a write: a jot (`POST /api/ideas`) or a set
+list's life (`POST /api/boards`, then archive, unarchive, delete). It exits non-zero when a call fails
+(`--max-errors`); `--json <file>` keeps the report.
+
+**On the PC, over a scratch database** (synthetic data at production scale; never the live database):
+
+```bash
+cd rust && cargo build --release -p pk-load && cd ..
+PK_BGE_DIR=<bge-small folder> python tools/load/scratch_api.py -- --concurrency 8 --requests 2000 --json load.json
+```
+
+`tools/load/scratch_api.py` writes 1,576 bits (2,849 versions), 60 taped sets (660 moments) and 5 set lists, starts
+a throwaway `surreal start memory` with its own random password, loads it through `db/push_remote.py pack` + `apply`
+as the database user `api`, starts `api/entry.py` (the hosted entry; `PK_ALLOW_NO_AUTH=1`, loopback only) with the
+bge-small model, waits for the vector sweep, then runs `pk-load --pid <the API> --writes`. Everything is removed
+afterwards (`--keep` leaves the temp folder and its logs).
+
+**On the server (the owner's go, each time).** Reads only, with an owner token in an environment variable (never on
+the command line):
+
+```bash
+rust/target/release/pk-load --base https://punchable.io --token-env PK_TOKEN --concurrency 8 --requests 2000 --json prod.json
+```
+
+Memory there is read off Grafana, not the PC: `container_memory_working_set_bytes{namespace="punchable",
+container="api"}` before, at the peak during, and two minutes after the run; the per-route p95 from
+`histogram_quantile(0.95, sum by (le, route) (rate(pk_http_request_duration_seconds_bucket[5m])))` over the run's
+window. The cold cloud time is cold only when the API's five-minute cache is empty (a fresh pod, or five quiet
+minutes).
+
+**The `pk-embed` memory probe (T15)**: what bge-small costs a Rust process, in the distroless base, under the API's
+limits. `rust/crates/pk-embed/examples/memprobe.rs` loads the model (one intra-op thread, no arena), embeds one query,
+1,000 more, 1,000 passages in batches of eight, then twenty batches at the token limit, and prints `Anonymous:` from
+`/proc/self/smaps_rollup` after each and `VmHWM` at the end. On the PC: `PK_BGE_DIR=<dir> cargo run -p pk-embed
+--release --example memprobe`. On the server it runs as a one-off Job (owner's go), built off the server:
+
+```bash
+git archive HEAD | docker build -f infra/probe/memprobe.Dockerfile -t punchable-memprobe:$(git rev-parse --short HEAD) -
+docker save punchable-memprobe:<sha> | ssh <server> 'docker load'          # then tag + push to localhost:32000
+sed "s#__IMAGE__#localhost:32000/punchable-memprobe@sha256:<digest>#" infra/probe/memprobe-job.yaml \
+  | ssh <server> 'microk8s kubectl apply -f -'
+ssh <server> 'microk8s kubectl -n punchable logs -f job/punchable-memprobe'   # the Job removes itself after 10 min
+```
+
+The numbers taken so far are in `docs/RUST.md` "Step 0 baseline".
+
 ## Files
 | Path | What |
 |---|---|
