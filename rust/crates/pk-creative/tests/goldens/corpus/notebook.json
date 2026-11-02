@@ -1792,5 +1792,743 @@
   "2015-13-01": "2015",
   "": "",
   "20xx-ab": "20xx"
+ },
+ "punch": {
+  "pairs": [
+   {
+    "a": "the bin gets my belt and my shoes",
+    "b": "So the bin gets my belt, my shoes and most of my confidence.",
+    "toks_a": [
+     "the",
+     "bin",
+     "gets",
+     "my",
+     "belt",
+     "and",
+     "my",
+     "shoes"
+    ],
+    "coverage": 0.875,
+    "present": true,
+    "same_line": true
+   },
+   {
+    "a": "a b c d e f",
+    "b": "a x c d y e f",
+    "toks_a": [
+     "a",
+     "b",
+     "c",
+     "d",
+     "e",
+     "f"
+    ],
+    "coverage": 0.6666666666666666,
+    "present": true,
+    "same_line": true
+   },
+   {
+    "a": "one two three",
+    "b": "three two one",
+    "toks_a": [
+     "one",
+     "two",
+     "three"
+    ],
+    "coverage": 0.0,
+    "present": false,
+    "same_line": true
+   },
+   {
+    "a": "I bought 2 parrots",
+    "b": "i bought two parrots today",
+    "toks_a": [
+     "i",
+     "bought",
+     "two",
+     "parrots"
+    ],
+    "coverage": 1.0,
+    "present": true,
+    "same_line": true
+   },
+   {
+    "a": "",
+    "b": "anything",
+    "toks_a": [],
+    "coverage": 0.0,
+    "present": false,
+    "same_line": false
+   },
+   {
+    "a": "He read me my rights",
+    "b": "He read me my rights when I touched his perch.",
+    "toks_a": [
+     "he",
+     "read",
+     "me",
+     "my",
+     "rights"
+    ],
+    "coverage": 1.0,
+    "present": true,
+    "same_line": true
+   },
+   {
+    "a": "dog cat dog cat dog",
+    "b": "cat dog cat dog cat dog",
+    "toks_a": [
+     "dog",
+     "cat",
+     "dog",
+     "cat",
+     "dog"
+    ],
+    "coverage": 1.0,
+    "present": true,
+    "same_line": true
+   }
+  ],
+  "phrases": {
+   "So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence. Okay.": [
+    "So airport security wants my belt in a bin.",
+    "The bin gets my belt",
+    "my shoes and most of my confidence."
+   ],
+   "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen, short one; Another clause that is long enough here!": [
+    "one two three four five six seven eight nine ten eleven twelve thirteen fourteen",
+    "Another clause that is long enough here!"
+   ],
+   "Same words here again now. Same words here again now!": [
+    "Same words here again now."
+   ]
+  },
+  "jokes": {
+   "joke:airport-bins": {
+    "latest": [
+     [
+      "The bin gets my belt",
+      "seg:2024-04-12_FakeSet0002#2"
+     ],
+     [
+      "my shoes and most of my confidence.",
+      "seg:2024-04-12_FakeSet0002#2"
+     ]
+    ],
+    "based_on": "2024-04-12_FakeSet0002",
+    "marks": [
+     "laugh 3.5 s",
+     "silence"
+    ],
+    "ws": {
+     "none": {
+      "user": "Bit: 'Airport bins (security)'. His moves in this bit: Rule of three.\nLines that got real laughs on his best night (The Loft? '24):\n- The bin gets my belt\n\nHis written version of the setup (verbatim):\n\"So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence. I walk through the scanner holding my pants up like a man surrendering to his own laundry.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The bin gets my belt   [laugh 3.5 s]\n2. my shoes and most of my confidence.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The bin gets my belt",
+        "seg:2024-04-12_FakeSet0002#2"
+       ],
+       [
+        "my shoes and most of my confidence.",
+        "seg:2024-04-12_FakeSet0002#2"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": "Bit: 'Airport bins (security)'. His moves in this bit: Rule of three.\nLines that got real laughs on his best night (The Loft? '24):\n- The bin gets my belt\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The bin gets my belt   [laugh 3.5 s]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Every line got a laugh: sharpen the weakest, leave the biggest alone. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The bin gets my belt",
+        "seg:2024-04-12_FakeSet0002#2"
+       ]
+      ],
+      "blocked": 1,
+      "locked_line": [
+       false,
+       true
+      ],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": "Bit: 'Airport bins (security)'. His moves in this bit: Rule of three.\nLines that got real laughs on his best night (The Loft? '24):\n- The bin gets my belt\n\nHis written version of the setup (verbatim):\n\"So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence. I walk through the scanner holding my pants up like a man surrendering to his own laundry.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The bin gets my belt   [laugh 3.5 s]\n2. my shoes and most of my confidence.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The bin gets my belt",
+        "seg:2024-04-12_FakeSet0002#2"
+       ],
+       [
+        "my shoes and most of my confidence.",
+        "seg:2024-04-12_FakeSet0002#2"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": true
+     },
+     "all_locked": {
+      "user": "Bit: 'Airport bins (security)'. His moves in this bit: Rule of three.\nLines that got real laughs on his best night (The Loft? '24):\n- The bin gets my belt\n\nHis written version of the setup (verbatim):\n\"So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence. I walk through the scanner holding my pants up like a man surrendering to his own laundry.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The bin gets my belt   [laugh 3.5 s]\n2. my shoes and most of my confidence.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The bin gets my belt",
+        "seg:2024-04-12_FakeSet0002#2"
+       ],
+       [
+        "my shoes and most of my confidence.",
+        "seg:2024-04-12_FakeSet0002#2"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:parrot-lawyer": {
+    "latest": [
+     [
+      "I got a parrot who only says legal disclaimers.",
+      "seg:2024-04-12_FakeSet0002#0"
+     ],
+     [
+      "He read me my rights when I touched his perch.",
+      "seg:2024-04-12_FakeSet0002#1"
+     ]
+    ],
+    "based_on": "2024-04-12_FakeSet0002",
+    "marks": [
+     "laugh · 1/4 bars",
+     "laugh · 3/4 bars"
+    ],
+    "ws": {
+     "none": {
+      "user": "Bit: 'Parrot lawyer'. His moves in this bit: Callback.\nLines that got real laughs on his best night (Unknown room '23):\n- Past results are no guarantee of future crackers.\n\nHis written version of the setup (verbatim):\n\"I bought a parrot that only says legal disclaimers. Past results are no guarantee of future crackers. He read me my rights when I touched his perch.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. I got a parrot who only says legal disclaimers.   [laugh · 1/4 bars]\n2. He read me my rights when I touched his perch.   [laugh · 3/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Every line got a laugh: sharpen the weakest, leave the biggest alone. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "I got a parrot who only says legal disclaimers.",
+        "seg:2024-04-12_FakeSet0002#0"
+       ],
+       [
+        "He read me my rights when I touched his perch.",
+        "seg:2024-04-12_FakeSet0002#1"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": "Bit: 'Parrot lawyer'. His moves in this bit: Callback.\nLines that got real laughs on his best night (Unknown room '23):\n- Past results are no guarantee of future crackers.\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. I got a parrot who only says legal disclaimers.   [laugh · 1/4 bars]\n2. He read me my rights when I touched his perch.   [laugh · 3/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Every line got a laugh: sharpen the weakest, leave the biggest alone. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "I got a parrot who only says legal disclaimers.",
+        "seg:2024-04-12_FakeSet0002#0"
+       ],
+       [
+        "He read me my rights when I touched his perch.",
+        "seg:2024-04-12_FakeSet0002#1"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": "Bit: 'Parrot lawyer'. His moves in this bit: Callback.\nLines that got real laughs on his best night (Unknown room '23):\n- Past results are no guarantee of future crackers.\n\nHis written version of the setup (verbatim):\n\"I bought a parrot that only says legal disclaimers. Past results are no guarantee of future crackers. He read me my rights when I touched his perch.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. I got a parrot who only says legal disclaimers.   [laugh · 1/4 bars]\n2. He read me my rights when I touched his perch.   [laugh · 3/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Every line got a laugh: sharpen the weakest, leave the biggest alone. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "I got a parrot who only says legal disclaimers.",
+        "seg:2024-04-12_FakeSet0002#0"
+       ],
+       [
+        "He read me my rights when I touched his perch.",
+        "seg:2024-04-12_FakeSet0002#1"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": "Bit: 'Parrot lawyer'. His moves in this bit: Callback.\nLines that got real laughs on his best night (Unknown room '23):\n- Past results are no guarantee of future crackers.\n\nHis written version of the setup (verbatim):\n\"I bought a parrot that only says legal disclaimers. Past results are no guarantee of future crackers. He read me my rights when I touched his perch.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. I got a parrot who only says legal disclaimers.   [laugh · 1/4 bars]\n2. He read me my rights when I touched his perch.   [laugh · 3/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Every line got a laugh: sharpen the weakest, leave the biggest alone. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "I got a parrot who only says legal disclaimers.",
+        "seg:2024-04-12_FakeSet0002#0"
+       ],
+       [
+        "He read me my rights when I touched his perch.",
+        "seg:2024-04-12_FakeSet0002#1"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:landlord-chat": {
+    "latest": [
+     [
+      "My landlord started a group chat for the building.",
+      "seg:2024-03-01_FakeSet0001#3"
+     ],
+     [
+      "Every message is a threat with a thumbs up.",
+      "seg:2024-03-01_FakeSet0001#3"
+     ]
+    ],
+    "based_on": "2024-03-01_FakeSet0001",
+    "marks": [
+     "silence",
+     "silence"
+    ],
+    "ws": {
+     "none": {
+      "user": "Bit: 'Landlord group chat (the building)'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Corner Room '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"My landlord started a group chat for the building. Every message is a threat with a thumbs up. He reacted to my rent with the crying laughing face.\"\n\nLines from his latest night (The Corner Room '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. My landlord started a group chat for the building.   [silence]\n2. Every message is a threat with a thumbs up.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 2 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "My landlord started a group chat for the building.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ],
+       [
+        "Every message is a threat with a thumbs up.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": "Bit: 'Landlord group chat (the building)'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Corner Room '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"My landlord started a group chat for the building. Every message is a threat with a thumbs up. He reacted to my rent with the crying laughing face.\"\n\nLines from his latest night (The Corner Room '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. My landlord started a group chat for the building.   [silence]\n2. Every message is a threat with a thumbs up.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 2 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "My landlord started a group chat for the building.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ],
+       [
+        "Every message is a threat with a thumbs up.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": "Bit: 'Landlord group chat (the building)'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Corner Room '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"My landlord started a group chat for the building. Every message is a threat with a thumbs up. He reacted to my rent with the crying laughing face.\"\n\nLines from his latest night (The Corner Room '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. My landlord started a group chat for the building.   [silence]\n2. Every message is a threat with a thumbs up.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 2 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "My landlord started a group chat for the building.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ],
+       [
+        "Every message is a threat with a thumbs up.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": "Bit: 'Landlord group chat (the building)'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Corner Room '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"My landlord started a group chat for the building. Every message is a threat with a thumbs up. He reacted to my rent with the crying laughing face.\"\n\nLines from his latest night (The Corner Room '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. My landlord started a group chat for the building.   [silence]\n2. Every message is a threat with a thumbs up.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 2 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "My landlord started a group chat for the building.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ],
+       [
+        "Every message is a threat with a thumbs up.",
+        "seg:2024-03-01_FakeSet0001#3"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:laundromat": {
+    "latest": [
+     [
+      "The laundromat is the only place I meet women.",
+      "seg:2023-08-14_FakeSet0003#0"
+     ],
+     [
+      "We stare at our socks spinning like it is a fireplace.",
+      "seg:2023-08-14_FakeSet0003#0"
+     ]
+    ],
+    "based_on": "2023-08-14_FakeSet0003",
+    "marks": [
+     "silence",
+     "laugh · 4/4 bars"
+    ],
+    "ws": {
+     "none": {
+      "user": "Bit: 'Laundromat dating'. His moves in this bit: n/a.\nLines that got real laughs on his best night (Unknown room '23):\n- like it is a fireplace\n\nHis written version of the setup (verbatim):\n\"The laundromat is the only place I meet women. We stare at our socks spinning like it is a fireplace. Nothing says romance like a dryer sheet stuck to my back.\"\n\nLines from his latest night (Unknown room '23) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The laundromat is the only place I meet women.   [silence]\n2. We stare at our socks spinning like it is a fireplace.   [laugh · 4/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The laundromat is the only place I meet women.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ],
+       [
+        "We stare at our socks spinning like it is a fireplace.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": "Bit: 'Laundromat dating'. His moves in this bit: n/a.\nLines that got real laughs on his best night (Unknown room '23):\n- like it is a fireplace\n\nHis written version of the setup (verbatim):\n\"The laundromat is the only place I meet women. We stare at our socks spinning like it is a fireplace. Nothing says romance like a dryer sheet stuck to my back.\"\n\nLines from his latest night (Unknown room '23) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The laundromat is the only place I meet women.   [silence]\n2. We stare at our socks spinning like it is a fireplace.   [laugh · 4/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The laundromat is the only place I meet women.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ],
+       [
+        "We stare at our socks spinning like it is a fireplace.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": "Bit: 'Laundromat dating'. His moves in this bit: n/a.\nLines that got real laughs on his best night (Unknown room '23):\n- like it is a fireplace\n\nHis written version of the setup (verbatim):\n\"The laundromat is the only place I meet women. We stare at our socks spinning like it is a fireplace. Nothing says romance like a dryer sheet stuck to my back.\"\n\nLines from his latest night (Unknown room '23) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The laundromat is the only place I meet women.   [silence]\n2. We stare at our socks spinning like it is a fireplace.   [laugh · 4/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The laundromat is the only place I meet women.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ],
+       [
+        "We stare at our socks spinning like it is a fireplace.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": "Bit: 'Laundromat dating'. His moves in this bit: n/a.\nLines that got real laughs on his best night (Unknown room '23):\n- like it is a fireplace\n\nHis written version of the setup (verbatim):\n\"The laundromat is the only place I meet women. We stare at our socks spinning like it is a fireplace. Nothing says romance like a dryer sheet stuck to my back.\"\n\nLines from his latest night (Unknown room '23) you MAY punch up (only these, by number), each with what the room did right after it:\n1. The laundromat is the only place I meet women.   [silence]\n2. We stare at our socks spinning like it is a fireplace.   [laugh · 4/4 bars]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 2); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "The laundromat is the only place I meet women.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ],
+       [
+        "We stare at our socks spinning like it is a fireplace.",
+        "seg:2023-08-14_FakeSet0003#0"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false,
+       false
+      ],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:gym-mirror": {
+    "latest": [
+     [
+      "At the gym I stare at the mirror the way my parrot does.",
+      "seg:2024-04-12_FakeSet0002#4"
+     ]
+    ],
+    "based_on": "2024-04-12_FakeSet0002",
+    "marks": [
+     "silence"
+    ],
+    "ws": {
+     "none": {
+      "user": "Bit: 'Gym mirror'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Loft? '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"At the gym I stare at the mirror the way my parrot does. Mostly to check if anyone saw me drop the small weights.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. At the gym I stare at the mirror the way my parrot does.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 1); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "At the gym I stare at the mirror the way my parrot does.",
+        "seg:2024-04-12_FakeSet0002#4"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false
+      ],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": "Bit: 'Gym mirror'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Loft? '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"At the gym I stare at the mirror the way my parrot does. Mostly to check if anyone saw me drop the small weights.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. At the gym I stare at the mirror the way my parrot does.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 1); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "At the gym I stare at the mirror the way my parrot does.",
+        "seg:2024-04-12_FakeSet0002#4"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false
+      ],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": "Bit: 'Gym mirror'. His moves in this bit: n/a.\nLines that got real laughs on his best night (The Loft? '24):\n- (none on tape)\n\nHis written version of the setup (verbatim):\n\"At the gym I stare at the mirror the way my parrot does. Mostly to check if anyone saw me drop the small weights.\"\n\nLines from his latest night (The Loft? '24) you MAY punch up (only these, by number), each with what the room did right after it:\n1. At the gym I stare at the mirror the way my parrot does.   [silence]\n\nGive up to 3 punch-up drafts: a sharper alternative for one numbered line each, in his voice, using his own moves. Keep the premise. Target the lines that got nothing ([silence]: 1 of 1); leave a line that already lands. `move` names the move you used, by the name his profile gives it.",
+      "lines": [
+       [
+        "At the gym I stare at the mirror the way my parrot does.",
+        "seg:2024-04-12_FakeSet0002#4"
+       ]
+      ],
+      "blocked": 0,
+      "locked_line": [
+       false
+      ],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 1,
+      "locked_line": [
+       true
+      ],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:old-bins": {
+    "latest": [],
+    "based_on": null,
+    "marks": null,
+    "ws": {
+     "none": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:tsa-poem": {
+    "latest": [],
+    "based_on": null,
+    "marks": null,
+    "ws": {
+     "none": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:carousel-idea": {
+    "latest": [],
+    "based_on": null,
+    "marks": null,
+    "ws": {
+     "none": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     }
+    }
+   },
+   "joke:missing": {
+    "latest": [],
+    "based_on": null,
+    "marks": null,
+    "ws": {
+     "none": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "line_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "bit_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     },
+     "all_locked": {
+      "user": null,
+      "lines": [],
+      "blocked": 0,
+      "locked_line": [],
+      "bit_locked": false
+     }
+    }
+   }
+  },
+  "working_sets": {
+   "none": {
+    "id": null,
+    "title": null,
+    "current": 0,
+    "locks": {}
+   },
+   "line_locked": {
+    "locks": {
+     "joke:parrot-lawyer": {
+      "lines": [
+       {
+        "text": "Past results are no guarantee of future crackers."
+       }
+      ]
+     },
+     "joke:airport-bins": {
+      "lines": [
+       {
+        "text": "most of my confidence"
+       }
+      ]
+     }
+    }
+   },
+   "bit_locked": {
+    "locks": {
+     "joke:airport-bins": {
+      "bit": true
+     }
+    }
+   },
+   "all_locked": {
+    "locks": {
+     "joke:gym-mirror": {
+      "lines": [
+       {
+        "text": "At the gym I stare at the mirror the way my parrot does."
+       }
+      ]
+     }
+    }
+   }
+  }
  }
 }

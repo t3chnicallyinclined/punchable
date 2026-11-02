@@ -11,6 +11,7 @@
 //!   notebook they are compared request for request, query strings included; for any other kind the Python mirrors
 //!   anyway and this worker does not (asserted absent), and `result.online.refresh` is then not compared.
 //! - `result.online.media_deleted`: the Python's count of recordings deleted from its folder (this worker has none).
+//! - `call_id` on a writing result: a random id on both sides (checked to be 12 hex).
 //! - `run_id` and the `analysis.json` text it is in: a timestamp; the sha256 is compared over the normalised text.
 //! - the validator's words after `invalid JSON:` (Python `jsonschema` vs the `jsonschema` crate; `pk-llm`'s own
 //!   allow-list), in the retry turn and in the failed result.
@@ -273,6 +274,12 @@ fn normalise(x: &Value) -> Value {
             }
             if let Some(Value::Object(online)) = out.get_mut("online") {
                 online.remove("media_deleted");
+            }
+            // a model call's id is random on both sides (uuid4, 12 hex): present, not compared
+            if let Some(id) = out.get_mut("call_id")
+                && id.as_str().is_some_and(|s| s.len() == 12 && s.chars().all(|c| c.is_ascii_hexdigit()))
+            {
+                *id = json!("<call_id>");
             }
             Value::Object(out)
         }

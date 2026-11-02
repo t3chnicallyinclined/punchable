@@ -16,6 +16,7 @@ pub mod corpus;
 pub mod error;
 pub mod event;
 pub mod notebook;
+pub mod punch;
 pub mod pyish;
 pub mod reducers;
 pub mod store;

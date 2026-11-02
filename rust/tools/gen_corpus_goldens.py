@@ -62,6 +62,53 @@ def jsonable(x):
     return x
 
 
+TEXT_PAIRS = [
+    ("the bin gets my belt and my shoes", "So the bin gets my belt, my shoes and most of my confidence."),
+    ("a b c d e f", "a x c d y e f"),
+    ("one two three", "three two one"),
+    ("I bought 2 parrots", "i bought two parrots today"),
+    ("", "anything"),
+    ("He read me my rights", "He read me my rights when I touched his perch."),
+    ("dog cat dog cat dog", "cat dog cat dog cat dog"),
+]
+TRANSCRIPTS = [
+    "So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence. Okay.",
+    "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen, "
+    "short one; Another clause that is long enough here!",
+    "Same words here again now. Same words here again now!",
+]
+WORKING_SETS = {
+    "none": {"id": None, "title": None, "current": 0, "locks": {}},
+    "line_locked": {"locks": {"joke:parrot-lawyer": {"lines": [{"text": "Past results are no guarantee of future crackers."}]},
+                              "joke:airport-bins": {"lines": [{"text": "most of my confidence"}]}}},
+    "bit_locked": {"locks": {"joke:airport-bins": {"bit": True}}},
+    "all_locked": {"locks": {"joke:gym-mirror": {"lines": [{"text": "At the gym I stare at the mirror the way my parrot does."}]}}},
+}
+
+
+def punch_golden(c) -> dict:
+    from creative import textdiff as T
+    from creative import voice as V
+    from creative import workingset as WS
+    V.clear()
+    out = {"pairs": [{"a": a, "b": b, "toks_a": T.toks(a), "coverage": T.coverage(a, b), "present": T.present(a, b),
+                      "same_line": WS._same_line(a, b)} for a, b in TEXT_PAIRS],
+           "phrases": {t: T.phrases(t) for t in TRANSCRIPTS}, "jokes": {}}
+    for j in list(c.jokes) + ["joke:missing"]:
+        p, lines = WS.latest_lines(c, j)
+        per = {"latest": [list(x) for x in lines], "based_on": p["set"] if p else None,
+               "marks": WS.laugh_marks(c, p, lines) if p else None, "ws": {}}
+        for name, ws in WORKING_SETS.items():
+            msgs, info = WS.punch_messages(c, ws, j)
+            per["ws"][name] = {"user": msgs[-1]["content"] if msgs else None,
+                               "lines": [list(x) for x in info["lines"]], "blocked": info["blocked"],
+                               "locked_line": [WS.is_locked_line(ws, j, ph) for ph, _ in lines],
+                               "bit_locked": WS.bit_locked(ws, j)}
+        out["jokes"][j] = per
+    out["working_sets"] = WORKING_SETS
+    return out
+
+
 def main():
     os.environ.pop("PK_OWNER_ID", None)
     with tempfile.TemporaryDirectory(prefix="pk-corpus-golden-") as td:
@@ -112,6 +159,7 @@ def main():
                 ("Unknown (title 'x')", "2023"), ("", None), ("Comix at Riverside", "2019-01-01"),
                 ("Mabel's (upstairs)", None), ("Ab Comedy", None), ("Joe's Poets Cafe", "2020")]},
             "month_year": {d: N.month_year(d) for d in ["2015-06-26", "2015", "2015-13-01", "", "20xx-ab"]},
+            "punch": punch_golden(c),
         }
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "notebook.json").write_text(json.dumps(jsonable(out), indent=1, ensure_ascii=False) + "\n", encoding="utf-8",

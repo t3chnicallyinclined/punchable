@@ -169,6 +169,13 @@ RIFF = json.dumps({"ideas": [
     {"line": "My parrot billed me by the hour.", "built_on": [], "move": ""},
     {"line": "x" * 450, "built_on": ["riff"], "move": "m" * 100},
     {"line": "Over the cap.", "built_on": [], "move": "none"}]})
+PUNCH = json.dumps({"drafts": [
+    {"line_no": 2, "alt": " He read me my rights, then billed me for the reading. ", "move": "the flat repeat"},
+    {"line_no": 9, "alt": "out of range", "move": "x"},
+    {"line_no": 1, "alt": "I got a parrot who only says legal disclaimers!", "move": "same words"},
+    {"line_no": 1, "alt": "Past the cap of three.", "move": "x"}]})
+PUNCH_LOCKED = json.dumps({"drafts": [{"line_no": 1, "alt": "The bin took my belt as a deposit.", "move": "list of three"},
+                                      {"line_no": 1, "alt": "   ", "move": "empty"}]})
 NAMED = {"PK_COMIC_NAME": "Pat Example", "PK_COMIC_FIRST": "Pat"}
 
 SCENARIOS = [
@@ -212,6 +219,27 @@ SCENARIOS = [
      "job": job("riff", {"idea": "zebra quantum", "lines": []}), "voice": voice_doc(), "model": []},
     {"name": "riff_refused_then_fallback", "env": {}, "notebook": True,
      "job": job("riff", {"idea": "landlord rent", "lines": ["my landlord"]}), "voice": voice_doc(learned=LEARNED),
+     "model": [answer("", OPUS, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal")]},
+    {"name": "punchup_named_learned", "env": NAMED, "notebook": True,
+     "job": job("punchup", {"working_set": {"id": "ws:golden", "title": "Golden set", "current": 0, "locks": {}},
+                            "joke_id": "joke:parrot-lawyer"}),
+     "voice": voice_doc(learned=LEARNED, laughs=LAUGHS), "model": [answer(PUNCH, OPUS, cache_read=1600)]},
+    {"name": "punchup_line_locked", "env": {}, "notebook": True,
+     "job": job("punchup", {"working_set": {"id": None, "title": None, "current": 0,
+                                            "locks": {"joke:airport-bins": {"lines": [{"text": "most of my confidence"}]}}},
+                            "joke_id": "joke:airport-bins"}),
+     "voice": voice_doc(), "model": [answer(PUNCH_LOCKED, OPUS)]},
+    {"name": "punchup_bit_locked", "env": {}, "notebook": True,
+     "job": job("punchup", {"working_set": {"locks": {"joke:airport-bins": {"bit": True}}}, "joke_id": "joke:airport-bins"}),
+     "voice": voice_doc(), "model": []},
+    {"name": "punchup_no_tape", "env": {}, "notebook": True,
+     "job": job("punchup", {"working_set": {"locks": {}}, "joke_id": "joke:tsa-poem"}), "voice": voice_doc(), "model": []},
+    {"name": "punchup_all_locked", "env": {}, "notebook": True,
+     "job": job("punchup", {"working_set": {"locks": {"joke:gym-mirror": {"lines": [
+         {"text": "At the gym I stare at the mirror the way my parrot does."}]}}}, "joke_id": "joke:gym-mirror"}),
+     "voice": voice_doc(), "model": []},
+    {"name": "punchup_refused", "env": {}, "notebook": True,
+     "job": job("punchup", {"working_set": {"locks": {}}, "joke_id": "joke:laundromat"}), "voice": voice_doc(learned=LEARNED),
      "model": [answer("", OPUS, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal")]},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},

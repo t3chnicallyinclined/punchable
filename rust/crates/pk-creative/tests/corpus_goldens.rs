@@ -276,3 +276,45 @@ fn lexical_related_and_riff_grounds() {
         );
     }
 }
+
+#[test]
+fn punch_up_halves() {
+    use pk_creative::punch::{bit_locked, is_locked_line, latest_lines, laugh_marks, punch_user, same_line};
+    use pk_creative::textdiff::{coverage, phrases, present, toks};
+    let g = golden();
+    let c = corpus(&g);
+    let pg = &g["punch"];
+    for case in pg["pairs"].as_array().unwrap() {
+        let (a, b) = (case["a"].as_str().unwrap(), case["b"].as_str().unwrap());
+        same(&json!(toks(a)), &case["toks_a"], &format!("toks {a:?}"));
+        same(&json!(coverage(a, b)), &case["coverage"], &format!("coverage {a:?}"));
+        same(&json!(present(a, b, 0.6)), &case["present"], &format!("present {a:?}"));
+        same(&json!(same_line(a, b)), &case["same_line"], &format!("same_line {a:?}"));
+    }
+    for (t, want) in pg["phrases"].as_object().unwrap() {
+        same(&json!(phrases(t)), want, &format!("phrases {t:?}"));
+    }
+    for (j, want) in pg["jokes"].as_object().unwrap() {
+        let latest = latest_lines(&c, j);
+        let lines = latest.as_ref().map(|(_, l)| l.clone()).unwrap_or_default();
+        same(&json!(lines), &want["latest"], &format!("{j} latest"));
+        same(
+            &json!(latest.as_ref().map(|(p, _)| p.set.clone())),
+            &want["based_on"],
+            &format!("{j} based_on"),
+        );
+        let marks = latest.as_ref().map(|(p, l)| laugh_marks(&c, p, l));
+        same(&json!(marks), &want["marks"], &format!("{j} marks"));
+        for (name, w) in want["ws"].as_object().unwrap() {
+            let ws = &pg["working_sets"][name];
+            let (user, basis) = punch_user(&c, ws, j);
+            let at = format!("{j} / {name}");
+            same(&json!(user), &w["user"], &format!("{at} user"));
+            same(&json!(basis.lines), &w["lines"], &format!("{at} lines"));
+            same(&json!(basis.blocked), &w["blocked"], &format!("{at} blocked"));
+            let locked: Vec<bool> = lines.iter().map(|(ph, _)| is_locked_line(ws, j, ph)).collect();
+            same(&json!(locked), &w["locked_line"], &format!("{at} locked_line"));
+            same(&json!(bit_locked(ws, j)), &w["bit_locked"], &format!("{at} bit_locked"));
+        }
+    }
+}
