@@ -230,7 +230,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    write-heavy load `/api/health` is now p50 2.4 / p95 20.0 ms vs the Python's 17.6 / 39.1 (was 144.9 / 211.6), 67/67
    still equal. Trap written down: never serve an older generation to "callers who did not write": the app refetches
    once per `change` event, so a stale answer hides the change.
-   **`pk-worker` (2026-11-02; eight kinds merged into main locally, `ask` from `rust/t8-ask` too, all merged into main locally, not deployed deployed)**: the loop and **all nine hosted kinds** over
+   **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):
    later Asks 0.29 s vs 1.88 s; idle 13 vs 37 MiB working set; the first Ask after a NEW pod embeds every source
