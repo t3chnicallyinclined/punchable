@@ -230,6 +230,15 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    write-heavy load `/api/health` is now p50 2.4 / p95 20.0 ms vs the Python's 17.6 / 39.1 (was 144.9 / 211.6), 67/67
    still equal. Trap written down: never serve an older generation to "callers who did not write": the app refetches
    once per `change` event, so a stale answer hides the change.
+   **Round 4 (branch `rust/t9-round4`, not merged, not deployed):** pk-api also answers `/api/sets`,
+   `/api/sets/<id>/analysis`, `/api/sets/<id>/review` and `/api/jokes/<id>` (98/98 equal, empty allow-list, a
+   worker transcript post read back on both servers). Under the write-heavy load on the owner's PC, p95 Python vs
+   pk-api: `/api/sets` 4,182 vs 158 ms, `/api/jokes/<id>` 122 vs 2.5 ms, `/api/sets/<id>/analysis` 74 vs 29 ms;
+   memory peak 550 vs 105 MiB. Settled: laughs are the database's `laugh` rows, transcripts are
+   `srcfile` rows, and the hosted pod has no recordings (`audio` is always `null`, as the Python's). The id pages need a
+   regex Ingress (prepared; check ingress-nginx's host-wide `use-regex` first). Not done this round: `/api/jokes` and
+   `/api/today` (need the creative Corpus built from `srcfile` rows inside pk-api; `/api/today`'s `inbox` count is the
+   Python pod's own upload folder, T10), `/api/search` + `/similar`. Exact next steps: RUST_WORKSTREAM T9 row.
    **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and eight of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge, embed, memolink) over
    a `pk-creative` port of the notebook `Corpus` and creative/merge.py, proven equal to the Python worker over 34 recorded scenarios (bge loaded on first use) (the learned block second
    on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python
