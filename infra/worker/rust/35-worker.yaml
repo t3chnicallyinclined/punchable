@@ -2,10 +2,19 @@
 # (rust/Dockerfile.worker). It lives outside infra/k8s/ so infra/deploy.sh never applies it; the swap is the owner's
 # call: copy it over infra/k8s/35-worker.yaml in the swap commit, build the image off the node, roll out by digest,
 # and log it in the private deploy log (the day's spend ledger on the emptyDir resets with the pod: say so there).
-# Changes against the Python worker's manifest, nothing else:
-#   - no ENGINE_CONFIG / PK_ONLINE_FIRST / PK_CACHE_DIR: the engine config is compiled in, there is no workspace mirror
-#   - the liveness probe is `pk-worker probe` (the distroless image has no shell, no find)
+# Changes against the Python worker's manifest, nothing else (checked line by line against infra/k8s/35-worker.yaml
+# on 2026-11-02; every variable the Rust worker reads is listed in docs/RUST_WORKSTREAM.md T8 "swap package"):
+#   - no ENGINE_CONFIG / PK_ONLINE_FIRST / PK_CACHE_DIR: the engine config is compiled in (setting ENGINE_CONFIG would
+#     make it read that file instead, and the image has none); the notebook mirror lives in memory, not on disk;
+#     PK_BGE_DIR comes from the image (rust/Dockerfile.worker), as in the Python image
+#   - the liveness probe is `pk-worker probe` (the distroless image has no shell, no find); same 20 minutes, same
+#     period and threshold
 #   - RUST_LOG=info
+# Kept as they are: the Secrets by name (punchable-worker, punchable-anthropic, punchable-sentry optional: SENTRY_DSN
+# is the variable pk-obs reads), PK_AI_DAILY_USD, the names, the resources (the first Ask after a start embeds the
+# whole notebook once: see the T8 measurements), Recreate, the 60 s grace (the worker hands a running job back after
+# 20 s), the NetworkPolicy (10-networkpolicy.yaml punchable-worker: same egress, :9100 from observability only).
+# The claim asks for all nine hosted kinds when the image has the model (embed, memolink, ask need it).
 # Rollback: the previous image digest with infra/k8s/35-worker.yaml as it is on main.
 # Punchable hosted worker: infra/worker/Dockerfile (python -m worker --hosted over the in-cluster API). Rolled out only
 # when told (infra/ship.sh rollout worker). __IMAGE_REF__ is a digest (localhost:32000/punchable-worker@sha256:...)
@@ -96,7 +105,7 @@ spec:
             - { name: tmp, mountPath: /tmp }
       volumes:
         - name: tmp
-          # the disposable workspace (rebuilt from the API on every job), the heartbeat and the day's spend ledger
+          # the heartbeat and the day's spend ledger (the Rust worker mirrors the notebook in memory, not here)
           emptyDir: { sizeLimit: 2Gi }
 ---
 # The worker's metrics for Prometheus (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker).

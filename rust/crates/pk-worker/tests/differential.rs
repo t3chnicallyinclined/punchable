@@ -13,6 +13,7 @@
 //! - `result.online.media_deleted`: the Python's count of recordings deleted from its folder (this worker has none).
 //! - `call_id` on a writing result: a random id on both sides (checked to be 12 hex).
 //! - `run_id` and the `analysis.json` text it is in: a timestamp; the sha256 is compared over the normalised text.
+//!   The one-shot Ask's `run_id` (`ask-<time>`) and its `timings` values (seconds; the keys are compared).
 //! - the validator's words after `invalid JSON:` (Python `jsonschema` vs the `jsonschema` crate; `pk-llm`'s own
 //!   allow-list), in the retry turn and in the failed result.
 
@@ -255,6 +256,10 @@ fn run_id() -> Regex {
     Regex::new(r"settext-\d{8}-\d{6}-").unwrap()
 }
 
+fn ask_run_id() -> Regex {
+    Regex::new(r"ask-\d{8}-\d{6}").unwrap()
+}
+
 fn validator_words() -> [(Regex, &'static str); 2] {
     [
         (
@@ -286,11 +291,18 @@ fn normalise(x: &Value) -> Value {
             {
                 *id = json!("<call_id>");
             }
+            // the one-shot Ask's stage timings: the keys are compared, the values are the clock
+            if let Some(Value::Object(t)) = out.get_mut("timings") {
+                for v in t.values_mut() {
+                    *v = json!("<s>");
+                }
+            }
             Value::Object(out)
         }
         Value::Array(xs) => Value::Array(xs.iter().map(normalise).collect()),
         Value::String(s) => {
-            let mut s = run_id().replace_all(s, "settext-<time>-").into_owned();
+            let s = ask_run_id().replace_all(s, "ask-<time>").into_owned();
+            let mut s = run_id().replace_all(&s, "settext-<time>-").into_owned();
             for (re, with) in validator_words() {
                 s = re.replace_all(&s, with).into_owned();
             }

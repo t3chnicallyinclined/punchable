@@ -93,6 +93,7 @@ allow-wildcard-paths = true
 #   pk-store       only by pk-api (the worker goes through the API; IO crates never depend on each other)
 #   pk-llm         only by pk-worker (the API never depends on the model client)
 #   axum           by the two binaries (and tonic, which surrealdb-protocol pulls in under pk-store: not our edge)
+#   rusqlite       only through pk-fts (tier 1, pure: an in-memory SQLite; ADR 0010 amendment 2026-11-02)
 # Red arm (the ADR): `pk-store = { path = "../pk-store" }` in pk-creative's Cargo.toml must fail `cargo deny check bans`.
 deny = [
     { crate = "surrealdb", wrappers = ["pk-store"] },
@@ -101,6 +102,9 @@ deny = [
     { crate = "pk-store", wrappers = ["pk-api"] },
     { crate = "pk-llm", wrappers = ["pk-worker"] },
     { crate = "axum", wrappers = ["pk-api", "pk-worker", "tonic"] },
+    # the one C library we compile ourselves (SQLite, for the one-shot Ask's FTS5 + bm25): through pk-fts only
+    { crate = "rusqlite", wrappers = ["pk-fts"] },
+    { crate = "libsqlite3-sys", wrappers = ["rusqlite"] },
 ]
 
 [sources]

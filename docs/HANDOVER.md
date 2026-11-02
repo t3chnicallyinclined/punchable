@@ -230,10 +230,16 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    write-heavy load `/api/health` is now p50 2.4 / p95 20.0 ms vs the Python's 17.6 / 39.1 (was 144.9 / 211.6), 67/67
    still equal. Trap written down: never serve an older generation to "callers who did not write": the app refetches
    once per `change` event, so a stale answer hides the change.
-   **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and eight of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge, embed, memolink) over
-   a `pk-creative` port of the notebook `Corpus` and creative/merge.py, proven equal to the Python worker over 34 recorded scenarios (bge loaded on first use) (the learned block second
-   on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python
-   worker yet**: `ask` remains (T8 row; embed and memolink are on the branch after the local merge). Image and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
+   **`pk-worker` (2026-11-02; eight kinds merged into main locally, `ask` from `rust/t8-ask` too, all merged into main locally, not deployed deployed)**: the loop and **all nine hosted kinds** over
+   a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
+   the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):
+   later Asks 0.29 s vs 1.88 s; idle 13 vs 37 MiB working set; the first Ask after a NEW pod embeds every source
+   (5,085 on a production-size synthetic notebook: about 2 minutes on one CPU, measured for the Rust one, INFERRED for the
+   Python one on the pod's 1-CPU limit); a container
+   restart reads them back from the emptyDir. **Ready for the swap, which is the owner's call**: image (bases pinned
+   by digest) and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied;
+   the runbook (build off the node, swap commit, `pk-worker crash-test` into Bugsink, the spend-ledger reset note,
+   rollback) is in the T8 row of `docs/RUST_WORKSTREAM.md`. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
    `~/.punchable/bin/`). Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).

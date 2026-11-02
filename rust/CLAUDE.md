@@ -5,8 +5,9 @@ Read `docs/ARCHITECTURE.md` sections 1 to 5 and `docs/adr/0010-crate-dag-rule.md
 
 - Gate: `cargo xtask gate` (fmt, clippy `-D warnings`, tests, per crate, never `--workspace`; `cargo deny`). Per lane:
   `cargo build -p <crate>`, `cargo test -p <crate>`. Build only in this `target/`; stop on os error 112 (disk).
-- The DAG: `pk-core`, `pk-wire` -> `pk-kb`, `pk-llm`, `pk-embed`, `pk-obs` -> `pk-creative`, `pk-store` -> `pk-api`,
-  `pk-worker`. Edges point down only. Libraries never call `std::env`.
+- The DAG: `pk-core`, `pk-wire` -> `pk-kb`, `pk-llm`, `pk-embed`, `pk-obs`, `pk-engine`, `pk-fts` -> `pk-creative`,
+  `pk-store` -> `pk-api`, `pk-worker`. Edges point down only. Libraries never call `std::env`. `pk-fts` is the only
+  crate that compiles C (SQLite, for the one-shot Ask); `deny.toml` keeps `rusqlite` there.
 - Anything named after a Python builtin (`repr`, `str`, `isspace`, ...) lives in `pk-core::py` and nowhere else.
 - Goldens: a CPython generator in `rust/tools/gen_<crate>_goldens.py` writes synthetic JSON into
   `crates/<crate>/tests/goldens/`; the Rust test compares as parsed values; CI regenerates and fails on drift, so the

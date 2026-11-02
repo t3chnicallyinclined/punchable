@@ -227,6 +227,81 @@ def memo_files() -> dict[str, str]:
     return out
 
 
+# ------------------------------------------------------------------ the one-shot Ask's notebook (engine/ask.py)
+# Ask reads the v0 graph (kb/v0/graph.json, the kbstore view) with performances, set nodes with dates, a voice
+# note, and the set transcripts; windows of 8 segments more than half covered by a performance are left out.
+ASK_CLOSERS = [
+    "Thank you, you have been a lovely room.", "Quick thing about airport parking before I go.",
+    "Long-term parking is a field where cars go to retire.", "The shuttle driver knew my name and my sins.",
+    "He dropped me at a terminal that does not exist.", "I am still there, waving at planes.",
+    "My parrot would have negotiated a better spot.", "Anyway, tip your bartenders.", "Goodnight!",
+]
+ASK_EXTRA_SET = ("openmic_rooftop", [
+    (0, 6, "First time doing the rooftop open mic, the wind took my notes."),
+    (6, 14, "My landlord lives up here, he charges the pigeons rent."),
+    (14, 20, "The pigeons pay in exposure."),
+])
+
+
+def set_key(d: str, key: str | None) -> str:
+    return key or f"{d[:4]}-{d[4:6]}-{d[6:8]}_{d[9:]}"
+
+
+def ask_graph() -> dict:
+    g = graph()
+    for n in g["nodes"]:
+        if n["type"] == "set":
+            k = n["id"][4:]
+            n["date"] = f"{k[:10]}"
+        if n["id"] == "unit:bins-a":
+            n["doc_title"] = "Airport doc"
+    g["nodes"].append({"id": "unit:memo-parrot", "type": "unit", "source": "memo", "date": "2024-09-09T08:00:00Z",
+                       "text": "Voice note: the parrot reads me my rights before breakfast, every single morning."})
+    for d, key, _venue, _guess, segs in SETS:
+        k = set_key(d, key)
+        for i, (jid, _status, a, b, text, *_rest) in enumerate(segs):
+            if not jid:
+                continue
+            pid = f"perf:{k}@{a}"
+            g["nodes"].append({"id": pid, "type": "performance", "set": f"set:{k}", "text": text, "start_ms": a,
+                               "end_ms": b})
+            # the landlord bit's night is ruled out as that joke: the performance stays, its joke link does not
+            status = "rejected" if jid == "joke:landlord-chat" else "inferred"
+            g["edges"].append({"id": f"e:perf-{k}-{i}", "kind": "performed_as", "src": pid, "dst": jid,
+                               "confidence": 0.9, "status": status})
+    return g
+
+
+def ask_transcript(segs: list) -> dict:
+    """Each performed segment as one transcript segment, then the closers (5 s each) after the last one."""
+    out = [{"start": a / 1000, "end": b / 1000, "text": f" {text} "} for _j, _s, a, b, text, *_ in segs]
+    t = segs[-1][3] / 1000
+    for i, line in enumerate(ASK_CLOSERS):
+        out.append({"start": t + 5 * i, "end": t + 5 * i + 4.5, "text": line})
+    return {"segments": out}
+
+
+def ask_files() -> dict[str, str]:
+    out = files()
+    out["kb/v0/graph.json"] = json.dumps(ask_graph(), indent=1)
+    for d, _key, _venue, _guess, segs in SETS:
+        out[f"corpus/sets/{d}/transcript.json"] = json.dumps(ask_transcript(segs))
+    d, segs = ASK_EXTRA_SET
+    out[f"corpus/sets/{d}/transcript.json"] = json.dumps(
+        {"segments": [{"start": a, "end": b, "text": t} for a, b, t in segs]})
+    return out
+
+
+def ask_decisions() -> list[dict]:
+    """The notebook's decisions plus a rejected joke and a rejected label link (the Ask leaves both out)."""
+    return decisions() + [
+        {"ts": "2024-07-03T09:00:00Z", "by": OWNER, "target": "node", "id": "joke:old-bins", "action": "reject",
+         "after": {}},
+        {"ts": "2024-07-03T09:01:00Z", "by": OWNER, "target": "edge", "id": "e:lab2", "action": "reject",
+         "after": {}},
+    ]
+
+
 def files() -> dict[str, str]:
     """path -> text, as the srcfile rows the API lists."""
     out = {"kb/v1/graph.json": json.dumps(graph(), indent=1), "kb/v1/id_map.json": json.dumps(id_map()),

@@ -39,12 +39,26 @@ enum Command {
         #[arg(long)]
         file: Option<std::path::PathBuf>,
     },
+    /// The swap's crash-report proof: a job task that panics and one failed job, both sent through the same Sentry
+    /// client, panic hook and scrubber the loop uses, to `SENTRY_DSN`. Exit 1 when no DSN is set. Run by hand in the
+    /// canary pod only (`docs/RUST_WORKSTREAM.md` T8 swap runbook); it claims nothing and touches no API. Without
+    /// `--send` it only says where the events would go (host only): on a desk the DSN comes from `secrets.env` too.
+    CrashTest {
+        /// Really send the two events.
+        #[arg(long)]
+        send: bool,
+    },
 }
+
+/// The words the crash test sends: a quoted phrase stands in for his material, which the scrubber must cut.
+pub const CRASH_TEST: &str = "pk-worker crash test: a forced job panic, not a real failure ('a line of his must not \
+                              arrive')";
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let result = match cli.command {
         Some(Command::Probe { max_age, file }) => probe(&max_age, file),
+        Some(Command::CrashTest { send }) => crash_test(send),
         Some(Command::Run(args)) => run(&args),
         None => run(&cli.run),
     };
@@ -88,6 +102,51 @@ fn probe(max_age: &str, file: Option<std::path::PathBuf>) -> anyhow::Result<Exit
     }
 }
 
+fn crash_test(send: bool) -> anyhow::Result<ExitCode> {
+    let env = Env::from_process();
+    let obs = ObsConfig::from_env(&env)?;
+    let sha = env.opt("PK_BUILD_SHA").unwrap_or("dev").to_string();
+    let dsn = obs.sentry_dsn.trim();
+    if dsn.is_empty() {
+        eprintln!("SENTRY_DSN is not set: nothing to prove");
+        return Ok(ExitCode::FAILURE);
+    }
+    // the host only: the key in front of `@` is never printed
+    let host = reqwest::Url::parse(dsn)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_string))
+        .unwrap_or_else(|| "<an unparsable DSN>".into());
+    if !send {
+        eprintln!("would send two crash-test events to {host}; add --send to send them");
+        return Ok(ExitCode::from(2));
+    }
+    let Some(guard) = pk_obs::init_sentry(&obs, SERVICE, VERSION, &sha) else {
+        eprintln!("SENTRY_DSN is not set: nothing to prove");
+        return Ok(ExitCode::FAILURE);
+    };
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+    let joined = rt.block_on(async {
+        // a job task that panics, as the JoinSet in the loop would see one
+        tokio::spawn(async { panic!("{CRASH_TEST}") }).await
+    });
+    let panicked = sentry::last_event_id();
+    let failed = pk_worker::error::JobError::Value(CRASH_TEST.to_string());
+    pk_obs::crash::report(&failed, None, None, &[("kind", "crash_test"), ("retry", "false")]);
+    let reported = sentry::last_event_id();
+    drop(guard); // flushes both events before the process ends
+    println!(
+        "crash test sent: panic event {} (task ended {}), failed-job event {}",
+        panicked.map_or_else(|| "none".into(), |u| u.simple().to_string()),
+        if joined.is_err() { "by panic" } else { "normally?" },
+        reported.map_or_else(|| "none".into(), |u| u.simple().to_string()),
+    );
+    Ok(if panicked.is_some() && reported.is_some() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
 fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
     let env = Env::from_process();
     let obs = ObsConfig::from_env(&env)?;
@@ -123,7 +182,9 @@ fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .max_blocking_threads(4)
+        // every job may hold a blocking thread for long work (the first Ask embeds the whole notebook) while the
+        // HTTP client's DNS lookups need one too: twice the most jobs, so a full house never stalls a lookup
+        .max_blocking_threads(2 * pk_worker::config::MAX_JOBS)
         .build()?;
     rt.block_on(async move {
         let stop = CancellationToken::new();
@@ -140,6 +201,7 @@ fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
             daily_usd = budget.daily_usd(),
             spent_usd = budget.spent_today(),
             legal_markers = legal.len(),
+            sqlite = pk_fts::sqlite_version(),
             "hosted: the Anthropic API"
         );
         let worker = Worker::new(Parts {

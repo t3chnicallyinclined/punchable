@@ -26,11 +26,14 @@ percent-encoding = { workspace = true }
 pk-core = { workspace = true }
 pk-creative = { path = "../pk-creative" }
 pk-embed = { path = "../pk-embed" }
+pk-fts = { path = "../pk-fts" }
 pk-llm = { path = "../pk-llm" }
 pk-obs = { path = "../pk-obs" }
 pk-wire = { path = "../pk-wire" }
 regex = { workspace = true }
 reqwest = { workspace = true }
+# `pk-worker crash-test` reads the id of the event it sent (the client itself is pk-obs's)
+sentry = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

@@ -18,6 +18,7 @@ pub mod event;
 pub mod memolink;
 pub mod merge;
 pub mod notebook;
+pub mod oneshot;
 pub mod punch;
 pub mod pyish;
 pub mod reducers;
