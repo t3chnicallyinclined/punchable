@@ -271,9 +271,7 @@ impl Data {
         if let Some(c) = self.corpus.get() {
             return Ok(Arc::clone(c));
         }
-        let store = st
-            .store_handle()
-            .ok_or_else(|| ApiError::unavailable("the database is not connected"))?;
+        let store = st.store_handle();
         let st = st.clone();
         let me = Arc::clone(self);
         let task = tokio::spawn(async move {
@@ -288,7 +286,7 @@ impl Data {
                         .collect();
                     let texts = st
                         .src_texts()
-                        .get(&store, &want)
+                        .get(store.as_deref(), &want)
                         .await
                         .map_err(|e| ApiError::internal("StoreError", e))?;
                     let built = it

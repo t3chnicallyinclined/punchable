@@ -57,14 +57,6 @@ pub fn recent_key(x: &JokeSummary) -> &str {
     .unwrap_or("")
 }
 
-/// `(title.lower(), id)`.
-fn tie(a: &JokeSummary, b: &JokeSummary) -> Ordering {
-    a.title
-        .to_lowercase()
-        .cmp(&b.title.to_lowercase())
-        .then_with(|| a.id.cmp(&b.id))
-}
-
 fn opt(s: Option<&String>) -> &str {
     s.map_or("", String::as_str)
 }
@@ -75,19 +67,21 @@ fn performed_key(x: &JokeSummary) -> (&str, &str) {
 }
 
 /// `sort_jokes(items, how)`: the Desk's sorts (`UX_SPEC` 4.2). Missing values go last; ties by title then id, so
-/// pages are stable. Python's `sorted(..., reverse = True)` keeps equal items in order, as a stable sort on the
-/// reversed comparison does.
+/// pages are stable. Every sort is the tie order `(title.lower(), id)` first (each key computed once), then a stable
+/// sort on the sort's own key: equal keys keep the tie order, which is what Python's stable `sorted` gives both for
+/// `reverse = True` over a tie-sorted list and for a key that ends in the tie.
 pub fn sort_jokes(items: &mut [&Row], how: &str) -> Result<(), ApiError> {
-    let by_tie = |items: &mut [&Row]| items.sort_by(|a, b| tie(&a.summary, &b.summary));
+    if !JOKE_SORTS.contains(&how) {
+        return Err(ApiError::bad_request(format!(
+            "sort must be one of {}",
+            JOKE_SORTS.join(", ")
+        )));
+    }
+    items.sort_by_cached_key(|r| (r.summary.title.to_lowercase(), r.summary.id.clone()));
     match how {
-        "recent" => {
-            by_tie(items);
-            items.sort_by(|a, b| recent_key(&b.summary).cmp(recent_key(&a.summary)));
-        }
-        "performed" => {
-            by_tie(items);
-            items.sort_by(|a, b| performed_key(&b.summary).cmp(&performed_key(&a.summary)));
-        }
+        "recent" => items.sort_by(|a, b| recent_key(&b.summary).cmp(recent_key(&a.summary))),
+        "performed" => items.sort_by(|a, b| performed_key(&b.summary).cmp(&performed_key(&a.summary))),
+        // `(avg is None, -(avg or 0), -(nights or 0), *tie)`
         "strongest" => items.sort_by(|a, b| {
             let (a, b) = (&a.summary, &b.summary);
             a.avg_vs_room
@@ -98,27 +92,13 @@ pub fn sort_jokes(items: &mut [&Row], how: &str) -> Result<(), ApiError> {
                     y.partial_cmp(&x).unwrap_or(Ordering::Equal)
                 })
                 .then_with(|| b.nights.cmp(&a.nights))
-                .then_with(|| tie(a, b))
         }),
-        "written" => {
-            by_tie(items);
-            items.sort_by(|a, b| opt(b.summary.last_seen.as_ref()).cmp(opt(a.summary.last_seen.as_ref())));
-        }
-        "untouched" => items.sort_by(|a, b| {
-            let (a, b) = (&a.summary, &b.summary);
-            let (x, y) = (opt(a.last_seen.as_ref()), opt(b.last_seen.as_ref()));
-            // `(not last_seen, last_seen or "", *tie)`
-            x.is_empty()
-                .cmp(&y.is_empty())
-                .then_with(|| x.cmp(y))
-                .then_with(|| tie(a, b))
+        "written" => items.sort_by(|a, b| opt(b.summary.last_seen.as_ref()).cmp(opt(a.summary.last_seen.as_ref()))),
+        // `(not last_seen, last_seen or "", *tie)`
+        _ => items.sort_by(|a, b| {
+            let (x, y) = (opt(a.summary.last_seen.as_ref()), opt(b.summary.last_seen.as_ref()));
+            x.is_empty().cmp(&y.is_empty()).then_with(|| x.cmp(y))
         }),
-        _ => {
-            return Err(ApiError::bad_request(format!(
-                "sort must be one of {}",
-                JOKE_SORTS.join(", ")
-            )));
-        }
     }
     Ok(())
 }

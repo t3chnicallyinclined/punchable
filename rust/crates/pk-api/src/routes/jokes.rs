@@ -36,10 +36,8 @@ pub async fn jokes(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiRe
     };
     let mut items = filtered(&idx, &q);
     if !q.include_hidden() {
-        let store = st
-            .store_handle()
-            .ok_or_else(|| ApiError::unavailable("the database is not connected"))?;
-        if let Some(att) = crate::creative::attached(&store, &st.config().owner_id).await
+        let store = st.store_handle();
+        if let Some(att) = st.attached().get(store.as_deref(), &st.config().owner_id).await
             && !att.is_empty()
         {
             items.retain(|x| !att.contains(&x.summary.id));
@@ -62,9 +60,10 @@ pub async fn jokes(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiRe
             let (secs, basis) = c.duration(&s.id);
             s.duration_s = Some(secs);
             s.duration_estimated = Some(!basis.starts_with("tape"));
-            serde_json::to_value(s).unwrap_or(Value::Null)
+            serde_json::to_value(s)
         })
-        .collect();
+        .collect::<Result<_, _>>()
+        .map_err(|e| ApiError::internal("JSONError", e))?;
     Ok(ok(
         &json!({"items": page, "total": items.len(), "offset": off, "limit": lim}),
     ))

@@ -46,6 +46,12 @@ FLAGS = '{"glass_accessory": false}'
 # Keys are (request label, JSON path or "status" / "header:<name>"). Empty on purpose: add one only with a reason the
 # owner would accept (the board's rule: the allow-list is for things that cannot hold, not a licence).
 ALLOW: dict[tuple[str, str], str] = {}
+# /api/today's `inbox` is the length of the Python pod's own upload folder (kb.inbox, written by POST /api/upload), which
+# pk-api cannot see until T10 moves uploads; pk-api says 0. The app does not read the field (grep app/src: today.tsx
+# reads next_show and pipeline, bit/[id].tsx reads tonight.items). Owner's decision, 2026-11-02.
+TODAY = ["/api/today", "/api/today?include_hidden=1", "/api/today?backend=files", "after his tonight list: /api/today"]
+ALLOW |= {(p, "$.inbox"): "the Python pod's upload folder, not in the database until T10; the app does not read it"
+          for p in TODAY}
 # Numbers that cannot be bit-equal, compared within a tolerance instead: the cloud's coordinates come from numpy's
 # float32 LAPACK SVD on the Python side and a float64 eigen-decomposition in Rust (crates/pk-api/src/cloud.rs); they
 # agree to ~1e-6 before the 4-decimal rounding. Everything else in the cloud (ids, clusters, labels, counts) is exact.
@@ -198,7 +204,9 @@ SETS = {
                                         row(3, None, 150, 60, TEXT["d"], 3.0, 7.3, status="new")]),
          "meta": {"source": "app_upload", "title": "Seaside open mic", "show_venue": "Seaside Comedy Club", "duration_s": 240.0}},
     SZ: {"analysis": analysis(SZ, 5.0, [row(1, "joke:b", 0, 40, "Bravo setup about the dog.", 1.5, 5.0),
-                                        row(2, "joke:a", 40, 30, "Alpha opener line one.", 4.0, 5.0)]),
+                                        row(2, "joke:a", 40, 30, "Alpha opener line one.", 4.0, 5.0,
+                                            similar=[{"joke_id": "joke:c", "title": "Charlie bit", "why": "both short"}],
+                                            hint_labels=[{"label_id": "label:topic:kids", "why": "family again"}])]),
          "meta": {"title": "Mabel's, March", "venue_guess": "Mabel's (upstairs)", "show_date": "2024-03-01",
                   "drive_id": "drv-synthetic-1", "original_name": "march.m4a"}},
 }
@@ -254,6 +262,33 @@ def build_comedy(comedy: Path) -> None:
         write_json(d / "transcript.json", {"segments": segs})
         write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": tape.get("laughs", [])})
     (comedy / "kb" / "creative").mkdir(parents=True)
+    # the Today feed's inputs: gems and orphans (serendipity), and a working set with a locked bit and a locked line
+    write_json(v0 / "insights.json", INSIGHTS)
+    (comedy / "kb" / "creative" / "workingsets.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in WORKINGSETS), encoding="utf-8", newline="\n")
+
+
+INSIGHTS = {"gems": {"gems": [
+    {"joke": "joke:f", "like": "joke:a", "like_title": "Alpha bit", "shared_shape": ["device:d1", "structure:s1", "x", "y"],
+     "shared_topics": ["planes"], "score": 0.71},
+    {"joke": "joke:x03", "like": "joke:b", "like_title": "Bravo bit", "shared_shape": ["device:d2"], "shared_topics": [],
+     "score": 0.52},
+    {"joke": "joke:x04", "like": "joke:x04", "like_title": "itself", "shared_shape": [], "score": 0.4},
+    {"joke": "joke:a", "like": "joke:b", "like_title": "Bravo bit", "shared_shape": ["d"], "score": 0.9}]},
+    "orphans": {"active_orphans": ["joke:x07", "joke:x08", "joke:nope", "joke:f", "joke:x11"]}}
+WS_BITS = [{"joke_id": "joke:a", "title": "Alpha bit", "target_s": 40}, {"joke_id": "joke:b", "title": "Bravo bit", "target_s": 60},
+           {"joke_id": "joke:x01", "title": "Car one", "target_s": 30}, {"joke_id": "joke:c", "title": "Charlie bit", "target_s": 50},
+           {"joke_id": "joke:d", "title": "Delta bit", "target_s": 45}]
+WORKINGSETS = [
+    {"ts": "2024-03-20T10:00:00+00:00", "op": "promote", "id": "ws:main", "by": "owner",
+     "data": {"title": "Main set", "storyboard_id": None, "target_s": 225, "bits": WS_BITS}},
+    {"ts": "2024-03-21T10:00:00+00:00", "op": "lock_bit", "id": "ws:main", "by": "owner", "data": {"joke_id": "joke:d"}},
+    {"ts": "2024-03-21T11:00:00+00:00", "op": "lock_line", "id": "ws:main", "by": "owner",
+     "data": {"joke_id": "joke:b", "text": "The purple monkey dishwasher line here.", "node": "unit:b1"}},
+    {"ts": "2024-03-22T10:00:00+00:00", "op": "new_version", "id": "ws:main", "by": "owner",
+     "data": {"note": "v2: Charlie before Bravo", "bits": [WS_BITS[0], WS_BITS[3], WS_BITS[1], WS_BITS[2], WS_BITS[4]]}},
+    {"ts": "2024-03-01T10:00:00+00:00", "op": "promote", "id": "ws:old", "by": "owner",
+     "data": {"title": "Old set", "target_s": 60, "bits": WS_BITS[:1]}}]
 
 
 # the merges store (creative_event rows; the bundle carries no merges log, the API writes them): a note auto-attached
@@ -267,6 +302,10 @@ MERGES = [{"ts": "2024-05-01T10:00:00+00:00", "op": "attach", "id": "at:x05", "b
               {"ts": "2024-05-01T12:00:00+00:00", "op": "detach", "id": "at:x09", "by": "owner", "data": {}},
               {"ts": "2024-05-02T10:00:00+00:00", "op": "dismiss", "id": "dm:x02", "by": "owner",
                "data": {"jokes": ["joke:x02", "joke:x06"], "reason": "kept as its own bit"}}]
+
+
+ATTACH_LATE = {"ts": "2024-05-03T10:00:00+00:00", "op": "attach", "id": "at:x10", "by": "ai:attach",
+               "data": {"joke": "joke:x10", "into": "joke:x02", "text": "x10", "date": "2024-05-03"}}
 
 
 def surreal_sql(port: int, pw: str, sql: str, vars_: dict | None = None) -> list:
@@ -470,6 +509,15 @@ def coverage(py: str, app: dict) -> list[str]:
     checks["jokes: the attached note out, the detached one in, both kinds of duration"] = (
         "joke:x05" not in ids and "joke:x09" in ids and any(not x["duration_estimated"] for x in js)
         and any(x["duration_estimated"] for x in js) and len({x["duration_s"] for x in js}) > 3)
+    td = get("/api/today")
+    ws_ = td.get("working_set") or {}
+    checks |= {"today: a working set with a last night": bool(ws_.get("last_night")),
+               "today: notes to try tonight": bool(td.get("try_tonight")),
+               "today: the latest analysis and the card's moments": bool(
+                   td.get("latest_analysis") and (td.get("latest_set") or {}).get("moments") is not None),
+               "today: gems and orphans": {p["kind"] for p in td.get("serendipity") or []} == {"gem", "orphan"},
+               "today: glance hints": bool(td["glance"]["hints"]),
+               "today: minutes in testing": bool(td["minutes"]["n_testing"])}
     checks["jokes: the hidden view keeps the attached note"] = any(
         x["id"] == "joke:x05" for x in get("/api/jokes?limit=5000&include_hidden=1")["items"])
     for what, ok_ in checks.items():
@@ -608,6 +656,7 @@ def main() -> int:
                  "/api/jokes?who=edited", "/api/jokes?who=confirmed", "/api/jokes?who=ai&limit=5", "/api/jokes?who=nope",
                  "/api/jokes?mode=hybrid", "/api/jokes?q=%20&mode=hybrid", "/api/jokes?backend=files",
                  "/api/jokes?include_hidden=1&q=grocery", "/api/jokes?q=x05", "/api/jokes?q=x09"]
+        jokes += TODAY[:3]
         jokes += [f"/api/jokes?sort={s}&limit=5000" + h for s in ("recent", "performed", "strongest", "written", "untouched")
                   for h in ("", "&include_hidden=1")]
         reqs += [(p, "GET", p, app) for p in jokes]
@@ -671,6 +720,30 @@ def main() -> int:
             reqs.append((label, "GET", p, app))
         if call(rs, "GET", f"/api/sets/set:{SX}/review", app)[2] == before:
             problems.append("after a transcript post: pk-api still shows the old transcript")
+        # his own list for tonight (a write through pk-api): Today shows it saved, and the creative half lists it too
+        st, _, body = call(rs, "POST", "/api/tonight", app, {"items": [{"joke": "joke:c", "done": True},
+                                                                       {"joke": "joke:x02", "done": False}]})
+        if st != 200:
+            raise SystemExit(f"tonight through pk-api: HTTP {st} {body[:300]!r}")
+        label = TODAY[3]
+        got = compare(label, call(py, "GET", "/api/today", app), call(rs, "GET", "/api/today", app))
+        problems += got
+        n_ok += not got
+        reqs.append((label, "GET", "/api/today", app))
+        # a note attached after pk-api has served the list (creative writes do not move the generation): the very next
+        # list on both servers leaves it out
+        seen = call(rs, "GET", "/api/jokes?q=x10", app)[2]
+        surreal_sql(port, pw, "CREATE creative_event CONTENT $row RETURN NONE;", {"row": {
+            "store": "merges", "seq": len(MERGES), "op": "attach", "item": "at:x10", "at": "2024-05-03T10:00:00+00:00",
+            "line": json.dumps(ATTACH_LATE), "h": __import__("hashlib").sha256(json.dumps(ATTACH_LATE).encode()).hexdigest()}})
+        for p in ("/api/jokes?q=x10", "/api/jokes?limit=5000"):
+            label = "after a late attach: " + p
+            got = compare(label, call(py, "GET", p, app), call(rs, "GET", p, app))
+            problems += got
+            n_ok += not got
+            reqs.append((label, "GET", p, app))
+        if "joke:x10" not in seen.decode() or "joke:x10" in call(rs, "GET", "/api/jokes?q=x10", app)[2].decode():
+            problems.append("after a late attach: pk-api did not take the newly attached note out of the list")
         # the whole Bits-list row (AppIndex.summaries) before /api/jokes moves: the Python's page without the creative
         # layer's duration, against pk-api's diagnostics route (a build with --features diagnostics)
         for hid in ("", "&include_hidden=1"):
@@ -685,7 +758,7 @@ def main() -> int:
                 x.pop("duration_s", None)
                 x.pop("duration_estimated", None)
             # the Python's page has the attached note taken out (desk_filter) unless include_hidden; the raw rows have not
-            rs_items = [x for x in json.loads(s_rs[2])["items"] if hid or x["id"] != "joke:x05"]
+            rs_items = [x for x in json.loads(s_rs[2])["items"] if hid or x["id"] not in ("joke:x05", "joke:x10")]
             got = compare(label, (200, {}, json.dumps({"items": items}).encode()),
                           (200, {}, json.dumps({"items": rs_items}).encode()))
             problems += got
@@ -697,7 +770,7 @@ def main() -> int:
         mtext = call(rs, "GET", "/metrics")[2].decode()
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
                       "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}",
-                      "/api/jokes"):
+                      "/api/jokes", "/api/today"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here: the hybrid search goes to the Python before pk-api's layers

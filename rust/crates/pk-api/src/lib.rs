@@ -23,6 +23,7 @@ pub mod routes;
 pub mod snapshot;
 pub mod state;
 pub mod tape;
+pub mod today;
 
 use std::time::Duration;
 
@@ -40,8 +41,9 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 9] = [
+pub const OWN_PATHS: [&str; 10] = [
     "/api/jokes",
+    "/api/today",
     "/api/map/cloud",
     "/api/sets",
     "/api/health",
@@ -97,6 +99,7 @@ pub fn app(st: AppState) -> Router {
             read_route(&st, routes::jokes::jokes)
                 .layer(from_fn_with_state(st.clone(), routes::jokes::hybrid_to_python)),
         )
+        .route("/api/today", read_route(&st, routes::today::today))
         .route("/api/sets", read_route(&st, routes::sets::sets))
         .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
         .route("/api/sets/{id}/review", read_route(&st, routes::sets::review))

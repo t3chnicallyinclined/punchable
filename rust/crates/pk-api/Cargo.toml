@@ -16,6 +16,7 @@ diagnostics = []
 anyhow = { workspace = true }
 axum = { workspace = true }
 base64 = { workspace = true }
+chrono = { workspace = true }
 form_urlencoded = { workspace = true }
 futures = { workspace = true }
 hex = { workspace = true }

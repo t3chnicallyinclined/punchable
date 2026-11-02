@@ -58,6 +58,7 @@ struct Inner {
     cloud: tokio::sync::Mutex<Option<CloudCache>>,
     transcripts: crate::tape::TranscriptCache,
     src_texts: crate::creative::SrcTexts,
+    attached: crate::creative::Attached,
 }
 
 /// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
@@ -113,6 +114,7 @@ impl AppState {
             cloud: tokio::sync::Mutex::new(None),
             transcripts: crate::tape::TranscriptCache::default(),
             src_texts: crate::creative::SrcTexts::default(),
+            attached: crate::creative::Attached::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
         }))
     }
@@ -176,6 +178,11 @@ impl AppState {
     /// The `srcfile` texts the creative layer read so far (by path and hash), shared by every generation.
     pub fn src_texts(&self) -> &crate::creative::SrcTexts {
         &self.0.src_texts
+    }
+
+    /// The merges store's attached notes, as last replayed (`desk_filter`).
+    pub fn attached(&self) -> &crate::creative::Attached {
+        &self.0.attached
     }
 
     /// The cloud cache; held across a build, so two misses build once.

@@ -31,16 +31,23 @@ pub fn wanted(path: &str) -> bool {
             .is_some_and(|d| !d.contains('/'))
 }
 
-/// The texts fetched so far, by `srcfile` path: `(sha256, text)`. Shared by every generation.
+/// How many `srcfile` texts one query reads (the graph alone can be megabytes).
+const READ_CHUNK: usize = 8;
+
+/// The texts fetched so far, by `srcfile` path: `(sha256, text)`. Shared by every generation; a path's entry is
+/// replaced when its hash moves, so it holds one copy of each file the notebook reads (what the Python pod keeps on
+/// its disk).
 #[derive(Debug, Default)]
 pub struct SrcTexts(Mutex<HashMap<String, (String, Arc<str>)>>);
 
 impl SrcTexts {
-    /// The texts of `want` (path, sha256): each from the cache when its hash matches, else read (one query for every
-    /// miss, by key). A row gone since the generation listed it is left out, as a file the pod no longer has.
+    /// The texts of `want` (path, sha256): each from the cache when its hash matches, else read by key, a few rows per
+    /// query so the response held at once stays small (the hosted Python reads one row at a time for the same
+    /// reason). A row gone since the generation listed it is left out, as a file the pod no longer has. With no
+    /// database, only a miss is an error.
     pub async fn get(
         &self,
-        store: &Store,
+        store: Option<&Store>,
         want: &[(String, String)],
     ) -> Result<BTreeMap<String, Arc<str>>, StoreError> {
         let mut out = BTreeMap::new();
@@ -59,26 +66,29 @@ impl SrcTexts {
         if missing.is_empty() {
             return Ok(out);
         }
-        let keys: Vec<String> = missing.iter().map(|p| srcfile_key(p)).collect();
-        let rows = store
-            .last(
-                "LET $ids = array::map($ks, |$k| type::record('srcfile', $k));\
-                 SELECT path, sha256, text FROM $ids;",
-                vars([("ks", pk_store::to_db(&json!(keys)))]),
-            )
-            .await?;
-        let mut cache = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        for r in pk_store::store::rows_of(rows).into_iter().map(from_db) {
-            let (Some(p), Some(h), Some(t)) = (
-                r.get("path").and_then(Value::as_str),
-                r.get("sha256").and_then(Value::as_str),
-                r.get("text").and_then(Value::as_str),
-            ) else {
-                continue;
-            };
-            let t: Arc<str> = Arc::from(t);
-            cache.insert(p.to_string(), (h.to_string(), Arc::clone(&t)));
-            out.insert(p.to_string(), t);
+        let store = store.ok_or_else(|| StoreError::mapping("the database is not connected"))?;
+        for chunk in missing.chunks(READ_CHUNK) {
+            let keys: Vec<String> = chunk.iter().map(|p| srcfile_key(p)).collect();
+            let rows = store
+                .last(
+                    "LET $ids = array::map($ks, |$k| type::record('srcfile', $k));\
+                     SELECT path, sha256, text FROM $ids;",
+                    vars([("ks", pk_store::to_db(&json!(keys)))]),
+                )
+                .await?;
+            let mut cache = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+            for r in pk_store::store::rows_of(rows).into_iter().map(from_db) {
+                let (Some(p), Some(h), Some(t)) = (
+                    r.get("path").and_then(Value::as_str),
+                    r.get("sha256").and_then(Value::as_str),
+                    r.get("text").and_then(Value::as_str),
+                ) else {
+                    continue;
+                };
+                let t: Arc<str> = Arc::from(t);
+                cache.insert(p.to_string(), (h.to_string(), Arc::clone(&t)));
+                out.insert(p.to_string(), t);
+            }
         }
         Ok(out)
     }
@@ -119,7 +129,9 @@ pub fn corpus_inputs(bundle: &Value, files: &SrcShas) -> Result<Vec<(String, Str
     Ok(out)
 }
 
-/// `build_corpus` over the fetched texts (by `srcfile` path) and the database's decision lines.
+/// `build_corpus` over the fetched texts (by `srcfile` path) and the database's decision lines. Without the vectors the
+/// Python's corpus carries: nothing served from it reads them (`duration`, the Today feed); a route that needs
+/// similarity must add them (`Vectors::from_files` over the `vectors/` rows).
 pub fn build_corpus(
     inputs: &[(String, String)],
     texts: &BTreeMap<String, Arc<str>>,
@@ -140,18 +152,48 @@ pub fn build_corpus(
     Ok(Corpus::new(parts))
 }
 
-/// `merge.attached(store.items)` keys: the notes auto-attached under a bit, which the Desk does not list on their
-/// own (`merge_api.desk_filter`). `None` when the store cannot be read or replayed: the Python then filters nothing.
-pub async fn attached(store: &Store, owner: &str) -> Option<HashSet<String>> {
-    let lines = store.creative_lines("merges").await.ok()?;
-    let reducer = pk_creative::reducers::for_store("merges", owner)?;
-    let st = pk_creative::store::Store::replay(reducer, &lines).ok()?;
-    Some(
-        pk_creative::merge::MergeState::from_items(st.items())
-            .attached
-            .into_keys()
-            .collect(),
-    )
+/// The merges store's lines and the notes attached in them, as last replayed. Creative writes do not move the
+/// generation, so the lines are read on every request, as the Python reads them; the replay is redone only when
+/// they changed.
+#[derive(Debug, Default)]
+pub struct Attached(Mutex<Option<Replayed>>);
+
+/// The lines replayed and the attached notes they give.
+type Replayed = (Vec<String>, Arc<HashSet<String>>);
+
+impl Attached {
+    /// `merge.attached(store.items)` keys: the notes auto-attached under a bit, which the Desk does not list on their
+    /// own (`merge_api.desk_filter`). `None` with no database, or when the store cannot be read or replayed: the
+    /// Python then filters nothing (its `except Exception: return items`).
+    pub async fn get(&self, store: Option<&Store>, owner: &str) -> Option<Arc<HashSet<String>>> {
+        let lines = match store?.creative_lines("merges").await {
+            Ok(l) => l,
+            Err(e) => {
+                tracing::warn!("desk_filter: reading the merges store: {e}; nothing filtered");
+                return None;
+            }
+        };
+        if let Some((l, att)) = &*self.0.lock().unwrap_or_else(PoisonError::into_inner)
+            && *l == lines
+        {
+            return Some(Arc::clone(att));
+        }
+        let reducer = pk_creative::reducers::for_store("merges", owner)?;
+        let att: Arc<HashSet<String>> = match pk_creative::store::Store::replay(reducer, &lines) {
+            Ok(st) => Arc::new(
+                pk_creative::merge::MergeState::from_items(st.items())
+                    .attached
+                    .into_keys()
+                    .collect(),
+            ),
+            Err(e) => {
+                tracing::warn!("desk_filter: replaying the merges store: {e}; nothing filtered");
+                return None;
+            }
+        };
+        *self.0.lock().unwrap_or_else(PoisonError::into_inner) = Some((lines, Arc::clone(&att)));
+        Some(att)
+    }
 }
 
 #[cfg(test)]

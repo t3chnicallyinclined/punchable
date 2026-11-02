@@ -744,8 +744,13 @@ impl Corpus {
 
     /// `seg_evidence(seg_id)`: the first ten words of a segment, as evidence.
     pub fn seg_evidence(&self, seg_id: &str) -> Option<Value> {
+        self.seg_evidence_n(seg_id, 10)
+    }
+
+    /// `seg_evidence(seg_id, n_words)`: the first `n` words of a segment, as evidence.
+    pub fn seg_evidence_n(&self, seg_id: &str, n: usize) -> Option<Value> {
         let t = self.text_of(seg_id, None).unwrap_or_default();
-        let q = prefix_words(&t, 10);
+        let q = prefix_words(&t, n);
         if q.is_empty() { None } else { self.ev(seg_id, &q) }
     }
 
