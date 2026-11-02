@@ -2,7 +2,7 @@
 //! proposed config must stay in, the typed diff a model may return (unknown fields refused, so a reply cannot name a
 //! file, a set or anything else), and the Pareto front and reflective batch a search draws from.
 //!
-//! From upstream `gw-ops/src/proposer.rs` (rust-successor 9dfedad). Not forked (FORK.md): the model call
+//! From upstream `upstream-ops/src/proposer.rs` (Rust branch 9dfedad). Not forked (FORK.md): the model call
 //! (`ClaudeCli` spawns the `claude` command line: no process is ever spawned from Punchable's engine; a later lane
 //! makes the one call through `pk-llm` in the worker), the search loop that drives it, and the store sink. The pool
 //! entry carries the store's two leg ranks instead of a project and its rank there.
@@ -43,6 +43,9 @@ pub struct Cand {
     pub text_rank: Option<usize>,
     /// Its rank in the vector leg.
     pub vector_rank: Option<usize>,
+    /// Its rank in the store's own fusion, as read at the pool's depth (not recut by `read_depth`).
+    #[serde(default)]
+    pub fused_rank: Option<usize>,
     /// The bit it belongs to, for the `per_bit` cap.
     #[serde(default)]
     pub bit: Option<String>,
@@ -92,11 +95,13 @@ pub fn score_item(cfg: &RankConfig, item: &Item) -> Outcome {
         .iter()
         .map(|c| c.vector_rank.filter(|&r| r <= cfg.read_depth))
         .collect();
+    let fused_rank: Vec<Option<usize>> = kept.iter().map(|c| c.fused_rank).collect();
     let pool = Pool {
         texts: &texts,
         locators: &locators,
         text_rank: &text_rank,
         vector_rank: &vector_rank,
+        fused_rank: &fused_rank,
     };
     let order = order_pool(&item.question, &pool, &cfg.order);
     let (mut used, mut count, mut gold) = (0usize, 0usize, false);
@@ -397,6 +402,7 @@ mod tests {
                     },
                     text_rank: Some(i),
                     vector_rank: None,
+                    fused_rank: None,
                     bit: Some(if i <= 2 {
                         "joke:same".into()
                     } else {

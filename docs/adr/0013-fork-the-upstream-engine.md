@@ -5,7 +5,7 @@ punchable in the way it makes most sense"; "[upstream] is going public", so its 
 name in brackets is his project engine's, kept in his private notes until he publishes it). Wiring it into `pk-api` /
 `pk-worker` is a separate decision that waits on the offline proof and his go.
 
-**Context.** Upstream (the owner's project engine, Rust, `rust-successor` 9dfedad) already has what Punchable's next
+**Context.** Upstream (the owner's project engine, Rust, Rust branch 9dfedad) already has what Punchable's next
 steps need: a fact store with an evidence rule, an ask whose every quote a program checks, a ranking config that is
 versioned, replayed offline, proposed, promoted and rolled back, and cards and bridges between ideas. Punchable has its
 own verbatim gate (`pk-creative::verbatim`), its own Ask retrieval (in-memory BM25 + comedy rules) and its own search
@@ -39,3 +39,9 @@ latency, on the owner's desktop. Pass bar: no worse than today's retrieval. The 
 **Result (2026-11-02): not passed.** The fork's default order found the right bit within 24 places on 18 of 24
 questions against Search's 24 and Ask's 19, at 175 ms p50 against Search's 34 ms. The engine is kept on its branch,
 unwired; the next attempt is a held-out question set and a config that keeps SurrealDB's own fusion as the store leg.
+
+**Run 3 (2026-11-02): not passed.** A second set of 22 questions was written and the candidate (SurrealDB's own
+`search::rrf` as the order, the engine's packing on top) pre-registered before any change. On that held-out set it
+found the right bit within 5 places on 18 and within 24 on 20, against Search's 20 and 21, at 262 ms p50 against
+Search's 33 ms. Ranking changes stop here; the database guards stop bugs, not a holder of the shared login, so
+per-role logins come before any wiring.

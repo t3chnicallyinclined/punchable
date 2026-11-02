@@ -9,7 +9,7 @@
 //! frame: a card goes into a prompt only through [`render`] inside [`crate::frame::data`], quote first, facets
 //! labelled as unverified, every field escaped.
 //!
-//! From upstream `gw-ops/src/card.rs` (rust-successor 9dfedad). Changes (FORK.md): a card belongs to a bit, not a
+//! From upstream `upstream-ops/src/card.rs` (Rust branch 9dfedad). Changes (FORK.md): a card belongs to a bit, not a
 //! project; resolving and writing a card's quote is the store's (the quote is checked through the one verbatim gate
 //! before the store writes it); the recollection and cross-project grade caps are gone (one comic's own material);
 //! the secret-shaped-text refusal is gone (upstream's `refusal.rs` is a dev-journal guard; his material holds no

@@ -240,9 +240,12 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    0013, `rust/crates/pk-engine/FORK.md`), the one verbatim gate, the engine's store seam in `pk-store`, its schema
    (applied only on an explicit call; never on the hosted database without his go). **Its offline proof did not pass**:
    right bit within 24 places on 18/24 questions vs Search 24/24 and Ask 19/24; 175 ms vs Search's 34 ms
-   (`docs/RUST_WORKSTREAM.md` T19). Next: a held-out question set written before any change, a config that keeps
-   SurrealDB's own fusion as the store leg, the schema to gw-security before any wiring. The private questions, gold and
-   results are in his data repo's `docs/punchable/evals/engine-proof/`.
+   (`docs/RUST_WORKSTREAM.md` T19). **Run 3 did not pass either**: on a held-out set of 22 questions written and
+   pre-registered before any change, the candidate (SurrealDB's own fusion as the order) found the right bit within
+   5 / 24 places on 18 / 20 questions vs Search 20 / 21, at 262 ms vs 33 ms. Ranking changes stopped there. The security
+   re-review's schema findings are fixed and proven on a scratch server; what the database cannot prove with one shared
+   login (`signed`, snapshots, promotes) needs per-role logins before any wiring. The private questions, gold and
+   results are in his private data folder.
 
 Done 2026-11-02 (local commit, not pushed): the cloud map as a real 3D view (orbit, camera zoom, fly to a group, bit
 names when zoomed, Whole map, VoiceOver actions), and two latent phone bugs it found: `wrapAngle` called from the turn's

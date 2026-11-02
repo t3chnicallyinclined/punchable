@@ -10,12 +10,12 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use pk_core::Env;
 use pk_engine::fact::{FactIn, Grade, Kind, QuoteOf};
 use pk_engine::rank_config::RankConfig;
 use pk_engine::{EngineStore, ReadQuery};
-use pk_store::{Config, Store, store::vars};
+use pk_store::{Auth, Config, Store, store::vars};
 use serde_json::Value as Json;
+use sha2::{Digest, Sha256};
 use surrealdb::types::{Object, Value};
 
 struct Scratch {
@@ -52,12 +52,12 @@ async fn scratch() -> Option<(Scratch, Store)> {
         skip("no surreal binary (PUNCH_SURREAL or ~/.punchable/bin/surreal.exe)");
         return None;
     }
-    let env = Env::from_process();
-    let Some(pass) = env.opt("SURREAL_PASS") else {
-        skip(&format!("no SURREAL_PASS in {}", env.place()));
-        return None;
-    };
-    let user = env.opt("SURREAL_USER").unwrap_or("root").to_string();
+    // A throwaway root password for this server alone (never the secrets file's: the security reviewer re-review).
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    let pass = hex::encode(Sha256::digest(format!("{nanos}-{}", std::process::id()).as_bytes()));
+    let user = "root".to_string();
     let port = TcpListener::bind("127.0.0.1:0")
         .expect("bind")
         .local_addr()
@@ -73,7 +73,7 @@ async fn scratch() -> Option<(Scratch, Store)> {
             "memory",
         ])
         .env("SURREAL_USER", &user)
-        .env("SURREAL_PASS", pass)
+        .env("SURREAL_PASS", &pass)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
@@ -88,7 +88,12 @@ async fn scratch() -> Option<(Scratch, Store)> {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     tokio::time::sleep(Duration::from_millis(200)).await;
-    let cfg = Config::scratch(&env, port, "punchable_test", "t_engine").expect("config");
+    let cfg = Config::new(
+        format!("ws://127.0.0.1:{port}"),
+        Auth::Root { user, pass },
+        "punchable_test",
+        "t_engine",
+    );
     let store = Store::connect(cfg).await.expect("connect");
     assert!(store.apply_schema(false).await.expect("schema"));
     store.apply_engine_schema().await.expect("the engine schema applies");
@@ -190,11 +195,37 @@ async fn the_engine_reads_his_material_writes_lessons_and_its_guards_hold() {
     assert!(e.contains("retired, never deleted"), "{e}");
     let e = refused(&store, &format!("UPDATE {id} SET text = 'edited';")).await;
     assert!(e.to_lowercase().contains("readonly") || e.contains("read only"), "{e}");
-    refused(
+    let e = refused(
         &store,
         "CREATE lesson SET text = 'x', kind = 'fact', grade = 'CONFIRMED', source = 's', by = 'b', owner_statement = 'said so';",
     )
     .await;
+    assert!(e.contains("needs evidence"), "{e}");
+    // A quote that is not in the record it cites, and a record that does not exist (written straight to the
+    // database, around the Rust rule).
+    let e = refused(
+        &store,
+        &format!(
+            "CREATE lesson SET text = 'x', kind = 'fact', grade = 'INFERRED', source = 's', by = 'b', \
+             evidence = {uid}, quote = 'words he never said';"
+        ),
+    )
+    .await;
+    assert!(e.contains("words of the record"), "{e}");
+    let e = refused(
+        &store,
+        "CREATE lesson SET text = 'x', kind = 'fact', grade = 'INFERRED', source = 's', by = 'b', \
+         evidence = unit:nosuchunit, quote = 'any words here';",
+    )
+    .await;
+    assert!(e.contains("exists and is not hidden"), "{e}");
+    // A row dated into the future, to stay "newest" forever.
+    let e = refused(
+        &store,
+        "CREATE learning_mode SET mode = 'shadow', by = 'w', at = d'2999-01-01T00:00:00Z';",
+    )
+    .await;
+    assert!(e.contains("`at`"), "the clock rule on `at` refused it: {e}");
     let cfg = RankConfig::default();
     let canon = cfg.canonical_json();
     let ok = format!(
@@ -211,16 +242,18 @@ async fn the_engine_reads_his_material_writes_lessons_and_its_guards_hold() {
         "a config not named by its hash"
     );
     let to = format!("type::record('rank_config', '{}')", cfg.sha256());
-    refused(
+    let e = refused(
         &store,
         &format!("CREATE rank_switch SET to_cfg = {to}, reason = 'rollback', by = 'x';"),
     )
     .await;
-    refused(
+    assert!(e.contains("reason"), "the reason rule refused it: {e}");
+    let e = refused(
         &store,
         &format!("CREATE rank_switch SET to_cfg = {to}, reason = 'promote', by = 'x';"),
     )
     .await;
+    assert!(e.contains("reason"), "the reason rule refused it: {e}");
     store
         .query(
             &format!("CREATE rank_switch SET to_cfg = {to}, reason = 'promote', by = 'owner', owner_statement = 'go';"),
@@ -247,4 +280,27 @@ async fn the_engine_reads_his_material_writes_lessons_and_its_guards_hold() {
         )
         .await
         .expect("he raises it");
+
+    // His unit hidden later (pasted, not his): no new lesson may rest on it, even with a signed statement, and the
+    // lesson already resting on it can still be retired, never brought back.
+    store
+        .query(&format!("UPDATE {uid} SET hidden = true;"), Object::new())
+        .await
+        .expect("hide the unit");
+    let hidden_lesson = format!(
+        "CREATE lesson SET text = 'x', kind = 'fact', grade = 'CONFIRMED', source = 's', by = 'b', signed = true, \
+         owner_statement = 'said so', evidence = {uid}, quote = $q;"
+    );
+    let e = store
+        .query(&hidden_lesson, vars([("q", Value::String(question.clone()))]))
+        .await
+        .expect_err("a hidden unit is no evidence, even beside a signed statement")
+        .to_string();
+    assert!(e.contains("exists and is not hidden"), "{e}");
+    store
+        .query(&format!("UPDATE {id} SET status = 'retired';"), Object::new())
+        .await
+        .expect("a lesson on a hidden unit can be retired");
+    let e = refused(&store, &format!("UPDATE {id} SET status = 'live';")).await;
+    assert!(e.contains("stays retired"), "{e}");
 }

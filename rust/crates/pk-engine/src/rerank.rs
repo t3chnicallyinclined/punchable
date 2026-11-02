@@ -3,7 +3,7 @@
 //! long text, reciprocal rank fusion, and the store's two legs (full-text and vector) as orders of their own. Pure
 //! functions over text.
 //!
-//! From upstream `gw-ops/src/rerank.rs` (rust-successor 9dfedad), unchanged except: the pool carries each
+//! From upstream `upstream-ops/src/rerank.rs` (Rust branch 9dfedad), unchanged except: the pool carries each
 //! candidate's rank in the store's full-text leg and vector leg instead of its project and rank inside the project
 //! (Punchable reads one notebook, so upstream's `own_first` order and its two ladder arms are gone), and the
 //! ladder gains the `text`, `vector` and `hybrid` arms.
@@ -321,6 +321,8 @@ pub struct Pool<'a> {
     pub text_rank: &'a [Option<usize>],
     /// Rank in the store's vector read.
     pub vector_rank: &'a [Option<usize>],
+    /// Rank in the store's own fusion of its legs (`SurrealDB`'s `search::rrf`, as Search ranks today).
+    pub fused_rank: &'a [Option<usize>],
 }
 
 /// The pool in one leg's order: the candidates that leg returned, by their rank, then the rest in the given order.
@@ -331,7 +333,7 @@ pub fn by_leg(ranks: &[Option<usize>]) -> Vec<usize> {
 }
 
 /// The arms of the retrieval ladder, in the order they are reported. The first is the order given.
-pub const ARMS: [&str; 11] = [
+pub const ARMS: [&str; 12] = [
     "store",
     "bm25",
     "bm25-b1",
@@ -343,6 +345,7 @@ pub const ARMS: [&str; 11] = [
     "text",
     "vector",
     "hybrid",
+    "fused",
 ];
 
 /// Every arm's order of the pool against `question`, as indices into it, keyed by arm name.
@@ -375,6 +378,7 @@ pub fn ladder_orders(question: &str, pool: &Pool<'_>) -> Vec<(&'static str, Vec<
     let text = by_leg(pool.text_rank);
     let vector = by_leg(pool.vector_rank);
     let hybrid = rrf(&[text.clone(), vector.clone(), bm25_stem.clone()], RRF_K);
+    let fused_store = by_leg(pool.fused_rank);
     vec![
         ("store", store),
         ("bm25", bm25_plain),
@@ -387,6 +391,7 @@ pub fn ladder_orders(question: &str, pool: &Pool<'_>) -> Vec<(&'static str, Vec<
         ("text", text),
         ("vector", vector),
         ("hybrid", hybrid),
+        ("fused", fused_store),
     ]
 }
 
@@ -463,6 +468,7 @@ mod tests {
             locators: &locators,
             text_rank: &[None, Some(1), Some(2)],
             vector_rank: &[Some(1), Some(2), None],
+            fused_rank: &[Some(2), Some(1), None],
         };
         let orders = ladder_orders("why does the parser reject empty input", &pool);
         assert_eq!(orders.len(), ARMS.len());
@@ -476,6 +482,7 @@ mod tests {
         assert_eq!(orders[8].1, [1, 2, 0], "the full-text leg's order");
         assert_eq!(orders[9].1, [0, 1, 2], "the vector leg's order");
         assert_eq!(orders[10].1[0], 1, "hybrid: the one every signal likes leads");
+        assert_eq!(orders[11].1, [1, 0, 2], "the store's own fusion, as given");
     }
 
     #[test]

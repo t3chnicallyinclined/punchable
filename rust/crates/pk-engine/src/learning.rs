@@ -2,7 +2,7 @@
 //! logged reads under a candidate config, the fence that rolls a promoted config back when it does worse, and the
 //! learning switch.
 //!
-//! From upstream `gw-ops/src/learning.rs` (rust-successor 9dfedad). Upstream reads and writes its rows
+//! From upstream `upstream-ops/src/learning.rs` (Rust branch 9dfedad). Upstream reads and writes its rows
 //! (`config_version`, `config_switch`, `snapshot`, `learning`, `ask_packet`) inside each function over a blocking
 //! client; here the decisions are separated from the IO (FORK.md), so the async store (`pk-store`'s engine module)
 //! fetches the rows and hands them in, and the engine never touches a database, a file or the environment. Gone

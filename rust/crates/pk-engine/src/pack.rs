@@ -2,7 +2,7 @@
 //! `per_bit` of one bit, cut by bytes and by places; with a trace of how (each signal's order, the cut, timings), so an
 //! offline replay of the same read under the same config reproduces the packet exactly ([`crate::learning`]).
 //!
-//! From upstream `gw-ops/src/ask.rs` (`pack`, `order_traced`, `Trace`, rust-successor 9dfedad). Changes
+//! From upstream `upstream-ops/src/ask.rs` (`pack`, `order_traced`, `Trace`, Rust branch 9dfedad). Changes
 //! (FORK.md): a [`Hit`] is a record of his material with its ranks in the store's two legs, not a file span of a
 //! project; the hits keep the store's given order (upstream re-sorted by a score that spanned projects); the
 //! `per_bit` cap is new; the trace drops the project index.
@@ -51,6 +51,9 @@ pub struct Hit {
     /// Its rank in the store's vector leg (1 = nearest).
     #[serde(default)]
     pub vector_rank: Option<usize>,
+    /// Its rank in the store's own fusion of its legs (`search::rrf`), when the store computes one.
+    #[serde(default)]
+    pub fused_rank: Option<usize>,
     /// Its cosine distance to the question, when the vector leg returned it.
     #[serde(default)]
     pub distance: Option<f64>,
@@ -204,11 +207,13 @@ pub fn order_traced(question: &str, hits: Vec<Hit>, order: &Order) -> (Vec<Hit>,
     let locators: Vec<&str> = hits.iter().map(|h| h.key.as_str()).collect();
     let text_rank: Vec<Option<usize>> = hits.iter().map(|h| h.text_rank).collect();
     let vector_rank: Vec<Option<usize>> = hits.iter().map(|h| h.vector_rank).collect();
+    let fused_rank: Vec<Option<usize>> = hits.iter().map(|h| h.fused_rank).collect();
     let pool = Pool {
         texts: &texts,
         locators: &locators,
         text_rank: &text_rank,
         vector_rank: &vector_rank,
+        fused_rank: &fused_rank,
     };
     // The local BM25 reads what the question is about, as the store's legs do (`rerank::question_words`).
     let about = question_words(question).join(" ");

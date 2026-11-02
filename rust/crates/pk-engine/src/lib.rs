@@ -1,4 +1,4 @@
-//! Punchable's retrieval and evidence engine, forked from upstream (rust-successor 9dfedad; what came from where,
+//! Punchable's retrieval and evidence engine, forked from upstream (Rust branch 9dfedad; what came from where,
 //! what was dropped and what changed: `FORK.md` beside this crate; the decision: docs/adr/0013).
 //!
 //! What it is for: answering a question about his notebook from his own words, and learning without guessing.

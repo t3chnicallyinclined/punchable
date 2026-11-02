@@ -2,8 +2,9 @@
 //! file, touches files or the network, or reaches for a secret came across from upstream (exec, secrets, census,
 //! hooks, the MCP server, the window), and nothing may enter later.
 //!
-//! Two scans of this crate's own sources (`src/`, `schema/`), with `//` comments removed and every whitespace
-//! character dropped, so `std :: process`, `use std::{fs, process}` and a path split across lines are caught: one
+//! Two scans of this crate's own sources (`src/`, `schema/`), whole-line `//` comments and docs skipped (a trailing
+//! comment is scanned with its line, so a `//` inside a string hides nothing) and every whitespace character
+//! dropped, so `std :: process`, `use std::{fs, process}` and a path split across lines are caught: one
 //! line by line (to name the line), one over the whole file joined (to catch the split). And a manifest check over
 //! every dependency table, renamed packages included, plus no `build.rs`.
 //!
@@ -43,6 +44,10 @@ const BANNED: &[(&str, &str)] = &[
     ("secrets.env", "names the secrets file"),
     ("owner_pass", "carries a password (upstream's owner login)"),
     ("unsafe", "unsafe code"),
+    ("include!(", "pulls code from outside src/"),
+    ("std::*", "a glob std import (could hide fs, env, net, process)"),
+    ("usestdas", "renames std (could hide fs, env, net, process)"),
+    ("externcratestd", "renames std (could hide fs, env, net, process)"),
 ];
 
 /// The one `include_str!` the crate may hold: its own schema.
@@ -63,13 +68,10 @@ fn files(dir: &Path, out: &mut Vec<PathBuf>) {
 /// A line's code: everything before `//` (a `//` inside a string ends the scan of that line early, so such a line
 /// is also scanned whole by the file pass), with whitespace dropped and the allowed forms removed.
 fn code_of(line: &str) -> String {
-    let code: String = line
-        .split("//")
-        .next()
-        .unwrap_or("")
-        .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect();
+    if line.trim_start().starts_with("//") {
+        return String::new();
+    }
+    let code: String = line.chars().filter(|c| !c.is_whitespace()).collect();
     code.replace("#[tokio::test]", "")
         .replace(&SCHEMA_INCLUDE.replace(' ', ""), "")
 }
@@ -162,6 +164,14 @@ fn the_scan_can_fail() {
             "include_bytes!(",
         ),
         ("f.rs", "#[path = \"../../x.rs\"] mod x;\n", "#[path"),
+        (
+            "g.rs",
+            "pub fn u() { let _u = \"http://x\"; std::process::exit(0); }\n",
+            "std::process",
+        ),
+        ("h.rs", "include!(\"../../elsewhere.rs\");\n", "include!("),
+        ("i.rs", "use std::*;\n", "std::*"),
+        ("j.rs", "use std as s;\n", "usestdas"),
     ];
     for (name, body, _) in bad {
         std::fs::write(src.join(name), body).expect("write");
@@ -219,9 +229,29 @@ fn no_dependency_table_holds_an_io_crate() {
         }
     }
     assert!(!tables.is_empty(), "the manifest has a dependencies table");
+    // A `{ workspace = true }` dependency takes its package from the workspace root, where it may be renamed.
+    let root: toml::Table = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml"))
+        .expect("the workspace manifest")
+        .parse()
+        .expect("a TOML workspace manifest");
+    let workspace_deps = root
+        .get("workspace")
+        .and_then(|w| w.get("dependencies"))
+        .and_then(toml::Value::as_table)
+        .cloned()
+        .unwrap_or_default();
     for (where_, deps) in tables {
         for (name, spec) in deps {
-            let package = spec.get("package").and_then(toml::Value::as_str).unwrap_or(name);
+            let from_root = spec.get("workspace").and_then(toml::Value::as_bool) == Some(true);
+            let renamed = if from_root {
+                workspace_deps.get(name)
+            } else {
+                Some(spec)
+            };
+            let package = renamed
+                .and_then(|s| s.get("package"))
+                .and_then(toml::Value::as_str)
+                .unwrap_or(name);
             assert!(
                 !IO.contains(&package),
                 "{where_}: {package} is an IO dependency of a pure crate"

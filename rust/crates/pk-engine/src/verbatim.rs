@@ -9,7 +9,7 @@
 //! (`pk_core::py::isspace`) so the differential against the Python stays exact; positions are code points there and
 //! bytes here, which the index map hides.
 //!
-//! [`align`] comes from upstream (`gw-ops/src/ask.rs`, rust-successor 9dfedad): it LOCATES the run of lines a
+//! [`align`] comes from upstream (`upstream-ops/src/ask.rs`, Rust branch 9dfedad): it LOCATES the run of lines a
 //! paraphrased quote came from (80% of its words, in order). It is never a gate for his words: the engine's check
 //! uses it only under [`crate::check::Rules::UPSTREAM`], and even there the line's own text, not the model's
 //! words, stands as the quote. Punchable's rules ([`crate::check::Rules::PUNCHABLE`]) leave it off.
@@ -114,7 +114,7 @@ pub fn verbatim<'a>(quote: &str, source: &'a str) -> Option<&'a str> {
     Some(&source[a..b])
 }
 
-// ---- from upstream (gw-ops/src/ask.rs, 9dfedad) ---------------------------------------------------------------
+// ---- from upstream (upstream-ops/src/ask.rs, 9dfedad) ---------------------------------------------------------------
 
 /// Upstream's `labels.quote_min_words`: under this many words a quote counts only word for word.
 pub const QUOTE_MIN_WORDS: usize = 3;

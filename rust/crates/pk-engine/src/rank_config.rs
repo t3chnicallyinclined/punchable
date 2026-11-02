@@ -5,7 +5,7 @@
 //! problem at once), and it names itself: [`RankConfig::sha256`] hashes its canonical JSON (keys sorted at every
 //! level, no whitespace), so a packet, a replay and a rollback can say which config they used.
 //!
-//! From upstream `gw-ops/src/rank_config.rs` (rust-successor 9dfedad). Changes (FORK.md): the `own-first` signal
+//! From upstream `upstream-ops/src/rank_config.rs` (Rust branch 9dfedad). Changes (FORK.md): the `own-first` signal
 //! is gone (one notebook, no projects); `text` and `vector` signals order the pool by the store's two legs; a
 //! `per_bit` cap keeps one bit from filling the packet (Ask's `PER_JOKE`); the default is Punchable's hybrid order
 //! and [`RankConfig::upstream`] keeps the shipped upstream default for its tests; loading from a file is the
@@ -47,6 +47,9 @@ pub enum Signal {
     Text,
     /// The store's vector (bge) leg: what it returned, by distance, then the rest.
     Vector,
+    /// The store's own fusion of its legs (`SurrealDB`'s `search::rrf`, grouped as today's Search groups them):
+    /// what it ranked, by rank, then the rest.
+    Fused,
     /// BM25 over the read itself.
     Bm25(Bm25Spec),
 }
@@ -306,6 +309,7 @@ pub fn signal_order(question: &str, pool: &Pool<'_>, signal: &Signal) -> Vec<usi
         Signal::Store => (0..pool.texts.len()).collect(),
         Signal::Text => rerank::by_leg(pool.text_rank),
         Signal::Vector => rerank::by_leg(pool.vector_rank),
+        Signal::Fused => rerank::by_leg(pool.fused_rank),
         Signal::Bm25(s) => {
             let query = rerank::words(question, s.stem);
             if s.window_lines > 0 {
@@ -389,6 +393,7 @@ pub fn ladder_arms(k: &LadderKnobs) -> Vec<(&'static str, Order)> {
         ("text", one(Signal::Text)),
         ("vector", one(Signal::Vector)),
         ("hybrid", fuse(vec![Signal::Text, Signal::Vector, stem])),
+        ("fused", one(Signal::Fused)),
     ]
 }
 
@@ -491,6 +496,7 @@ mod tests {
             locators: &locators,
             text_rank: &[Some(2), None, Some(1), None],
             vector_rank: &[None, Some(1), Some(3), Some(2)],
+            fused_rank: &[Some(3), Some(1), None, Some(2)],
         };
         let q = "why does the parser reject empty input";
         let fixed = rerank::ladder_orders(q, &pool);
