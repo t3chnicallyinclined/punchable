@@ -221,8 +221,11 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    behind the Python's exact auth, CORS and errors, everything else forwarded to the Python; 57 of 57 requests equal
    against the hosted Python over one scratch database (`rust/tools/diff_api_reads.py`, empty allow-list), the
    read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t9-api-rs.yaml`).
-   Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query). `pk-worker` is
-   lane T8. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
+   Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query). Second group
+   (same day): `/api/map/cloud` in Rust (67/67 equal, numpy's random stream ported bit for bit) and an incremental
+   snapshot patch after writes; under a write-heavy load the Rust reads still rebuild ~130 ms per write, so
+   `/api/health` is slower than the Python's there (RUST_WORKSTREAM T9 row has the numbers and the next fixes).
+   `pk-worker` is lane T8. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
    `~/.punchable/bin/`). Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).

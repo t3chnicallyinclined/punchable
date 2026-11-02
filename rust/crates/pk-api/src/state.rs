@@ -41,7 +41,11 @@ struct Inner {
     rebuild: tokio::sync::Mutex<()>,
     failed: Mutex<Option<Failed>>,
     draining: std::sync::atomic::AtomicBool,
+    cloud: tokio::sync::Mutex<Option<CloudCache>>,
 }
+
+/// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
+pub type CloudCache = (String, i64, bool, std::time::Instant, Arc<Value>);
 
 /// The state a build last failed for, and when.
 type Failed = ((Option<i64>, Value), std::time::Instant);
@@ -62,6 +66,8 @@ pub const PROXY_CONCURRENCY: usize = 64;
 pub const STATE_TIMEOUT: Duration = Duration::from_millis(1500);
 /// A snapshot read gives up after this.
 pub const LOAD_TIMEOUT: Duration = Duration::from_secs(30);
+/// An incremental patch gives up after this (then the full read has its own [`LOAD_TIMEOUT`]).
+pub const PATCH_TIMEOUT: Duration = Duration::from_secs(5);
 /// Connecting gives up after this.
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// A failed build for one state is not retried sooner than this.
@@ -84,6 +90,7 @@ impl AppState {
             data: RwLock::new(None),
             rebuild: tokio::sync::Mutex::new(()),
             failed: Mutex::new(None),
+            cloud: tokio::sync::Mutex::new(None),
             draining: std::sync::atomic::AtomicBool::new(false),
         }))
     }
@@ -132,6 +139,16 @@ impl AppState {
     /// owner's PC: 0.4 ms on the shared handle, 16-19 ms through a fresh clone), which made every read 10x slower.
     fn store(&self) -> Option<Arc<Store>> {
         self.0.db.read().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    /// The shared database handle for a route's own query (never cloned into a new session).
+    pub fn store_handle(&self) -> Option<Arc<Store>> {
+        self.store()
+    }
+
+    /// The cloud cache; held across a build, so two misses build once.
+    pub fn cloud_cache(&self) -> &tokio::sync::Mutex<Option<CloudCache>> {
+        &self.0.cloud
     }
 
     fn cached(&self) -> Option<Arc<Data>> {
@@ -210,12 +227,21 @@ impl AppState {
             return self.cached().ok_or_else(|| self.booting_error());
         }
         let t = std::time::Instant::now();
-        let loaded = match tokio::time::timeout(
-            LOAD_TIMEOUT,
-            snapshot::load(&store, st.clone(), &self.0.config.owner_id),
-        )
-        .await
-        {
+        let owner = self.0.config.owner_id.clone();
+        let prev = self.cached();
+        let read = async {
+            // only decisions appended since the last generation: patch it (a few ms of reads, not the whole graph)
+            if let Some(prev) = prev.as_deref() {
+                match tokio::time::timeout(PATCH_TIMEOUT, snapshot::patch(&store, prev, st.clone(), &owner)).await {
+                    Ok(Ok(Some(d))) => return Ok(d),
+                    Ok(Ok(None)) => {}
+                    Ok(Err(e)) => tracing::warn!(error = %e, "snapshot patch failed; reading everything"),
+                    Err(_) => tracing::warn!("snapshot patch timed out; reading everything"),
+                }
+            }
+            snapshot::load(&store, st.clone(), &owner).await
+        };
+        let loaded = match tokio::time::timeout(LOAD_TIMEOUT, read).await {
             Ok(r) => r,
             Err(_) => Err(pk_store::StoreError::mapping("the snapshot read timed out")),
         };

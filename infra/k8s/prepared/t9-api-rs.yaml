@@ -121,6 +121,8 @@ spec:
           - { path: /api/learned, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/meta, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/pipeline, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # step 2 (GET-only on the Python too): the cloud map, Python's slowest route under load
+          - { path: /api/map/cloud, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

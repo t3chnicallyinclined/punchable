@@ -174,6 +174,8 @@ def get(url: str, timeout: float = 5):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--keep", action="store_true", help="leave the temp folder (logs) behind")
+    ap.add_argument("--rust", type=Path, default=None,
+                    help="a pk-api binary: after the Python run, run pk-load against it over the same database (T9)")
     ap.add_argument("rest", nargs=argparse.REMAINDER, help="-- then arguments for pk-load")
     a = ap.parse_args()
     bge = os.environ.get("PK_BGE_DIR")
@@ -244,7 +246,36 @@ def main() -> int:
         print(f"API pid {api.pid} on {base}: loaded and embedded ({time.time() - t:.0f}s, sweep {vec.get('last')})", flush=True)
         time.sleep(10)  # settle before the idle sample
         rest = [x for x in a.rest if x != "--"]
-        return subprocess.run([str(PK_LOAD), "--base", base, "--pid", str(api.pid), "--writes", *rest]).returncode
+        rc = subprocess.run([str(PK_LOAD), "--base", base, "--pid", str(api.pid), "--writes", *rest]).returncode
+        if not a.rust:
+            return rc
+        # T9: pk-api over the same database, everything it does not answer forwarded to this Python; the same
+        # pk-load run (its routes not ported yet measure the forward plus the Python, so read only the ported ones)
+        rport = free_port()
+        rs_env = {**db_env, "PORT": str(rport), "HOST": "127.0.0.1", "PK_AUTH": "0", "PK_ALLOW_NO_AUTH": "1",
+                  "PK_DATA": str(root / "data"), "PK_PYTHON_URL": base, "RUST_LOG": "info"}
+        rlog = open(root / "pk-api.log", "w", encoding="utf-8")
+        rs = subprocess.Popen([str(a.rust)], env=rs_env, stdout=rlog, stderr=subprocess.STDOUT)
+        procs.append(rs)
+        rbase = f"http://127.0.0.1:{rport}"
+        t = time.time()
+        while True:
+            if rs.poll() is not None:
+                raise SystemExit(f"pk-api exited {rs.returncode}")
+            if time.time() - t > 300:
+                raise SystemExit("pk-api did not become ready")
+            try:
+                with urllib.request.urlopen(rbase + "/api/health?ready=1", timeout=5) as resp:
+                    if resp.status == 200:
+                        break
+            except OSError:
+                pass
+            time.sleep(1)
+        print(f"pk-api pid {rs.pid} on {rbase}: ready ({time.time() - t:.0f}s)", flush=True)
+        time.sleep(10)
+        rc2 = subprocess.run([str(PK_LOAD), "--base", rbase, "--pid", str(rs.pid), "--writes", *rest]).returncode
+        rlog.close()
+        return rc or rc2
     finally:
         for p in reversed(procs):
             p.terminate()

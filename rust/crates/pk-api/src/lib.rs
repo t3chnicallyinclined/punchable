@@ -7,6 +7,7 @@
 //! socket. [`serve`] binds, supervises the database connection and shuts down the way the manifest expects.
 
 pub mod auth;
+pub mod cloud;
 pub mod config;
 pub mod cors;
 pub mod display;
@@ -35,7 +36,8 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 6] = [
+pub const OWN_PATHS: [&str; 7] = [
+    "/api/map/cloud",
     "/api/health",
     "/api/labels",
     "/api/decisions",
@@ -72,6 +74,7 @@ pub fn app(st: AppState) -> Router {
         .route("/api/meta", read_route(&st, routes::kb::meta))
         .route("/api/pipeline", read_route(&st, routes::kb::pipeline))
         .route("/api/learned", read_route(&st, routes::learned::learned))
+        .route("/api/map/cloud", read_route(&st, routes::cloud::map_cloud))
         .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));

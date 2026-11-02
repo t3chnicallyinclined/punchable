@@ -20,6 +20,7 @@ form_urlencoded = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 jsonwebtoken = { workspace = true }
+nalgebra = { workspace = true }
 pk-core = { workspace = true }
 pk-kb = { path = "../pk-kb" }
 pk-obs = { path = "../pk-obs" }
