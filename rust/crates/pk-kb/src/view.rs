@@ -50,26 +50,44 @@ pub struct View {
 impl View {
     /// Replay `graph` (an object with `nodes` and `edges` arrays) and `decisions`.
     pub fn new(graph: &Value, decisions: Vec<Decision>, report: Vec<String>, owner_id: &str) -> Self {
+        let objects = |k: &str| {
+            graph
+                .get(k)
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_object().cloned())
+        };
+        Self::from_records(graph, objects("nodes"), objects("edges"), decisions, report, owner_id)
+    }
+
+    /// [`View::new`] over records the caller already holds, without building a `graph.json` value first (one clone
+    /// of each record instead of two). `meta` gives `version`, `generated_at` and `runs` (a missing one is null; its
+    /// other keys are ignored, so a whole graph object works too); `nodes` and `edges` are the graph's records in
+    /// order. A record without a non-empty string `id` is skipped, as `new` skips it.
+    pub fn from_records(
+        meta: &Value,
+        nodes: impl IntoIterator<Item = Rec>,
+        edges: impl IntoIterator<Item = Rec>,
+        decisions: Vec<Decision>,
+        report: Vec<String>,
+        owner_id: &str,
+    ) -> Self {
         let mut graph_meta = Map::new();
         for k in ["version", "generated_at", "runs"] {
-            graph_meta.insert(k.to_string(), graph.get(k).cloned().unwrap_or(Value::Null));
+            graph_meta.insert(k.to_string(), meta.get(k).cloned().unwrap_or(Value::Null));
         }
-        let mut nodes = IndexMap::new();
-        for n in graph.get("nodes").and_then(Value::as_array).into_iter().flatten() {
-            if let Value::Object(o) = n
-                && let Some(id) = truthy_str(o.get("id"))
-            {
-                nodes.insert(id.to_string(), o.clone());
+        let keyed = |recs: &mut dyn Iterator<Item = Rec>| {
+            let mut out: IndexMap<String, Rec> = IndexMap::new();
+            for o in recs {
+                if let Some(id) = truthy_str(o.get("id")).map(str::to_string) {
+                    out.insert(id, o);
+                }
             }
-        }
-        let mut edges = IndexMap::new();
-        for e in graph.get("edges").and_then(Value::as_array).into_iter().flatten() {
-            if let Value::Object(o) = e
-                && let Some(id) = truthy_str(o.get("id"))
-            {
-                edges.insert(id.to_string(), o.clone());
-            }
-        }
+            out
+        };
+        let nodes = keyed(&mut nodes.into_iter());
+        let edges = keyed(&mut edges.into_iter());
         let undone: Vec<usize> = decisions.iter().filter_map(Decision::undo_of).collect();
         let mut v = Self {
             graph_meta,

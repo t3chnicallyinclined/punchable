@@ -33,7 +33,15 @@ pub async fn health(
         b["error"] = json!("shutting down");
         return Ok(json_response(StatusCode::SERVICE_UNAVAILABLE, &b));
     }
-    let d = match st.data().await {
+    // signed out (the kubelet's probes, the app before sign-in) the answer is `{ok, rev, auth, flags}`: nobody reads
+    // data from it, so it never waits for a rebuild once there is data
+    let signed_out = st.verifier().is_some() && caller.0.is_none();
+    let now = if signed_out { st.data_now() } else { None };
+    let fetched = match now {
+        Some(d) => Ok(d),
+        None => st.data().await,
+    };
+    let d = match fetched {
         Ok(d) => d,
         Err(_) if !st.loaded() => {
             // `server.py` `booting`: `ready=1` is the readiness probe (200 only once this pod serves data)
@@ -54,12 +62,12 @@ pub async fn health(
     };
     super::pick(&q)?;
     let flags = Value::Object(st.config().flags.clone());
-    if st.verifier().is_some() && caller.0.is_none() {
+    if signed_out {
         return Ok(ok(
             &json!({"ok": true, "rev": d.rev(), "auth": "required", "flags": flags}),
         ));
     }
-    let idx = d.index(q.include_hidden()).await?;
+    // no view and no index: the decision count is the rows' (the same in both views)
     let data = &st.config().data;
     let comedy = data.join("comedy");
     let graph = d
@@ -82,7 +90,7 @@ pub async fn health(
         "graph": graph,
         "graph_state": "ok",
         "decisions": path_str(&comedy.join("kb").join("v0").join("decisions.jsonl")),
-        "decision_lines": idx.view.decisions.len(),
+        "decision_lines": d.decisions().len(),
         "bad_lines": d.load_info.get("bad_lines").cloned().unwrap_or(json!(0)),
         "inbox": path_str(&data.join("inbox")),
         "corpus": path_str(&comedy.join("corpus")),

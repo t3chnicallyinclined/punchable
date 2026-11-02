@@ -3,16 +3,17 @@
 //! in `spawn_blocking`, holding the cache lock so concurrent misses build once.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use axum::body::Bytes;
 use axum::extract::{RawQuery, State};
+use axum::http::StatusCode;
 use axum::response::Response;
 use pk_store::{from_db, vars};
 use serde_json::{Value, json};
 
 use crate::cloud::{self, Bit, CACHE_S, CAP_DEFAULT, CAP_MAX};
-use crate::error::{ApiError, ApiResult, ok};
+use crate::error::{ApiError, ApiResult, json_bytes};
 use crate::query::Query;
 use crate::state::AppState;
 
@@ -43,7 +44,8 @@ fn mean_unit(vs: &[&Vec<f32>]) -> Vec<f32> {
 /// The handler.
 pub async fn map_cloud(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());
-    let (d, idx) = super::prepare(&st, &q).await?;
+    // the index only on a cache miss: a warm cloud is answered from the rows' generation alone
+    let d = super::prepare_rows(&st, &q).await?;
     let cap_s = q.get("cap").map_or_else(|| CAP_DEFAULT.to_string(), str::to_string);
     let cap = cap_s
         .chars()
@@ -52,17 +54,21 @@ pub async fn map_cloud(State(st): State<AppState>, RawQuery(raw): RawQuery) -> A
         .flatten()
         .filter(|c| (1..=CAP_MAX).contains(c))
         .ok_or_else(|| ApiError::bad_request(format!("cap must be 1-{CAP_MAX}")))?;
-    let rev = d.rev();
     let hidden = q.include_hidden();
     let mut cache = st.cloud_cache().lock().await;
+    // a request that waited here behind another's build answers for the data as it is now, so an older generation
+    // never replaces a newer entry (one `meta:state` read when nothing moved)
+    let d = if cache.is_some() { st.data().await? } else { d };
+    let rev = d.rev();
     if let Some((r, c, h, at, body)) = cache.as_ref()
         && *r == rev
         && *c == cap
         && *h == hidden
         && at.elapsed() < Duration::from_secs(CACHE_S)
     {
-        return Ok(ok(body));
+        return Ok(json_bytes(StatusCode::OK, body.clone()));
     }
+    let idx = d.index(hidden).await?;
     let store = st
         .store_handle()
         .ok_or_else(|| ApiError::unavailable(crate::state::NOT_LOADED))?;
@@ -144,7 +150,8 @@ pub async fn map_cloud(State(st): State<AppState>, RawQuery(raw): RawQuery) -> A
     .map_err(|e| ApiError::internal("JoinError", e))?;
     let mut body = built;
     body["rev"] = json!(rev);
-    let body = Arc::new(body);
-    *cache = Some((rev, cap, hidden, Instant::now(), Arc::clone(&body)));
-    Ok(ok(&body))
+    // cached as the bytes sent: a warm hit copies nothing and serialises nothing
+    let bytes = Bytes::from(serde_json::to_vec(&body).map_err(|e| ApiError::internal("JSONError", e))?);
+    *cache = Some((rev, cap, hidden, Instant::now(), bytes.clone()));
+    Ok(json_bytes(StatusCode::OK, bytes))
 }
