@@ -3495,6 +3495,7 @@ dependencies = [
 name = "pk-creative"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "indexmap",
  "pk-core",
  "pk-engine",
@@ -3503,6 +3504,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
 ]
 
@@ -3656,6 +3658,7 @@ dependencies = [
  "percent-encoding",
  "pk-core",
  "pk-creative",
+ "pk-embed",
  "pk-llm",
  "pk-obs",
  "pk-wire",

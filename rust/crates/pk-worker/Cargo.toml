@@ -25,6 +25,7 @@ html-escape = { workspace = true }
 percent-encoding = { workspace = true }
 pk-core = { workspace = true }
 pk-creative = { path = "../pk-creative" }
+pk-embed = { path = "../pk-embed" }
 pk-llm = { path = "../pk-llm" }
 pk-obs = { path = "../pk-obs" }
 pk-wire = { path = "../pk-wire" }

@@ -40,6 +40,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# the bge model for the embedding scenarios (tools/kb/fetch_bge.py); without it those goldens are kept as committed
+BGE = os.environ.get("PK_BGE_DIR") or ""
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import notebook_fixture as F  # noqa: E402
 OUT = ROOT / "rust" / "crates" / "pk-worker" / "tests" / "goldens"
@@ -253,6 +255,10 @@ SCENARIOS = [
     {"name": "bridge_refused", "env": {}, "notebook": True,
      "job": job("bridge", {"from": "joke:landlord-chat", "to": "joke:laundromat", "set": "ws:golden"}),
      "voice": voice_doc(), "model": [answer("", SONNET, stop_reason="refusal")]},
+    {"name": "embed_new_idea", "env": {}, "notebook": True, "bge": True, "job": job("embed", {}),
+     "voice": voice_doc(), "model": []},
+    {"name": "embed_current_and_gone", "env": {}, "notebook": True, "bge": True, "summary_current": True,
+     "job": job("embed", {}), "voice": voice_doc(), "model": []},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -362,7 +368,16 @@ REFUSED_RESULT = b'{"error": "body too large"}'
 
 
 def notebook_files(sc: dict) -> dict:
-    return F.files() if sc.get("notebook") else {}
+    files = F.files() if sc.get("notebook") else {}
+    if sc.get("summary_current"):
+        # the memo idea's vector is current (its text hash matches) and one row is for an idea that is gone
+        doc = json.loads(files["vectors/extra_summary.json"])
+        text = " ".join(next(d for d in F.decisions() if d["id"] == "joke:carousel-idea")["after"]["summary"].split())
+        doc["text_sha"]["summary:joke:carousel-idea"] = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        doc["rows"]["summary:joke:gone-idea"] = F.vector("gone")
+        doc["text_sha"]["summary:joke:gone-idea"] = "0" * 16
+        files["vectors/extra_summary.json"] = json.dumps(doc, separators=(",", ":"))
+    return files
 
 
 def notebook_decisions(sc: dict) -> list:
@@ -417,7 +432,8 @@ def run_python(sc: dict) -> dict:
             "PUNCHABLE_LEGAL_RULES": str(tmp / "no-legal-rules.json"),
             "ANTHROPIC_API_KEY": KEY, "ANTHROPIC_BASE_URL": base(anth),
             "ENGINE_CONFIG": str(ROOT / "engine" / "config.hosted.toml"),
-            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "cache"), "PK_BGE_DIR": str(tmp / "no-bge"),
+            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "cache"),
+            "PK_BGE_DIR": BGE if sc.get("bge") else str(tmp / "no-bge"),
             "PK_HEARTBEAT_FILE": str(tmp / "heartbeat"), "PK_AI_SPEND_FILE": str(spend),
             "PK_AI_DAILY_USD": str(sc.get("daily_usd", 5.0)), "PK_METRICS_PORT": "0", "PK_WORKER_NAME": WORKER_NAME,
         })
@@ -448,6 +464,10 @@ def normalise(x):
             if os.name != "nt" and not RUN_ID.search(x["text"]):
                 assert x["sha256"] == hashlib.sha256(x["text"].encode("utf-8")).hexdigest(), x["path"]
             out["sha256"] = hashlib.sha256(out["text"].encode("utf-8")).hexdigest()
+        # embed_summaries reports the vector file's absolute local path (this PC's temp folder): never written into a
+        # golden; the Rust worker reports the workspace path it posts the file under
+        if isinstance(out.get("file"), str) and out["file"].replace("\\", "/").endswith("/extra_summary.json"):
+            out["file"] = "vectors/extra_summary.json"
         return out
     if isinstance(x, list):
         return [normalise(v) for v in x]
@@ -549,6 +569,9 @@ def pages_golden() -> dict:
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for sc in SCENARIOS:
+        if sc.get("bge") and not BGE:
+            print(f"{sc['name']}: kept as committed (no PK_BGE_DIR: the bge model is not here)")
+            continue
         got = run_python(sc)
         doc = {k: v for k, v in sc.items()}
         if sc.get("notebook"):   # the Rust test serves the same notebook

@@ -81,6 +81,9 @@ pub struct WorkerConfig {
     pub stop_grace: Duration,
     /// `PK_OWNER_ID`: the actor id of his own edits ("owner").
     pub owner_id: String,
+    /// Where the bge-small model is, when it is there (`PK_BGE_DIR`, else `<PK_CACHE_DIR>/models/…`): the embedding
+    /// kinds are claimed only with it, as the Python's `hosted_kinds`.
+    pub bge_dir: Option<PathBuf>,
 }
 
 fn invalid(key: &str, reason: impl Into<String>) -> ConfigError {
@@ -144,9 +147,10 @@ impl WorkerConfig {
             .or_else(|| env.path("PK_CACHE_DIR").map(|p| p.join("worker")))
             .or_else(|| env.home().map(|h| h.join(".punchable-worker")))
             .unwrap_or_else(|| PathBuf::from(".punchable-worker"));
+        let bge_dir = pk_embed::EmbedConfig::from_env(env)?.model_dir();
         let kinds = match &args.kinds {
             Some(s) => parse_kinds(s)?,
-            None => Kind::claimable(false),
+            None => Kind::claimable(bge_dir.is_some()),
         };
         let jobs = match env.u64("PK_WORKER_JOBS")? {
             None => 1,
@@ -190,6 +194,7 @@ impl WorkerConfig {
             build_sha: env.opt("PK_BUILD_SHA").unwrap_or("dev").to_string(),
             stop_grace: STOP_GRACE,
             owner_id: env.opt("PK_OWNER_ID").unwrap_or("owner").to_string(),
+            bge_dir,
         })
     }
 }

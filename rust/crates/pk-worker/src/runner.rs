@@ -79,6 +79,8 @@ pub struct Parts {
     pub legal: Legal,
     /// The fact-check page fetcher.
     pub pages: Pages,
+    /// The bge-small model, when the image has it (the embedding kinds need it).
+    pub embedder: Option<crate::kinds::Model>,
 }
 
 /// The worker. Shared by the loop and its job tasks behind an `Arc`.
@@ -91,6 +93,7 @@ pub struct Worker {
     metrics: Arc<WorkerMetrics>,
     legal: Legal,
     pages: Pages,
+    embedder: Option<crate::kinds::Model>,
     voice: VoiceCache,
     mirror: Mirror,
     model_line: Option<String>,
@@ -146,6 +149,7 @@ impl Worker {
             metrics: p.metrics,
             legal: p.legal,
             pages: p.pages,
+            embedder: p.embedder,
             voice: VoiceCache::new(),
             mirror: Mirror::new(),
             counted: Mutex::new(0),
@@ -294,22 +298,25 @@ impl Worker {
     /// `run_job`: the voice profile, the kind, the files, and the `online` block of the result.
     async fn execute(&self, kind: Kind, job: &Job) -> Result<Value, JobError> {
         // the notebook first, then the profile: the Python's `run_job` order
-        let (corpus, refresh) = if kind.reads_notebook() {
+        let (corpus, files, refresh) = if kind.reads_notebook() {
             let snap = self.mirror.refresh(&self.api).await?;
             let owner = self.cfg.owner_id.clone();
             let refresh = snap.refresh.clone();
+            let files = snap.files.clone(); // path → Arc'd text: the texts are shared, not copied
             let built = tokio::task::spawn_blocking(move || {
                 corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
             })
             .await
             .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
-            (Some(Arc::new(built)), refresh)
+            (Some(Arc::new(built)), Some(files), refresh)
         } else {
-            (None, Value::Null)
+            (None, None, Value::Null)
         };
         let voice = self.voice.fetch(&self.api).await;
         let ctx = Ctx {
             corpus: corpus.as_ref(),
+            files: files.as_ref(),
+            embedder: self.embedder.as_ref(),
             api: &self.api,
             router: &self.router,
             voice: &voice,

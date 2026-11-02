@@ -27,6 +27,9 @@ pub enum JobError {
     /// His notebook could not be built from the mirror (a file missing or not JSON).
     #[error(transparent)]
     Corpus(#[from] CorpusError),
+    /// The bge-small model refused (`RuntimeError` in the Python's embedder).
+    #[error(transparent)]
+    Embed(#[from] pk_embed::EmbedError),
 }
 
 impl JobError {
@@ -38,6 +41,7 @@ impl JobError {
             JobError::Api(e) => e.py_type(),
             JobError::Corpus(CorpusError::Missing(_)) => "FileNotFoundError",
             JobError::Corpus(CorpusError::Json { .. }) => "JSONDecodeError",
+            JobError::Embed(_) => "RuntimeError",
         }
     }
 
