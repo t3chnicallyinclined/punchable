@@ -37,6 +37,7 @@ export const P = {
   bits: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   sets: 'M5 6h14M5 12h14M5 18h9',
   plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
   chat: 'M4 5h16v11H9l-5 4V5z',
   chevron: 'M9 6l6 6-6 6',
   chevronDown: 'M6 9l6 6 6-6',

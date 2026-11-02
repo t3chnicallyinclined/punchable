@@ -286,11 +286,17 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
 - **The cloud (default since 2026-10-29, `lib/Cloud.native.tsx` on Skia / `lib/Cloud.tsx` SVG on the web, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
   3-axis PCA of its bge-small vector (the mean of its versions', or the typed idea's own), k-means groups named by
-  their titles' words. A slow turn about the vertical axis until he touches (off under Reduce Motion; HIG/motion:
-  motion is never the only signal and stops on request), depth as size and fade (near = bigger, brighter), pinch and
-  pan (lib/PanZoom), a tap selects the nearest dot (a card: Open · To a set), group names float at their centres, the
-  legend's chips turn a group to the front. Turn left/right buttons (44 pt) for a no-gesture path. "Links" switches to
-  the galaxy below, where nearness means a stored link; the choice is remembered (prefs.mapMode).
+  their titles' words. **A real 3D view since 2026-11-02** (`docs/design/SPEC-2026-11-02-cloud-3d.md`, owner: "rotate
+  it and zoom into different spots, this one gets blurry"): an orbit camera in `rules/cloudMath.ts`. One finger
+  orbits (yaw and pitch, pitch clamped, momentum), a pinch zooms the CAMERA about the fingers (0.6×-12×, Skia redraws
+  at device resolution, so nothing blurs) and its midpoint pans, a double tap zooms in (at 12× back to the whole
+  map), a double-tap-and-drag zooms one-handed, a two-finger tap zooms out. A tap selects a dot (a card: Open · To a
+  set · Done), a group's name or chip flies there; from 2.5× the nearest dots show their names (≤ 30, never
+  overlapping) and group names away from the centre fade. Bottom-trailing column: + · − · "Whole map" (shown off
+  home). A slow turn until he touches (off under Reduce Motion, which also turns flights and momentum into jumps;
+  HIG/motion). VoiceOver: one image element with a value ("Zoom 2×, near …") and actions Zoom in / out, Whole map,
+  Turn, Tilt. "Links" switches to the galaxy below, where nearness means a stored link; the choice is remembered
+  (prefs.mapMode).
 - Push, inline title "Map"; `Stack.Toolbar` right: Shuffle (`shuffle`), Centre (`scope`, "Centre on the selected
   bit"), List (`list.bullet`, the map as a SectionList grouped by cluster for VoiceOver); the header search field
   ("Find a bit") on the phone, a field above the map on the web. Pan + pinch (`lib/PanZoom`), double-tap zooms.
