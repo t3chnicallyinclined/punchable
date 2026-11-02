@@ -1,0 +1,220 @@
+//! The router without a socket or a database (`tower::ServiceExt::oneshot`): the refusals before any data is read,
+//! the preflight, CORS on errors, `/metrics`, the boot answer of `/api/health`, and that a method this service does
+//! not answer (a POST on a moved path) goes to the fallback and is never handled here. The answers over real data
+//! are the differential's (`rust/tools/diff_api_reads.py`).
+
+use std::sync::Arc;
+
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use pk_api::auth::verifier::{Clock, Fetch, Jwks, Verifier};
+use pk_api::{ApiConfig, AppState, app};
+use pk_core::Env;
+use serde_json::Value;
+use tower::ServiceExt;
+
+const ORIGIN: &str = "https://punchable.io";
+
+fn state(auth: bool) -> AppState {
+    let mut env = vec![
+        ("SURREAL_PASS", "x"),
+        ("PUBLIC_URL", "https://punchable.io/"),
+        ("HOST", "127.0.0.1"),
+    ];
+    if auth {
+        env.push(("OIDC_ISSUER", "https://auth.example/realms/punchable"));
+    } else {
+        env.extend([("PK_AUTH", "0"), ("PK_ALLOW_NO_AUTH", "1")]);
+    }
+    let cfg = ApiConfig::from_env(&Env::from_map(env)).expect("config");
+    let verifier = auth.then(|| {
+        let fetch: Fetch = Arc::new(|| Box::pin(async { Err("no Keycloak in this test".to_string()) }));
+        let clock: Clock = Arc::new(|| 0.0);
+        Verifier::new(
+            "https://auth.example/realms/punchable",
+            "pk-api",
+            Jwks::with_fetch(fetch, clock.clone()),
+            clock,
+        )
+    });
+    let metrics = pk_obs::ApiMetrics::new("0.1.0", "").expect("metrics");
+    AppState::new(cfg, verifier, metrics, reqwest::Client::new())
+}
+
+async fn send(st: &AppState, req: Request<Body>) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    let (parts, body) = r.into_parts();
+    let b = axum::body::to_bytes(body, 1 << 20).await.expect("body").to_vec();
+    (parts.status, parts.headers, b)
+}
+
+fn get(path: &str) -> axum::http::request::Builder {
+    Request::builder().method("GET").uri(path)
+}
+
+fn error_of(b: &[u8]) -> String {
+    serde_json::from_slice::<Value>(b).expect("json")["error"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string()
+}
+
+#[tokio::test]
+async fn no_token_is_401_with_the_challenge_and_cors() {
+    let st = state(true);
+    let (s, h, b) = send(
+        &st,
+        get("/api/labels")
+            .header(header::ORIGIN, ORIGIN)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    assert_eq!(error_of(&b), "sign in required");
+    assert_eq!(
+        h[header::WWW_AUTHENTICATE],
+        r#"Bearer realm="punchable", error="invalid_token""#
+    );
+    assert_eq!(h[header::CACHE_CONTROL], "no-store");
+    assert_eq!(h[header::ACCESS_CONTROL_ALLOW_ORIGIN], ORIGIN);
+    assert_eq!(h[header::VARY], "Origin");
+    let (s, _, b) = send(
+        &st,
+        get("/api/meta")
+            .header(header::AUTHORIZATION, "Bearer garbage")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        (s, error_of(&b).as_str()),
+        (StatusCode::UNAUTHORIZED, "malformed token")
+    );
+    // Keycloak unreachable and the key unknown: refused, never let through
+    let tok = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsifQ.e30.c2ln";
+    let (s, _, b) = send(
+        &st,
+        get("/api/meta")
+            .header(header::AUTHORIZATION, format!("Bearer {tok}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        (s, error_of(&b).as_str()),
+        (StatusCode::UNAUTHORIZED, "unknown signing key")
+    );
+}
+
+#[tokio::test]
+async fn the_preflight_is_fixed_and_needs_no_token() {
+    let st = state(true);
+    let req = Request::builder()
+        .method("OPTIONS")
+        .uri("/api/labels")
+        .header(header::ORIGIN, "http://localhost:8081")
+        .body(Body::empty())
+        .unwrap();
+    let (s, h, b) = send(&st, req).await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+    assert!(b.is_empty());
+    assert_eq!(h[header::ACCESS_CONTROL_ALLOW_ORIGIN], "http://localhost:8081");
+    assert_eq!(h[header::ACCESS_CONTROL_ALLOW_METHODS], pk_api::cors::ALLOW_METHODS);
+    assert_eq!(h[header::ACCESS_CONTROL_ALLOW_HEADERS], pk_api::cors::ALLOW_HEADERS);
+    assert_eq!(h[header::ACCESS_CONTROL_MAX_AGE], "600");
+    let req = Request::builder()
+        .method("OPTIONS")
+        .uri("/api/meta")
+        .header(header::ORIGIN, "https://evil.example")
+        .body(Body::empty())
+        .unwrap();
+    let (s, h, _) = send(&st, req).await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+    assert!(h.get(header::ACCESS_CONTROL_ALLOW_ORIGIN).is_none());
+}
+
+#[tokio::test]
+async fn a_write_on_a_moved_path_is_never_answered_here() {
+    // no PK_PYTHON_URL in this test: the fallback answers the Python's 404, which proves the POST did not reach a
+    // GET handler (with the Python configured, it is forwarded: the differential writes through it)
+    let st = state(false);
+    for m in ["POST", "PATCH", "PUT", "DELETE"] {
+        let req = Request::builder()
+            .method(m)
+            .uri("/api/labels")
+            .body(Body::empty())
+            .unwrap();
+        let (s, _, b) = send(&st, req).await;
+        assert_eq!((s, error_of(&b).as_str()), (StatusCode::NOT_FOUND, "not found"), "{m}");
+    }
+    let (s, _, _) = send(&st, get("/api/jokes").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn health_before_any_data_is_the_boot_status() {
+    let st = state(true);
+    let (s, _, b) = send(&st, get("/api/health?ready=1").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE);
+    let v: Value = serde_json::from_slice(&b).unwrap();
+    assert_eq!(v["ok"], false);
+    assert_eq!(v["ready"], false);
+    assert_eq!(v["surreal"], false);
+    let (s, _, b) = send(
+        &st,
+        get("/api/labels")
+            .header(header::AUTHORIZATION, "Bearer x")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        (s, error_of(&b).as_str()),
+        (StatusCode::UNAUTHORIZED, "malformed token"),
+        "auth comes first"
+    );
+    st.start_draining();
+    let (s, _, _) = send(&st, get("/api/health?ready=1").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[test]
+fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../infra/k8s/prepared/t9-api-rs.yaml");
+    let text = std::fs::read_to_string(p).expect("the prepared manifest");
+    let mut exact: Vec<&str> = text
+        .lines()
+        .filter(|l| l.contains("pathType: Exact"))
+        .filter_map(|l| l.split("path: ").nth(1)?.split(',').next())
+        .collect();
+    exact.sort_unstable();
+    let mut own = pk_api::OWN_PATHS.to_vec();
+    own.sort_unstable();
+    assert_eq!(exact, own);
+    assert!(!text.contains("pathType: Prefix"), "no prefix moves at T9");
+}
+
+#[tokio::test]
+async fn every_moved_path_is_answered_here() {
+    let st = state(true);
+    for p in pk_api::OWN_PATHS {
+        let (s, _, b) = send(&st, get(p).body(Body::empty()).unwrap()).await;
+        let answered_here =
+            s == StatusCode::UNAUTHORIZED || (p == "/api/health" && s == StatusCode::SERVICE_UNAVAILABLE);
+        assert!(answered_here, "{p}: {s} {}", String::from_utf8_lossy(&b));
+    }
+}
+
+#[tokio::test]
+async fn metrics_are_open_and_count_by_route_pattern() {
+    let st = state(true);
+    let _ = send(&st, get("/api/labels").body(Body::empty()).unwrap()).await;
+    let (s, h, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(h[header::CONTENT_TYPE], pk_obs::CONTENT_TYPE);
+    let text = String::from_utf8(b).unwrap();
+    assert!(text.contains(r#"pk_build_info{sha="dev",version="0.1.0"} 1"#), "{text}");
+    assert!(text.contains(r#"pk_http_requests_total{method="GET",route="/api/labels",status="401"} 1"#));
+    assert!(!text.contains(r#"route="/metrics""#), "the scrape is not app traffic");
+}

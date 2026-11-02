@@ -1,0 +1,202 @@
+# PREPARED, NOT APPLIED (lane T9, 2026-11-02). Nothing in infra/ship.sh reads this folder; applying it is the owner's
+# call, after the Rust image is built off the node (docs/ARCHITECTURE.md section 6) and its digest is in the private
+# deploy log with this rollback: `kubectl -n punchable delete ingress punchable-api-rs` (the Python takes every path
+# back at once: its Ingress, 50-ingress.yaml, is not touched), then delete the rest of this file's objects.
+#
+# What it adds, beside the Python API (30-api.yaml), never instead of it:
+#   - pk-api as its own Deployment + Service (`app: punchable-api-rs`, `impl: rust`), so no Grafana panel mixes the two
+#     (the Prometheus job is `punchable-api-rs`; `impl` is copied onto every series by podTargetLabels).
+#   - an Ingress with EXACT paths for the six routes pk-api answers itself (pk-api `OWN_PATHS`). An exact path still
+#     routes every method, so pk-api forwards any method it does not answer (POST, PATCH, PUT, DELETE) to the Python
+#     Service unchanged (`PK_PYTHON_URL`, crates/pk-api/src/proxy.rs): a write can never be swallowed. No prefix moves
+#     at T9: `/api/jokes`, `/api/sets`, `/api/map` carry writes and stay whole on the Python until T10.
+#   - NetworkPolicies, additive only (policies are a union): pk-api in from the ingress host and Prometheus; out to
+#     SurrealDB, the Python API (the fallback), Keycloak (JWKS) and Bugsink. Three small policies let SurrealDB, the
+#     Python API and Bugsink accept pk-api; 10-networkpolicy.yaml is unchanged.
+#
+# Placeholders are the same as the numbered manifests (infra/render.sh fills them); __IMAGE_REF_RS__ is the pk-api
+# digest. Paths moved per group, in this order, each its own step with its own deploy-log line:
+#   1. /api/health /api/labels /api/decisions /api/learned /api/meta /api/pipeline   (this file; GET-only on the
+#      Python too, so exact paths are enough)
+#   2. later groups (T9 continued: /api/search, /api/today, /api/export, /api/audio/<id>, /api/backend; then the GET
+#      halves of /api/jokes and /api/sets) are added here as exact paths, or with a regex path and
+#      `nginx.ingress.kubernetes.io/use-regex`, never as a prefix while the Python owns a write under it.
+# Measure before moving step 1 (docs/ARCHITECTURE.md section 8): Python p95 per route off Grafana; pk-api's in the T9
+# report (docs/RUST_WORKSTREAM.md T9).
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-api-rs, namespace: punchable, labels: { app: punchable-api-rs, impl: rust } }
+spec:
+  selector: { app: punchable-api-rs }
+  ports: [ { name: http, port: 80, targetPort: 8080 } ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-api-rs, namespace: punchable, labels: { impl: rust } }
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  minReadySeconds: 5
+  selector: { matchLabels: { app: punchable-api-rs } }
+  template:
+    metadata: { labels: { app: punchable-api-rs, impl: rust } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # pk-api flips readiness to 503 on SIGTERM, waits 10 s, then drains (no preStop: the image has no shell)
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: api
+          image: __IMAGE_REF_RS__
+          ports: [ { containerPort: 8080 } ]
+          env:
+            - { name: PORT, value: "8080" }
+            - { name: PK_AUTH, value: "1" }
+            # only the paths /api/health names; pk-api writes nothing to disk
+            - { name: PK_DATA, value: /tmp/punchable }
+            - { name: PK_OWNER_ID, value: "__PK_OWNER_ID__" }
+            - { name: PUBLIC_URL, value: "https://__PK_DOMAIN__" }
+            - { name: OIDC_ISSUER, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__" }
+            - { name: OIDC_AUDIENCE, value: pk-api }
+            - { name: OIDC_JWKS_URL, value: "http://keycloak.__PK_KC_NS__.svc.cluster.local/realms/__PK_REALM__/protocol/openid-connect/certs" }
+            - { name: SURREAL_URL, value: "ws://surrealdb:8000/rpc" }
+            - { name: SURREAL_NS, value: punchable }
+            - { name: SURREAL_DB, value: main }
+            # T9 only: everything pk-api does not answer goes to the Python Service unchanged
+            - { name: PK_PYTHON_URL, value: "http://punchable-api.punchable.svc.cluster.local" }
+            - { name: RUST_LOG, value: info }
+          envFrom:
+            # SURREAL_API_USER / SURREAL_API_PASS (database EDITOR, never root) and SENTRY_DSN: the same Secrets
+            - secretRef: { name: punchable-api }
+            - secretRef: { name: punchable-sentry, optional: true }
+            # PK_APP_FLAGS, when it is set for the Python, must be set here too (/api/health answers it)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          # no model in this image (search is not ported yet): the T15 measurement sets the request once it is
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: "1", memory: 256Mi }
+          readinessProbe:
+            httpGet: { path: "/api/health?ready=1", port: 8080 }
+            periodSeconds: 3
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /api/health, port: 8080 }
+            timeoutSeconds: 3
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-api-rs
+  namespace: punchable
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - { path: /api/health, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/labels, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/decisions, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/learned, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/meta, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/pipeline, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: punchable-api-rs
+  namespace: punchable
+  labels: { app: punchable-api-rs, release: prometheus }
+spec:
+  jobLabel: app
+  podTargetLabels: [impl]
+  selector: { matchLabels: { app: punchable-api-rs } }
+  namespaceSelector: { matchNames: [punchable] }
+  endpoints:
+    - { port: http, path: /metrics, interval: 30s, scrapeTimeout: 10s }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-api-rs } }
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: observability } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: surrealdb } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+    - to:
+        - podSelector: { matchLabels: { app: punchable-api } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - to:
+        - podSelector: { matchLabels: { app: punchable-bugsink } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: __PK_KC_NS__ } }
+          podSelector: { matchLabels: { app: keycloak } }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+# the three counterparts: SurrealDB, the Python API (the fallback) and Bugsink accept pk-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: surrealdb-from-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: surrealdb } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from: [ { podSelector: { matchLabels: { app: punchable-api-rs } } } ]
+      ports: [ { protocol: TCP, port: 8000 } ]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-api-from-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-api } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from: [ { podSelector: { matchLabels: { app: punchable-api-rs } } } ]
+      ports: [ { protocol: TCP, port: 8080 } ]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-bugsink-from-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-bugsink } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from: [ { podSelector: { matchLabels: { app: punchable-api-rs } } } ]
+      ports: [ { protocol: TCP, port: 8000 } ]

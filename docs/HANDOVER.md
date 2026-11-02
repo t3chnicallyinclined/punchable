@@ -216,7 +216,13 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    folder move, then **T8 the Rust worker** (the first thing that ships), T9, T10, T11.
    **Rust port** (`docs/RUST.md`, the board `docs/RUST_WORKSTREAM.md`): nine crates are in and golden against the
    Python: `pk-core`, `pk-wire`, `pk-kb`, `pk-creative` (store + reducers + verbatim + `ask`), `pk-llm`, `pk-embed`,
-   `pk-obs`, `pk-store`. `pk-api` / `pk-worker` are stubs. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
+   `pk-obs`, `pk-store`. **`pk-api` T9 first group (2026-11-02, branch `rust/t9-api-reads`, not merged, not
+   deployed):** six GETs (health, labels, decisions, meta, pipeline, learned) answered from the database snapshot
+   behind the Python's exact auth, CORS and errors, everything else forwarded to the Python; 57 of 57 requests equal
+   against the hosted Python over one scratch database (`rust/tools/diff_api_reads.py`, empty allow-list), the
+   read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t9-api-rs.yaml`).
+   Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query). `pk-worker` is
+   lane T8. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
    `~/.punchable/bin/`). Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).

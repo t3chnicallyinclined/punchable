@@ -24,6 +24,10 @@ on:
       - 'api-dev/metrics.py'
       - 'api-dev/scrub.py'
       - 'api-dev/search_api.py'
+      # the T9 differential runs the hosted Python API and the production load (rust/tools/diff_api_reads.py)
+      - 'api-dev/**'
+      - 'api/**'
+      - 'db/**'
       # include_str!-compiled into the crates (docs/ARCHITECTURE.md section 6)
       - 'db/schema*.surql'
       - 'engine/config.hosted.toml'
@@ -38,6 +42,9 @@ on:
       - 'api-dev/metrics.py'
       - 'api-dev/scrub.py'
       - 'api-dev/search_api.py'
+      - 'api-dev/**'
+      - 'api/**'
+      - 'db/**'
       - 'db/schema*.surql'
       - 'engine/config.hosted.toml'
       - '.github/workflows/rust.yml'
@@ -183,3 +190,50 @@ jobs:
 
       - name: The committed goldens match
         run: git diff --exit-code -- rust/crates/*/tests/goldens
+
+  # T9: pk-api against the hosted Python API (api/entry.py) over one scratch SurrealDB loaded the production way
+  # (db/push_remote.py pack + apply), auth on with a local JWKS; every answer equal as a value, writes forwarded
+  # through pk-api and read back at once (rust/tools/diff_api_reads.py; its ALLOW list is the only exception list).
+  api-differential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: The API's Python
+        run: python -m pip install -r api/requirements.txt
+
+      - name: surreal (cached by version and hash)
+        id: surreal
+        uses: actions/cache@v4
+        with:
+          path: ~/.punchable/bin
+          key: surreal-${{ env.SURREAL_VERSION }}-${{ env.SURREAL_SHA256 }}
+
+      - name: surreal (pinned, sha256-checked)
+        if: steps.surreal.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/surreal.tgz" \
+            "https://github.com/surrealdb/surrealdb/releases/download/v${SURREAL_VERSION}/surreal-v${SURREAL_VERSION}.linux-amd64.tgz"
+          echo "${SURREAL_SHA256}  $RUNNER_TEMP/surreal.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.punchable/bin"
+          tar -xzf "$RUNNER_TEMP/surreal.tgz" -C "$HOME/.punchable/bin" surreal
+
+      - name: Build pk-api with the diagnostics route (the whole Bits-list row is compared too)
+        working-directory: rust
+        run: cargo build -p pk-api --features diagnostics
+
+      - name: The differential (exit 1 on any difference outside ALLOW)
+        run: |
+          export PUNCH_SURREAL="$HOME/.punchable/bin/surreal"
+          python rust/tools/diff_api_reads.py --pk-api rust/target/debug/pk-api
