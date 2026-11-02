@@ -566,31 +566,31 @@ impl AppIndex {
 }
 
 /// `visible_view`: the view without `hidden: true` jokes and units and the edges that touch them, re-indexed.
-pub fn visible(full: &View, graph: &Value, owner_id: &str) -> Option<View> {
-    let hidden: HashSet<&str> = full
+///
+/// Built straight from the database rows (`None` when nothing is hidden: the whole view is the visible one), so a
+/// rebuild never builds the whole view first; the whole view is built only for `?include_hidden=1`.
+pub fn visible(snap: &pk_store::Snapshot, owner_id: &str) -> Option<View> {
+    let hidden: HashSet<&str> = snap
         .nodes
         .iter()
-        .filter(|(_, n)| n.get("hidden") == Some(&Value::Bool(true)))
-        .map(|(k, _)| k.as_str())
+        .filter(|n| n.get("hidden") == Some(&Value::Bool(true)))
+        .filter_map(|n| n.get("id").and_then(Value::as_str))
         .collect();
     if hidden.is_empty() {
         return None;
     }
-    let keep_edge = |e: &Value| {
-        !e.get("src").and_then(Value::as_str).is_some_and(|s| hidden.contains(s))
-            && !e.get("dst").and_then(Value::as_str).is_some_and(|s| hidden.contains(s))
-    };
-    let mut g = graph.clone();
-    if let Some(Value::Array(ns)) = g.get_mut("nodes") {
-        ns.retain(|n| !n.get("id").and_then(Value::as_str).is_some_and(|s| hidden.contains(s)));
-    }
-    if let Some(Value::Array(es)) = g.get_mut("edges") {
-        es.retain(keep_edge);
-    }
-    let mut v = View::new(&g, Vec::new(), full.report.clone(), owner_id);
-    v.decisions.clone_from(&full.decisions);
-    v.undone.clone_from(&full.undone);
-    v.orphans = full.orphans;
+    let shown = |id: Option<&Value>| !id.and_then(Value::as_str).is_some_and(|s| hidden.contains(s));
+    let meta = snap.load_info.get("graph_meta").cloned().unwrap_or(Value::Null);
+    let g = serde_json::json!({
+        "version": meta.get("version").cloned().unwrap_or(Value::Null),
+        "generated_at": meta.get("generated_at").cloned().unwrap_or(Value::Null),
+        "runs": meta.get("runs").cloned().unwrap_or(Value::Null),
+        "nodes": snap.nodes.iter().filter(|n| shown(n.get("id"))).collect::<Vec<_>>(),
+        "edges": snap.edges.iter().filter(|e| shown(e.get("src")) && shown(e.get("dst"))).collect::<Vec<_>>(),
+    });
+    let mut v = View::new(&g, Vec::new(), Vec::new(), owner_id);
+    v.undone = snap.decisions.iter().filter_map(pk_kb::Decision::undo_of).collect();
+    v.decisions.clone_from(&snap.decisions);
     Some(v)
 }
 

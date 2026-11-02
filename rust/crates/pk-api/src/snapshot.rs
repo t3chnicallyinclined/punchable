@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
-use pk_kb::{Decision, View};
+use pk_kb::Decision;
 use pk_store::{DecisionRow, EdgeRow, NodeRow, Snapshot, Store, StoreError, from_db, vars};
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
@@ -82,23 +82,25 @@ pub struct Data {
     /// How long the database read took, seconds.
     pub fetch_s: f64,
     visible: Arc<AppIndex>,
-    /// The whole view when it differs from the visible one (some material is hidden); its index is built on the
-    /// first `?include_hidden=1`.
-    full_view: Option<View>,
+    /// Some material is hidden, so the whole view differs from the visible one: it and its index are built on the
+    /// first `?include_hidden=1` only.
+    has_hidden: bool,
     full: OnceCell<Arc<AppIndex>>,
+    /// `PK_OWNER_ID`, for the lazy whole view.
+    owner: String,
 }
 
 impl Data {
     /// The index a request reads: the visible view, or everything on `?include_hidden=1`.
     pub async fn index(self: &Arc<Self>, include_hidden: bool) -> Result<Arc<AppIndex>, ApiError> {
-        if !include_hidden || self.full_view.is_none() {
+        if !include_hidden || !self.has_hidden {
             return Ok(self.visible());
         }
         let me = Arc::clone(self);
         self.full
             .get_or_try_init(|| async move {
                 tokio::task::spawn_blocking(move || {
-                    let v = me.full_view.clone().unwrap_or_else(|| me.visible.view.clone());
+                    let v = me.snap.view(Vec::new(), &me.owner);
                     Arc::new(AppIndex::build(v, &me.ai, &me.working, &me.metas))
                 })
                 .await
@@ -221,20 +223,17 @@ async fn build(
     let owner = owner_id.to_string();
     tokio::task::spawn_blocking(move || {
         let t = std::time::Instant::now();
-        let full = snap.view(Vec::new(), &owner);
-        let t_view = t.elapsed();
-        let vis = visible(&full, &snap.graph(), &owner);
-        let t_vis = t.elapsed();
-        let (vis_view, full_view) = match vis {
-            Some(v) => (v, Some(full)),
-            None => (full, None),
+        // one view per rebuild: the visible one (the whole one only on `?include_hidden=1`)
+        let (vis_view, has_hidden) = match visible(&snap, &owner) {
+            Some(v) => (v, true),
+            None => (snap.view(Vec::new(), &owner), false),
         };
+        let t_view = t.elapsed();
         let idx = AppIndex::build(vis_view, &ai, &snap.working, &metas);
         tracing::info!(
             fetch_ms = fetch_s * 1000.0,
             view_ms = t_view.as_secs_f64() * 1000.0,
-            visible_ms = t_vis.saturating_sub(t_view).as_secs_f64() * 1000.0,
-            index_ms = t.elapsed().saturating_sub(t_vis).as_secs_f64() * 1000.0,
+            index_ms = t.elapsed().saturating_sub(t_view).as_secs_f64() * 1000.0,
             "snapshot built"
         );
         Data {
@@ -247,9 +246,10 @@ async fn build(
             learning,
             fetch_s,
             visible: Arc::new(idx),
-            full_view,
+            has_hidden,
             full: OnceCell::new(),
             snap,
+            owner,
         }
     })
     .await
