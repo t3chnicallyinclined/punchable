@@ -16,6 +16,7 @@ pub mod corpus;
 pub mod error;
 pub mod event;
 pub mod memolink;
+pub mod merge;
 pub mod notebook;
 pub mod punch;
 pub mod pyish;

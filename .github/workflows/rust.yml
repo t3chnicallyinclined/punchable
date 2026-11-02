@@ -196,6 +196,7 @@ jobs:
           python rust/tools/gen_embed_goldens.py
           python rust/tools/gen_wire_goldens.py
           python rust/tools/gen_corpus_goldens.py
+          python rust/tools/gen_merge_goldens.py
           python rust/tools/gen_worker_goldens.py
 
       - name: The committed goldens match
