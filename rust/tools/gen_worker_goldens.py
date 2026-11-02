@@ -171,6 +171,15 @@ RIFF = json.dumps({"ideas": [
     {"line": "My parrot billed me by the hour.", "built_on": [], "move": ""},
     {"line": "x" * 450, "built_on": ["riff"], "move": "m" * 100},
     {"line": "Over the cap.", "built_on": [], "move": "none"}]})
+HAIKU = "claude-haiku-5-5"
+JUDGED = json.dumps({"pairs": [{"id": f"p{k}", "same": k == 1, "confidence": [0.95, 0.6, 0.9][k - 1],
+                                "why": f"pair {k}"} for k in (1, 2, 3)]})
+TRIAGED_SHORT = json.dumps({"items": [{"id": "m1", "kind": "joke", "audience": False, "confidence": 0.9,
+                                       "why": "a bit about bins"},
+                                      {"id": "m2", "kind": "note", "audience": False, "confidence": 0.85,
+                                       "why": "pick up milk"}]})
+TRIAGED_LONG = json.dumps({"items": [{"id": "m1", "kind": "performed_set", "audience": True, "confidence": 0.8,
+                                      "why": "give it up"}]})
 PUNCH = json.dumps({"drafts": [
     {"line_no": 2, "alt": " He read me my rights, then billed me for the reading. ", "move": "the flat repeat"},
     {"line_no": 9, "alt": "out of range", "move": "x"},
@@ -259,6 +268,13 @@ SCENARIOS = [
      "voice": voice_doc(), "model": []},
     {"name": "embed_current_and_gone", "env": {}, "notebook": True, "bge": True, "summary_current": True,
      "job": job("embed", {}), "voice": voice_doc(), "model": []},
+    {"name": "memolink_all_steps", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {}), "voice": voice_doc(),
+     "model": [answer(JUDGED, HAIKU), answer(TRIAGED_SHORT, HAIKU), answer(TRIAGED_LONG, HAIKU)]},
+    {"name": "memolink_triage_only_refused", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {"steps": ["triage"]}), "voice": voice_doc(),
+     "model": [answer("", HAIKU, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal"),
+               answer(TRIAGED_LONG, HAIKU)]},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -377,11 +393,13 @@ def notebook_files(sc: dict) -> dict:
         doc["rows"]["summary:joke:gone-idea"] = F.vector("gone")
         doc["text_sha"]["summary:joke:gone-idea"] = "0" * 16
         files["vectors/extra_summary.json"] = json.dumps(doc, separators=(",", ":"))
+    if sc.get("memos"):
+        files.update(F.memo_files())
     return files
 
 
 def notebook_decisions(sc: dict) -> list:
-    return F.decisions() if sc.get("notebook") else []
+    return (F.decisions() + (F.memo_decisions() if sc.get("memos") else [])) if sc.get("notebook") else []
 
 
 def ideas_reply(n: int) -> dict:
@@ -432,7 +450,9 @@ def run_python(sc: dict) -> dict:
             "PUNCHABLE_LEGAL_RULES": str(tmp / "no-legal-rules.json"),
             "ANTHROPIC_API_KEY": KEY, "ANTHROPIC_BASE_URL": base(anth),
             "ENGINE_CONFIG": str(ROOT / "engine" / "config.hosted.toml"),
-            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "cache"),
+            # the cache path the workspace activates (worker/online.py Workspace.env): the bootstrap imports
+            # creative.write first, which fixes creative.data.VECTORS_DIR from this variable at import time
+            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "ws" / "cache"),
             "PK_BGE_DIR": BGE if sc.get("bge") else str(tmp / "no-bge"),
             "PK_HEARTBEAT_FILE": str(tmp / "heartbeat"), "PK_AI_SPEND_FILE": str(spend),
             "PK_AI_DAILY_USD": str(sc.get("daily_usd", 5.0)), "PK_METRICS_PORT": "0", "PK_WORKER_NAME": WORKER_NAME,
@@ -468,6 +488,9 @@ def normalise(x):
         # golden; the Rust worker reports the workspace path it posts the file under
         if isinstance(out.get("file"), str) and out["file"].replace("\\", "/").endswith("/extra_summary.json"):
             out["file"] = "vectors/extra_summary.json"
+        # a model call's id is a fresh uuid4 every run: kept as a marker so the goldens do not drift
+        if isinstance(out.get("call_id"), str) and re.fullmatch(r"[0-9a-f]{12}", out["call_id"]):
+            out["call_id"] = "<call_id>"
         return out
     if isinstance(x, list):
         return [normalise(v) for v in x]

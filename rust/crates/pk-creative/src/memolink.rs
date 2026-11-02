@@ -322,7 +322,7 @@ pub fn set_recordings(triage_doc: Option<&Value>) -> HashSet<String> {
 }
 
 fn groups_for(
-    ix: &crate::merge::Index<'_>,
+    ix: &crate::merge::Index,
     judgements: &Map<String, Value>,
     st: &crate::merge::MergeState,
     recordings: &HashSet<String>,
@@ -333,7 +333,7 @@ fn groups_for(
 
 /// `suggestions(c, creative_dir, mj, items)`: the "Same idea · Merge" groups that include a memo idea.
 pub fn suggestions(
-    ix: &crate::merge::Index<'_>,
+    ix: &crate::merge::Index,
     judgements: &Map<String, Value>,
     st: &crate::merge::MergeState,
     recordings: &HashSet<String>,
@@ -354,7 +354,7 @@ pub fn suggestions(
 /// `clear_attaches(c, creative_dir, mj, items)`: memo ideas that clearly ARE one existing bit: the judge says same
 /// at >= `ATTACH_JUDGE_MIN` with exactly one bit (or its group), and `match_text` places the memo there on its own.
 pub fn clear_attaches(
-    ix: &crate::merge::Index<'_>,
+    ix: &crate::merge::Index,
     c: &Corpus,
     judgements: &Map<String, Value>,
     st: &crate::merge::MergeState,

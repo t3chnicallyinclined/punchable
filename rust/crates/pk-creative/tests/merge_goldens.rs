@@ -77,8 +77,8 @@ fn judge_answer(n: usize) -> Value {
 #[allow(clippy::too_many_lines, clippy::many_single_char_names)]
 fn the_same_idea_index_judge_groups_and_memos() {
     let g = golden();
-    let c = corpus(&g);
-    let ix = Index::new(&c);
+    let c = Arc::new(corpus(&g));
+    let ix = Index::new(Arc::clone(&c));
     same(&json!(ix.jokes), &g["index"]["jokes"], "jokes");
     let cands: Vec<Value> = ix.candidates().into_iter().map(|(a, b)| json!([a, b])).collect();
     same(&Value::Array(cands), &g["candidates"], "candidates");

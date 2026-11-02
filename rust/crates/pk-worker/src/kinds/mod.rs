@@ -8,6 +8,7 @@ pub mod ask_chat;
 pub mod bridge;
 pub mod embed;
 pub mod facts;
+pub mod memolink;
 pub mod punchup;
 pub mod riff;
 pub mod set_text;
@@ -94,10 +95,15 @@ impl Kind {
     /// Whether this worker can run it yet.
     pub fn ported(self) -> bool {
         match self {
-            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Riff | Kind::Punchup | Kind::Bridge | Kind::Embed => {
-                true
-            }
-            Kind::Memolink | Kind::Ask => false,
+            Kind::AskChat
+            | Kind::Facts
+            | Kind::SetText
+            | Kind::Riff
+            | Kind::Punchup
+            | Kind::Bridge
+            | Kind::Embed
+            | Kind::Memolink => true,
+            Kind::Ask => false,
         }
     }
 
@@ -180,6 +186,10 @@ pub struct Ctx<'a> {
     pub files: Option<&'a BTreeMap<String, Arc<str>>>,
     /// The bge-small model, when this worker has it.
     pub embedder: Option<&'a Model>,
+    /// The creative logs mirrored with the notebook (store → lines), for the kinds that read it.
+    pub creative: Option<&'a BTreeMap<String, Vec<String>>>,
+    /// `PK_OWNER_ID`: the actor of his own edits (the merges store's reducer needs it).
+    pub owner: &'a str,
 }
 
 impl<'a> Ctx<'a> {
@@ -252,7 +262,8 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Punchup => run_typed::<punchup::Punchup>(ctx, input).await,
         Kind::Bridge => run_typed::<bridge::Bridge>(ctx, input).await,
         Kind::Embed => run_typed::<embed::Embed>(ctx, input).await,
-        Kind::Memolink | Kind::Ask => Err(JobError::Value(format!(
+        Kind::Memolink => run_typed::<memolink::Memolink>(ctx, input).await,
+        Kind::Ask => Err(JobError::Value(format!(
             "{} is not ported to the Rust worker yet",
             kind.name()
         ))),

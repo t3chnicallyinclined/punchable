@@ -191,7 +191,7 @@ impl Mirror {
 
 /// `rebuild_vectors` + `Vectors`: the parts (non-`extra_` files under `vectors/` named `*.part*.json`) in path
 /// order, the `extra_*.json` files after.
-fn build_vectors(files: &[(String, Arc<str>)]) -> Vectors {
+pub fn build_vectors(files: &[(String, Arc<str>)]) -> Vectors {
     let mut parts = Vec::new();
     let mut extras = Vec::new();
     for (p, t) in files {

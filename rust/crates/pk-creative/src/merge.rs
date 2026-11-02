@@ -176,8 +176,8 @@ fn reference(row: &[f32]) -> f32 {
 
 /// Everything pair scoring needs, built once per corpus (`merge.Index`).
 #[derive(Debug)]
-pub struct Index<'c> {
-    c: &'c Corpus,
+pub struct Index {
+    c: std::sync::Arc<Corpus>,
     /// The jokes, sorted.
     pub jokes: Vec<String>,
     /// Each joke's units (non-hidden, sorted).
@@ -208,13 +208,13 @@ fn pair(a: &str, b: &str) -> (String, String) {
     }
 }
 
-impl<'c> Index<'c> {
+impl Index {
     /// Build it (`Index(c)`).
     #[allow(clippy::too_many_lines, clippy::many_single_char_names)]
-    pub fn new(c: &'c Corpus) -> Self {
+    pub fn new(c: std::sync::Arc<Corpus>) -> Self {
         let mut jokes: Vec<String> = c.jokes.clone();
         jokes.sort();
-        let units: HashMap<String, Vec<String>> = jokes.iter().map(|j| (j.clone(), units_of(c, j))).collect();
+        let units: HashMap<String, Vec<String>> = jokes.iter().map(|j| (j.clone(), units_of(&c, j))).collect();
         let mut utoks: Vec<(String, Vec<String>)> = Vec::new();
         for j in &jokes {
             for u in &units[j] {
@@ -477,7 +477,7 @@ impl<'c> Index<'c> {
 
     /// `_excerpt(c, ix, j, unit)`: what the judge reads of one side.
     pub fn excerpt(&self, j: &str, unit: Option<&str>, n: usize) -> String {
-        let c = self.c;
+        let c = &*self.c;
         let from_unit = unit
             .and_then(|u| c.nodes.get(u))
             .and_then(|x| s(x, "text"))
@@ -510,7 +510,7 @@ impl<'c> Index<'c> {
 
     /// `_full(c, ix, j)`: every written version, oldest first, for the second look.
     pub fn full(&self, j: &str, n: usize) -> String {
-        let c = self.c;
+        let c = &*self.c;
         let date = |u: &str| c.nodes.get(u).and_then(|x| s(x, "date")).unwrap_or("").to_string();
         let mut us: Vec<&String> = self.units.get(j).map(|u| u.iter().collect()).unwrap_or_default();
         us.sort_by(|x, y| (date(x), *x).cmp(&(date(y), *y)));
@@ -546,7 +546,7 @@ impl<'c> Index<'c> {
 
     /// `_dates(c, ix, j)`.
     fn dates(&self, j: &str) -> Vec<String> {
-        let c = self.c;
+        let c = &*self.c;
         let mut ds: BTreeSet<String> = self.units[j]
             .iter()
             .filter_map(|u| {
@@ -573,7 +573,7 @@ impl<'c> Index<'c> {
     }
 
     fn docs(&self, j: &str) -> Vec<Value> {
-        let c = self.c;
+        let c = &*self.c;
         let mut out: BTreeMap<String, Map<String, Value>> = BTreeMap::new();
         let mut order: Vec<String> = Vec::new();
         for u in &self.units[j] {
@@ -611,7 +611,7 @@ impl<'c> Index<'c> {
 
     /// `member(c, ix, j)`.
     pub fn member(&self, j: &str) -> Value {
-        let c = self.c;
+        let c = &*self.c;
         let ds = self.dates(j);
         let (st, src) = c.stage(j);
         json!({"joke_id": j, "title": c.title(j), "stage": st, "stage_source": src,
@@ -650,7 +650,7 @@ pub fn pair_score(f: &Value) -> f64 {
 
 /// `judge_candidates(c)`: candidate pairs worth asking about (score over the floor, and close in meaning or a
 /// same-premise edge), best first.
-pub fn judge_candidates(ix: &Index<'_>) -> Vec<Value> {
+pub fn judge_candidates(ix: &Index) -> Vec<Value> {
     let mut fs: Vec<Value> = ix
         .candidates()
         .iter()
@@ -670,7 +670,7 @@ pub fn judge_candidates(ix: &Index<'_>) -> Vec<Value> {
 }
 
 /// The judge's user turn for one batch of features.
-pub fn judge_user(ix: &Index<'_>, batch: &[Value]) -> String {
+pub fn judge_user(ix: &Index, batch: &[Value]) -> String {
     let lines: Vec<String> = batch
         .iter()
         .enumerate()
@@ -709,13 +709,7 @@ fn why_of(p: &Value) -> String {
 }
 
 /// `judge` after the call: each answered pair into the cache under its key.
-pub fn judge_finish(
-    ix: &Index<'_>,
-    batch: &[Value],
-    data: Option<&Value>,
-    model: &str,
-    cache: &mut Map<String, Value>,
-) {
+pub fn judge_finish(ix: &Index, batch: &[Value], data: Option<&Value>, model: &str, cache: &mut Map<String, Value>) {
     let got = answer_pairs(data);
     for (k, f) in batch.iter().enumerate() {
         let Some(p) = got.get(&format!("p{}", k + 1)) else {
@@ -748,7 +742,7 @@ pub fn second_todo(c: &Corpus, cache: &Map<String, Value>) -> Vec<String> {
 }
 
 /// The second look's user turn for a batch of cache keys.
-pub fn second_user(ix: &Index<'_>, cache: &Map<String, Value>, batch: &[String]) -> String {
+pub fn second_user(ix: &Index, cache: &Map<String, Value>, batch: &[String]) -> String {
     let lines: Vec<String> = batch
         .iter()
         .enumerate()
@@ -928,7 +922,7 @@ struct Accepted {
 }
 
 fn accepted_pairs(
-    ix: &Index<'_>,
+    ix: &Index,
     judgements: &Map<String, Value>,
     st: &MergeState,
     exclude: &HashSet<String>,
@@ -961,7 +955,7 @@ fn accepted_pairs(
     out
 }
 
-fn reasons(ix: &Index<'_>, prs: &[(String, String, Accepted)]) -> Vec<String> {
+fn reasons(ix: &Index, prs: &[(String, String, Accepted)]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for (a, b, p) in prs {
         if p.his {
@@ -998,7 +992,7 @@ fn reasons(ix: &Index<'_>, prs: &[(String, String, Accepted)]) -> Vec<String> {
 
 /// `build_groups(c, judgements, dismissed, exclude=…)`: the same-idea groups, biggest and surest first.
 pub fn build_groups(
-    ix: &Index<'_>,
+    ix: &Index,
     judgements: &Map<String, Value>,
     st: &MergeState,
     exclude: &HashSet<String>,
@@ -1096,7 +1090,7 @@ pub fn build_groups(
 
 /// `_jot_support(ix, ts, j)`: shared distinctive phrases between a jot and a bit, and how much of the jot's
 /// content words its closest unit holds.
-fn jot_support(ix: &Index<'_>, ts: &[String], j: &str) -> (Vec<String>, f64) {
+fn jot_support(ix: &Index, ts: &[String], j: &str) -> (Vec<String>, f64) {
     let (j3, j2, cont) = (g3(ts), g2(ts), content(ts));
     let mut phr: BTreeSet<String> = BTreeSet::new();
     let mut best = 0.0_f64;
@@ -1126,13 +1120,13 @@ fn jot_support(ix: &Index<'_>, ts: &[String], j: &str) -> (Vec<String>, f64) {
 /// `match_text(c, text, vec, exclude, group_of)`: where a new jot belongs (`attach`, `ambiguous` or `new`).
 #[allow(clippy::too_many_lines)]
 pub fn match_text(
-    ix: &Index<'_>,
+    ix: &Index,
     text: &str,
     vec: Option<&[f32]>,
     exclude: &HashSet<String>,
     group_of: &HashMap<String, String>,
 ) -> Value {
-    let c = ix.c;
+    let c = &*ix.c;
     let ts = toks(text);
     let cont = content(&ts);
     let mut out = json!({"decision": "new", "joke_id": null, "title": null, "reasons": [], "top": []});

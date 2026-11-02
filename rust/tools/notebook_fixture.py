@@ -197,6 +197,36 @@ def vector(seed: str) -> list[float]:
     return [float(f"{x / n:.9g}") for x in xs]
 
 
+MEMOS = [
+    # key, transcript, joke it was filed as (None: a long memo kept as a note)
+    ("memo-bins", "the bin got my belt and my shoes at airport security again", "joke:memo-bins"),
+    ("memo-chat", "hey can you pick up milk on the way home and call the landlord", "joke:memo-chat"),
+    ("memo-long", " ".join(["Thank you guys, give it up, here is the bit about the carousel and the luggage."] * 60), None),
+]
+
+
+def memo_decisions() -> list[dict]:
+    """The memo ideas, filed as imports of his own memos."""
+    return [{"ts": "2024-08-01T10:00:00Z", "by": "import:memo", "target": "node", "id": j, "action": "add",
+             "after": {"type": "joke", "title": f"Memo {k[5:]}", "summary": text, "date": "2024-08-01"}}
+            for k, text, j in MEMOS if j]
+
+
+def memo_files() -> dict[str, str]:
+    """kb/gsync/memos.json and each memo's transcript, plus a same-premise edge from the bins memo to the bins bit."""
+    items = {k: {"status": "done", "transcript": f"corpus/memos/{k}/transcript.json", "joke_id": j,
+                 "title": f"Memo {k[5:]}", "duration_s": 30 + 10 * n, "date": "2024-08-01"}
+             for n, (k, _, j) in enumerate(MEMOS)}
+    out = {"kb/gsync/memos.json": json.dumps({"items": items})}
+    for k, text, _ in MEMOS:
+        out[f"corpus/memos/{k}/transcript.json"] = json.dumps({"segments": [{"text": text}]})
+    g = graph()
+    g["edges"].append({"id": "e:memo-prem", "kind": "same_premise", "src": "joke:memo-bins", "dst": "joke:airport-bins",
+                       "status": "inferred", "confidence": 0.8, "reason": "the bins again"})
+    out["kb/v1/graph.json"] = json.dumps(g, indent=1)
+    return out
+
+
 def files() -> dict[str, str]:
     """path -> text, as the srcfile rows the API lists."""
     out = {"kb/v1/graph.json": json.dumps(graph(), indent=1), "kb/v1/id_map.json": json.dumps(id_map()),

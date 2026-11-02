@@ -371,7 +371,7 @@
       "based_on": "2024-04-12_FakeSet0002",
       "provider": "anthropic",
       "model": "claude-opus-5-5",
-      "call_id": "4a2ce788f849",
+      "call_id": "<call_id>",
       "task": "creative_punchup",
       "online": {
        "refresh": {

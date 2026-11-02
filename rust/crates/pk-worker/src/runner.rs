@@ -298,25 +298,28 @@ impl Worker {
     /// `run_job`: the voice profile, the kind, the files, and the `online` block of the result.
     async fn execute(&self, kind: Kind, job: &Job) -> Result<Value, JobError> {
         // the notebook first, then the profile: the Python's `run_job` order
-        let (corpus, files, refresh) = if kind.reads_notebook() {
+        let (corpus, files, creative, refresh) = if kind.reads_notebook() {
             let snap = self.mirror.refresh(&self.api).await?;
             let owner = self.cfg.owner_id.clone();
             let refresh = snap.refresh.clone();
             let files = snap.files.clone(); // path → Arc'd text: the texts are shared, not copied
+            let creative = snap.creative.clone();
             let built = tokio::task::spawn_blocking(move || {
                 corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
             })
             .await
             .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
-            (Some(Arc::new(built)), Some(files), refresh)
+            (Some(Arc::new(built)), Some(files), Some(creative), refresh)
         } else {
-            (None, None, Value::Null)
+            (None, None, None, Value::Null)
         };
         let voice = self.voice.fetch(&self.api).await;
         let ctx = Ctx {
             corpus: corpus.as_ref(),
             files: files.as_ref(),
             embedder: self.embedder.as_ref(),
+            creative: creative.as_ref(),
+            owner: &self.cfg.owner_id,
             api: &self.api,
             router: &self.router,
             voice: &voice,
