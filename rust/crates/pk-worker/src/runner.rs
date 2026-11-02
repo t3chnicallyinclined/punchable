@@ -96,6 +96,7 @@ pub struct Worker {
     embedder: Option<crate::kinds::Model>,
     voice: VoiceCache,
     mirror: Mirror,
+    ask_vectors: Arc<crate::kinds::ask::AskVectors>,
     model_line: Option<String>,
     counted: Mutex<usize>,
     /// Jobs started and not finished. A job decrements it (through `Running`, so a panic does too) before its slot
@@ -152,6 +153,7 @@ impl Worker {
             embedder: p.embedder,
             voice: VoiceCache::new(),
             mirror: Mirror::new(),
+            ask_vectors: Arc::new(crate::kinds::ask::AskVectors::new()),
             counted: Mutex::new(0),
             running: AtomicUsize::new(0),
         })
@@ -298,20 +300,26 @@ impl Worker {
     /// `run_job`: the voice profile, the kind, the files, and the `online` block of the result.
     async fn execute(&self, kind: Kind, job: &Job) -> Result<Value, JobError> {
         // the notebook first, then the profile: the Python's `run_job` order
-        let (corpus, files, creative, refresh) = if kind.reads_notebook() {
+        let (corpus, files, creative, decisions, refresh) = if kind.reads_notebook() {
             let snap = self.mirror.refresh(&self.api).await?;
             let owner = self.cfg.owner_id.clone();
             let refresh = snap.refresh.clone();
             let files = snap.files.clone(); // path → Arc'd text: the texts are shared, not copied
             let creative = snap.creative.clone();
-            let built = tokio::task::spawn_blocking(move || {
-                corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
-            })
-            .await
-            .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
-            (Some(Arc::new(built)), Some(files), Some(creative), refresh)
+            let decisions = (!kind.builds_corpus()).then(|| snap.decisions.clone());
+            let built = if kind.builds_corpus() {
+                let b = tokio::task::spawn_blocking(move || {
+                    corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
+                })
+                .await
+                .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
+                Some(Arc::new(b))
+            } else {
+                None
+            };
+            (built, Some(files), Some(creative), decisions, refresh)
         } else {
-            (None, None, None, Value::Null)
+            (None, None, None, None, Value::Null)
         };
         let voice = self.voice.fetch(&self.api).await;
         let ctx = Ctx {
@@ -319,6 +327,8 @@ impl Worker {
             files: files.as_ref(),
             embedder: self.embedder.as_ref(),
             creative: creative.as_ref(),
+            decisions: decisions.as_deref(),
+            ask_vectors: &self.ask_vectors,
             owner: &self.cfg.owner_id,
             api: &self.api,
             router: &self.router,

@@ -12,6 +12,7 @@ members = [
     "crates/pk-worker",
     "crates/pk-wire",
     "crates/pk-engine",
+    "crates/pk-fts",
     "xtask",
     "tools/pk-load",
 ]
@@ -87,6 +88,9 @@ rust-stemmers = "1"
 tokio-util = { version = "0.7", default-features = false }
 percent-encoding = "2"
 html-escape = "0.2"
+# pk-fts (T8 `ask`): SQLite FTS5 compiled from the amalgamation, so `bm25()` and the porter tokenizer are the ones the
+# Python's sqlite3 runs; 0.41 builds on the pinned 1.93.1 toolchain (MSRV 1.89)
+rusqlite = { version = "0.41", default-features = false, features = ["bundled"] }
 # tests
 insta ={ version = "1", features = ["json"] }
 proptest = "1"

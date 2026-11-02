@@ -1,9 +1,9 @@
 //! The job kinds the hosted worker runs (`worker/__main__.py` `HOSTED_KINDS` + `HOSTED_EMBED_KINDS`), each a
 //! [`Runner`] with its typed input, dispatched by one exhaustive `match`: a kind added to [`Kind`] does not compile
-//! until it is handled. Ported so far: `ask_chat`, `facts`, `set_text`. The kinds that read his whole notebook
-//! (`riff`, `punchup`, `bridge`, `embed`, `memolink`, `ask`) need the `Corpus` port first and are never claimed by
-//! this worker until then (`docs/RUST_WORKSTREAM.md` T8).
+//! until it is handled. All nine are ported (`docs/RUST_WORKSTREAM.md` T8); the kinds that read his notebook mirror
+//! it first, and all but `ask` build the `creative/data.py` `Corpus` from it (`ask` reads the v0 graph instead).
 
+pub mod ask;
 pub mod ask_chat;
 pub mod bridge;
 pub mod embed;
@@ -102,9 +102,15 @@ impl Kind {
             | Kind::Punchup
             | Kind::Bridge
             | Kind::Embed
-            | Kind::Memolink => true,
-            Kind::Ask => false,
+            | Kind::Memolink
+            | Kind::Ask => true,
         }
+    }
+
+    /// Whether it reads the `creative/data.py` `Corpus` (the v1 graph): every notebook kind but `ask`, whose own
+    /// corpus is the v0 graph (`engine/ask.py`), so a notebook without `kb/v1/graph.json` still answers an Ask.
+    pub fn builds_corpus(self) -> bool {
+        self.reads_notebook() && self != Kind::Ask
     }
 
     /// Whether it reads his notebook (the worker mirrors it and builds the `Corpus` first, as the Python's
@@ -242,6 +248,10 @@ pub struct Ctx<'a> {
     pub embedder: Option<&'a Model>,
     /// The creative logs mirrored with the notebook (store → lines), for the kinds that read it.
     pub creative: Option<&'a BTreeMap<String, Vec<String>>>,
+    /// The decision lines mirrored with the notebook, oldest first, for the kinds that read it.
+    pub decisions: Option<&'a [Value]>,
+    /// The one-shot Ask's document vectors, kept across jobs.
+    pub ask_vectors: &'a Arc<ask::AskVectors>,
     /// `PK_OWNER_ID`: the actor of his own edits (the merges store's reducer needs it).
     pub owner: &'a str,
 }
@@ -317,10 +327,7 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Bridge => run_typed::<bridge::Bridge>(ctx, input).await,
         Kind::Embed => run_typed::<embed::Embed>(ctx, input).await,
         Kind::Memolink => run_typed::<memolink::Memolink>(ctx, input).await,
-        Kind::Ask => Err(JobError::Value(format!(
-            "{} is not ported to the Rust worker yet",
-            kind.name()
-        ))),
+        Kind::Ask => run_typed::<ask::Ask>(ctx, input).await,
     }
 }
 
@@ -348,6 +355,15 @@ mod tests {
     fn claimable_is_the_hosted_order_ported_only() {
         let names: Vec<&str> = Kind::claimable(false).into_iter().map(Kind::name).collect();
         assert_eq!(names, ["bridge", "punchup", "facts", "riff", "ask_chat", "set_text"]);
+        let all: Vec<&str> = Kind::claimable(true).into_iter().map(Kind::name).collect();
+        assert_eq!(
+            all,
+            [
+                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "embed", "memolink", "ask"
+            ],
+            "all nine, the Python's order"
+        );
+        assert!(Kind::Ask.reads_notebook() && !Kind::Ask.builds_corpus() && Kind::Riff.builds_corpus());
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));
         assert_eq!(Kind::parse("process_set"), None);
         assert!(

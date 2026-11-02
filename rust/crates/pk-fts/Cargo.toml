@@ -1,0 +1,17 @@
+[package]
+name = "pk-fts"
+description = "SQLite FTS5 (porter unicode61, bm25) over an in-memory table: the full-text leg of the one-shot Ask, bit for bit the engine the Python's sqlite3 runs (ADR 0010 amendment 2026-11-02)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# SQLite compiled from its amalgamation (public domain) by libsqlite3-sys (MIT), FTS5 on: no system library, the
+# same engine on the desk, in CI and in the image
+rusqlite = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

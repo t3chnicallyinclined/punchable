@@ -235,8 +235,8 @@ mod tests {
             ..RunArgs::default()
         };
         assert!(WorkerConfig::from_env(&base(), &args).unwrap().creds.is_none());
-        // the one hosted kind not ported yet
-        assert!(parse_kinds("ask").is_err());
+        // every hosted kind is ported now
+        assert_eq!(parse_kinds("ask").unwrap(), vec![Kind::Ask]);
         assert_eq!(parse_kinds("memolink").unwrap(), vec![Kind::Memolink]);
         assert!(parse_kinds("nope").is_err());
         assert_eq!(parse_kinds("process_set,facts,facts").unwrap(), vec![Kind::Facts]);

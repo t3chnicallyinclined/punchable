@@ -48,6 +48,7 @@ OUT = ROOT / "rust" / "crates" / "pk-worker" / "tests" / "goldens"
 KEY = "sk-golden-not-a-key"
 WORKER_NAME = "golden-worker"
 RUN_ID = re.compile(r"settext-\d{8}-\d{6}-")
+ASK_RUN_ID = re.compile(r"ask-\d{8}-\d{6}")
 # the workspace-mirror reads the Python makes on every job (worker/online.py Workspace.refresh); the Rust worker reads
 # only what a kind needs, so these are compared by presence in the Python run and absent in the Rust run
 MIRROR = ("/api/worker/files", "/api/worker/decisions", "/api/worker/creative")
@@ -189,6 +190,24 @@ PUNCH_LOCKED = json.dumps({"drafts": [{"line_no": 1, "alt": "The bin took my bel
                                       {"line_no": 1, "alt": "   ", "move": "empty"}]})
 NAMED = {"PK_COMIC_NAME": "Pat Example", "PK_COMIC_FIRST": "Pat"}
 
+
+# the one-shot Ask (engine/ask.py): a plan, then an answer over the retrieved sources
+def plan(queries, labels=(), year_min=0, year_max=0, performed="any", titles=(), by_year=False) -> str:
+    return json.dumps({"search_queries": list(queries), "label_ids": list(labels), "year_min": year_min,
+                       "year_max": year_max, "performed": performed, "joke_titles": list(titles), "by_year": by_year})
+
+
+def asked(found, text, cites=(), not_found="") -> str:
+    return json.dumps({"found": found, "answer": text, "not_found": not_found,
+                       "citations": [{"source_id": s, "quote": q, "note": n} for s, q, n in cites]})
+
+
+def ask_job(question: str) -> dict:
+    return job("ask", {"question": question})
+
+
+ASK = {"env": {}, "notebook": True, "ask": True, "bge": True}
+
 SCENARIOS = [
     {"name": "ask_chat_named", "env": NAMED, "job": job("ask_chat", {"messages": ASK_MESSAGES}),
      "voice": voice_doc(learned=LEARNED, laughs=LAUGHS), "model": [answer(ANSWER, SONNET, cache_write=900)]},
@@ -286,6 +305,48 @@ SCENARIOS = [
      "creative": {"merges": [json.dumps({"ts": "2026-10-20T10:00:00+00:00", "op": "attach", "id": "at:dup",
                                          "by": "owner", "data": {"joke": "joke:memo-bins",
                                                                  "into": "joke:airport-bins"}})] * 2}},
+    # the one-shot Ask: a good citation (typography forgiven), a bad quote kept as its source and flagged, an id with
+    # look-alike hyphens normalised, a source that was not retrieved, an unverified "quote" in the prose cut, a
+    # bracketed id that was not retrieved marked; an unknown label dropped and a label named in the question added
+    {**ASK, "name": "ask_cited_good_and_bad", "voice": voice_doc(), "env": NAMED,
+     "job": ask_job("What have I written about airport security and travel?"),
+     "model": [answer(plan(["airport security bin belt", "scanner shoes"], labels=["label:nope"]), SONNET),
+               answer(asked(True, "The bins [unit:bins‑a], the spa line [perf:2023‑08‑14_FakeSet0003@50000] "
+                                  "and \"a line he never wrote anywhere at all\" plus [unit:nope].",
+                            [("unit:bins-a", "The bin gets my belt, my shoes and most of my confidence…", "lead"),
+                             (" [unit:bins‐b] ", "Airports are a spa where strangers touch you without asking.",
+                              "the same line on paper"),
+                             ("[perf:2023‑08‑14_FakeSet0003@50000]",
+                              "Airports are a spa where strangers touch you without asking.", "close"),
+                             ("unit:bins-a", "The bin took my dignity", "not his words"),
+                             ("unit:nope", "anything", "not retrieved")]), SONNET)]},
+    # found but nothing verified: every citation names a source that was not retrieved and the prose cites none
+    {**ASK, "name": "ask_no_verified_support", "voice": voice_doc(), "job": ask_job("my parrot lawyer bit"),
+     "model": [answer(plan(["parrot lawyer disclaimers"]), SONNET),
+               answer(asked(True, "You have a parrot bit.", [("unit:parrot-zzz", "a parrot", "x")]), SONNET)]},
+    {**ASK, "name": "ask_not_found", "voice": voice_doc(), "job": ask_job("What did I write about my dad?"),
+     "model": [answer(plan(["dad father"]), SONNET),
+               answer(asked(False, "Nothing about your father.", not_found="no source mentions a father"), SONNET)]},
+    # a refused plan: retrieval runs on the question alone; the answer cites in the prose only
+    {**ASK, "name": "ask_plan_refused", "voice": voice_doc(), "job": ask_job("landlord group chat rent"),
+     "model": [answer("", SONNET, stop_reason="refusal"),
+               answer(asked(True, "Your landlord bit [unit:landlord-a] and the rooftop [tx:openmic_rooftop@0].")
+                      , SONNET)]},
+    # a named bit (its units and performances all come in, up to 40) ordered by year
+    {**ASK, "name": "ask_named_joke_by_year", "voice": voice_doc(), "job": ask_job("Every version of my parrot bit, by year"),
+     "model": [answer(plan(["parrot legal disclaimers", "read me my rights"], titles=["parrot bit"], by_year=True),
+                      SONNET),
+               answer(asked(True, "2024: [unit:parrot-a]", [("unit:parrot-a", "I bought a parrot", "first")]),
+                      SONNET)]},
+    # never performed, the years the question names (the plan said none), the travel label named in the question
+    {**ASK, "name": "ask_never_performed_years", "voice": voice_doc(),
+     "job": ask_job("Which travel jokes from 2023 or 2024 have I never performed?"),
+     "model": [answer(plan(["travel airport scanner"], performed="never"), SONNET),
+               answer(asked(True, "The poem [unit:poem-a].", [("unit:poem-a", "the scanner is blue", "poem")]),
+                      SONNET)]},
+    # a year nothing is from: no sources, no answer call
+    {**ASK, "name": "ask_nothing_matches", "voice": voice_doc(), "job": ask_job("What did I write in 1999?"),
+     "model": [answer(plan(["anything"]), SONNET)]},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -396,7 +457,7 @@ REFUSED_RESULT = b'{"error": "body too large"}'
 
 
 def notebook_files(sc: dict) -> dict:
-    files = F.files() if sc.get("notebook") else {}
+    files = (F.ask_files() if sc.get("ask") else F.files()) if sc.get("notebook") else {}
     if sc.get("summary_current"):
         # the memo idea's vector is current (its text hash matches) and one row is for an idea that is gone
         doc = json.loads(files["vectors/extra_summary.json"])
@@ -411,6 +472,8 @@ def notebook_files(sc: dict) -> dict:
 
 
 def notebook_decisions(sc: dict) -> list:
+    if sc.get("ask"):
+        return F.ask_decisions()
     return (F.decisions() + (F.memo_decisions() if sc.get("memos") else [])) if sc.get("notebook") else []
 
 
@@ -526,11 +589,14 @@ def normalise(x):
         # a model call's id is a fresh uuid4 every run: kept as a marker so the goldens do not drift
         if isinstance(out.get("call_id"), str) and re.fullmatch(r"[0-9a-f]{12}", out["call_id"]):
             out["call_id"] = "<call_id>"
+        # the one-shot Ask's stage timings (seconds, rounded): the keys are compared, the values are the clock
+        if isinstance(out.get("timings"), dict):
+            out["timings"] = {k: "<s>" for k in out["timings"]}
         return out
     if isinstance(x, list):
         return [normalise(v) for v in x]
     if isinstance(x, str):
-        return RUN_ID.sub("settext-<time>-", x)
+        return ASK_RUN_ID.sub("ask-<time>", RUN_ID.sub("settext-<time>-", x))
     return x
 
 
@@ -626,6 +692,10 @@ def pages_golden() -> dict:
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    # the hosted image has no tools/kb/cache (infra/worker/Dockerfile): engine/ask.py then embeds every source itself.
+    # A desk copy of that cache would feed the Python his own vectors instead, so the goldens refuse to be made over one
+    if (ROOT / "tools" / "kb" / "cache" / "vectors_ids.json").exists():
+        raise SystemExit("tools/kb/cache/vectors_ids.json exists here: the Ask goldens must be made without it")
     for sc in SCENARIOS:
         if sc.get("bge") and not BGE:
             print(f"{sc['name']}: kept as committed (no PK_BGE_DIR: the bge model is not here)")
