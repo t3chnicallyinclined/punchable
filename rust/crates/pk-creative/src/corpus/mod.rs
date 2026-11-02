@@ -243,6 +243,8 @@ pub struct Parts {
     pub laughs: HashMap<String, IndexMap<String, Value>>,
     /// `kb/v0/inferred.json`.
     pub inferred: Value,
+    /// `kb/v0/insights.json` (gems, orphans, chunks), `Null` when there is none.
+    pub insights: Value,
     /// The vectors (shared: the worker keeps one copy across jobs).
     pub vectors: Arc<Vectors>,
     /// `PK_OWNER_ID` ("owner" unless set).
@@ -274,6 +276,7 @@ impl Parts {
             |p: &str| -> Result<Value, CorpusError> { files.get(p).map_or(Ok(Value::Null), |t| parse(p, t.as_ref())) };
         let id_map = opt("kb/v1/id_map.json")?;
         let inferred = opt("kb/v0/inferred.json")?;
+        let insights = opt("kb/v0/insights.json")?;
         let (mut analyses, mut metas, mut laughs) = (IndexMap::new(), HashMap::new(), HashMap::new());
         // the set folders in name order (BTreeMap: `sorted(os.listdir(sets))`)
         let mut dirs: Vec<&str> = files
@@ -317,6 +320,7 @@ impl Parts {
             metas,
             laughs,
             inferred,
+            insights,
             vectors,
             owner: owner.to_string(),
         })
@@ -374,6 +378,8 @@ pub struct Corpus {
     pub laughs: HashMap<String, IndexMap<String, Value>>,
     /// The vectors.
     pub vectors: Arc<Vectors>,
+    /// `insights.json` (`self.insights = insights or {}`; `Null` when there is none).
+    pub insights: Value,
 }
 
 impl Corpus {
@@ -384,6 +390,7 @@ impl Corpus {
             id_map: p.id_map,
             laughs: p.laughs,
             vectors: p.vectors,
+            insights: p.insights,
             ..Self::default()
         };
         c.build_graph(p.graph, &p.decisions, &p.inferred);

@@ -89,7 +89,7 @@ impl Runner for Memolink {
                 let base = Arc::clone(&corpus);
                 corpus = tokio::task::spawn_blocking(move || {
                     let mut c = (*base).clone();
-                    c.vectors = Arc::new(crate::mirror::build_vectors(&texts));
+                    c.vectors = Arc::new(pk_creative::corpus::Vectors::from_files(&texts));
                     Arc::new(c)
                 })
                 .await

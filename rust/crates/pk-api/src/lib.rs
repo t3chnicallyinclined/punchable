@@ -10,10 +10,12 @@ pub mod auth;
 pub mod cloud;
 pub mod config;
 pub mod cors;
+pub mod creative;
 pub mod display;
 pub mod error;
 pub mod index;
 pub mod instrument;
+pub mod jokes;
 pub mod pages;
 pub mod proxy;
 pub mod query;
@@ -38,7 +40,8 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 8] = [
+pub const OWN_PATHS: [&str; 9] = [
+    "/api/jokes",
     "/api/map/cloud",
     "/api/sets",
     "/api/health",
@@ -89,6 +92,11 @@ pub fn app(st: AppState) -> Router {
         .route("/api/pipeline", read_route(&st, routes::kb::pipeline))
         .route("/api/learned", read_route(&st, routes::learned::learned))
         .route("/api/map/cloud", read_route(&st, routes::cloud::map_cloud))
+        .route(
+            "/api/jokes",
+            read_route(&st, routes::jokes::jokes)
+                .layer(from_fn_with_state(st.clone(), routes::jokes::hybrid_to_python)),
+        )
         .route("/api/sets", read_route(&st, routes::sets::sets))
         .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
         .route("/api/sets/{id}/review", read_route(&st, routes::sets::review))

@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use pk_creative::corpus::{VectorPart, Vectors};
+use pk_creative::corpus::Vectors;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
@@ -138,7 +138,7 @@ impl Mirror {
                 .collect();
             // parsing a few MB of JSON floats is CPU work: off the async threads. A failed rebuild keeps the last
             // vectors and is tried again next job (the shas do not move)
-            match tokio::task::spawn_blocking(move || Arc::new(build_vectors(&texts))).await {
+            match tokio::task::spawn_blocking(move || Arc::new(Vectors::from_files(&texts))).await {
                 Ok(v) => {
                     st.vectors = v;
                     st.vector_shas = vector_shas;
@@ -187,25 +187,4 @@ impl Mirror {
             vectors,
         })
     }
-}
-
-/// `rebuild_vectors` + `Vectors`: the parts (non-`extra_` files under `vectors/` named `*.part*.json`) in path
-/// order, the `extra_*.json` files after.
-pub fn build_vectors(files: &[(String, Arc<str>)]) -> Vectors {
-    let mut parts = Vec::new();
-    let mut extras = Vec::new();
-    for (p, t) in files {
-        let name = p.rsplit('/').next().unwrap_or(p);
-        if name.starts_with("extra_") {
-            if let Ok(v) = serde_json::from_str::<Value>(t) {
-                extras.push((name.to_string(), v));
-            }
-        } else if name.contains(".part")
-            && std::path::Path::new(name).extension().is_some_and(|x| x == "json")
-            && let Ok(part) = serde_json::from_str::<VectorPart>(t)
-        {
-            parts.push(part);
-        }
-    }
-    Vectors::from_parts(&parts, &extras)
 }

@@ -256,6 +256,43 @@ def build_comedy(comedy: Path) -> None:
     (comedy / "kb" / "creative").mkdir(parents=True)
 
 
+# the merges store (creative_event rows; the bundle carries no merges log, the API writes them): a note auto-attached
+# under a bit, which the Desk does not list on its own (merge_api.desk_filter), one attached then detached (listed),
+# and a pair he dismissed (no effect on the list)
+MERGES = [{"ts": "2024-05-01T10:00:00+00:00", "op": "attach", "id": "at:x05", "by": "ai:attach",
+               "data": {"joke": "joke:x05", "into": "joke:x01", "text": "x05", "date": "2024-05-01", "score": 0.9,
+                        "reasons": ["same words"], "source": "app"}},
+              {"ts": "2024-05-01T11:00:00+00:00", "op": "attach", "id": "at:x09", "by": "ai:attach",
+               "data": {"joke": "joke:x09", "into": "joke:x01", "text": "x09", "date": "2024-05-01"}},
+              {"ts": "2024-05-01T12:00:00+00:00", "op": "detach", "id": "at:x09", "by": "owner", "data": {}},
+              {"ts": "2024-05-02T10:00:00+00:00", "op": "dismiss", "id": "dm:x02", "by": "owner",
+               "data": {"jokes": ["joke:x02", "joke:x06"], "reason": "kept as its own bit"}}]
+
+
+def surreal_sql(port: int, pw: str, sql: str, vars_: dict | None = None) -> list:
+    """One SurrealQL request to the scratch database (root, over HTTP)."""
+    import base64
+    q = "".join(f"LET ${k} = {json.dumps(v)};" for k, v in (vars_ or {}).items()) + sql
+    req = Request(f"http://127.0.0.1:{port}/sql", data=q.encode(), method="POST",
+                  headers={"Accept": "application/json", "surreal-ns": NS, "surreal-db": DB,
+                           "Authorization": "Basic " + base64.b64encode(f"root:{pw}".encode()).decode()})
+    with urlopen(req, timeout=30) as r:
+        out = json.loads(r.read())
+    bad = [x for x in out if x.get("status") != "OK"]
+    if bad:
+        raise SystemExit(f"surreal: {bad[0]}")
+    return out
+
+
+def write_merges(port: int, pw: str) -> None:
+    import hashlib
+    for seq, ev in enumerate(MERGES):
+        line = json.dumps(ev)
+        row = {"store": "merges", "seq": seq, "line": line, "h": hashlib.sha256(line.encode()).hexdigest(),
+               "op": ev["op"], "item": ev["id"], "at": ev["ts"]}
+        surreal_sql(port, pw, "CREATE creative_event CONTENT $row RETURN NONE;", {"row": row})
+
+
 def write_vectors(cache_kb: Path, graph: dict) -> None:
     """Synthetic 384-d unit vectors (four topic centres plus noise, seeded) in the cache layout db/load.py reads, so
     the bundle carries unit embeddings and the cloud has something to place."""
@@ -428,6 +465,13 @@ def coverage(py: str, app: dict) -> list[str]:
     ja = get("/api/jokes/joke:a")
     checks["joke: a performance with laughs, a punch and a labelled edge"] = bool(
         ja["performances"] and ja["performances"][0]["laughs"] and ja["performances"][0]["punch"]["text"] and ja["labels"])
+    js = get("/api/jokes?limit=5000")["items"]
+    ids = {x["id"] for x in js}
+    checks["jokes: the attached note out, the detached one in, both kinds of duration"] = (
+        "joke:x05" not in ids and "joke:x09" in ids and any(not x["duration_estimated"] for x in js)
+        and any(x["duration_estimated"] for x in js) and len({x["duration_s"] for x in js}) > 3)
+    checks["jokes: the hidden view keeps the attached note"] = any(
+        x["id"] == "joke:x05" for x in get("/api/jokes?limit=5000&include_hidden=1")["items"])
     for what, ok_ in checks.items():
         if not ok_:
             out.append(f"coverage: the synthetic data no longer reaches '{what}'")
@@ -481,6 +525,7 @@ def main() -> int:
                                capture_output=True, text=True, encoding="utf-8")
             if r.returncode != 0:
                 raise SystemExit(f"push_remote {step[0]} failed:\n{r.stdout[-2000:]}\n{r.stderr[-3000:]}")
+        write_merges(port, pw)
 
         key, other = JK.Key("t9", seed=9), JK.Key("t9-other", seed=10)
         jwks = JwksServer([key])
@@ -552,6 +597,20 @@ def main() -> int:
             pages += [f"/api/sets/set:{sk}/analysis", f"/api/sets/set:{sk}/review"]
         pages += [f"/api/jokes/joke:{k}" for k in "abcdef"] + ["/api/jokes/joke:x00", "/api/jokes/joke:x07"]
         reqs += [(p, "GET", p, app) for p in pages]
+        # round 5: the Bits list (filters, every sort, the page bounds, both views, the attached note taken out)
+        jokes = ["/api/jokes", "/api/jokes?limit=5000", "/api/jokes?limit=5000&include_hidden=1", "/api/jokes?limit=3",
+                 "/api/jokes?offset=2&limit=2", "/api/jokes?offset=-5", "/api/jokes?offset=999", "/api/jokes?offset=abc",
+                 "/api/jokes?limit=0", "/api/jokes?limit=-3", "/api/jokes?limit=99999", "/api/jokes?limit=x",
+                 "/api/jokes?sort=bad", "/api/jokes?sort=bad&offset=abc", "/api/jokes?q=niece", "/api/jokes?q=%20%20",
+                 "/api/jokes?q=NIECE%20laundromat", "/api/jokes?q=nothingmatches", "/api/jokes?stage=idea",
+                 "/api/jokes?stage=testing&sort=strongest", "/api/jokes?label=label:persona:dad",
+                 "/api/jokes?label=label:persona:dad&label=label:topic:kids", "/api/jokes?label=label:nope",
+                 "/api/jokes?who=edited", "/api/jokes?who=confirmed", "/api/jokes?who=ai&limit=5", "/api/jokes?who=nope",
+                 "/api/jokes?mode=hybrid", "/api/jokes?q=%20&mode=hybrid", "/api/jokes?backend=files",
+                 "/api/jokes?include_hidden=1&q=grocery", "/api/jokes?q=x05", "/api/jokes?q=x09"]
+        jokes += [f"/api/jokes?sort={s}&limit=5000" + h for s in ("recent", "performed", "strongest", "written", "untouched")
+                  for h in ("", "&include_hidden=1")]
+        reqs += [(p, "GET", p, app) for p in jokes]
         reqs += [("proxied connections", "GET", "/api/jokes/joke:a/connections", app),
                  ("proxied clips", "GET", f"/api/sets/set:{SX}/clips", app)]
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
@@ -583,7 +642,7 @@ def main() -> int:
                  ("no kid", "GET", "/api/labels", {"Authorization": "Bearer " + JK.token(key, now=now, header={"kid": None})}),
                  ("bad sig", "GET", "/api/labels", {"Authorization": "Bearer " + JK.token(key, now=now)[:-6] + "AAAAAA"}),
                  ("proxied 404", "GET", "/api/nothing-here", app),
-                 ("proxied jokes", "GET", "/api/jokes?limit=3", app)]
+                 ("proxied hybrid", "GET", "/api/jokes?q=dog&mode=hybrid", app)]
         n_ok = 0
         for label, m, p, h in reqs:
             got = compare(label, call(py, m, p, h), call(rs, m, p, h))
@@ -625,7 +684,10 @@ def main() -> int:
             for x in items:
                 x.pop("duration_s", None)
                 x.pop("duration_estimated", None)
-            got = compare(label, (200, {}, json.dumps({"items": items}).encode()), (200, {}, s_rs[2]))
+            # the Python's page has the attached note taken out (desk_filter) unless include_hidden; the raw rows have not
+            rs_items = [x for x in json.loads(s_rs[2])["items"] if hid or x["id"] != "joke:x05"]
+            got = compare(label, (200, {}, json.dumps({"items": items}).encode()),
+                          (200, {}, json.dumps({"items": rs_items}).encode()))
             problems += got
             n_ok += not got
             reqs.append((label, "GET", "", {}))
@@ -634,11 +696,18 @@ def main() -> int:
         # proof the answers came from pk-api and not through its fallback: its own counters saw every moved route
         mtext = call(rs, "GET", "/metrics")[2].decode()
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
-                      "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}"):
+                      "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}",
+                      "/api/jokes"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
-        if 'route="/api/jokes"' in mtext:
-            problems.append("pk-api counted a forwarded route (/api/jokes): the fallback must count nothing")
+        # a forwarded request is counted by nobody here: the hybrid search goes to the Python before pk-api's layers
+        def jokes_count() -> float:
+            return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
+                       if ln.startswith("pk_http_requests_total{") and 'route="/api/jokes"' in ln)
+        n0 = jokes_count()
+        call(rs, "GET", "/api/jokes?q=dog&mode=hybrid", app)
+        if jokes_count() != n0:
+            problems.append("pk-api counted a forwarded request (/api/jokes?mode=hybrid): the fallback must count nothing")
 
         # -- timing and memory
         if a.bench:
