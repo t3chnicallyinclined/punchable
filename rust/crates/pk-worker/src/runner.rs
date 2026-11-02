@@ -132,6 +132,10 @@ enum Claimed {
 impl Worker {
     /// A worker over its parts.
     pub fn new(p: Parts) -> Arc<Self> {
+        let ask_vectors = Arc::new(p.cfg.ask_vectors.clone().map_or_else(
+            crate::kinds::ask::AskVectors::new,
+            crate::kinds::ask::AskVectors::with_file,
+        ));
         let budget = Arc::clone(&p.budget);
         p.metrics.attach_budget(move || {
             let s = budget.status();
@@ -153,7 +157,7 @@ impl Worker {
             embedder: p.embedder,
             voice: VoiceCache::new(),
             mirror: Mirror::new(),
-            ask_vectors: Arc::new(crate::kinds::ask::AskVectors::new()),
+            ask_vectors,
             counted: Mutex::new(0),
             running: AtomicUsize::new(0),
         })
@@ -306,16 +310,16 @@ impl Worker {
             let refresh = snap.refresh.clone();
             let files = snap.files.clone(); // path → Arc'd text: the texts are shared, not copied
             let creative = snap.creative.clone();
-            let decisions = (!kind.builds_corpus()).then(|| snap.decisions.clone());
-            let built = if kind.builds_corpus() {
+            let (built, decisions) = if kind.builds_corpus() {
                 let b = tokio::task::spawn_blocking(move || {
                     corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
                 })
                 .await
                 .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
-                Some(Arc::new(b))
+                (Some(Arc::new(b)), None)
             } else {
-                None
+                // `ask` replays the decisions over its own graph: handed over, not copied
+                (None, Some(Arc::<[Value]>::from(snap.decisions)))
             };
             (built, Some(files), Some(creative), decisions, refresh)
         } else {
@@ -327,7 +331,7 @@ impl Worker {
             files: files.as_ref(),
             embedder: self.embedder.as_ref(),
             creative: creative.as_ref(),
-            decisions: decisions.as_deref(),
+            decisions: decisions.as_ref(),
             ask_vectors: &self.ask_vectors,
             owner: &self.cfg.owner_id,
             api: &self.api,

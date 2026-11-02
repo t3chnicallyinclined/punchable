@@ -84,6 +84,9 @@ pub struct WorkerConfig {
     /// Where the bge-small model is, when it is there (`PK_BGE_DIR`, else `<PK_CACHE_DIR>/models/…`): the embedding
     /// kinds are claimed only with it, as the Python's `hosted_kinds`.
     pub bge_dir: Option<PathBuf>,
+    /// Where the one-shot Ask keeps its document vectors across a container restart (`<PK_WORKSPACE>/ask_vectors`,
+    /// only when `PK_WORKSPACE` is set: the pod's emptyDir; never a default folder).
+    pub ask_vectors: Option<PathBuf>,
 }
 
 fn invalid(key: &str, reason: impl Into<String>) -> ConfigError {
@@ -195,6 +198,7 @@ impl WorkerConfig {
             stop_grace: STOP_GRACE,
             owner_id: env.opt("PK_OWNER_ID").unwrap_or("owner").to_string(),
             bge_dir,
+            ask_vectors: env.path("PK_WORKSPACE").map(|w| w.join("ask_vectors")),
         })
     }
 }

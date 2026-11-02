@@ -144,6 +144,17 @@ impl Router {
             .clone()
     }
 
+    /// Input and output tokens over every call made with `run_id` (failed attempts count, as the Python's
+    /// `router.calls` sums do), summed under the lock without copying the history.
+    pub fn tokens_for(&self, run_id: &str) -> (u64, u64) {
+        self.calls
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .iter()
+            .filter(|c| c.run_id.as_deref() == Some(run_id))
+            .fold((0, 0), |(i, o), c| (i + c.tokens_in, o + c.tokens_out))
+    }
+
     /// `[(provider, model)]` in preference order, available ones only.
     pub fn resolve(&self, task: &str) -> Result<Vec<(String, String)>, LlmError> {
         let tcfg = self.cfg.task(task)?;

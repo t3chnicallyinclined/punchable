@@ -18,6 +18,7 @@
 //! [`TX_WINDOW`] segments not more than half covered by a performance. Insertion orders are the Python's dict
 //! orders, sorts are stable as Python's are, and the vector order breaks a tie by document order.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::LazyLock;
 
@@ -94,6 +95,11 @@ static SET_DIR: LazyLock<Regex> = LazyLock::new(|| rx(r"^([0-9]{4})-?([0-9]{2})-
 static PROSE_IDS: LazyLock<Regex> = LazyLock::new(|| rx(r#"(?:unit|perf|tx|joke):[^\]\s\x1C-\x1F,;)'"]+"#));
 static ANSWER_IDS: LazyLock<Regex> = LazyLock::new(|| rx(r"(?:unit|perf|tx|joke):[^\]\s\x1C-\x1F,;)]+"));
 static BRACKET_IDS: LazyLock<Regex> = LazyLock::new(|| rx(r"\[((?:unit|perf|tx|joke):[^\]\s\x1C-\x1F,;]+)"));
+
+/// Python's `<` on two floats for a stable sort: -0.0 equals 0.0, and nothing here is NaN.
+fn py_cmp(a: f64, b: f64) -> std::cmp::Ordering {
+    a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal)
+}
 
 fn rejected_status(e: &Map<String, Value>) -> bool {
     e.get("status")
@@ -274,9 +280,12 @@ impl Doc {
             .flatten()
     }
 
-    /// The text the vector is made from (`d["text"][:2000]`).
-    pub fn embed_text(&self) -> String {
-        self.text.chars().take(EMBED_CHARS).collect()
+    /// The text the vector is made from (`d["text"][:2000]`: characters, not bytes), borrowed.
+    pub fn embed_text(&self) -> &str {
+        match self.text.char_indices().nth(EMBED_CHARS) {
+            Some((at, _)) => &self.text[..at],
+            None => &self.text,
+        }
     }
 }
 
@@ -461,17 +470,15 @@ impl AskCorpus {
     }
 
     /// The `(id, title, text)` rows of the FTS table, in document order (a non-string title is its `str`).
-    pub fn fts_rows(&self) -> Vec<(String, String, String)> {
-        self.docs
-            .values()
-            .map(|d| {
-                let title = match &d.title {
-                    Value::Null => String::new(),
-                    t => py::str(t),
-                };
-                (d.id.clone(), title, d.text.clone())
-            })
-            .collect()
+    pub fn fts_rows(&self) -> impl Iterator<Item = (&str, Cow<'_, str>, &str)> {
+        self.docs.values().map(|d| {
+            let title = match &d.title {
+                Value::Null => Cow::Borrowed(""),
+                Value::String(s) => Cow::Borrowed(s.as_str()),
+                t => Cow::Owned(py::str(t)),
+            };
+            (d.id.as_str(), title, d.text.as_str())
+        })
     }
 }
 
@@ -658,7 +665,9 @@ pub struct Vecs<'a> {
 }
 
 impl Vecs<'_> {
-    /// `M @ q`, float32 like numpy's.
+    /// `M @ q` in float32, summed left to right. numpy's BLAS sums in its own (SIMD) order, so a cosine can differ in
+    /// the last bits and two documents within that of each other may swap places; numpy's default `argsort` is not
+    /// stable either, so an exact tie (the same text twice) has no fixed Python order to match. Known difference.
     fn sims(&self, q: &str, n: usize) -> Vec<f32> {
         let Some(qv) = self.queries.get(q) else {
             return vec![0.0; n];
@@ -677,7 +686,7 @@ impl Vecs<'_> {
 pub fn vec_hits(c: &AskCorpus, v: &Vecs<'_>, q: &str, k: usize) -> Vec<String> {
     let s = v.sims(q, c.docs.len());
     let mut idx: Vec<usize> = (0..s.len()).collect();
-    idx.sort_by(|&a, &b| s[b].total_cmp(&s[a]));
+    idx.sort_by(|&a, &b| py_cmp(f64::from(s[b]), f64::from(s[a])));
     idx.into_iter()
         .take(k)
         .map(|i| c.docs.get_index(i).map(|(id, _)| id.clone()).unwrap_or_default())
@@ -728,7 +737,7 @@ pub fn retrieve(
                 members.contains(d.id.as_str()) || d.joke.as_deref().is_some_and(|j| members.contains(j))
             })
             .collect();
-        docs.sort_by(|&a, &b| (-doc_sim(a)).total_cmp(&-doc_sim(b)));
+        docs.sort_by(|&a, &b| py_cmp(-doc_sim(a), -doc_sim(b)));
         for i in docs {
             add(&c.docs[i].id, 0.5 + 0.1 * doc_sim(i));
         }
@@ -746,9 +755,15 @@ pub fn retrieve(
             let dw: HashSet<&str> = WORDS.find_iter(&t).map(|m| m.as_str()).collect();
             -(f64::from(js[i]) + 0.2 * tw.intersection(&dw).count() as f64)
         };
-        let mut jd: Vec<usize> = (0..n).filter(|&i| c.docs[i].kind == DocKind::Joke).collect();
-        jd.sort_by(|&a, &b| key(a).total_cmp(&key(b)));
-        if let Some(&top) = jd.first() {
+        // `jd.sort(key=...)[:1]`: the first joke with the smallest key (a stable sort's head), one pass
+        let mut top: Option<(usize, f64)> = None;
+        for i in (0..n).filter(|&i| c.docs[i].kind == DocKind::Joke) {
+            let k = key(i);
+            if top.is_none_or(|(_, best)| k < best) {
+                top = Some((i, k));
+            }
+        }
+        if let Some((top, _)) = top {
             let jid = c.docs[top].id.clone();
             for x in c.docs.values() {
                 if x.joke.as_deref() == Some(jid.as_str()) {
@@ -778,7 +793,7 @@ pub fn retrieve(
         true
     };
     let mut ranked: Vec<(&String, f64)> = score.iter().map(|(k, s)| (k, *s)).collect();
-    ranked.sort_by(|a, b| (-a.1).total_cmp(&-b.1));
+    ranked.sort_by(|a, b| py_cmp(-a.1, -b.1));
     let cap_all = if focus.is_empty() { MAX_SOURCES } else { 48 };
     let mut picked: Vec<String> = Vec::new();
     let mut per: HashMap<String, usize> = HashMap::new();
@@ -1008,6 +1023,29 @@ pub fn verify(c: &AskCorpus, kb: &Kb, picked: &[String], data: &Value) -> Verifi
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A decision, not parity: the Python's `keep()` raises on a null date (`None[:4]`) and fails the whole Ask; here
+    /// a null date is "no year": dropped by a year filter, kept otherwise.
+    #[test]
+    fn a_null_date_is_no_year_not_a_crash() {
+        let d = Doc {
+            id: "perf:x@0".into(),
+            kind: DocKind::Performed,
+            text: "é".repeat(EMBED_CHARS + 5),
+            date: Value::Null,
+            title: Value::Null,
+            joke: None,
+        };
+        assert_eq!(d.year(), None);
+        assert_eq!(d.embed_text().chars().count(), EMBED_CHARS, "cut by characters");
+        let dated = Doc {
+            date: json!("2019-05-01"),
+            ..d.clone()
+        };
+        assert_eq!(dated.year(), Some(2019));
+        let short = Doc { date: json!("20"), ..d };
+        assert_eq!(short.year(), Some(20), "`'20'[:4].isdigit()` is true in Python too");
+    }
 
     #[test]
     fn the_fts_query_is_the_python_one() {

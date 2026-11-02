@@ -75,8 +75,7 @@ fn a_dropped_source_is_caught() {
 fn bm25_orders_as_the_pythons_sqlite() {
     let g = golden();
     let (_, c) = built(&g);
-    let rows = c.fts_rows();
-    let idx = pk_fts::Index::build(rows.iter().map(|(a, b, t)| (a.as_str(), b.as_str(), t.as_str()))).unwrap();
+    let idx = pk_fts::Index::build(c.fts_rows()).unwrap();
     let mut ordered = 0;
     for s in g["searches"].as_array().unwrap() {
         let q = s["q"].as_str().unwrap();

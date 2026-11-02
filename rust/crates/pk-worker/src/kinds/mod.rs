@@ -249,7 +249,7 @@ pub struct Ctx<'a> {
     /// The creative logs mirrored with the notebook (store → lines), for the kinds that read it.
     pub creative: Option<&'a BTreeMap<String, Vec<String>>>,
     /// The decision lines mirrored with the notebook, oldest first, for the kinds that read it.
-    pub decisions: Option<&'a [Value]>,
+    pub decisions: Option<&'a Arc<[Value]>>,
     /// The one-shot Ask's document vectors, kept across jobs.
     pub ask_vectors: &'a Arc<ask::AskVectors>,
     /// `PK_OWNER_ID`: the actor of his own edits (the merges store's reducer needs it).

@@ -13,12 +13,18 @@
 
 use rusqlite::{Connection, params};
 
-/// What can go wrong: `SQLite`'s own words.
-#[derive(Debug, thiserror::Error)]
+/// What can go wrong: `SQLite`'s own words (the `rusqlite` error stays inside this crate).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum FtsError {
-    /// `SQLite` refused the statement (an FTS5 syntax error in a query lands here: the Python reads it as no hits).
+    /// `SQLite` refused the statement (an FTS5 syntax error in a query lands here: the Python's
+    /// `sqlite3.OperationalError`, which the Ask reads as no hits).
     #[error("sqlite: {0}")]
-    Sqlite(#[from] rusqlite::Error),
+    Sqlite(String),
+}
+
+#[allow(clippy::needless_pass_by_value)] // a `map_err` adapter
+fn sql(e: rusqlite::Error) -> FtsError {
+    FtsError::Sqlite(e.to_string())
 }
 
 /// One table of `(id, title, text)` rows, searchable by an FTS5 query.
@@ -30,24 +36,32 @@ pub struct Index {
 
 impl Index {
     /// The table over `rows` (`(id, title, text)`), inserted in the given order (the rowid order `SQLite` breaks a
-    /// bm25 tie by), in one transaction.
-    pub fn build<'a, I>(rows: I) -> Result<Self, FtsError>
+    /// bm25 tie by), in one transaction. Temporary storage is pinned to memory: nothing of his touches a disk.
+    pub fn build<I, A, B, C>(rows: I) -> Result<Self, FtsError>
     where
-        I: IntoIterator<Item = (&'a str, &'a str, &'a str)>,
+        I: IntoIterator<Item = (A, B, C)>,
+        A: AsRef<str>,
+        B: AsRef<str>,
+        C: AsRef<str>,
     {
-        let mut db = Connection::open_in_memory()?;
-        db.execute_batch("create virtual table f using fts5(id unindexed, title, text, tokenize='porter unicode61')")?;
+        let mut db = Connection::open_in_memory().map_err(sql)?;
+        db.execute_batch(
+            "pragma temp_store = memory;
+             create virtual table f using fts5(id unindexed, title, text, tokenize='porter unicode61')",
+        )
+        .map_err(sql)?;
         let mut n = 0usize;
         {
-            let tx = db.transaction()?;
+            let tx = db.transaction().map_err(sql)?;
             {
-                let mut ins = tx.prepare("insert into f values (?,?,?)")?;
+                let mut ins = tx.prepare("insert into f values (?,?,?)").map_err(sql)?;
                 for (id, title, text) in rows {
-                    ins.execute(params![id, title, text])?;
+                    ins.execute(params![id.as_ref(), title.as_ref(), text.as_ref()])
+                        .map_err(sql)?;
                     n += 1;
                 }
             }
-            tx.commit()?;
+            tx.commit().map_err(sql)?;
         }
         Ok(Self { db, rows: n })
     }
@@ -66,12 +80,13 @@ impl Index {
     pub fn search(&self, expr: &str, k: usize) -> Result<Vec<String>, FtsError> {
         let mut st = self
             .db
-            .prepare("select id from f where f match ? order by bm25(f) limit ?")?;
+            .prepare("select id from f where f match ? order by bm25(f) limit ?")
+            .map_err(sql)?;
         let k = i64::try_from(k).unwrap_or(i64::MAX);
-        let ids = st
-            .query_map(params![expr, k], |r| r.get::<_, String>(0))?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(ids)
+        st.query_map(params![expr, k], |r| r.get::<_, String>(0))
+            .map_err(sql)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(sql)
     }
 }
 
@@ -122,7 +137,7 @@ mod tests {
     #[test]
     fn a_bad_query_is_an_error_the_caller_reads_as_no_hits() {
         assert!(idx().search("\"unclosed", 50).is_err());
-        assert!(Index::build([]).unwrap().is_empty());
+        assert!(Index::build(Vec::<(&str, &str, &str)>::new()).unwrap().is_empty());
         assert!(sqlite_version().starts_with('3'));
     }
 }
