@@ -90,6 +90,8 @@ def make_graph() -> dict:
              "source": "gdoc", "doc_title": "Notes"}
         if k == "g":
             j["hidden"] = u["hidden"] = True
+        if k == "f":
+            j["from"] = {"set": f"set:{SY}", "start_ms": 150000}
         nodes += [j, u]
         edges.append({"id": f"e:p{k}", "src": f"unit:{k}1", "dst": f"joke:{k}", "kind": "part_of", "status": "inferred",
                       "confidence": 0.9, "evidence": []})
@@ -148,7 +150,7 @@ def make_graph() -> dict:
     return {"version": "t9-test", "generated_at": "2026-10-01", "runs": ["r1"], "nodes": nodes, "edges": edges}
 
 
-def row(idx, joke, start_s, dur_s, text, laugh_s, set_rate, status="known"):
+def row(idx, joke, start_s, dur_s, text, laugh_s, set_rate, status="known", **extra):
     window = float(dur_s)
     lspm = round(laugh_s / (window / 60), 2) if window else 0.0
     return {"idx": idx, "start_ms": int(start_s * 1000), "end_ms": int((start_s + dur_s) * 1000), "title": f"T{idx}",
@@ -159,7 +161,17 @@ def row(idx, joke, start_s, dur_s, text, laugh_s, set_rate, status="known"):
             "laugh_s_per_min": lspm, "pct_laughing": round(laugh_s / window, 3), "time_to_first_laugh_s": 5.0 if laugh_s else None,
             "dead_air_max_s": 5.0, "vs_room": round(lspm / set_rate, 2), "ai_rating": "worked" if laugh_s else "died",
             "rating_basis": "the laugh" if laugh_s else "silence", "similar": [], "hint_labels": [],
-            "script_diff": {"on_script_pct": 50, "dropped": [], "added": []}}
+            "script_diff": {"on_script_pct": 50, "dropped": [], "added": []}, **extra}
+
+
+ROW1_EXTRA = {
+    "punchlines": [{"text": "The alpha punch lands here every time.", "at_ms": 5000, "bars": 2, "laugh_id": "L1"},
+                   {"text": "Yes.", "at_ms": 54000, "bars": 3, "laugh_id": "L2"}, {"text": ""}],
+    "similar": [{"joke_id": "joke:c", "why": "both open the night", "confidence": 0.4}, {"joke_id": "joke:a", "why": "itself"},
+                {"joke_id": "joke:nope"}, {"joke_id": "label:device:d1", "why": "not a joke"}],
+    "hint_labels": [{"label_id": "label:device:d1", "why": "a callback"}, {"label_id": "label:topic:kids", "why": "family"},
+                    {"label_id": "label:missing"}],
+}
 
 
 def analysis(key, rate, rows):
@@ -174,7 +186,9 @@ def analysis(key, rate, rows):
 
 
 SETS = {
-    SX: {"analysis": analysis(SX, 6.0, [row(1, "joke:a", 0, 60, TEXT["a"], 9.0, 6.0), row(2, "joke:b", 60, 60, TEXT["b"], 6.0, 6.0),
+    SX: {"analysis": analysis(SX, 6.0, [row(1, "joke:a", 0, 60, TEXT["a"], 9.0, 6.0, **ROW1_EXTRA),
+                                        row(2, "joke:b", 60, 60, TEXT["b"], 6.0, 6.0,
+                                            punchlines=[{"text": "Bravo closer words.", "at_ms": 89500, "bars": 1, "laugh_id": "LX"}]),
                                         row(3, None, 120, 20, "So who here has a car?", 0.0, 6.0, status="crowd_work"),
                                         row(4, "joke:c", 140, 60, TEXT["c"], 6.1, 6.0)]),
          "meta": {"title": "Corner Room, Tuesday", "venue_guess": "The Corner Room", "show_date": "2024-01-05",
@@ -185,7 +199,32 @@ SETS = {
          "meta": {"source": "app_upload", "title": "Seaside open mic", "show_venue": "Seaside Comedy Club", "duration_s": 240.0}},
     SZ: {"analysis": analysis(SZ, 5.0, [row(1, "joke:b", 0, 40, "Bravo setup about the dog.", 1.5, 5.0),
                                         row(2, "joke:a", 40, 30, "Alpha opener line one.", 4.0, 5.0)]),
-         "meta": {"title": "Mabel's, March", "venue_guess": "Mabel's (upstairs)", "show_date": "2024-03-01"}},
+         "meta": {"title": "Mabel's, March", "venue_guess": "Mabel's (upstairs)", "show_date": "2024-03-01",
+                  "drive_id": "drv-synthetic-1", "original_name": "march.m4a"}},
+}
+# What the tape pages read (T9 round 4): laughs (laughs_auto.json -> laugh_run + laugh rows) and the transcript
+# (a srcfile row). Laughs inside and outside the performances, of every bar count, in and out of the set segment, so
+# punch_of, review_steps' "new line?" steps, the ticks and the summaries all have something to choose between.
+TAPES = {
+    SX: {"laughs": [{"id": "L1", "start_ms": 20000, "end_ms": 23000, "bars": 2, "strength": 0.6, "segment": "set"},
+                    {"id": "L2", "start_ms": 55000, "end_ms": 59000, "bars": 3, "strength": 0.9},
+                    {"id": "L3", "start_ms": 90000, "end_ms": 91500, "bars": 1, "strength": 0.3, "segment": "set"},
+                    {"id": "L3b", "start_ms": 95000, "end_ms": 96000, "bars": 1, "strength": 0.8, "segment": "set"},
+                    {"id": "L4", "start_ms": 130000, "end_ms": 132000, "bars": 2, "strength": 0.5, "segment": "crowd"},
+                    {"id": "L5", "start_ms": 230000, "end_ms": 233000, "bars": 2, "strength": 0.7},
+                    {"id": "L6", "start_ms": 260000, "end_ms": 261000, "bars": 1},
+                    {"id": "L7", "start_ms": 280500, "end_ms": 282500, "bars": 3, "strength": 0.2, "segment": "set"}],
+         "segments": [(0, 5, "Alpha opener line one."), (5, 18, "The alpha punch lands here every time."),
+                      (18, 40, "Short bit."), (40, 54, "Then a longer line with many words to say here."),
+                      (54, 58, "Yes."), (60, 80, "Bravo setup about the dog."),
+                      (80, 89.5, "  The purple monkey dishwasher line here. "), (89.5, 100, "Bravo closer words."),
+                      (120, 129, "So who here has a car?"),
+                      (140, 170, "Charlie premise about cars and traffic and more traffic today."),
+                      (210, 222, "A new thing I tried tonight about the bus driver."), (222, 229.9996, "Big finish."),
+                      (270, 279, "Ok."), (279, 280.0004, "Then the real closer that got them all laughing.")]},
+    SY: {"laughs": [{"id": "Y1", "start_ms": 30000, "end_ms": 31000, "bars": 2},
+                    {"id": "Y2", "start_ms": 170000, "end_ms": 172000, "bars": 3, "strength": 1.0}],
+         "segments": [(0, 30, "Alpha opener line one."), (160, 171, "Delta bit about my niece and the laundromat place.")]},
 }
 INFERRED = {"run_id": "inf-1", "generated_at": "2026-10-01T00:00:00+00:00", "notes": "synthetic",
             "jokes": [{"id": "joke:a", "stage": "working", "stage_confidence": 0.8, "stage_reason": "three nights"},
@@ -210,8 +249,10 @@ def build_comedy(comedy: Path) -> None:
         d = comedy / "corpus" / "sets" / set_dir(key)
         write_json(d / "analysis.json", s["analysis"])
         write_json(d / "meta.json", s["meta"])
-        write_json(d / "transcript.json", {"segments": [{"start": 0, "end": 5, "text": "Hello."}]})
-        write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": []})
+        tape = TAPES.get(key, {})
+        segs = [{"start": a, "end": b, "text": t} for a, b, t in tape.get("segments", [(0, 5, "Hello.")])]
+        write_json(d / "transcript.json", {"segments": segs})
+        write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": tape.get("laughs", [])})
     (comedy / "kb" / "creative").mkdir(parents=True)
 
 
@@ -363,6 +404,36 @@ def compare(label: str, py: tuple, rs: tuple) -> list[str]:
 
 
 # ---------------------------------------------------------------- the run
+def coverage(py: str, app: dict) -> list[str]:
+    """Equal answers only prove something when they carry the cases: the Python's own pages must show each rule the
+    synthetic tapes were written to reach (a gate that compares two empty lists passes without doing work)."""
+    get = lambda p: json.loads(call(py, "GET", p, app)[2])  # noqa: E731
+    out = []
+    rv = get(f"/api/sets/set:{SX}/review")["steps"]
+    checks = {
+        "review: a 'new line?' step from an uncovered laugh": any(s["key"].startswith("line:") for s in rv),
+        "review: a punch of two short segments": any(sum(x["punch"] for x in s["punch"]["segments"]) == 2 for s in rv),
+        "review: a step with laughs and a match": any(s["laughs"] and s["match"] for s in rv),
+    }
+    an = get(f"/api/sets/set:{SX}/analysis")
+    r1 = an["rows"][0]
+    checks |= {"analysis: ticks, hints with an edge, similar, punchline play": bool(
+        r1["ticks"] and any(h["edge"] for h in r1["hints"]) and r1["similar"] and r1["play"]["end_ms"] > 0),
+        "analysis: summary best and weakest": bool(an["summary"]["best"] and an["summary"]["weakest"])}
+    checks["analysis: a saved new moment"] = any(r["saved_as"] for r in get(f"/api/sets/set:{SY}/analysis")["rows"])
+    cards = {c["id"]: c for c in get("/api/sets")["sets"]}
+    checks["sets: a drive reference, a file reference, laughs counted"] = (
+        (cards[f"set:{SZ}"]["reference"] or {}).get("kind") == "drive"
+        and (cards[f"set:{SY}"]["reference"] or {}).get("kind") == "file" and cards[f"set:{SX}"]["laughs"] > 0)
+    ja = get("/api/jokes/joke:a")
+    checks["joke: a performance with laughs, a punch and a labelled edge"] = bool(
+        ja["performances"] and ja["performances"][0]["laughs"] and ja["performances"][0]["punch"]["text"] and ja["labels"])
+    for what, ok_ in checks.items():
+        if not ok_:
+            out.append(f"coverage: the synthetic data no longer reaches '{what}'")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pk-api", required=True, type=Path)
@@ -435,7 +506,10 @@ def main() -> int:
                   ("POST", "/api/decision", {"target": "edge", "id": "e:la-d1", "action": "confirm"}),
                   ("POST", "/api/review/rate", {"perf": f"perf:{SX}@0", "rating": "killed"}),
                   ("POST", "/api/review/rate", {"perf": f"perf:{SX}@60000", "rating": "meh"}),
-                  ("POST", "/api/decision", {"target": "node", "id": "joke:e", "action": "edit", "after": {"stage": "testing"}})]
+                  ("POST", "/api/decision", {"target": "node", "id": "joke:e", "action": "edit", "after": {"stage": "testing"}}),
+                  # his room edit: the card's venue changes, its venue_id keeps the room it was (set_info)
+                  ("POST", "/api/decision", {"target": "node", "id": f"set:{SY}", "action": "edit",
+                                             "after": {"venue": "Comix at Riverside (show)"}})]
         want = json.loads(call(rs, "GET", "/api/decisions?limit=1", app)[2])["total"]
         for i, (m, p, b) in enumerate(writes):
             st, _, body = call(rs, m, p, app, b)
@@ -469,6 +543,17 @@ def main() -> int:
                   "/api/map/cloud?cap=2001", "/api/map/cloud?cap=2000", "/api/map/cloud?cap=1",
                   "/api/map/cloud?cap=2", "/api/map/cloud?cap=3", "/api/map/cloud?cap=12"):
             reqs.append((p, "GET", p, app))
+        # round 4: the tape pages and one bit's page, both views, every set and bit, the misses
+        pages = ["/api/sets", "/api/sets?include_hidden=1", "/api/sets/set:nope/analysis", "/api/sets/joke:a/analysis",
+                 "/api/sets/set:nope/review", "/api/jokes/joke:nope", "/api/jokes/unit:a1", "/api/jokes/joke%3Aa",
+                 "/api/jokes/joke:g", "/api/jokes/joke:g?include_hidden=1", "/api/jokes/joke:a?backend=files",
+                 "/api/sets/set:" + SX + "/review?include_hidden=1"]
+        for sk in (SX, SY, SZ):
+            pages += [f"/api/sets/set:{sk}/analysis", f"/api/sets/set:{sk}/review"]
+        pages += [f"/api/jokes/joke:{k}" for k in "abcdef"] + ["/api/jokes/joke:x00", "/api/jokes/joke:x07"]
+        reqs += [(p, "GET", p, app) for p in pages]
+        reqs += [("proxied connections", "GET", "/api/jokes/joke:a/connections", app),
+                 ("proxied clips", "GET", f"/api/sets/set:{SX}/clips", app)]
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
                  ("health signed out", "GET", "/api/health", {}),
                  ("health bad token", "GET", "/api/health", {"Authorization": "Bearer x.y.z"}),
@@ -504,6 +589,29 @@ def main() -> int:
             got = compare(label, call(py, m, p, h), call(rs, m, p, h))
             problems += got
             n_ok += not got
+        problems += coverage(py, app)
+        # a transcript the worker rewrites (POST /api/worker/files through pk-api): files_rev moves, the Python pod
+        # refreshes its disk copy within a poll, pk-api's transcript cache misses on the new hash; both pages again
+        worker = tok(realm_access={"roles": ["worker"]})
+        tpath = f"corpus/sets/{set_dir(SX)}/transcript.json"
+        new_tx = {"segments": [{"start": 0, "end": 30, "text": "A rewritten opener for the worker test."},
+                               {"start": 50, "end": 56, "text": "Tiny."}, {"start": 56, "end": 59.5, "text": "Ha."}]}
+        before = call(py, "GET", f"/api/sets/set:{SX}/review", app)[2]
+        st, _, body = call(rs, "POST", "/api/worker/files", worker,
+                           {"files": [{"path": tpath, "text": json.dumps(new_tx)}], "actor": "import:upload"})
+        if st != 200:
+            raise SystemExit(f"worker files through pk-api: HTTP {st} {body[:300]!r}")
+        deadline = time.time() + 30
+        while call(py, "GET", f"/api/sets/set:{SX}/review", app)[2] == before and time.time() < deadline:
+            time.sleep(0.5)
+        for p in (f"/api/sets/set:{SX}/review", "/api/jokes/joke:a", "/api/jokes/joke:b"):
+            label = "after a transcript post: " + p
+            got = compare(label, call(py, "GET", p, app), call(rs, "GET", p, app))
+            problems += got
+            n_ok += not got
+            reqs.append((label, "GET", p, app))
+        if call(rs, "GET", f"/api/sets/set:{SX}/review", app)[2] == before:
+            problems.append("after a transcript post: pk-api still shows the old transcript")
         # the whole Bits-list row (AppIndex.summaries) before /api/jokes moves: the Python's page without the creative
         # layer's duration, against pk-api's diagnostics route (a build with --features diagnostics)
         for hid in ("", "&include_hidden=1"):
@@ -526,7 +634,7 @@ def main() -> int:
         # proof the answers came from pk-api and not through its fallback: its own counters saw every moved route
         mtext = call(rs, "GET", "/metrics")[2].decode()
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
-                      "/api/map/cloud"):
+                      "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         if 'route="/api/jokes"' in mtext:

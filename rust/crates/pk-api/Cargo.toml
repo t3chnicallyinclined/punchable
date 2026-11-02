@@ -18,10 +18,12 @@ axum = { workspace = true }
 base64 = { workspace = true }
 form_urlencoded = { workspace = true }
 futures = { workspace = true }
+hex = { workspace = true }
 indexmap = { workspace = true }
 jsonwebtoken = { workspace = true }
 nalgebra = { workspace = true }
 pk-core = { workspace = true }
+pk-creative = { path = "../pk-creative" }
 pk-kb = { path = "../pk-kb" }
 pk-obs = { path = "../pk-obs" }
 pk-store = { path = "../pk-store" }
@@ -30,6 +32,7 @@ prometheus = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 sentry = { workspace = true }
+sha1 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

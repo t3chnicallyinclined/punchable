@@ -123,6 +123,37 @@ spec:
           - { path: /api/pipeline, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # step 2 (GET-only on the Python too): the cloud map, Python's slowest route under load
           - { path: /api/map/cloud, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # step 3 (GET-only on the Python too): the Sets list
+          - { path: /api/sets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+---
+# Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
+# exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
+# anchored to exactly one id segment; /api/jokes/<id>/versions (POST), /connections, /map, /similar and
+# /api/sets/<id>/clips have more segments and stay on the Python's Ingress. Its own object, so it can be deleted alone.
+# Check before applying (UNKNOWN on this cluster): ingress-nginx applies use-regex to every path of the host, across
+# Ingresses; render both Ingresses and read the generated nginx.conf locations for /api/health and /api/jokes first.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-api-rs-ids
+  namespace: punchable
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - { path: "/api/jokes/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/sets/[^/]+/analysis$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/sets/[^/]+/review$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

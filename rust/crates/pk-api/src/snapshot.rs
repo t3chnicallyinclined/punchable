@@ -15,6 +15,7 @@ use tokio::sync::{OnceCell, Semaphore};
 
 use crate::error::ApiError;
 use crate::index::{Ai, AppIndex, SetMetas, hidden_ids, view_of};
+use crate::tape::{Tape, TranscriptShas};
 
 /// The srcfile path of the learning file (`kb/v0/learning.json` under the data folder).
 pub const LEARNING: &str = "kb/v0/learning.json";
@@ -104,6 +105,8 @@ pub struct Data {
     pub ai: Arc<Ai>,
     /// `corpus/sets/<dir>/meta.json` by folder.
     pub metas: Arc<SetMetas>,
+    /// The laughs and the transcript hashes (unchanged by a patch).
+    pub tape: Arc<Tape>,
     /// The rows this generation was built from (the next one patches them).
     snap: Arc<Rows>,
     /// `kb/v0/learning.json` as stored, when there is one.
@@ -127,6 +130,8 @@ pub struct Data {
 struct Lazy {
     view: OnceCell<Arc<View>>,
     index: OnceCell<Arc<AppIndex>>,
+    /// The `/api/sets` body: every card and every set's analysis, the same for every reader of the generation.
+    sets: OnceCell<axum::body::Bytes>,
 }
 
 impl Data {
@@ -140,6 +145,7 @@ impl Data {
         snap: Arc<Rows>,
         ai: Arc<Ai>,
         metas: Arc<SetMetas>,
+        tape: Arc<Tape>,
         learning: Option<String>,
         st: State,
         fetch_s: f64,
@@ -152,6 +158,7 @@ impl Data {
             orphans: snap.orphans,
             ai,
             metas,
+            tape,
             learning,
             fetch_s,
             undone: snap.decisions.iter().filter_map(|d| d.undo_of()).collect(),
@@ -216,6 +223,38 @@ impl Data {
         task.await.map_err(|e| ApiError::internal("JoinError", e))?
     }
 
+    /// The `/api/sets` body (`{"sets": [card, ...]}`, newest first), built once per generation and view like
+    /// [`Data::index`] (one CPU build at a time; a burst of readers waits for the one build).
+    pub async fn sets_body(self: &Arc<Self>, include_hidden: bool) -> Result<axum::body::Bytes, ApiError> {
+        let slot = self.slot(include_hidden);
+        if let Some(b) = self.lazy[slot].sets.get() {
+            return Ok(b.clone());
+        }
+        let idx = self.index(include_hidden).await?;
+        let me = Arc::clone(self);
+        let task = tokio::spawn(async move {
+            let it = Arc::clone(&me);
+            me.lazy[slot]
+                .sets
+                .get_or_try_init(|| async move {
+                    let body = it
+                        .cpu_build(move |d| {
+                            let tx = crate::tape::Transcripts::new();
+                            let c = crate::pages::Ctx::new(&idx, d, &tx);
+                            let sets: Vec<Value> = idx.sets.iter().rev().map(|s| c.set_card(s)).collect();
+                            serde_json::to_vec(&json!({ "sets": sets })).map_err(|e| e.to_string())
+                        })
+                        .await?;
+                    let body = Arc::try_unwrap(body).unwrap_or_else(|a| (*a).clone());
+                    body.map(axum::body::Bytes::from)
+                        .map_err(|e| ApiError::internal("JSONError", e))
+                })
+                .await
+                .cloned()
+        });
+        task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
     /// Run `f` over this generation in `spawn_blocking`, holding the service's CPU permit.
     async fn cpu_build<T: Send + Sync + 'static>(
         self: Arc<Self>,
@@ -235,6 +274,11 @@ impl Data {
     /// Every decision line, in `seq` order (the same in both views).
     pub fn decisions(&self) -> &[Arc<Decision>] {
         &self.snap.decisions
+    }
+
+    /// The database's Working for a joke (`joke.working`, `joke.working_sets`), when the joke is in the database.
+    pub fn working(&self, jid: &str) -> Option<&(bool, Vec<String>)> {
+        self.snap.working.get(jid)
     }
 
     /// Whether decision `i` was undone (`View.is_undone`).
@@ -265,22 +309,56 @@ fn rows(v: Value) -> Vec<Value> {
 pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>) -> Result<Data, StoreError> {
     let t = std::time::Instant::now();
     let snap = store.fetch_snapshot().await?;
+    // one batch, like the Python's `_fetch`: the AI layer, the files the reads need (one scan of `srcfile`: every
+    // set file's path and hash, the text only of the set metas and the learning file), and the laughs
     let mut res = store
         .query(
             "SELECT set, meta, rows FROM analysis ORDER BY ord;\
-             SELECT path, text FROM srcfile WHERE path = $learning \
-               OR (string::starts_with(path, 'corpus/sets/') AND string::ends_with(path, '/meta.json'));",
+             SELECT path, sha256, (IF path = $learning OR string::ends_with(path, '/meta.json') { text } ELSE { NONE }) \
+               AS text FROM srcfile WHERE path = $learning OR string::starts_with(path, 'corpus/sets/');\
+             SELECT set, set_dir, doc FROM laugh_run;\
+             SELECT * FROM laugh ORDER BY ord;",
             vars([("learning", pk_store::to_db(&json!(LEARNING)))]),
         )
         .await?
-        .into_iter()
-        .map(from_db);
-    let analysis = rows(res.next().unwrap_or(Value::Null));
-    let files = rows(res.next().unwrap_or(Value::Null));
+        .into_iter();
+    let mut next = || res.next().unwrap_or_default();
+    let (analysis, files, runs, laughs) = (next(), next(), next(), next());
     let fetch_s = t.elapsed().as_secs_f64();
+    let inferred = snap.load_info.get("inferred").cloned().unwrap_or(Value::Null);
+    let owner = owner_id.to_string();
+    // what is left is CPU (mapping the rows, parsing the set metas, grouping the laughs): off the runtime
+    tokio::task::spawn_blocking(move || {
+        let (ai, metas, learning, shas) = files_of(inferred, rows(from_db(analysis)), rows(from_db(files)));
+        let laughs = pk_store::store::rows_of(laughs)
+            .into_iter()
+            .map(pk_store::kbmap::row_to_set_laugh)
+            .collect::<Result<Vec<_>, _>>()?;
+        let tape = crate::tape::build(rows(from_db(runs)), laughs, shas);
+        Ok(Data::new(
+            Arc::new(Rows::from(snap)),
+            Arc::new(ai),
+            Arc::new(metas),
+            Arc::new(tape),
+            learning,
+            st,
+            fetch_s,
+            &owner,
+            cpu,
+        ))
+    })
+    .await
+    .map_err(|e| StoreError::mapping(format!("building the data failed: {e}")))?
+}
 
+/// The AI layer, the set metas, the learning file and the transcript hashes, from the `analysis` and `srcfile` rows.
+fn files_of(
+    inferred: Value,
+    analysis: Vec<Value>,
+    files: Vec<Value>,
+) -> (Ai, SetMetas, Option<String>, TranscriptShas) {
     let mut ai = Ai {
-        inferred: snap.load_info.get("inferred").cloned().unwrap_or(Value::Null),
+        inferred,
         ..Ai::default()
     };
     for a in analysis {
@@ -305,40 +383,28 @@ pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>)
     }
     let mut metas = SetMetas::new();
     let mut learning = None;
+    let mut shas = TranscriptShas::new();
     for f in files {
-        let (Some(path), Some(text)) = (
-            f.get("path").and_then(Value::as_str),
-            f.get("text").and_then(Value::as_str),
-        ) else {
+        let Some(path) = f.get("path").and_then(Value::as_str) else {
             continue;
         };
+        let text = f.get("text").and_then(Value::as_str);
+        let dir_of = |suffix: &str| {
+            path.strip_prefix("corpus/sets/")
+                .and_then(|p| p.strip_suffix(suffix))
+                .filter(|d| !d.contains('/'))
+        };
         if path == LEARNING {
-            learning = Some(text.to_string());
-        } else if let Some(dir) = path
-            .strip_prefix("corpus/sets/")
-            .and_then(|p| p.strip_suffix("/meta.json"))
-            .filter(|d| !d.contains('/'))
-            && let Ok(Value::Object(o)) = serde_json::from_str::<Value>(text)
-        {
-            metas.insert(dir.to_string(), o);
+            learning = text.map(str::to_string);
+        } else if let Some(dir) = dir_of("/meta.json") {
+            if let Some(Ok(Value::Object(o))) = text.map(serde_json::from_str::<Value>) {
+                metas.insert(dir.to_string(), o);
+            }
+        } else if let (Some(dir), Some(sha)) = (dir_of("/transcript.json"), f.get("sha256").and_then(Value::as_str)) {
+            shas.insert(dir.to_string(), sha.to_string());
         }
     }
-    let owner = owner_id.to_string();
-    // the rows are parsed; what is left is a pass over them, off the runtime like every other CPU step here
-    tokio::task::spawn_blocking(move || {
-        Data::new(
-            Arc::new(Rows::from(snap)),
-            Arc::new(ai),
-            Arc::new(metas),
-            learning,
-            st,
-            fetch_s,
-            &owner,
-            cpu,
-        )
-    })
-    .await
-    .map_err(|e| StoreError::mapping(format!("building the data failed: {e}")))
+    (ai, metas, learning, shas)
 }
 
 /// The next generation from the previous one when only decisions were appended since (each one bumps `gen` by
@@ -499,6 +565,7 @@ impl Patch {
             Arc::new(snap),
             Arc::clone(&old.ai),
             Arc::clone(&old.metas),
+            Arc::clone(&old.tape),
             old.learning.clone(),
             st,
             fetch_s,

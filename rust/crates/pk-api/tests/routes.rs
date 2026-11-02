@@ -193,17 +193,54 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
     own.sort_unstable();
     assert_eq!(exact, own);
     assert!(!text.contains("pathType: Prefix"), "no prefix moves at T9");
+    let mut regex: Vec<&str> = text
+        .lines()
+        .filter(|l| l.contains("pathType: ImplementationSpecific"))
+        .filter_map(|l| l.split("path: \"").nth(1)?.split('"').next())
+        .collect();
+    regex.sort_unstable();
+    let mut own: Vec<String> = pk_api::OWN_PATTERNS.iter().map(|p| pk_api::ingress_regex(p)).collect();
+    own.sort_unstable();
+    assert_eq!(regex, own);
 }
 
 #[tokio::test]
 async fn every_moved_path_is_answered_here() {
     let st = state(true);
-    for p in pk_api::OWN_PATHS {
+    let ids = pk_api::OWN_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb"));
+    for p in pk_api::OWN_PATHS.iter().copied().chain(ids.iter().map(String::as_str)) {
         let (s, _, b) = send(&st, get(p).body(Body::empty()).unwrap()).await;
         let answered_here =
             s == StatusCode::UNAUTHORIZED || (p == "/api/health" && s == StatusCode::SERVICE_UNAVAILABLE);
         assert!(answered_here, "{p}: {s} {}", String::from_utf8_lossy(&b));
     }
+}
+
+#[tokio::test]
+async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
+    // no Python configured in these tests: anything forwarded is the fallback's 404, never the auth check's 401
+    let st = state(true);
+    for p in [
+        "/api/jokes/joke:a/connections",
+        "/api/jokes/joke:a/map",
+        "/api/jokes/joke:a/similar",
+        "/api/sets/set:x/clips",
+        "/api/jokes/a/b",
+        "/api/jokes/",
+    ] {
+        let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "{p}");
+    }
+    let post = Request::builder()
+        .method("POST")
+        .uri("/api/jokes/joke:a")
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        send(&st, post).await.0,
+        StatusCode::NOT_FOUND,
+        "a POST under a moved id path is forwarded"
+    );
 }
 
 #[tokio::test]

@@ -14,11 +14,13 @@ pub mod display;
 pub mod error;
 pub mod index;
 pub mod instrument;
+pub mod pages;
 pub mod proxy;
 pub mod query;
 pub mod routes;
 pub mod snapshot;
 pub mod state;
+pub mod tape;
 
 use std::time::Duration;
 
@@ -36,8 +38,9 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 7] = [
+pub const OWN_PATHS: [&str; 8] = [
     "/api/map/cloud",
+    "/api/sets",
     "/api/health",
     "/api/labels",
     "/api/decisions",
@@ -45,6 +48,17 @@ pub const OWN_PATHS: [&str; 7] = [
     "/api/pipeline",
     "/api/learned",
 ];
+
+/// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
+/// ([`ingress_regex`] gives each one's path), never with a prefix: `/api/jokes/<id>/versions` (POST),
+/// `/connections`, `/map`, `/similar` and `/api/sets/<id>/clips` stay the Python's, and an id path with more
+/// segments than these patterns falls through to the fallback and is forwarded.
+pub const OWN_PATTERNS: [&str; 3] = ["/api/jokes/{id}", "/api/sets/{id}/analysis", "/api/sets/{id}/review"];
+
+/// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
+pub fn ingress_regex(pattern: &str) -> String {
+    format!("{}$", pattern.replace("{id}", "[^/]+"))
+}
 
 /// A read route: GET (and HEAD) answered here behind CORS, metrics and auth; OPTIONS is the preflight; any other
 /// method goes to the Python (an Ingress path moved here must never swallow a write).
@@ -75,6 +89,10 @@ pub fn app(st: AppState) -> Router {
         .route("/api/pipeline", read_route(&st, routes::kb::pipeline))
         .route("/api/learned", read_route(&st, routes::learned::learned))
         .route("/api/map/cloud", read_route(&st, routes::cloud::map_cloud))
+        .route("/api/sets", read_route(&st, routes::sets::sets))
+        .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
+        .route("/api/sets/{id}/review", read_route(&st, routes::sets::review))
+        .route("/api/jokes/{id}", read_route(&st, routes::sets::joke))
         .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));

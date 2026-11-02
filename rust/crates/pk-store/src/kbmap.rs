@@ -884,6 +884,19 @@ pub fn laugh_to_row(l: &Rec, set: &RecordId, ord: i64) -> Value {
     Value::Object(row)
 }
 
+/// [`row_to_laugh`] plus the set the row belongs to (`rid_str(row["set"])`; `None` when it is not a record id), so
+/// a reader can group the laughs by set without a second pass over the row (`surreal_kb._fetch`).
+pub fn row_to_set_laugh(v: Value) -> Result<(Option<String>, Rec)> {
+    let set = match &v {
+        Value::Object(o) => match o.get("set") {
+            Some(Value::RecordId(r)) => Some(rid_str(r)),
+            _ => None,
+        },
+        _ => None,
+    };
+    Ok((set, row_to_laugh(v)?))
+}
+
 /// `row_to_laugh`: the laugh dict again (`id`, `set`, `ord` dropped, `extra` merged in, `lid` back to `id`).
 pub fn row_to_laugh(v: Value) -> Result<Rec> {
     let o = object(v, "laugh row")?;
@@ -1009,6 +1022,11 @@ mod tests {
         let Value::Object(o) = &row else { panic!() };
         assert_eq!(o.get("lid"), Some(&Value::String("l1".into())));
         assert!(o.get("confidence").is_none(), "a string confidence goes to extra");
-        assert_eq!(Json::Object(row_to_laugh(row.clone()).unwrap()), Json::Object(l));
+        assert_eq!(
+            Json::Object(row_to_laugh(row.clone()).unwrap()),
+            Json::Object(l.clone())
+        );
+        let (s, back) = row_to_set_laugh(row).unwrap();
+        assert_eq!((s.as_deref(), Json::Object(back)), (Some("set:s1"), Json::Object(l)));
     }
 }

@@ -26,7 +26,7 @@ pub const STAGES: [&str; 5] = ["idea", "to_try", "testing", "working", "retired"
 pub const RATINGS: [&str; 4] = ["killed", "worked", "meh", "died"];
 const HIT_RATINGS: [&str; 2] = ["killed", "worked"];
 /// `ai_overlay.NOT_COUNTED`: performances that are not material.
-const NOT_COUNTED: [&str; 2] = ["crowd_work", "banter"];
+pub const NOT_COUNTED: [&str; 2] = ["crowd_work", "banter"];
 /// `VS_ROOM_CLIP`.
 const VS_ROOM_CLIP: f64 = 3.0;
 
@@ -50,11 +50,22 @@ pub struct Row {
     pub label_ids: Vec<String>,
 }
 
+/// What the comic touched on one record (live lines only; undone lines and undo lines do not count).
 #[derive(Debug, Default)]
-struct Touch {
-    actions: HashSet<Option<String>>,
-    fields: HashSet<String>,
-    ends: Vec<String>,
+pub struct Touch {
+    /// The actions (an edit that agrees with the AI's rating counts as `confirm`).
+    pub actions: HashSet<Option<String>>,
+    /// Every field an `after` named.
+    pub fields: HashSet<String>,
+    /// The edge ends a `before` named.
+    pub ends: Vec<String>,
+}
+
+impl Touch {
+    /// `action in t["actions"]`.
+    pub fn has(&self, action: &str) -> bool {
+        self.actions.iter().any(|a| a.as_deref() == Some(action))
+    }
 }
 
 /// The per-view index.
@@ -68,6 +79,18 @@ pub struct AppIndex {
     pub performances: usize,
     /// The Bits list, in the Desk's order.
     pub summaries: Vec<Row>,
+    /// Joke id -> its row in `summaries`.
+    pub by_id: HashMap<String, usize>,
+    /// Performance id -> the id of its `performed_as` edge (the best one: not rejected first).
+    pub perf_edge: IndexMap<String, String>,
+    /// Joke id -> its performance ids (the edge not rejected), in edge order.
+    pub joke_perfs: IndexMap<String, Vec<String>>,
+    /// Record id -> what the comic touched on it.
+    pub touch: IndexMap<String, Touch>,
+    /// Joke id -> `edited` / `confirmed` (`ai` when absent).
+    pub who: HashMap<String, &'static str>,
+    /// Set id -> its performance ids by `start_ms` (a performance with no `set` is in no list).
+    pub set_perfs: HashMap<String, Vec<String>>,
 }
 
 /// The per-set files the index reads (`corpus/sets/<dir>/meta.json`), by set folder.
@@ -102,7 +125,7 @@ struct Builder<'a> {
     ai: &'a Ai,
     working: &'a BTreeMap<String, (bool, Vec<String>)>,
     metas: &'a SetMetas,
-    perf_edge: IndexMap<String, &'a Map<String, Value>>,
+    perf_edge: IndexMap<String, &'a String>,
     joke_perfs: IndexMap<String, Vec<String>>,
     touch: IndexMap<String, Touch>,
     who: HashMap<String, &'static str>,
@@ -136,7 +159,7 @@ impl<'a> Builder<'a> {
 
     fn perfs(&mut self) {
         let v = self.v;
-        for e in v.edges.values() {
+        for (eid, e) in &v.edges {
             if str_of(e, "kind") != Some("performed_as") {
                 continue;
             }
@@ -149,13 +172,14 @@ impl<'a> Builder<'a> {
                 continue;
             }
             let replace = self.perf_edge.get(p).is_none_or(|cur| {
-                bucket(cur.get("status")) == Bucket::Rejected && bucket(e.get("status")) != Bucket::Rejected
+                bucket(v.edges[*cur].get("status")) == Bucket::Rejected && bucket(e.get("status")) != Bucket::Rejected
             });
             if replace {
-                self.perf_edge.insert(p.to_string(), e);
+                self.perf_edge.insert(p.to_string(), eid);
             }
         }
-        for (p, e) in &self.perf_edge {
+        for (p, eid) in &self.perf_edge {
+            let e = &v.edges[*eid];
             if bucket(e.get("status")) != Bucket::Rejected {
                 let dst = str_of(e, "dst");
                 let j = if v.ntype(dst) == Some("joke") {
@@ -227,7 +251,7 @@ impl<'a> Builder<'a> {
     }
 
     fn joke_of(&self, perf: &str) -> Option<String> {
-        let e = self.perf_edge.get(perf)?;
+        let e = &self.v.edges[*self.perf_edge.get(perf)?];
         let dst = str_of(e, "dst");
         let j = if self.v.ntype(dst) == Some("joke") {
             dst
@@ -280,7 +304,7 @@ impl<'a> Builder<'a> {
             }
             let set = pk_core::py::repr(p.get("set").unwrap_or(&Value::Null));
             sets.insert(set.clone());
-            if let Some(e) = self.perf_edge.get(pid)
+            if let Some(e) = self.perf_edge.get(pid).map(|id| &self.v.edges[*id])
                 && bucket(e.get("status")) == Bucket::Confirmed
                 && str_of(p, "rating").is_some_and(|r| HIT_RATINGS.contains(&r))
             {
@@ -537,7 +561,7 @@ impl<'a> Builder<'a> {
 impl AppIndex {
     /// Index `view`; `working` is the database's Working per joke (`joke.working`, `joke.working_sets`).
     pub fn build(view: Arc<View>, ai: &Ai, working: &BTreeMap<String, (bool, Vec<String>)>, metas: &SetMetas) -> Self {
-        let (summaries, sets, performances) = {
+        let (summaries, sets, performances, set_perfs, perf_edge, joke_perfs, touch, who) = {
             let b = Builder::new(&view, ai, working, metas);
             let mut sets: Vec<(&str, &String)> = view
                 .nodes
@@ -546,22 +570,66 @@ impl AppIndex {
                 .map(|(id, n)| (str_of(n, "date").unwrap_or(""), id))
                 .collect();
             sets.sort_by_key(|(d, _)| *d);
-            let performances = view
+            // `set_perfs`: by set, sorted by `start_ms or 0` (stable, so node order breaks ties)
+            let mut by_set: HashMap<Option<String>, Vec<(f64, String)>> = HashMap::new();
+            for (id, n) in view
                 .nodes
-                .values()
-                .filter(|n| str_of(n, "type") == Some("performance"))
-                .count();
+                .iter()
+                .filter(|(_, n)| str_of(n, "type") == Some("performance"))
+            {
+                let at = n
+                    .get("start_ms")
+                    .filter(|x| truthy(Some(x)))
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.0);
+                by_set
+                    .entry(str_of(n, "set").map(str::to_string))
+                    .or_default()
+                    .push((at, id.clone()));
+            }
+            let performances = by_set.values().map(Vec::len).sum();
+            let set_perfs = by_set
+                .into_iter()
+                .filter_map(|(k, mut ps)| {
+                    ps.sort_by(|a, b| a.0.total_cmp(&b.0));
+                    Some((k?, ps.into_iter().map(|(_, id)| id).collect()))
+                })
+                .collect();
+            let summaries = b.summaries();
+            let Builder {
+                perf_edge,
+                joke_perfs,
+                touch,
+                who,
+                ..
+            } = b;
             (
-                b.summaries(),
+                summaries,
                 sets.into_iter().map(|(_, id)| id.clone()).collect(),
                 performances,
+                set_perfs,
+                perf_edge.into_iter().map(|(p, e)| (p, e.clone())).collect(),
+                joke_perfs,
+                touch,
+                who,
             )
         };
+        let by_id = summaries
+            .iter()
+            .enumerate()
+            .map(|(i, r)| (r.summary.id.clone(), i))
+            .collect();
         Self {
             view,
             sets,
             performances,
             summaries,
+            by_id,
+            perf_edge,
+            joke_perfs,
+            touch,
+            who,
+            set_perfs,
         }
     }
 }
