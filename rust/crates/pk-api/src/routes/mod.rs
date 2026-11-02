@@ -7,6 +7,7 @@ pub mod health;
 pub mod kb;
 pub mod learned;
 pub mod metrics;
+pub mod sets;
 
 use std::sync::Arc;
 

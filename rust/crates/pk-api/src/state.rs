@@ -56,6 +56,7 @@ struct Inner {
     failed: Mutex<Option<Failed>>,
     draining: std::sync::atomic::AtomicBool,
     cloud: tokio::sync::Mutex<Option<CloudCache>>,
+    transcripts: crate::tape::TranscriptCache,
 }
 
 /// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
@@ -109,6 +110,7 @@ impl AppState {
             cpu: Arc::new(tokio::sync::Semaphore::new(1)),
             failed: Mutex::new(None),
             cloud: tokio::sync::Mutex::new(None),
+            transcripts: crate::tape::TranscriptCache::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
         }))
     }
@@ -162,6 +164,11 @@ impl AppState {
     /// The shared database handle for a route's own query (never cloned into a new session).
     pub fn store_handle(&self) -> Option<Arc<Store>> {
         self.store()
+    }
+
+    /// The transcripts fetched so far (by `srcfile` path and hash), shared by every generation.
+    pub fn transcripts(&self) -> &crate::tape::TranscriptCache {
+        &self.0.transcripts
     }
 
     /// The cloud cache; held across a build, so two misses build once.
