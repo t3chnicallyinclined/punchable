@@ -55,6 +55,12 @@ def rpc(a):
     secrets = os.environ.get("PUNCH_SECRETS")
     if not secrets or Path(secrets).resolve() == (Path.home() / ".punchable" / "secrets.env").resolve():
         raise SystemExit("set PUNCH_SECRETS to a scratch-only secrets file (never ~/.punchable/secrets.env)")
+    # db/sdb.py lets these environment variables override the secrets file: with any of them set, the scratch file is
+    # not what signs in (the security reviewer re-review).
+    overriding = [k for k in ("SURREAL_PASS", "SURREAL_USER", "SURREAL_URL", "SURREAL_API_USER", "SURREAL_API_PASS")
+                  if os.environ.get(k)]
+    if overriding:
+        raise SystemExit(f"unset {', '.join(overriding)}: they override the scratch secrets file")
     if not a.ns.startswith("proof"):
         raise SystemExit(f"the namespace must start with 'proof' (scratch only), not {a.ns!r}")
     return sdb.Rpc(a.port, a.ns, a.db)
@@ -94,14 +100,29 @@ def cmd_sample(a):
     print(f"wrote {len(out)} bits to {a.out}")
 
 
+class Capture:
+    """Search's own connection, unchanged, keeping the last raw result so the scorer can read `rrf_score`."""
+
+    def __init__(self, r):
+        self.r, self.last = r, None
+
+    def query(self, sql, vars=None):
+        self.last = self.r.query(sql, vars)
+        return self.last
+
+    def close(self):
+        self.r.close()
+
+
 def cmd_baseline(a):
     import search_api
     from creative import askchat
     qs = json.loads(Path(a.questions).read_text(encoding="utf-8"))
     c = corpus()
     askchat.sources(c)  # built once, as the API caches it
+    import sdb
     emb = search_api.make_embedder(log=lambda *_: None)
-    r = rpc(a)
+    r = Capture(rpc(a))
     rows = []
     try:
         for q in qs:
@@ -113,9 +134,14 @@ def cmd_baseline(a):
                 t = time.perf_counter()
                 res = search_api.search_all(r, emb, q["q"], limit=20)
                 search_us.append(int((time.perf_counter() - t) * 1e6))
-            merged = sorted([(s or 0.0, i, k) for i, (k, s) in enumerate(res["hits"])]
-                            + [(s or 0.0, i, k) for i, (k, s) in enumerate(res["moments"])],
-                            key=lambda x: (-x[0], x[1]))
+            # Search shows bits and moments as two lists; one ranked list for scoring merges them by the fused score
+            # search::rrf gave each (`rrf_score`; search_all keeps only the leg's `score`, so the raw result is read
+            # through `Capture`). Ties: bits first, then list position.
+            raw_j, raw_p = (r.last[-2]["result"] or []), (r.last[-1]["result"] or [])
+            merged = sorted([(x.get("rrf_score") or 0.0, 0, i, sdb.rid_str(x["id"])) for i, x in enumerate(raw_j)]
+                            + [(x.get("rrf_score") or 0.0, 1, i, sdb.rid_str(x["id"])) for i, x in enumerate(raw_p)],
+                            key=lambda x: (-x[0], x[1], x[2]))
+            merged = [(0.0, 0, k) for *_, k in merged]
             rows.append({"id": q["id"], "ask": ask_ids, "search": [k for _, _, k in merged],
                          "vectors": res["vectors"],
                          "us": {"ask_cold": ask_us[0], "ask_warm_median": int(statistics.median(ask_us[1:] or ask_us)),

@@ -6,7 +6,7 @@
 //! does not stand out against its own scores for every other problem is dropped (each row's own "usually this close"
 //! level, `creative/merge.py`, never one global cutoff).
 //!
-//! From upstream `gw-ops/src/bridge.rs` (`rank`, `screen`, `below`, `why`; rust-successor 9dfedad), which took
+//! From upstream `upstream-ops/src/bridge.rs` (`rank`, `screen`, `below`, `why`; Rust branch 9dfedad), which took
 //! those two rules from Punchable. Changes (FORK.md): bits instead of projects; the reach rules (walls, levels,
 //! isolation between projects), the store reads and writes, and the candidate -> testable -> supported states are
 //! not forked (one comic's notebook has no walls; a link he keeps is a `custom` edge through the decision log). The

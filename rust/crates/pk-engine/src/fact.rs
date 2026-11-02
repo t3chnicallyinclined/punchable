@@ -1,8 +1,8 @@
 //! Lessons: what the engine has learned about his material and his taste, each with its source and its evidence,
 //! and the evidence rule that decides how sure each one is.
 //!
-//! The rule, from upstream (`gw-ops/src/store.rs` `needs_evidence`, `confirm_cap`, `Quote::verify`;
-//! rust-successor 9dfedad): a lesson may be CONFIRMED only with evidence, and the evidence is checked, not trusted.
+//! The rule, from upstream (`upstream-ops/src/store.rs` `needs_evidence`, `confirm_cap`, `Quote::verify`;
+//! Rust branch 9dfedad): a lesson may be CONFIRMED only with evidence, and the evidence is checked, not trusted.
 //! Punchable keeps two kinds of evidence and drops one (FORK.md):
 //! - a **quote** of his material (a record and words from it): found through the one verbatim gate
 //!   ([`crate::verbatim::verbatim`]), and the exact slice of the record is what is kept, never the writer's copy;

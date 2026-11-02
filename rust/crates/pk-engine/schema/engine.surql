@@ -10,7 +10,15 @@
 -- every writer): every learning row is append-only, a config's id is the sha256 of its canonical JSON, a rollback
 -- goes to a snapshot and to that snapshot's own config, every pointer move but an auto-rollback or the bootstrap
 -- carries his statement, and the learning mode is raised only by a row his own signed-in session wrote (`signed`,
--- set by the API from the session, never from a request) with his statement. Lowering is open.
+-- set by the API from the session, never from a request) with his statement. Lowering is open. Every `at` is the
+-- server's own clock (within 5 s), so no row can be dated into the future to stay "newest".
+--
+-- WHAT THESE GUARDS ARE (the security reviewer re-review, 2026-11-02): they stop bugs, not someone holding the credential.
+-- A root or EDITOR login can REMOVE an event, redefine a field or drop a table, and with one shared login the
+-- database cannot tell his session from a worker: `signed` and a snapshot's statement are whatever the writer says.
+-- Before any service writes these tables, each gets its own database login below EDITOR with table PERMISSIONS,
+-- and only the API, after checking his session token, writes `signed = true`, CONFIRMED lessons, snapshots,
+-- promotes and pins. Until then nothing writes them but the tests and the offline proof.
 -- IF NOT EXISTS on tables (OVERWRITE would drop a changefeed), OVERWRITE on fields, indexes and events.
 
 -- ---- lessons ----------------------------------------------------------------------------------------------------
@@ -29,17 +37,27 @@ DEFINE FIELD OVERWRITE evidence  ON lesson TYPE option<record<unit | joke | perf
 DEFINE FIELD OVERWRITE quote     ON lesson TYPE option<string> READONLY;
 -- the one field that may change: a lesson is retired, never edited or deleted
 DEFINE FIELD OVERWRITE status    ON lesson TYPE string DEFAULT 'live' ASSERT $value IN ['live', 'retired'];
-DEFINE FIELD OVERWRITE at        ON lesson TYPE datetime DEFAULT time::now() READONLY;
--- CONFIRMED needs evidence in the row: words of his material (not hidden), or a statement his session signed
-DEFINE EVENT OVERWRITE lesson_evidence ON lesson WHEN $event IN ['CREATE', 'UPDATE'] THEN {
+DEFINE FIELD OVERWRITE at        ON lesson TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
+-- Evidence, checked once when the lesson is written (its fields are READONLY after): a quoted record must exist, be
+-- his (not hidden) and hold the quote; CONFIRMED needs such words or a statement his session signed. Not run on a
+-- later status change, so a lesson whose unit is hidden afterwards can still be retired.
+DEFINE EVENT OVERWRITE lesson_evidence ON lesson WHEN $event = 'CREATE' THEN {
+    LET $words = $after.evidence.text ?? $after.evidence.summary ?? $after.evidence.title;
+    IF $after.evidence != NONE AND ($after.evidence.id = NONE OR $after.evidence.hidden = true) {
+        THROW 'a lesson rests only on a record of his material that exists and is not hidden';
+    };
+    IF $after.evidence != NONE AND ($after.quote = NONE OR $words = NONE OR !string::contains($words, $after.quote)) {
+        THROW 'a lesson quote must be words of the record it cites';
+    };
     IF $after.grade = 'CONFIRMED'
         AND NOT ($after.owner_statement != NONE AND $after.signed = true)
-        AND ($after.evidence = NONE OR $after.quote = NONE OR $after.evidence.hidden = true) {
+        AND ($after.evidence = NONE OR $after.quote = NONE) {
         THROW 'a confirmed lesson needs evidence: words found in his material, or a statement he signed';
     };
-    IF $event = 'UPDATE' AND $before.status = 'retired' AND $after.status = 'live' {
-        THROW 'a retired lesson stays retired: record a new one';
-    };
+};
+DEFINE EVENT OVERWRITE lesson_retired ON lesson WHEN $event = 'UPDATE' AND $before.status = 'retired' AND $after.status = 'live' THEN {
+    THROW 'a retired lesson stays retired: record a new one';
 };
 DEFINE EVENT OVERWRITE lesson_kept ON lesson WHEN $event = 'DELETE' THEN {
     THROW 'a lesson is retired, never deleted';
@@ -52,14 +70,16 @@ DEFINE TABLE IF NOT EXISTS rank_config SCHEMAFULL;
 DEFINE FIELD OVERWRITE canonical ON rank_config TYPE string READONLY ASSERT crypto::sha256($value) = record::id($this.id);
 DEFINE FIELD OVERWRITE origin    ON rank_config TYPE string READONLY ASSERT $value IN ['default', 'owner', 'proposal', 'rollback'];
 DEFINE FIELD OVERWRITE note      ON rank_config TYPE option<string> READONLY;
-DEFINE FIELD OVERWRITE at        ON rank_config TYPE datetime DEFAULT time::now() READONLY;
+DEFINE FIELD OVERWRITE at        ON rank_config TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
 
 -- A point he likes: the config and its baseline. id = the name (snapshot:r1).
 DEFINE TABLE IF NOT EXISTS rank_snapshot SCHEMAFULL;
 DEFINE FIELD OVERWRITE cfg       ON rank_snapshot TYPE record<rank_config> READONLY;
 DEFINE FIELD OVERWRITE baseline  ON rank_snapshot TYPE object FLEXIBLE READONLY;
 DEFINE FIELD OVERWRITE owner_statement ON rank_snapshot TYPE string READONLY ASSERT string::len($value) > 0;
-DEFINE FIELD OVERWRITE at        ON rank_snapshot TYPE datetime DEFAULT time::now() READONLY;
+DEFINE FIELD OVERWRITE at        ON rank_snapshot TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
 
 -- The live pointer's history; the newest row is live. A rollback is one more row, never an edit.
 DEFINE TABLE IF NOT EXISTS rank_switch SCHEMAFULL;
@@ -75,7 +95,8 @@ DEFINE FIELD OVERWRITE reason    ON rank_switch TYPE string READONLY
 DEFINE FIELD OVERWRITE guard     ON rank_switch TYPE option<object> FLEXIBLE READONLY;
 DEFINE FIELD OVERWRITE fence     ON rank_switch TYPE option<object> FLEXIBLE READONLY;
 DEFINE FIELD OVERWRITE by        ON rank_switch TYPE string READONLY;
-DEFINE FIELD OVERWRITE at        ON rank_switch TYPE datetime DEFAULT time::now() READONLY;
+DEFINE FIELD OVERWRITE at        ON rank_switch TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
 DEFINE INDEX OVERWRITE rank_switch_at ON rank_switch FIELDS at;
 
 -- ---- the learning switch -----------------------------------------------------------------------------------------
@@ -90,7 +111,8 @@ DEFINE FIELD OVERWRITE mode      ON learning_mode TYPE string READONLY
     OR ($this.signed = true AND string::len($this.owner_statement ?? '') > 0)
   );
 DEFINE FIELD OVERWRITE by        ON learning_mode TYPE string READONLY;
-DEFINE FIELD OVERWRITE at        ON learning_mode TYPE datetime DEFAULT time::now() READONLY;
+DEFINE FIELD OVERWRITE at        ON learning_mode TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
 
 -- ---- logged packets (the offline replay's input) ----------------------------------------------------------------
 DEFINE TABLE IF NOT EXISTS packet SCHEMAFULL;
@@ -100,7 +122,8 @@ DEFINE FIELD OVERWRITE candidates ON packet TYPE array<object> FLEXIBLE READONLY
 DEFINE FIELD OVERWRITE trace     ON packet TYPE object FLEXIBLE READONLY;
 -- the one field that moves: OPEN, then the check's verdict, once
 DEFINE FIELD OVERWRITE status    ON packet TYPE string DEFAULT 'OPEN' ASSERT $value IN ['OPEN', 'NO_HITS', 'PASS', 'FAIL', 'NOT_EXECUTED'];
-DEFINE FIELD OVERWRITE at        ON packet TYPE datetime DEFAULT time::now() READONLY;
+DEFINE FIELD OVERWRITE at        ON packet TYPE datetime DEFAULT time::now() READONLY
+  ASSERT $value >= time::now() - 5s AND $value <= time::now() + 5s;
 
 -- Append-only: the learning loop's rows are never edited (READONLY above) and never deleted.
 DEFINE EVENT OVERWRITE rank_config_kept   ON rank_config   WHEN $event = 'DELETE' THEN { THROW 'rank configs are append-only'; };

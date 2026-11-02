@@ -2,7 +2,7 @@
 //! never opens a connection; `pk-store` implements this over the official `surrealdb` client (its `engine` module),
 //! and the tests implement it in memory.
 //!
-//! Upstream calls its store inside each function over blocking `ureq` (`gw-ops/src/store.rs`); here the store is
+//! Upstream calls its store inside each function over blocking `ureq` (`upstream-ops/src/store.rs`); here the store is
 //! async (tokio, the official crate), and the engine awaits it without blocking a runtime thread: the engine's own
 //! work after a read is a few milliseconds of pure ranking over at most a few hundred candidates.
 

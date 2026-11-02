@@ -4,7 +4,7 @@
 //! the legs return record ids with their score or distance, then each distinct record is fetched once with its text
 //! and its bit.
 //!
-//! Ported from upstream's `Store::retrieve` / `retrieve_facts` (`gw-ops/src/store.rs`, rust-successor 9dfedad):
+//! Ported from upstream's `Store::retrieve` / `retrieve_facts` (`upstream-ops/src/store.rs`, Rust branch 9dfedad):
 //! the any-word full-text query (each word its own `@n@` match, the scores summed, so a record with more and rarer
 //! words ranks higher; `@@` with several words would require all of them), now async and over four fields instead
 //! of one, plus the vector legs upstream does not have. Each full-text leg is ranked on its own index's scale, so
@@ -37,6 +37,8 @@ pub const MAX_WORDS: usize = 16;
 pub const KNN_EF: usize = 150;
 /// Reciprocal rank fusion's constant for the four full-text legs (`search::rrf`'s in `search_api.py`).
 pub const TEXT_RRF_K: f64 = 60.0;
+/// The RRF constant `search::rrf` is called with (`search_all`'s).
+pub const FUSED_RRF_K: u32 = 60;
 /// Edge statuses that do not link a record to a bit.
 const DEAD: &str = "['rejected', 'ruled_out', 'superseded']";
 
@@ -109,7 +111,9 @@ fn perf_select() -> String {
     )
 }
 
-/// The whole read as one batch: seven legs, the distinct ids per table, each record once. The corpus count is not
+/// The whole read as one batch: seven legs, `SurrealDB`'s own fusion of them (`search::rrf`, grouped as
+/// `api-dev/search_api.py` `search_all` groups them: bits, then moments), the distinct ids per table, each record
+/// once. The corpus count is not
 /// here: three full scans cost ~110 ms a read on the owner's desktop (measured 2026-11-02), so it is
 /// [`Store::corpus_size`], which a caller counts once and caches.
 fn read_sql(n: usize, depth: usize, vector: bool) -> String {
@@ -125,7 +129,9 @@ fn read_sql(n: usize, depth: usize, vector: bool) -> String {
         "LET $uids = array::union($ut.id, $uv.id); \
          LET $jids = array::union(array::union($jt.id, $js.id), $jv.id); \
          LET $pids = array::union($pt.id, $pv.id); \
-         RETURN {{ legs: [$ut, $jt, $js, $pt, $uv, $jv, $pv], \
+         LET $fb = search::rrf([$ut, $jt, $js, $uv, $jv], {depth}, {FUSED_RRF_K}); \
+         LET $fm = search::rrf([$pt, $pv], {depth}, {FUSED_RRF_K}); \
+         RETURN {{ legs: [$ut, $jt, $js, $pt, $uv, $jv, $pv], fused: [$fb, $fm], \
          units: (SELECT {} FROM $uids), jokes: (SELECT {JOKE_SELECT} FROM $jids), perfs: (SELECT {} FROM $pids) }};",
         unit_select(),
         perf_select()
@@ -236,6 +242,32 @@ fn merge(text_legs: &[Vec<Json>], vector_legs: &[Vec<Json>], mut records: HashMa
         ranks(a).cmp(&ranks(b)).then_with(|| a.key.cmp(&b.key))
     });
     hits
+}
+
+/// The store's own fused order: `search::rrf`'s groups (bits, then moments) merged by `rrf_score`, ties to the
+/// earlier group, then the earlier place; rank 1 = best.
+fn fused_ranks(groups: Vec<Vec<Json>>) -> HashMap<String, usize> {
+    let mut all: Vec<(f64, usize, usize, String)> = groups
+        .into_iter()
+        .enumerate()
+        .flat_map(|(g, rows)| {
+            rows.into_iter().enumerate().filter_map(move |(i, row)| {
+                Some((
+                    row.get("rrf_score").and_then(Json::as_f64).unwrap_or(0.0),
+                    g,
+                    i,
+                    str_of(&row, "id")?,
+                ))
+            })
+        })
+        .collect();
+    all.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let mut out = HashMap::new();
+    for (_, _, _, key) in all {
+        let next = out.len() + 1;
+        out.entry(key).or_insert(next);
+    }
+    out
 }
 
 /// `$w1..$wn`, one per word.
@@ -381,11 +413,18 @@ impl EngineStore for Store {
                 }
             }
         }
+        let fused = fused_ranks(
+            into_rows(out.remove("fused"))
+                .into_iter()
+                .map(|g| into_rows(Some(g)))
+                .collect(),
+        );
+        let mut hits = merge(&text, &vector, records);
+        for h in &mut hits {
+            h.fused_rank = fused.get(&h.key).copied();
+        }
         // Not counted on the read path (see `read_sql`); a caller that reports "not read" uses `corpus_size`.
-        Ok(Read {
-            hits: merge(&text, &vector, records),
-            corpus_total: 0,
-        })
+        Ok(Read { hits, corpus_total: 0 })
     }
 
     async fn lessons(&self, question: &str, k: usize) -> Result<Vec<Hit>> {
@@ -525,6 +564,25 @@ mod tests {
             "T"
         );
         assert_eq!(hits[0].hash.len(), 64);
+    }
+
+    #[test]
+    fn the_stores_fusion_merges_bits_and_moments_by_rrf_score() {
+        let bits = vec![
+            json!({"id": "unit:a", "rrf_score": 0.03}),
+            json!({"id": "joke:b", "rrf_score": 0.016}),
+        ];
+        let moments = vec![
+            json!({"id": "perf:m", "rrf_score": 0.02}),
+            json!({"id": "perf:n", "rrf_score": 0.016}),
+        ];
+        let r = fused_ranks(vec![bits, moments]);
+        assert_eq!(
+            (r["unit:a"], r["perf:m"], r["joke:b"], r["perf:n"]),
+            (1, 2, 3, 4),
+            "ties go to the bits"
+        );
+        assert!(fused_ranks(vec![]).is_empty());
     }
 
     #[test]

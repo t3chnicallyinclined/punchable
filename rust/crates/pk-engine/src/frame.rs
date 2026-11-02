@@ -3,7 +3,7 @@
 //! through [`data`], so there is one wording of the rule and one escape: the body cannot close the frame early (a
 //! `</tag` inside it is written `&lt;/tag`), and attribute values cannot break out of their quotes.
 //!
-//! From upstream `gw-ops/src/frame.rs` (rust-successor 9dfedad), unchanged.
+//! From upstream `upstream-ops/src/frame.rs` (Rust branch 9dfedad), unchanged.
 
 use std::fmt::Write as _;
 

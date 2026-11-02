@@ -1,7 +1,7 @@
 //! The answer check: every rule of upstream's `ask::check` (itself Python `ask/check.py`, rule for
 //! rule), as one pure function over a packet's candidates, what those candidates are now, and the answer.
 //!
-//! Ported from `gw-ops/src/ask.rs` (rust-successor 9dfedad) with three changes, each in FORK.md:
+//! Ported from `upstream-ops/src/ask.rs` (Rust branch 9dfedad) with three changes, each in FORK.md:
 //! 1. "Word for word" is the one verbatim gate ([`crate::verbatim::verbatim`]), not upstream's whitespace-folded
 //!    `contains`: it accepts everything that accepted (whitespace aside) plus typography-only changes, and it is the
 //!    gate Punchable's Ask already runs, so a quote of his words passes or fails the same way everywhere.

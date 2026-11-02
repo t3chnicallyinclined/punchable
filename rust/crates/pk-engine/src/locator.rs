@@ -1,5 +1,5 @@
-//! Where a candidate's text sits, and its lines. From upstream `gw-ops/src/store.rs` (`line_range`, `first_line`,
-//! `numbered`) and `ask.rs` (`span_text`), rust-successor 9dfedad, unchanged. Upstream's units are file spans
+//! Where a candidate's text sits, and its lines. From upstream `upstream-ops/src/store.rs` (`line_range`, `first_line`,
+//! `numbered`) and `ask.rs` (`span_text`), Rust branch 9dfedad, unchanged. Upstream's units are file spans
 //! (`path#L120-135`); Punchable's are records (`unit:…`, `performance:…`) whose lines count from 1, which every
 //! function here already handles (a locator without `#L` numbers its own lines).
 

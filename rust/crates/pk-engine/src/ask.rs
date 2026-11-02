@@ -2,7 +2,7 @@
 //! packet under a ranking config. The model call that answers it, and the check of that answer
 //! ([`crate::check::check`]), are the caller's.
 //!
-//! From upstream `gw-ops/src/ask.rs` (`fan_out_with`, `open_traced`; rust-successor 9dfedad). Changes (FORK.md):
+//! From upstream `upstream-ops/src/ask.rs` (`fan_out_with`, `open_traced`; Rust branch 9dfedad). Changes (FORK.md):
 //! async over [`EngineStore`] (the two reads run concurrently, nothing blocks); one notebook, so no fan-out over
 //! projects, no reach, no walls; the packet is returned, not written (recording it is the caller's choice); the
 //! secret-shaped-question refusal and the eval-session marker read from the environment are gone.
