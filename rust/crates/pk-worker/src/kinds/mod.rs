@@ -6,8 +6,12 @@
 
 pub mod ask_chat;
 pub mod facts;
+pub mod riff;
 pub mod set_text;
 
+use std::sync::Arc;
+
+use pk_creative::corpus::Corpus;
 use pk_llm::Router;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -85,8 +89,17 @@ impl Kind {
     /// Whether this worker can run it yet.
     pub fn ported(self) -> bool {
         match self {
-            Kind::AskChat | Kind::Facts | Kind::SetText => true,
-            Kind::Bridge | Kind::Punchup | Kind::Riff | Kind::Embed | Kind::Memolink | Kind::Ask => false,
+            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Riff => true,
+            Kind::Bridge | Kind::Punchup | Kind::Embed | Kind::Memolink | Kind::Ask => false,
+        }
+    }
+
+    /// Whether it reads his notebook (the worker mirrors it and builds the `Corpus` first, as the Python's
+    /// `run_job` refreshes its workspace).
+    pub fn reads_notebook(self) -> bool {
+        match self {
+            Kind::Riff | Kind::Punchup | Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => true,
+            Kind::AskChat | Kind::Facts | Kind::SetText => false,
         }
     }
 
@@ -144,6 +157,16 @@ pub struct Ctx<'a> {
     pub legal: &'a Legal,
     /// The fact-check page fetcher.
     pub pages: &'a Pages,
+    /// His notebook, for the kinds that read it.
+    pub corpus: Option<&'a Arc<Corpus>>,
+}
+
+impl<'a> Ctx<'a> {
+    /// The notebook; an error for a kind dispatched without one (a wiring bug, never his input).
+    pub fn corpus(&self) -> Result<&'a Arc<Corpus>, JobError> {
+        self.corpus
+            .ok_or_else(|| JobError::Value("this kind needs the notebook and none was loaded".into()))
+    }
 }
 
 /// A text file a job leaves for the API (`online.Workspace.push` posts it after the kind returns).
@@ -204,9 +227,11 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::AskChat => run_typed::<ask_chat::AskChat>(ctx, input).await,
         Kind::Facts => run_typed::<facts::Facts>(ctx, input).await,
         Kind::SetText => run_typed::<set_text::SetText>(ctx, input).await,
-        Kind::Bridge | Kind::Punchup | Kind::Riff | Kind::Embed | Kind::Memolink | Kind::Ask => Err(JobError::Value(
-            format!("{} is not ported to the Rust worker yet", kind.name()),
-        )),
+        Kind::Riff => run_typed::<riff::Riff>(ctx, input).await,
+        Kind::Bridge | Kind::Punchup | Kind::Embed | Kind::Memolink | Kind::Ask => Err(JobError::Value(format!(
+            "{} is not ported to the Rust worker yet",
+            kind.name()
+        ))),
     }
 }
 
@@ -217,7 +242,7 @@ mod tests {
     #[test]
     fn claimable_is_the_hosted_order_ported_only() {
         let names: Vec<&str> = Kind::claimable(false).into_iter().map(Kind::name).collect();
-        assert_eq!(names, ["facts", "ask_chat", "set_text"]);
+        assert_eq!(names, ["facts", "riff", "ask_chat", "set_text"]);
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));
         assert_eq!(Kind::parse("process_set"), None);
         assert!(

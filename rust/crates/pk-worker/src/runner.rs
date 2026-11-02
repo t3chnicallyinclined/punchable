@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+use pk_creative::corpus::{self, Corpus};
 use pk_llm::{Budget, Router};
 use pk_obs::WorkerMetrics;
 use pk_wire::worker::files::{FilePut, FilesPost};
@@ -32,6 +33,7 @@ use crate::error::JobError;
 use crate::heartbeat;
 use crate::kinds::{self, Ctx, Job, Kind, OutFile, Pages, TRANSCRIBER_KINDS};
 use crate::legal::{Legal, worker_may_write};
+use crate::mirror::Mirror;
 use crate::voice::VoiceCache;
 
 /// The first back-off after a loop error, and where it resets.
@@ -90,6 +92,7 @@ pub struct Worker {
     legal: Legal,
     pages: Pages,
     voice: VoiceCache,
+    mirror: Mirror,
     model_line: Option<String>,
     counted: Mutex<usize>,
     /// Jobs started and not finished. A job decrements it (through `Running`, so a panic does too) before its slot
@@ -144,6 +147,7 @@ impl Worker {
             legal: p.legal,
             pages: p.pages,
             voice: VoiceCache::new(),
+            mirror: Mirror::new(),
             counted: Mutex::new(0),
             running: AtomicUsize::new(0),
         })
@@ -289,8 +293,23 @@ impl Worker {
 
     /// `run_job`: the voice profile, the kind, the files, and the `online` block of the result.
     async fn execute(&self, kind: Kind, job: &Job) -> Result<Value, JobError> {
+        // the notebook first, then the profile: the Python's `run_job` order
+        let (corpus, refresh) = if kind.reads_notebook() {
+            let snap = self.mirror.refresh(&self.api).await?;
+            let owner = self.cfg.owner_id.clone();
+            let refresh = snap.refresh.clone();
+            let built = tokio::task::spawn_blocking(move || {
+                corpus::Parts::from_files(&snap.files, snap.decisions, snap.vectors, &owner).map(Corpus::new)
+            })
+            .await
+            .map_err(|e| JobError::Value(format!("building the notebook: {e}")))??;
+            (Some(Arc::new(built)), refresh)
+        } else {
+            (None, Value::Null)
+        };
         let voice = self.voice.fetch(&self.api).await;
         let ctx = Ctx {
+            corpus: corpus.as_ref(),
             api: &self.api,
             router: &self.router,
             voice: &voice,
@@ -301,10 +320,10 @@ impl Worker {
         let done = kinds::dispatch(kind, ctx, job.input.clone()).await?;
         let (pushed, refused) = self.push(&done.files, kind.actor()).await?;
         let mut result = done.result;
-        // `refresh` is null: this worker reads from the API only what a kind needs, it keeps no mirror
+        // `refresh` is null for a kind that does not read the notebook: nothing was mirrored for it
         result.insert(
             "online".into(),
-            json!({"refresh": null, "pushed": pushed, "legal_refused": refused, "media_deleted": 0,
+            json!({"refresh": refresh, "pushed": pushed, "legal_refused": refused, "media_deleted": 0,
                    "voice": voice.status()}),
         );
         Ok(Value::Object(result))

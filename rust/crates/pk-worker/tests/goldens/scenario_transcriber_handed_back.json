@@ -56,6 +56,7 @@
    {
     "method": "POST",
     "path": "/api/worker/jobs/job%3Aprocess_set-golden000001/result",
+    "query": "",
     "body": {
      "ok": false,
      "retry": true,
@@ -63,7 +64,6 @@
     }
    }
   ],
-  "python_only": [],
   "anthropic": []
  }
 }

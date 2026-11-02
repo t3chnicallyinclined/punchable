@@ -15,7 +15,9 @@ The child gets a clean environment: no secrets file, no legal rules file (the ge
 a temporary home, its own spend ledger. What is written per scenario (crates/pk-worker/tests/goldens/<name>.json):
 the scenario (job, voice profile, model answers, pages, budget) and what the Python did (exit code, claim bodies,
 the effectful API requests in order, the Anthropic request bodies). Times are normalised (`run_id`); the workspace
-mirror reads the Rust worker does not make are listed by path in `python_only` (docs/RUST_WORKSTREAM.md T8).
+mirror requests (`GET files`, `files/content`, `decisions`, `creative`) are kept in `api` with their query strings:
+the Rust worker makes the same ones for the kinds that read the notebook, and none for the others
+(docs/RUST_WORKSTREAM.md T8). The notebook is rust/tools/notebook_fixture.py's.
 
 Two smaller goldens come from the same modules in-process: `voice.json` (creative/voice.py's blocks and messages
 per task, named and unnamed) and `pages.json` (creative/write.py's page text and `supported`).
@@ -38,6 +40,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import notebook_fixture as F  # noqa: E402
 OUT = ROOT / "rust" / "crates" / "pk-worker" / "tests" / "goldens"
 KEY = "sk-golden-not-a-key"
 WORKER_NAME = "golden-worker"
@@ -159,6 +163,12 @@ def set_text_input(segs, *, timed=False, title="Open mic", recorded_at="2026-10-
 
 
 OPUS, SONNET = "claude-opus-5-5", "claude-sonnet-5-5"
+RIFF = json.dumps({"ideas": [
+    {"line": " The bin took my belt; TSA kept the receipt. ", "built_on": ["B1", "riff", "B9"], "move": "the flat repeat"},
+    {"line": "   ", "built_on": ["B1"], "move": "x"},
+    {"line": "My parrot billed me by the hour.", "built_on": [], "move": ""},
+    {"line": "x" * 450, "built_on": ["riff"], "move": "m" * 100},
+    {"line": "Over the cap.", "built_on": [], "move": "none"}]})
 NAMED = {"PK_COMIC_NAME": "Pat Example", "PK_COMIC_FIRST": "Pat"}
 
 SCENARIOS = [
@@ -192,6 +202,17 @@ SCENARIOS = [
      "voice": voice_doc(),
      "model": [answer(json.dumps({"units": [{"first": 0, "last": 219, "kind": "bit", "name": "Luggage",
                                              "funny": True}]}), OPUS, input_tokens=1_000_000)]},
+    {"name": "riff_named_learned", "env": NAMED, "notebook": True,
+     "job": job("riff", {"idea": "  Airport bins again ", "lines": ["the bin gets everything", "  ", "my belt"]}),
+     "voice": voice_doc(learned=LEARNED, laughs=LAUGHS), "model": [answer(RIFF, OPUS, cache_write=1400)]},
+    {"name": "riff_unnamed_profile_only", "env": {}, "notebook": True,
+     "job": job("riff", {"idea": "parrot lawyer", "lines": []}), "voice": voice_doc(),
+     "model": [answer(RIFF, OPUS, cache_read=1400)]},
+    {"name": "riff_no_grounding", "env": {}, "notebook": True,
+     "job": job("riff", {"idea": "zebra quantum", "lines": []}), "voice": voice_doc(), "model": []},
+    {"name": "riff_refused_then_fallback", "env": {}, "notebook": True,
+     "job": job("riff", {"idea": "landlord rent", "lines": ["my landlord"]}), "voice": voice_doc(learned=LEARNED),
+     "model": [answer("", OPUS, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal")]},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -262,10 +283,22 @@ def make_handler(rec: Recorder, which: str):
                 return self._send(204)
             if p == "/api/worker/profile/voice":
                 return self._send(200, rec.sc["voice"])
+            nb = notebook_files(rec.sc)
             if p == "/api/worker/files" and method == "GET":
-                return self._send(200, {"files": [], "files_rev": None, "mode": "db"})
+                return self._send(200, {"files": [{"path": k, "sha256": hashlib.sha256(v.encode()).hexdigest(),
+                                                   "bytes": len(v.encode())} for k, v in sorted(nb.items())],
+                                        "files_rev": 3 if nb else None, "mode": "db"})
+            if p == "/api/worker/files/content":
+                rel = urllib.parse.parse_qs(u.query).get("path", [""])[0]
+                if rel not in nb:
+                    return self._send(404, {"error": "no such file"})
+                return self._send(200, {"path": rel, "sha256": hashlib.sha256(nb[rel].encode()).hexdigest(),
+                                        "text": nb[rel]})
             if p == "/api/worker/decisions":
-                return self._send(200, {"lines": [], "total": 0})
+                ds = notebook_decisions(rec.sc)
+                after = int(urllib.parse.parse_qs(u.query).get("after", ["0"])[0])
+                return self._send(200, {"lines": [{"decision": d, "index": after + i} for i, d in enumerate(ds[after:])],
+                                        "total": len(ds)})
             if p == "/api/worker/creative":
                 return self._send(200, {"lines": []})
             if p == "/api/worker/ideas":
@@ -286,6 +319,14 @@ def make_handler(rec: Recorder, which: str):
 
 # the API's answer to a result it will not take (`refuse_ok_result`: the success post is refused, the failure taken)
 REFUSED_RESULT = b'{"error": "body too large"}'
+
+
+def notebook_files(sc: dict) -> dict:
+    return F.files() if sc.get("notebook") else {}
+
+
+def notebook_decisions(sc: dict) -> list:
+    return F.decisions() if sc.get("notebook") else []
 
 
 def ideas_reply(n: int) -> dict:
@@ -349,12 +390,11 @@ def run_python(sc: dict) -> dict:
     if p.returncode not in (0, 1):
         raise SystemExit(f"{sc['name']}: the Python worker exited {p.returncode}\n{p.stdout}\n{p.stderr}")
     claims = [r["body"] for r in rec.api if r["path"] == "/api/worker/claim"]
-    effect = [r for r in rec.api if r["path"] != "/api/worker/claim" and not r["path"].startswith(MIRROR)
-              or (r["path"] == "/api/worker/files" and r["method"] == "POST")]
-    mirror = sorted({r["path"] for r in rec.api if r["path"].startswith(MIRROR) and r["method"] == "GET"})
+    effect = [r for r in rec.api if r["path"] != "/api/worker/claim"]
     return {"exit": p.returncode, "claims": claims,
-            "api": [normalise({"method": r["method"], "path": r["path"], "body": r["body"]}) for r in effect],
-            "python_only": mirror, "anthropic": rec.anthropic}
+            "api": [normalise({"method": r["method"], "path": r["path"], "query": r["query"], "body": r["body"]})
+                    for r in effect],
+            "anthropic": rec.anthropic}
 
 
 def normalise(x):
@@ -471,6 +511,8 @@ def main():
     for sc in SCENARIOS:
         got = run_python(sc)
         doc = {k: v for k, v in sc.items()}
+        if sc.get("notebook"):   # the Rust test serves the same notebook
+            doc["notebook_files"], doc["notebook_decisions"] = notebook_files(sc), notebook_decisions(sc)
         doc["expect"] = got
         (OUT / f"scenario_{sc['name']}.json").write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n",
                                                         encoding="utf-8", newline="\n")

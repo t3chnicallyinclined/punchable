@@ -4,6 +4,7 @@
 //! Python's, because the app and the job store show them.
 
 use pk_core::py;
+use pk_creative::corpus::CorpusError;
 use pk_llm::LlmError;
 
 use crate::api::ApiError;
@@ -23,6 +24,9 @@ pub enum JobError {
     /// A call to the API.
     #[error(transparent)]
     Api(#[from] ApiError),
+    /// His notebook could not be built from the mirror (a file missing or not JSON).
+    #[error(transparent)]
+    Corpus(#[from] CorpusError),
 }
 
 impl JobError {
@@ -32,6 +36,8 @@ impl JobError {
             JobError::Value(_) => "ValueError",
             JobError::Llm(e) => llm_type(e),
             JobError::Api(e) => e.py_type(),
+            JobError::Corpus(CorpusError::Missing(_)) => "FileNotFoundError",
+            JobError::Corpus(CorpusError::Json { .. }) => "JSONDecodeError",
         }
     }
 
@@ -42,7 +48,10 @@ impl JobError {
 
     /// Back to the queue rather than failed: the budget, an IO error, a timeout (`OSError`, `TimeoutError`).
     pub fn retry(&self) -> bool {
-        self.is_budget() || matches!(self, JobError::Api(e) if e.retry())
+        // a missing notebook file is the Python's FileNotFoundError, an OSError: back to the queue
+        self.is_budget()
+            || matches!(self, JobError::Api(e) if e.retry())
+            || matches!(self, JobError::Corpus(CorpusError::Missing(_)))
     }
 
     /// The `error` a failed result carries: the budget's words alone, else `"<Type>: <message>"`, cut.

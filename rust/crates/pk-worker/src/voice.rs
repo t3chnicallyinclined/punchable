@@ -76,6 +76,24 @@ impl Names {
         self.comic != UNNAMED
     }
 
+    /// `whose_idea()`: "Pat's idea" when he is named, else "His idea".
+    pub fn whose_idea(&self) -> String {
+        if self.named() {
+            format!("{}'s idea", self.first)
+        } else {
+            "His idea".to_string()
+        }
+    }
+
+    /// `he_could_say()`: "Pat could say" when he is named, else "he could say".
+    pub fn he_could_say(&self) -> String {
+        if self.named() {
+            format!("{} could say", self.first)
+        } else {
+            "he could say".to_string()
+        }
+    }
+
     /// `material_owner()`: "stand-up comic Pat Example's", else "a stand-up comic's".
     pub fn material_owner(&self) -> String {
         if self.named() {

@@ -79,6 +79,8 @@ pub struct WorkerConfig {
     pub build_sha: String,
     /// On a stop, how long a running job may still finish before it is handed back (inside the pod's 60 s grace).
     pub stop_grace: Duration,
+    /// `PK_OWNER_ID`: the actor id of his own edits ("owner").
+    pub owner_id: String,
 }
 
 fn invalid(key: &str, reason: impl Into<String>) -> ConfigError {
@@ -187,6 +189,7 @@ impl WorkerConfig {
                 .unwrap_or_else(|| workspace.join("ai_spend.json")),
             build_sha: env.opt("PK_BUILD_SHA").unwrap_or("dev").to_string(),
             stop_grace: STOP_GRACE,
+            owner_id: env.opt("PK_OWNER_ID").unwrap_or("owner").to_string(),
         })
     }
 }
@@ -227,7 +230,7 @@ mod tests {
             ..RunArgs::default()
         };
         assert!(WorkerConfig::from_env(&base(), &args).unwrap().creds.is_none());
-        assert!(parse_kinds("riff").is_err());
+        assert!(parse_kinds("bridge").is_err());
         assert!(parse_kinds("nope").is_err());
         assert_eq!(parse_kinds("process_set,facts,facts").unwrap(), vec![Kind::Facts]);
         let mut env = Env::from_map([

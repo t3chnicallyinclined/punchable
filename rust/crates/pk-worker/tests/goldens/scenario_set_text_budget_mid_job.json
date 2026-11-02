@@ -772,23 +772,62 @@
   "api": [
    {
     "method": "GET",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/decisions",
+    "query": "after=0",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=storyboards",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=workingsets",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=venues",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=merges",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=suggestions",
+    "body": null
+   },
+   {
+    "method": "GET",
     "path": "/api/worker/profile/voice",
+    "query": "",
     "body": null
    },
    {
     "method": "POST",
     "path": "/api/worker/jobs/job%3Aset_text-golden000001/result",
+    "query": "",
     "body": {
      "ok": false,
      "error": "over today's AI budget ($4.00 of $1.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD",
      "retry": true
     }
    }
-  ],
-  "python_only": [
-   "/api/worker/creative",
-   "/api/worker/decisions",
-   "/api/worker/files"
   ],
   "anthropic": [
    {

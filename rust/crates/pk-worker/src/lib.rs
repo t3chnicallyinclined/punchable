@@ -25,6 +25,7 @@ pub mod heartbeat;
 pub mod kinds;
 pub mod legal;
 pub mod metrics_server;
+pub mod mirror;
 pub(crate) mod pyjson;
 pub mod runner;
 pub mod voice;

@@ -7,9 +7,10 @@
 //!
 //! The allow-list, each with its reason (`docs/RUST_WORKSTREAM.md` T8):
 //! - `claim.kinds`: this worker claims the ported kinds only, in the Python's order.
-//! - the workspace-mirror reads (`GET files`, `decisions`, `creative`): the Python mirrors the whole notebook on
-//!   every job; this worker reads only what a kind needs. Asserted absent here.
-//! - `result.online.refresh` and `.media_deleted`: about that mirror (no reader in the API or the app).
+//! - the workspace-mirror reads (`GET files`, `files/content`, `decisions`, `creative`): for a kind that reads his
+//!   notebook they are compared request for request, query strings included; for any other kind the Python mirrors
+//!   anyway and this worker does not (asserted absent), and `result.online.refresh` is then not compared.
+//! - `result.online.media_deleted`: the Python's count of recordings deleted from its folder (this worker has none).
 //! - `run_id` and the `analysis.json` text it is in: a timestamp; the sha256 is compared over the normalised text.
 //! - the validator's words after `invalid JSON:` (Python `jsonschema` vs the `jsonschema` crate; `pk-llm`'s own
 //!   allow-list), in the retry turn and in the failed result.
@@ -141,6 +142,45 @@ impl Respond for Api {
                 }
             }
             ("GET", "/api/worker/profile/voice") => ok(self.sc["voice"].clone()),
+            ("GET", "/api/worker/files") => {
+                let files: Vec<Value> = self
+                    .notebook()
+                    .iter()
+                    .map(|(k, v)| {
+                        let text = v.as_str().unwrap_or_default();
+                        json!({"path": k, "sha256": hex::encode(Sha256::digest(text.as_bytes())), "bytes": text.len()})
+                    })
+                    .collect();
+                let rev = if files.is_empty() { Value::Null } else { json!(3) };
+                ok(json!({"files": files, "files_rev": rev, "mode": "db"}))
+            }
+            ("GET", "/api/worker/files/content") => {
+                let rel = query_param(req, "path");
+                match self.notebook().get(&rel).and_then(Value::as_str) {
+                    Some(text) => ok(
+                        json!({"path": rel, "sha256": hex::encode(Sha256::digest(text.as_bytes())),
+                                            "text": text}),
+                    ),
+                    None => ResponseTemplate::new(404).set_body_json(json!({"error": "no such file"})),
+                }
+            }
+            ("GET", "/api/worker/decisions") => {
+                let ds = self
+                    .sc
+                    .get("notebook_decisions")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                let after: usize = query_param(req, "after").parse().unwrap_or(0);
+                let lines: Vec<Value> = ds
+                    .iter()
+                    .enumerate()
+                    .skip(after)
+                    .map(|(i, d)| json!({"decision": d, "index": i}))
+                    .collect();
+                ok(json!({"lines": lines, "total": ds.len()}))
+            }
+            ("GET", "/api/worker/creative") => ok(json!({"lines": []})),
             ("POST", "/api/worker/ideas") => {
                 let n = self.ideas.fetch_add(1, Ordering::SeqCst) + 1;
                 ok(
@@ -172,6 +212,24 @@ impl Respond for Api {
             _ => ResponseTemplate::new(404).set_body_json(json!({"error": format!("no route {p}")})),
         }
     }
+}
+
+impl Api {
+    fn notebook(&self) -> Map<String, Value> {
+        self.sc
+            .get("notebook_files")
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+fn query_param(req: &Request, k: &str) -> String {
+    req.url
+        .query_pairs()
+        .find(|(q, _)| q == k)
+        .map(|(_, v)| v.into_owned())
+        .unwrap_or_default()
 }
 
 struct PageServer {
@@ -214,7 +272,6 @@ fn normalise(x: &Value) -> Value {
                 out.insert("sha256".into(), json!(hex::encode(Sha256::digest(text.as_bytes()))));
             }
             if let Some(Value::Object(online)) = out.get_mut("online") {
-                online.remove("refresh");
                 online.remove("media_deleted");
             }
             Value::Object(out)
@@ -384,16 +441,35 @@ async fn run_scenario(name: &str, sc: &Value) {
     }
     same(&Value::Array(claims), &Value::Array(want_claims), "claims", name);
 
-    for r in &received {
-        let mirror = r.method.as_str() == "GET" && MIRROR.contains(&r.url.path());
-        assert!(!mirror, "{name}: this worker read the mirror route {}", r.url.path());
+    let reads_notebook = Kind::parse(sc["job"]["kind"].as_str().unwrap_or("")).is_some_and(Kind::reads_notebook);
+    let is_mirror = |method: &str, path: &str| method == "GET" && MIRROR.iter().any(|m| path.starts_with(m));
+    if !reads_notebook {
+        for r in &received {
+            assert!(
+                !is_mirror(r.method.as_str(), r.url.path()),
+                "{name}: this worker read {}",
+                r.url.path()
+            );
+        }
     }
-    let effect: Vec<Value> = received
+    let mut effect: Vec<Value> = received
         .iter()
         .filter(|r| r.url.path() != "/api/worker/claim")
-        .map(|r| json!({"method": r.method.as_str(), "path": r.url.path(), "body": body_of(r)}))
+        .map(|r| {
+            json!({"method": r.method.as_str(), "path": r.url.path(), "query": r.url.query().unwrap_or(""),
+                   "body": body_of(r)})
+        })
         .collect();
-    same(&Value::Array(effect), &expect["api"], "api", name);
+    let mut want: Vec<Value> = expect["api"].as_array().cloned().unwrap();
+    if !reads_notebook {
+        want.retain(|r| !is_mirror(r["method"].as_str().unwrap_or(""), r["path"].as_str().unwrap_or("")));
+        for v in effect.iter_mut().chain(want.iter_mut()) {
+            if let Some(online) = v.pointer_mut("/body/result/online").and_then(Value::as_object_mut) {
+                online.remove("refresh");
+            }
+        }
+    }
+    same(&Value::Array(effect), &Value::Array(want), "api", name);
 
     let calls: Vec<Value> = anthropic
         .received_requests()
