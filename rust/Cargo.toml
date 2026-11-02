@@ -11,6 +11,7 @@ members = [
     "crates/pk-api",
     "crates/pk-worker",
     "crates/pk-wire",
+    "crates/pk-engine",
     "xtask",
 ]
 
@@ -67,8 +68,10 @@ ndarray = "0.17"
 clap = { version = "4", features = ["derive"] }
 # pk-wire (feature `ts`, off by default): the app's TypeScript types from the wire structs after T9
 ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }
+# pk-engine (ADR 0013): the Snowball English stemmer, the same algorithm as the `punch_en` analyzer's snowball(english)
+rust-stemmers = "1"
 # tests
-insta = { version = "1", features = ["json"] }
+insta ={ version = "1", features = ["json"] }
 proptest = "1"
 wiremock = "0.6"
 tempfile = "3"

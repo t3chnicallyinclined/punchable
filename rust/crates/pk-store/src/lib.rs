@@ -23,6 +23,7 @@
 
 pub mod config;
 pub mod creative;
+pub mod engine;
 pub mod error;
 pub mod ids;
 pub mod kbmap;

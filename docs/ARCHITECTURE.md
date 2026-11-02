@@ -45,13 +45,14 @@ API re-checks every worker post (C, `ingest_api.py`, `35-worker.yaml`).
 
 ## 1. The Rust workspace: crates and the one dependency rule
 
-Eleven crates: the nine in `docs/RUST.md` plus two small leaves, `pk-core` and `pk-wire`.
+Twelve crates: the nine in `docs/RUST.md`, two small leaves, `pk-core` and `pk-wire`, and `pk-engine` (the upstream
+engine fork, ADR 0013, 2026-11-02).
 
 ```
 tier 0  pure, no internal deps     pk-core                     pk-wire
-tier 1  pure domain                pk-kb -> core
+tier 1  pure domain                pk-kb -> core     pk-engine -> core   (ADR 0013, the upstream fork)
 tier 1  IO leaves                  pk-llm -> core    pk-embed -> core    pk-obs -> core
-tier 2  domain + IO                pk-creative -> kb, core     pk-store -> kb, core
+tier 2  domain + IO                pk-creative -> kb, engine, core     pk-store -> kb, engine, core
 tier 3  binaries                   pk-api    -> wire, core, kb, creative, store, embed, obs
                                    pk-worker -> wire, core, kb, creative, llm,   embed, obs
 tooling                            xtask (no internal deps)
@@ -69,7 +70,8 @@ metadata`).
 | `pk-wire` | the typed HTTP contract: **the whole `/api/worker/*` surface** **[review]** (claim with `worker`, `hosted`, `model`, `paused`; job; result; files, `files/content`; decisions; creative lines; events; ideas; `profile/voice`; `jokes/<id>`; `state`; `decision`; `undo`; `jobs/<id>/file`; the PC-only ones marked for deletion at T11) and the 58 app-facing response types now hand-written in `app/src/lib/{api,creative,simple}.ts`. Open KB records stay `#[serde(flatten)] extra`. After T9 it generates the app's TypeScript types with `ts-rs` | behaviour, errors, internal deps |
 | `pk-kb` | the graph with no IO: typed ids (`edge_id`, `Actor`), `Decision`, replay, merge resolution, the read index, the decision builder, `Rating` | |
 | `pk-creative` | rules with no IO: store reducers, the verbatim gate (one copy), `ask` (retrieve / prompt / finish), `words` (one tokeniser, named stop-word sets), `display` (`mmss`, `month_year`, `short_name_of`, `venue_short`), `voice` (the profile and learned blocks), **`legal`** (rules JSON in, `content_is_legal` out) **[review]**, **`settext`** (the `Inbox.split` prompt half and finish half, `engine/inbox.py:440-483`, `worker/execute.py:124-192`) **[review]**, the writing and merge prompt halves | |
-| `pk-store` | SurrealDB through the official crate: typed rows, `kbmap`, the decision-append transaction, the `creative_event` mirror, LIVE | |
+| `pk-engine` | **the upstream fork (ADR 0013, `rust/crates/pk-engine/FORK.md`)**, pure: the one verbatim gate (moved from `pk-creative`, which re-exports it), the answer check, hybrid ranking (the store's full-text and vector legs + BM25 over the read, fused) under a versioned config, lessons with evidence, the offline replay / fence / learning switch, the proposer's scoring, cards and links between bits, the data frame, the app-facing `Lesson` / `Link` (no grade). The async `EngineStore` seam; `pk-store::engine` implements it. **Not wired into pk-api / pk-worker** until the offline proof and the owner's go | IO, processes, secrets, the environment (`tests/boundary.rs`) |
+| `pk-store` | SurrealDB through the official crate: typed rows, `kbmap`, the decision-append transaction, the `creative_event` mirror, LIVE; `engine` (the `EngineStore` reads over the existing indexes; the engine schema applied only on an explicit call) | |
 | `pk-llm` | the Anthropic Messages client, the TOML router, schema validation, prompt caching, the USD budget | |
 | `pk-embed` | bge-small over `ort` + `tokenizers`, CLS pooling, the hash embedder for tests | |
 | `pk-obs` | tracing init, the metrics registry (names and label values identical to Python's), sentry with the one scrubber | |
@@ -190,7 +192,7 @@ JSON case files (input → expected). `cargo xtask contracts` writes them from t
 
 | Rule | Single home | Python copy dies at | App side |
 |---|---|---|---|
-| Verbatim gate, inline-quote stripping | `pk-creative::verbatim` (askchat's variant) | `engine/verify.py` at T8; `creative/askchat.py` at T11 | — |
+| Verbatim gate, inline-quote stripping | `pk-engine::verbatim` (askchat's variant; moved from `pk-creative`, which re-exports it, ADR 0013); the engine's answer check uses the same gate | `engine/verify.py` at T8; `creative/askchat.py` at T11 | — |
 | Decision replay | SurQL `fn::apply_decision` is the hosted truth; `pk-kb::view` in memory; both kept, the three-way test stays in CI permanently (ADR 0009) | `surreal_kb.py` overrides at T10; `kb.py` ships in both images until T11, then stays as the PC tool and oracle **[review]** | — |
 | Metrics, `build_info`, label sanitisers | `pk-obs::{metrics,labels}` | `worker/metrics.py` T8; `engine/prom.py`, `api-dev/metrics.py` T11 | — |
 | Crash scrubber | `pk-obs::scrub`, the one `before_send`; adopt the app's four extra keys | `worker/crashreport.py` T8; `api-dev/{scrub,crash}.py` T11 | `crash.ts` stays, pinned by `contracts/sensitive_keys.json`; fold `crashlog.ts` into it |

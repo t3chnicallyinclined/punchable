@@ -18,3 +18,4 @@ from `docs/HANDOVER.md`, `docs/RUST.md` and `docs/design/HIG.md`.
 | [0010](0010-crate-dag-rule.md) | the crate dependency rule |
 | [0011](0011-worker-speaks-http-only.md) | the worker speaks HTTP only |
 | [0012](0012-transcriber-kinds-stay-off-the-server.md) | the transcriber kinds stay off the server |
+| [0013](0013-fork-the-upstream-engine.md) | fork the upstream engine as `pk-engine`; one verbatim gate |
