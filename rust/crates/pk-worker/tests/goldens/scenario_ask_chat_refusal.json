@@ -1,0 +1,183 @@
+{
+ "name": "ask_chat_refusal",
+ "env": {},
+ "job": {
+  "id": "job:ask_chat-golden000001",
+  "kind": "ask_chat",
+  "input": {
+   "messages": [
+    {
+     "role": "system",
+     "content": "You answer a stand-up comic's questions about his OWN material (synthetic system)."
+    },
+    {
+     "role": "user",
+     "content": "SOURCES\n[S1] (bit, Oct 2026) The bin gets my belt and my shoes.\n\nQUESTION: did I ever do airport bins?"
+    }
+   ]
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [],
+   "dropped": [],
+   "updated_at": null
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "",
+   "model": "claude-sonnet-5-5",
+   "stop_reason": "refusal",
+   "stop_details": {
+    "type": "refusal",
+    "category": "cyber",
+    "explanation": "Not this one."
+   }
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Aask_chat-golden000001/result",
+    "body": {
+     "ok": false,
+     "error": "Refusal: Claude declined this one: Not this one. Try rewording.",
+     "retry": false
+    }
+   }
+  ],
+  "python_only": [
+   "/api/worker/creative",
+   "/api/worker/decisions",
+   "/api/worker/files"
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "SOURCES\n[S1] (bit, Oct 2026) The bin gets my belt and my shoes.\n\nQUESTION: did I ever do airport bins?"
+     }
+    ],
+    "model": "claude-sonnet-5-5",
+    "output_config": {
+     "effort": "medium",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "found": {
+         "type": "boolean"
+        },
+        "answer": {
+         "type": "string"
+        },
+        "citations": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "source": {
+            "type": "string"
+           },
+           "quote": {
+            "type": "string"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "source",
+           "quote"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "found",
+        "answer",
+        "citations"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     },
+     {
+      "type": "text",
+      "text": "You answer a stand-up comic's questions about his OWN material (synthetic system).",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

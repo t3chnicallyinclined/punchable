@@ -1,0 +1,207 @@
+{
+ "name": "set_text_legal",
+ "env": {},
+ "job": {
+  "id": "job:set_text-golden000001",
+  "kind": "set_text",
+  "input": {
+   "segments": [
+    {
+     "text": "Thanks folks."
+    },
+    {
+     "text": "My lawyer says the petitioner and the respondent should both try decaf."
+    },
+    {
+     "text": "That one is for the court reporters."
+    }
+   ],
+   "title": "Open mic",
+   "recorded_at": "2026-10-20T21:00:00-04:00",
+   "venue": "a room",
+   "duration_s": null,
+   "received_at": "2026-10-20T21:30:00Z",
+   "engine": "speech"
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [],
+   "dropped": [],
+   "updated_at": null
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "{\"units\": [{\"first\": 0, \"last\": 2, \"kind\": \"bit\", \"name\": \"Decaf\", \"funny\": true}]}",
+   "model": "claude-opus-5-5"
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Aset_text-golden000001/result",
+    "body": {
+     "ok": true,
+     "result": {
+      "status": "skipped_legal",
+      "online": {
+       "refresh": {
+        "fetched": 0,
+        "files": 0,
+        "decisions": 0
+       },
+       "pushed": [],
+       "legal_refused": 0,
+       "media_deleted": 0,
+       "voice": {
+        "loaded": true,
+        "updated_at": "2026-10-19T08:00:00Z",
+        "sha": "34afd63ab5ca",
+        "chars": 884
+       }
+      }
+     }
+    }
+   }
+  ],
+  "python_only": [
+   "/api/worker/creative",
+   "/api/worker/decisions",
+   "/api/worker/files"
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "This is the transcript of a recorded stand-up SET. Units are: bit (a joke or bit he performs), crowd_work, banter (filler, transitions), intro (host/walk-on), outro, one numbered line each.\nSplit it into consecutive units. Each unit covers lines first..last (inclusive) and units must not overlap. A bit is ONE unit including its tags, act-outs and asides; start a new unit only when he moves to a different premise (watch for the turn: 'anyway', 'so', a new subject). intro = only the host introducing him / walk-on applause: his own first lines are material, even quick openers. outro = only his sign-off ('that's my time', socials). name = a short title for the unit (3-7 words). funny = true if it is comedic material.\n\n[0] (00:00) Thanks folks.\n[1] (00:00) My lawyer says the petitioner and the respondent should both try decaf.\n[2] (00:05) That one is for the court reporters."
+     }
+    ],
+    "model": "claude-opus-5-5",
+    "output_config": {
+     "effort": "high",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "units": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "first": {
+            "type": "integer"
+           },
+           "last": {
+            "type": "integer"
+           },
+           "kind": {
+            "type": "string",
+            "enum": [
+             "bit",
+             "idea",
+             "crowd_work",
+             "banter",
+             "intro",
+             "outro",
+             "note"
+            ]
+           },
+           "name": {
+            "type": "string"
+           },
+           "funny": {
+            "type": "boolean"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "first",
+           "last",
+           "kind",
+           "name",
+           "funny"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "units"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "You work on a stand-up comic's own material. Be literal and exact. Every quote you give must be copied character for character from the text it names; never paraphrase a quote. Reasons are one plain sentence a comic would understand.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

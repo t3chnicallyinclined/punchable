@@ -1,0 +1,199 @@
+{
+ "name": "ask_chat_no_profile",
+ "env": {},
+ "job": {
+  "id": "job:ask_chat-golden000001",
+  "kind": "ask_chat",
+  "input": {
+   "messages": [
+    {
+     "role": "system",
+     "content": "You answer a stand-up comic's questions about his OWN material (synthetic system)."
+    },
+    {
+     "role": "user",
+     "content": "SOURCES\n[S1] (bit, Oct 2026) The bin gets my belt and my shoes.\n\nQUESTION: did I ever do airport bins?"
+    }
+   ]
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": null,
+  "updated_at": null,
+  "by": null,
+  "by_kind": null,
+  "chars": 0,
+  "learned": {
+   "kept": [],
+   "dropped": [],
+   "updated_at": null
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "{\"found\": true, \"answer\": \"Yes: the bins bit [S1].\", \"citations\": [{\"source\": \"S1\", \"quote\": \"The bin gets my belt\"}]}",
+   "model": "claude-sonnet-5-5"
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Aask_chat-golden000001/result",
+    "body": {
+     "ok": true,
+     "result": {
+      "status": "answered",
+      "data": {
+       "found": true,
+       "answer": "Yes: the bins bit [S1].",
+       "citations": [
+        {
+         "source": "S1",
+         "quote": "The bin gets my belt"
+        }
+       ]
+      },
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "online": {
+       "refresh": {
+        "fetched": 0,
+        "files": 0,
+        "decisions": 0
+       },
+       "pushed": [],
+       "legal_refused": 0,
+       "media_deleted": 0,
+       "voice": {
+        "loaded": false,
+        "updated_at": null,
+        "sha": null,
+        "chars": 0
+       }
+      }
+     }
+    }
+   }
+  ],
+  "python_only": [
+   "/api/worker/creative",
+   "/api/worker/decisions",
+   "/api/worker/files"
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "SOURCES\n[S1] (bit, Oct 2026) The bin gets my belt and my shoes.\n\nQUESTION: did I ever do airport bins?"
+     }
+    ],
+    "model": "claude-sonnet-5-5",
+    "output_config": {
+     "effort": "medium",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "found": {
+         "type": "boolean"
+        },
+        "answer": {
+         "type": "string"
+        },
+        "citations": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "source": {
+            "type": "string"
+           },
+           "quote": {
+            "type": "string"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "source",
+           "quote"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "found",
+        "answer",
+        "citations"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "You answer a stand-up comic's questions about his OWN material (synthetic system).",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

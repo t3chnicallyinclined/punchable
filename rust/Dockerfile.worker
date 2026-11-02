@@ -1,0 +1,36 @@
+# Punchable hosted worker, the Rust one (pk-worker, T8). Build context = the repo root:
+#   docker build -f rust/Dockerfile.worker --build-arg PK_BUILD_SHA=$(git rev-parse HEAD) -t punchable-worker-rs .
+# Built OFF the production node (docs/ARCHITECTURE.md section 6: a release cargo build is the heavy run the owner
+# forbids on a box doing real work): in CI or on the PC, then `docker save` | ssh | `docker load` and pushed to the
+# cluster registry. Not wired into infra/deploy.sh yet: the swap is the owner's call (docs/RUST_WORKSTREAM.md T8).
+#
+# What is in it: one static-ish binary (rustls, no OpenSSL, no onnxruntime: the embedding kinds are not ported, so no
+# bge model either) on distroless cc (glibc + libgcc), non-root uid 10001, read-only root filesystem; the only writes
+# go to /tmp (the emptyDir in 35-worker.yaml: the heartbeat and the day's spend ledger). The engine config is compiled
+# in (engine/config.hosted.toml via pk-llm's include_str!), so no ENGINE_CONFIG path exists in this image.
+# Pin both bases by digest when this is first built for the cluster (the build log records them), as
+# infra/worker/Dockerfile pins its Python base.
+FROM rust:1.93.1-slim-bookworm AS build
+WORKDIR /src
+COPY engine/config.hosted.toml engine/config.hosted.toml
+COPY db/schema.surql db/schema_extra.surql db/
+COPY rust/ rust/
+WORKDIR /src/rust
+RUN cargo build --release --locked -p pk-worker \
+ && cp target/release/pk-worker /pk-worker
+
+FROM gcr.io/distroless/cc-debian12:nonroot
+COPY --from=build /pk-worker /pk-worker
+ARG PK_BUILD_SHA=dev
+ENV PK_BUILD_SHA=$PK_BUILD_SHA \
+    HOME=/tmp \
+    PK_HOSTED=1 \
+    PK_WORKSPACE=/tmp/pk-worker \
+    PK_HEARTBEAT_FILE=/tmp/pk-worker/heartbeat \
+    PK_AI_SPEND_FILE=/tmp/pk-worker/ai_spend.json \
+    PUNCH_SECRETS=/nonexistent \
+    RUST_LOG=info
+USER 10001:10001
+# GET /metrics and /healthz for Prometheus (PK_METRICS_PORT): the only thing this image listens on
+EXPOSE 9100
+ENTRYPOINT ["/pk-worker"]

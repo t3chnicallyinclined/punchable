@@ -1,15 +1,46 @@
 [package]
 name = "pk-worker"
-description = "Punchable's worker: claim a job from the API, run it, post the result (docs/RUST.md step 3)"
+description = "Punchable's hosted worker: claim a job from the API, run it on the Anthropic API, post the result (T8)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pk-worker"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = { workspace = true }
-pk-kb = { path = "../pk-kb" }
+axum = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+futures = { workspace = true }
+hex = { workspace = true }
+html-escape = { workspace = true }
+percent-encoding = { workspace = true }
+pk-core = { workspace = true }
+pk-creative = { path = "../pk-creative" }
+pk-llm = { path = "../pk-llm" }
+pk-obs = { path = "../pk-obs" }
+pk-wire = { path = "../pk-wire" }
+regex = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt", "net"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+wiremock = { workspace = true }
 
 [lints]
 workspace = true
