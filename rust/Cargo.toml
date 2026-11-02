@@ -72,6 +72,8 @@ clap = { version = "4", features = ["derive"] }
 # pk-api: base64url read as leniently as Python's urlsafe_b64decode reads a token; Python's parse_qs for query strings
 base64 = "0.22"
 form_urlencoded = "1"
+# pk-api /api/map/cloud: the symmetric eigen-decomposition behind the PCA (pure Rust, no LAPACK)
+nalgebra = { version = "0.34", default-features = false, features = ["std"] }
 tower = { version = "0.5", features = ["util"] }
 # pk-wire (feature `ts`, off by default): the app's TypeScript types from the wire structs after T9
 ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }

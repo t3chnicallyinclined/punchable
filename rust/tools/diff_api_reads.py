@@ -46,6 +46,15 @@ FLAGS = '{"glass_accessory": false}'
 # Keys are (request label, JSON path or "status" / "header:<name>"). Empty on purpose: add one only with a reason the
 # owner would accept (the board's rule: the allow-list is for things that cannot hold, not a licence).
 ALLOW: dict[tuple[str, str], str] = {}
+# Numbers that cannot be bit-equal, compared within a tolerance instead: the cloud's coordinates come from numpy's
+# float32 LAPACK SVD on the Python side and a float64 eigen-decomposition in Rust (crates/pk-api/src/cloud.rs); they
+# agree to ~1e-6 before the 4-decimal rounding. Everything else in the cloud (ids, clusters, labels, counts) is exact.
+TOLERANT_KEYS = {"x", "y", "z", "cx", "cy", "cz"}
+TOLERANCE = 1e-3
+# With 2 or 3 bits there is no spread along the last axis: numpy's float32 SVD returns a noise direction (~1e-8) that
+# the 1e-9 cut lets through, so the Python stretches noise to +/-1; the float64 eigen-decomposition gives ~1e-17 and
+# Rust leaves the axis at 0. The coordinates of these two requests are not compared (everything else is).
+DEGENERATE = {"/api/map/cloud?cap=2", "/api/map/cloud?cap=3"}
 
 # ---------------------------------------------------------------- the synthetic data folder
 TEXT = {
@@ -63,6 +72,9 @@ STAGE = {"a": "testing", "b": "working", "c": "testing", "d": "to_try", "e": "id
 UNIT_DATE = {"a": "2024-01-10", "b": "2023-05-01", "c": "2024-04-04", "d": "2015-03-03", "e": "2024-08-08",
              "f": "2016-07-07", "g": "2024-09-09"}
 SX, SY, SZ = "2024-01-01_x", "2024-02-01_y", "2024-03-01_z"
+EXTRA = [("dog", ["leash", "park", "bark"]), ("car", ["traffic", "parking", "engine"]),
+         ("plane", ["pilot", "luggage", "airport"]), ("family", ["niece", "uncle", "dinner"])]
+TOPIC_OF = {"a": 0, "b": 0, "c": 1, "d": 3, "e": 3, "f": 2, "g": 3}
 
 
 def set_dir(key: str) -> str:
@@ -79,6 +91,17 @@ def make_graph() -> dict:
         if k == "g":
             j["hidden"] = u["hidden"] = True
         nodes += [j, u]
+        edges.append({"id": f"e:p{k}", "src": f"unit:{k}1", "dst": f"joke:{k}", "kind": "part_of", "status": "inferred",
+                      "confidence": 0.9, "evidence": []})
+    # 36 more bits on four invented topics, so the cloud has real clusters to find (k = 6 at 43 bits)
+    for i in range(36):
+        topic, words = EXTRA[i % 4]
+        k = f"x{i:02d}"
+        nodes.append({"id": f"joke:{k}", "type": "joke", "title": f"{topic.title()} {words[i % 3]} number {i}", "stage": "idea",
+                      "summary": f"An idea about {topic}.", "first_seen": "2023-01-01", "last_seen": f"2024-{1 + i % 12:02d}-{1 + i % 27:02d}",
+                      "lead_unit": f"unit:{k}1"})
+        nodes.append({"id": f"unit:{k}1", "type": "unit", "kind": "setup+punch", "date": f"2024-{1 + i % 12:02d}-{1 + i % 27:02d}",
+                      "text": f"The {topic} and the {words[i % 3]}. Then the {words[(i + 1) % 3]} again, number {i}.", "source": "gdoc"})
         edges.append({"id": f"e:p{k}", "src": f"unit:{k}1", "dst": f"joke:{k}", "kind": "part_of", "status": "inferred",
                       "confidence": 0.9, "evidence": []})
     nodes.append({"id": "unit:a0", "type": "unit", "kind": "setup+punch", "text": "Alpha opener, first draft.", "date": "2023-02-02"})
@@ -192,6 +215,26 @@ def build_comedy(comedy: Path) -> None:
     (comedy / "kb" / "creative").mkdir(parents=True)
 
 
+def write_vectors(cache_kb: Path, graph: dict) -> None:
+    """Synthetic 384-d unit vectors (four topic centres plus noise, seeded) in the cache layout db/load.py reads, so
+    the bundle carries unit embeddings and the cloud has something to place."""
+    import numpy as np
+    rng = np.random.default_rng(3)
+    centres = rng.normal(size=(4, 384))
+    ids, rows = [], []
+    for n in graph["nodes"]:
+        if n["type"] != "unit":
+            continue
+        key = n["id"].split(":", 1)[1]
+        topic = int(key[1:3]) % 4 if key.startswith("x") else TOPIC_OF.get(key[0], 0)
+        v = centres[topic] + 0.8 * rng.normal(size=384)
+        rows.append(v / np.linalg.norm(v))
+        ids.append(n["id"])
+    cache_kb.mkdir(parents=True, exist_ok=True)
+    (cache_kb / "vectors_ids.json").write_text(json.dumps(ids), encoding="utf-8")
+    np.asarray(rows, dtype=np.float32).tofile(cache_kb / "vectors.f32")
+
+
 # ---------------------------------------------------------------- processes
 def free_port() -> int:
     s = socket.socket()
@@ -288,6 +331,10 @@ def diff(a, b, path="$", out=None):
     elif isinstance(a, bool) or isinstance(b, bool):
         if a is not b:
             out.append((path, a, b))
+    elif (path.startswith("$.nodes[") or path.startswith("$.clusters[")) and path.rsplit(".", 1)[-1] in TOLERANT_KEYS \
+            and isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        if abs(a - b) > TOLERANCE:
+            out.append((path, a, b))
     elif a != b:
         out.append((path, a, b))
     return out
@@ -308,6 +355,8 @@ def compare(label: str, py: tuple, rs: tuple) -> list[str]:
                 bad.append(f"{label}: bodies differ and are not both JSON")
             return bad
         for p, x, y in diff(a, b):
+            if label in DEGENERATE and p.rsplit(".", 1)[-1] in TOLERANT_KEYS:
+                continue
             if (label, p) not in ALLOW:
                 bad.append(f"{label}: {p}: python {json.dumps(x)[:120]} rust {json.dumps(y)[:120]}")
     return bad
@@ -327,6 +376,7 @@ def main() -> int:
     for d in (data, home, tmp / "cache"):
         d.mkdir()
     build_comedy(comedy)
+    write_vectors(tmp / "cache" / "kb", make_graph())
     port = free_port()
     pw = secrets.token_hex(16)
     env = {**os.environ, "PUNCHABLE_HOME": str(home), "COMEDY_DIR": str(comedy), "PUNCH_COMEDY": str(comedy),
@@ -414,7 +464,10 @@ def main() -> int:
                   "/api/meta?include_hidden=1", "/api/meta?labels=x", "/api/pipeline", "/api/pipeline?limit=1",
                   "/api/pipeline?include_hidden=true", "/api/pipeline?limit=-1", "/api/learned", "/api/health",
                   "/api/health?ready=1", "/api/labels?backend=files", "/api/labels?backend=surreal",
-                  "/api/labels?backend=", "/api/health?backend=x"):
+                  "/api/labels?backend=", "/api/health?backend=x",
+                  "/api/map/cloud", "/api/map/cloud?cap=5", "/api/map/cloud?cap=0", "/api/map/cloud?cap=abc",
+                  "/api/map/cloud?cap=2001", "/api/map/cloud?cap=2000", "/api/map/cloud?cap=1",
+                  "/api/map/cloud?cap=2", "/api/map/cloud?cap=3", "/api/map/cloud?cap=12"):
             reqs.append((p, "GET", p, app))
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
                  ("health signed out", "GET", "/api/health", {}),
@@ -472,7 +525,8 @@ def main() -> int:
         report["equal"] = n_ok
         # proof the answers came from pk-api and not through its fallback: its own counters saw every moved route
         mtext = call(rs, "GET", "/metrics")[2].decode()
-        for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned"):
+        for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
+                      "/api/map/cloud"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         if 'route="/api/jokes"' in mtext:
@@ -484,7 +538,8 @@ def main() -> int:
             groups = {"metrics (no auth, no database)": ("/metrics", False), "health signed out (database)": ("/api/health", False),
                       "health": ("/api/health", True), "labels": ("/api/labels", True),
                       "decisions": ("/api/decisions?limit=100", True), "meta": ("/api/meta", True),
-                      "pipeline": ("/api/pipeline", True), "learned": ("/api/learned", True)}
+                      "pipeline": ("/api/pipeline", True), "learned": ("/api/learned", True),
+                      "map/cloud (cached)": ("/api/map/cloud", True)}
             timing = {}
             for g, (p, signed) in groups.items():
                 row_ = {}

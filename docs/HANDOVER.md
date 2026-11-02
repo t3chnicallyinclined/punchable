@@ -221,7 +221,10 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    behind the Python's exact auth, CORS and errors, everything else forwarded to the Python; 57 of 57 requests equal
    against the hosted Python over one scratch database (`rust/tools/diff_api_reads.py`, empty allow-list), the
    read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t9-api-rs.yaml`).
-   Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query).
+   Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query). Second group
+   (same day): `/api/map/cloud` in Rust (67/67 equal, numpy's random stream ported bit for bit) and an incremental
+   snapshot patch after writes; under a write-heavy load the Rust reads still rebuild ~130 ms per write, so
+   `/api/health` is slower than the Python's there (RUST_WORKSTREAM T9 row has the numbers and the next fixes).
    **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and six of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge) over
    a `pk-creative` port of the notebook `Corpus`, proven equal to the Python worker over 29 recorded scenarios (the learned block second
    on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python

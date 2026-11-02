@@ -5,10 +5,11 @@
 //! behind an `Arc`, and replaced whole when either changes.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::sync::Arc;
 
-use pk_kb::View;
-use pk_store::{Store, StoreError, from_db, vars};
+use pk_kb::{Decision, View};
+use pk_store::{DecisionRow, EdgeRow, NodeRow, Snapshot, Store, StoreError, from_db, vars};
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
@@ -29,6 +30,8 @@ pub struct State {
     pub files_rev: Value,
     /// A bundle has been loaded (`load_info.bundle`).
     pub has_bundle: bool,
+    /// `load_info.bundle` itself (a new bundle = read everything again).
+    pub bundle: Value,
 }
 
 impl State {
@@ -53,6 +56,7 @@ pub async fn state(store: &Store) -> Result<State, StoreError> {
         loading: v.get("loading") == Some(&Value::Bool(true)),
         files_rev: v.get("files_rev").cloned().unwrap_or(Value::Null),
         has_bundle: v.get("bundle").is_some_and(|b| !b.is_null()),
+        bundle: v.get("bundle").cloned().unwrap_or(Value::Null),
     })
 }
 
@@ -66,11 +70,13 @@ pub struct Data {
     /// `meta:state.orphans`.
     pub orphans: i64,
     /// The AI layer.
-    pub ai: Ai,
+    pub ai: Arc<Ai>,
     /// Working per joke, from the database.
     pub working: BTreeMap<String, (bool, Vec<String>)>,
     /// `corpus/sets/<dir>/meta.json` by folder.
-    pub metas: SetMetas,
+    pub metas: Arc<SetMetas>,
+    /// The rows this generation was built from (the next one patches them).
+    snap: Arc<Snapshot>,
     /// `kb/v0/learning.json` as stored, when there is one.
     pub learning: Option<String>,
     /// How long the database read took, seconds.
@@ -190,33 +196,201 @@ pub async fn load(store: &Store, st: State, owner_id: &str) -> Result<Data, Stor
             metas.insert(dir.to_string(), o);
         }
     }
+    build(
+        Arc::new(snap),
+        Arc::new(ai),
+        Arc::new(metas),
+        learning,
+        st,
+        fetch_s,
+        owner_id,
+    )
+    .await
+}
+
+/// The CPU half: the view, the visible view and the index, in `spawn_blocking`.
+async fn build(
+    snap: Arc<Snapshot>,
+    ai: Arc<Ai>,
+    metas: Arc<SetMetas>,
+    learning: Option<String>,
+    st: State,
+    fetch_s: f64,
+    owner_id: &str,
+) -> Result<Data, StoreError> {
     let owner = owner_id.to_string();
-    let built = tokio::task::spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || {
+        let t = std::time::Instant::now();
         let full = snap.view(Vec::new(), &owner);
-        let graph = snap.graph();
-        let vis = visible(&full, &graph, &owner);
+        let t_view = t.elapsed();
+        let vis = visible(&full, &snap.graph(), &owner);
+        let t_vis = t.elapsed();
         let (vis_view, full_view) = match vis {
             Some(v) => (v, Some(full)),
             None => (full, None),
         };
         let idx = AppIndex::build(vis_view, &ai, &snap.working, &metas);
+        tracing::info!(
+            fetch_ms = fetch_s * 1000.0,
+            view_ms = t_view.as_secs_f64() * 1000.0,
+            visible_ms = t_vis.saturating_sub(t_view).as_secs_f64() * 1000.0,
+            index_ms = t.elapsed().saturating_sub(t_vis).as_secs_f64() * 1000.0,
+            "snapshot built"
+        );
         Data {
             state: st,
-            load_info: snap.load_info,
+            load_info: snap.load_info.clone(),
             orphans: snap.orphans,
             ai,
-            working: snap.working,
+            working: snap.working.clone(),
             metas,
             learning,
             fetch_s,
             visible: Arc::new(idx),
             full_view,
             full: OnceCell::new(),
+            snap,
         }
     })
     .await
-    .map_err(|e| StoreError::mapping(format!("building the index failed: {e}")))?;
-    Ok(built)
+    .map_err(|e| StoreError::mapping(format!("building the index failed: {e}")))
+}
+
+/// The next generation from the previous one when only decisions were appended since (each one bumps `gen` by
+/// one; the files, the bundle and the AI layer are unchanged): read the new decision rows, the current state of
+/// each record they touched, and the Working flags, and rebuild the view over the patched rows. This is the
+/// Python's `surreal_kb._patch`, applied to every writer's lines. Anything else (a reload, new files, a gap) is
+/// `Ok(None)`: read everything.
+pub async fn patch(store: &Store, old: &Data, st: State, owner_id: &str) -> Result<Option<Data>, StoreError> {
+    let (Some(g0), Some(g1)) = (old.state.generation, st.generation) else {
+        return Ok(None);
+    };
+    if st.loading || st.files_rev != old.state.files_rev || st.bundle != old.state.bundle || g1 <= g0 || g1 - g0 > 50 {
+        return Ok(None);
+    }
+    let t = std::time::Instant::now();
+    let n0 = old.snap.decisions.len();
+    let rows_v = store
+        .last(
+            "SELECT * FROM decision WHERE seq >= $n ORDER BY seq;",
+            vars([("n", pk_store::to_db(&json!(n0)))]),
+        )
+        .await?;
+    let new: Vec<Decision> = pk_store::store::rows_of(rows_v)
+        .into_iter()
+        .map(|r| DecisionRow::from_record(r).map(DecisionRow::into_decision))
+        .collect::<Result<_, _>>()?;
+    if i64::try_from(new.len()).ok() != Some(g1 - g0) {
+        return Ok(None);
+    }
+    // Only the shapes a patch reproduces exactly; everything else is a full read:
+    // - edit / confirm / reject of a record that exists: updated in place, `ord` unchanged;
+    // - add of a record that does not exist yet, once in the window: `fn::next_ord` gives it the highest ord, so it
+    //   goes last, and several new records go in decision order, which is ord order.
+    // A delete (the database drops the record's relations too), an add over an existing record (delete + upsert), a
+    // target touched twice in one window, or any other action is not patched.
+    let mut targets: Vec<(bool, String)> = Vec::new();
+    for d in &new {
+        let (Some(tg @ ("edge" | "node")), Some(id)) = (d.target(), d.id()) else {
+            continue;
+        };
+        let edge = tg == "edge";
+        let list = if edge { &old.snap.edges } else { &old.snap.nodes };
+        let exists = list.iter().any(|r| r.get("id").and_then(Value::as_str) == Some(id));
+        let ok = match d.action() {
+            Some("edit" | "confirm" | "reject") => exists,
+            Some("add") => !exists,
+            _ => false,
+        };
+        if !ok || targets.iter().any(|(e, i)| *e == edge && i == id) {
+            return Ok(None);
+        }
+        targets.push((edge, id.to_string()));
+    }
+    let mut sql = String::new();
+    let mut vs = Vec::new();
+    for (i, (edge, id)) in targets.iter().enumerate() {
+        let f = if *edge { "fn::edge_find" } else { "fn::rid" };
+        let _ = write!(
+            sql,
+            "LET $t{i} = {f}($id{i}); IF $t{i} != NONE AND record::exists($t{i}) \
+             {{ (SELECT * OMIT embedding FROM ONLY $t{i}) }} ELSE {{ NONE }};"
+        );
+        vs.push((format!("id{i}"), pk_store::to_db(&json!(id))));
+    }
+    sql.push_str(
+        "SELECT id, working, working_sets FROM joke WHERE working = true OR array::len(working_sets) > 0;\
+         SELECT gen, orphans FROM ONLY meta:state;",
+    );
+    let res = store
+        .query(&sql, vars(vs.iter().map(|(k, v)| (k.as_str(), v.clone()))))
+        .await?;
+    // each target is two statements (LET, the IF); the last two are Working and meta
+    if res.len() != targets.len() * 2 + 2 {
+        return Ok(None);
+    }
+    let meta = from_db(res[res.len() - 1].clone());
+    if meta.get("gen").and_then(Value::as_i64) != Some(g1) {
+        return Ok(None); // another write landed meanwhile: read everything
+    }
+    let mut snap = (*old.snap).clone();
+    for (i, (edge, id)) in targets.iter().enumerate() {
+        let rec = &res[i * 2 + 1];
+        let list = if *edge { &mut snap.edges } else { &mut snap.nodes };
+        let pos = list
+            .iter()
+            .position(|r| r.get("id").and_then(Value::as_str) == Some(id.as_str()));
+        let row = if !from_db(rec.clone()).is_object() {
+            None
+        } else if *edge {
+            Some(EdgeRow::from_record(rec.clone())?.into_edge())
+        } else {
+            Some(NodeRow::from_record(rec.clone())?.into_node())
+        };
+        match (pos, row) {
+            (Some(p), Some(r)) => list[p] = r,
+            (None, Some(r)) => {
+                if !*edge && r.get("type").and_then(Value::as_str) == Some("joke") {
+                    snap.working.insert(id.clone(), (false, Vec::new())); // a full read keys every joke
+                }
+                let list = if *edge { &mut snap.edges } else { &mut snap.nodes };
+                list.push(r);
+            }
+            // gone, or an orphan add: not a shape a patch reproduces
+            _ => return Ok(None),
+        }
+    }
+    for w in snap.working.values_mut() {
+        *w = (false, Vec::new());
+    }
+    for r in pk_store::store::rows_of(res[res.len() - 2].clone()) {
+        let r = from_db(r);
+        if let Some(id) = r.get("id").and_then(Value::as_str) {
+            let sets = r
+                .get("working_sets")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).collect())
+                .unwrap_or_default();
+            snap.working
+                .insert(id.to_string(), (r.get("working") == Some(&Value::Bool(true)), sets));
+        }
+    }
+    snap.decisions.extend(new);
+    snap.generation = Some(g1);
+    snap.orphans = meta.get("orphans").and_then(Value::as_i64).unwrap_or(snap.orphans);
+    let fetch_s = t.elapsed().as_secs_f64();
+    let learning = old.learning.clone();
+    build(
+        Arc::new(snap),
+        Arc::clone(&old.ai),
+        Arc::clone(&old.metas),
+        learning,
+        st,
+        fetch_s,
+        owner_id,
+    )
+    .await
+    .map(Some)
 }
 
 /// `ai_status` for `/api/health`.
