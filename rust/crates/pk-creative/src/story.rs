@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
-use std::sync::{LazyLock, OnceLock};
+use std::sync::{LazyLock, Mutex, OnceLock, PoisonError};
 
 use pk_core::py;
 use regex::Regex;
@@ -69,7 +69,7 @@ pub struct Story<'c> {
     c: &'c Corpus,
     subject: OnceLock<SubjectIndex>,
     vecs: OnceLock<HashMap<String, Option<Vec<f32>>>>,
-    bands: OnceLock<HashMap<String, (f64, f64)>>,
+    bands: Mutex<HashMap<String, (f64, f64)>>,
 }
 
 impl<'c> Story<'c> {
@@ -79,7 +79,7 @@ impl<'c> Story<'c> {
             c,
             subject: OnceLock::new(),
             vecs: OnceLock::new(),
-            bands: OnceLock::new(),
+            bands: Mutex::new(HashMap::new()),
         }
     }
 
@@ -200,30 +200,29 @@ impl<'c> Story<'c> {
 
     /// `_cos_band(j)`: the 97th and 99.7th percentile of the joke's cosines to every other (1, 1 under 50).
     pub fn cos_band(&self, j: &str) -> (f64, f64) {
-        let bands = self.bands.get_or_init(|| {
-            self.c
-                .jokes
-                .iter()
-                .map(|j| {
-                    let mut cs: Vec<f64> = self
-                        .c
-                        .jokes
-                        .iter()
-                        .filter(|o| *o != j)
-                        .filter_map(|o| self.cos(j, o))
-                        .collect();
-                    let band = if cs.len() < 50 {
-                        (1.0, 1.0)
-                    } else {
-                        cs.sort_by(f64::total_cmp);
-                        let at = |q: f64| cs[(q * (cs.len() - 1) as f64) as usize];
-                        (at(0.97), at(0.997))
-                    };
-                    (j.clone(), band)
-                })
-                .collect()
-        });
-        bands.get(j).copied().unwrap_or((1.0, 1.0))
+        if let Some(b) = self.bands.lock().unwrap_or_else(PoisonError::into_inner).get(j) {
+            return *b;
+        }
+        // n dot products for the one bit asked about (the Python caches per bit, too)
+        let mut cs: Vec<f64> = self
+            .c
+            .jokes
+            .iter()
+            .filter(|o| *o != j)
+            .filter_map(|o| self.cos(j, o))
+            .collect();
+        let band = if cs.len() < 50 {
+            (1.0, 1.0)
+        } else {
+            cs.sort_by(f64::total_cmp);
+            let at = |q: f64| cs[(q * (cs.len() - 1) as f64) as usize];
+            (at(0.97), at(0.997))
+        };
+        self.bands
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(j.to_string(), band);
+        band
     }
 
     /// `same_subject(c, ids, o)`: how strongly `o` shares the subject of `ids` (rare shared words, or a cosine above

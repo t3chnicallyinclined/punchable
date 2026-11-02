@@ -94,6 +94,13 @@ impl Mirror {
             .call_as(reqwest::Method::GET, "/api/worker/files", None::<&Value>)
             .await?
             .ok_or_else(|| ApiError::Decode("the files listing is empty".into()))?;
+        // `len(listing)`: the paths as listed (before cleaning), each once
+        let raw_count = listing
+            .files
+            .iter()
+            .map(|e| e.path.as_str())
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         let mut listed: BTreeMap<String, String> = BTreeMap::new();
         for e in listing.files {
             if let Some(rel) = clean(&e.path) {
@@ -129,12 +136,20 @@ impl Mirror {
                 .filter(|(p, _)| is_vector_file(p))
                 .map(|(p, (_, t))| (p.clone(), Arc::clone(t)))
                 .collect();
-            // parsing a few MB of JSON floats is CPU work: off the async threads
-            st.vectors = tokio::task::spawn_blocking(move || Arc::new(build_vectors(&texts)))
-                .await
-                .unwrap_or_default();
-            st.vector_shas = vector_shas;
+            // parsing a few MB of JSON floats is CPU work: off the async threads. A failed rebuild keeps the last
+            // vectors and is tried again next job (the shas do not move)
+            match tokio::task::spawn_blocking(move || Arc::new(build_vectors(&texts))).await {
+                Ok(v) => {
+                    st.vectors = v;
+                    st.vector_shas = vector_shas;
+                }
+                Err(e) => tracing::warn!("rebuilding the vectors: {e}; the last ones stay"),
+            }
         }
+        let files: BTreeMap<String, Arc<str>> = st.files.iter().map(|(p, (_, t))| (p.clone(), Arc::clone(t))).collect();
+        let vectors = Arc::clone(&st.vectors);
+        // decisions and the creative logs touch no mirror state: another job may refresh meanwhile
+        drop(st);
         let mut decisions: Vec<Value> = Vec::new();
         loop {
             let path = format!("/api/worker/decisions?after={}", decisions.len());
@@ -165,11 +180,11 @@ impl Mirror {
             }
         }
         Ok(Snapshot {
-            files: st.files.iter().map(|(p, (_, t))| (p.clone(), Arc::clone(t))).collect(),
-            refresh: json!({"fetched": fetched, "files": listed.len(), "decisions": decisions.len()}),
+            files,
+            refresh: json!({"fetched": fetched, "files": raw_count, "decisions": decisions.len()}),
             decisions,
             creative,
-            vectors: Arc::clone(&st.vectors),
+            vectors,
         })
     }
 }
@@ -186,6 +201,7 @@ fn build_vectors(files: &[(String, Arc<str>)]) -> Vectors {
                 extras.push((name.to_string(), v));
             }
         } else if name.contains(".part")
+            && std::path::Path::new(name).extension().is_some_and(|x| x == "json")
             && let Ok(part) = serde_json::from_str::<VectorPart>(t)
         {
             parts.push(part);

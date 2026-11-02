@@ -9,7 +9,7 @@ use pk_core::py;
 use pk_creative::notebook::Index;
 use pk_creative::write::{DRAFT_LABEL, RIFF_SCHEMA, RIFF_SYSTEM, riff_grounds, riff_ideas, riff_user};
 use pk_llm::ChatMessage;
-use pk_wire::worker::RiffInput;
+use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
 use super::{Ctx, Done, Runner};
@@ -20,23 +20,36 @@ pub const TASK: &str = "creative_riff";
 /// His riff lines read at most.
 const MAX_LINES: usize = 20;
 
+/// The `riff` input as the Python reads it: `lines` may be absent or null (`inp.get("lines") or []`) and only its
+/// strings count (`pk_wire::worker::RiffInput` is the API's stricter shape of the same thing).
+#[derive(Debug, Deserialize)]
+pub struct RiffJob {
+    /// His idea.
+    pub idea: String,
+    /// His lines so far.
+    #[serde(default)]
+    pub lines: Option<Vec<Value>>,
+}
+
 /// The `riff` kind.
 #[derive(Debug)]
 pub struct Riff;
 
 impl Runner for Riff {
-    type Input = RiffInput;
+    type Input = RiffJob;
 
     fn bad_input(e: &serde_json::Error) -> JobError {
         JobError::Value(format!("bad riff input: {e}"))
     }
 
-    async fn run(ctx: Ctx<'_>, input: RiffInput) -> Result<Done, JobError> {
+    async fn run(ctx: Ctx<'_>, input: RiffJob) -> Result<Done, JobError> {
         let corpus = Arc::clone(ctx.corpus()?);
         let idea = py::strip(&input.idea).to_string();
         let lines: Vec<String> = input
             .lines
+            .unwrap_or_default()
             .iter()
+            .filter_map(Value::as_str)
             .map(|x| py::strip(x).to_string())
             .filter(|x| !x.is_empty())
             .take(MAX_LINES)

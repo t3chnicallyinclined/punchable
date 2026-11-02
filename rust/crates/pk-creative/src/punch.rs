@@ -174,7 +174,9 @@ pub fn punch_user(c: &Corpus, ws: &Value, jid: &str) -> (Option<String>, Basis) 
     let mut best = &ps[0];
     for x in &ps[1..] {
         let (a, b) = (key(x), key(best));
-        if a.0 > b.0 || (a.0.total_cmp(&b.0).is_eq() && a.1 > b.1) {
+        #[allow(clippy::float_cmp)] // Python's tuple comparison: exact, 0.0 == -0.0
+        let later_wins = a.0 > b.0 || (a.0 == b.0 && a.1 > b.1);
+        if later_wins {
             best = x;
         }
     }

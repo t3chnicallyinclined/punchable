@@ -276,11 +276,13 @@ impl Parts {
         let inferred = opt("kb/v0/inferred.json")?;
         let (mut analyses, mut metas, mut laughs) = (IndexMap::new(), HashMap::new(), HashMap::new());
         // the set folders in name order (BTreeMap: `sorted(os.listdir(sets))`)
-        let dirs: Vec<&str> = files
+        let mut dirs: Vec<&str> = files
             .keys()
             .filter_map(|p| p.strip_prefix("corpus/sets/")?.strip_suffix("/analysis.json"))
             .filter(|d| !d.contains('/'))
             .collect();
+        // `sorted(os.listdir(sets))`: by folder name ("Show" before "Show-2"), not by the whole path
+        dirs.sort_unstable();
         for d in dirs {
             let a = parse(
                 "analysis.json",
@@ -384,13 +386,14 @@ impl Corpus {
             vectors: p.vectors,
             ..Self::default()
         };
-        c.build_graph(&p.graph, &p.decisions, &p.inferred);
+        c.build_graph(p.graph, &p.decisions, &p.inferred);
         c.build_sets(&p.analyses, &p.metas);
         c
     }
 
     fn mapped(&self, table: &str, id: &str) -> Option<String> {
-        self.id_map.get(table)?.get(id).map(py::str)
+        // a null in the map is Python's None: the id stays as it is
+        self.id_map.get(table)?.get(id).filter(|v| !v.is_null()).map(py::str)
     }
 
     /// `map_joke(jid)`.
@@ -419,13 +422,19 @@ impl Corpus {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn build_graph(&mut self, graph: &Value, decisions: &[Value], inferred: &Value) {
-        let objs = |k: &str| -> Vec<Map<String, Value>> {
-            graph
-                .get(k)
-                .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|x| x.as_object().cloned()).collect())
-                .unwrap_or_default()
+    fn build_graph(&mut self, mut graph: Value, decisions: &[Value], inferred: &Value) {
+        // the graph is ours: its nodes and edges move into the corpus, never copied
+        let mut objs = |k: &str| -> Vec<Map<String, Value>> {
+            match graph.get_mut(k).map(Value::take) {
+                Some(Value::Array(a)) => a
+                    .into_iter()
+                    .filter_map(|x| match x {
+                        Value::Object(m) => Some(m),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            }
         };
         for n in objs("nodes") {
             self.nodes.insert(n.get("id").map(py::str).unwrap_or_default(), n);
@@ -1027,7 +1036,8 @@ pub fn prefix_words(text: &str, n: usize) -> String {
     if words.is_empty() {
         return String::new();
     }
-    let end = words[n.min(words.len()) - 1].1;
+    // `ms[min(n, len) - 1]`: n = 0 is index -1, the last word, in Python
+    let end = words[n.min(words.len()).checked_sub(1).unwrap_or(words.len() - 1)].1;
     text[words[0].0..end].to_string()
 }
 
@@ -1042,7 +1052,7 @@ pub fn suffix_words(text: &str, n: usize) -> String {
 }
 
 /// Byte spans of `\S+` runs (Python's `\s` is Unicode whitespace, the same set `str.isspace` names).
-fn word_spans(text: &str) -> Vec<(usize, usize)> {
+pub(crate) fn word_spans(text: &str) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut start: Option<usize> = None;
     for (i, c) in text.char_indices() {

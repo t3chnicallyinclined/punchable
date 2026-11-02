@@ -10,7 +10,6 @@ use regex::Regex;
 
 static W: LazyLock<Regex> = LazyLock::new(|| Regex::new("[A-Za-z0-9\u{2019}']+").expect("a valid regex"));
 static CLAUSE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^.!?,;]+[.!?]?").expect("a valid regex"));
-static NONSPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\S+").expect("a valid regex"));
 
 /// `ntok(t)`: the comparison form of one word; empty when nothing of it survives.
 pub fn ntok(t: &str) -> String {
@@ -139,17 +138,18 @@ pub fn phrases(text: &str) -> Vec<String> {
     let mut out: Vec<&str> = Vec::new();
     for m in CLAUSE.find_iter(text) {
         let seg = m.as_str();
-        let words: Vec<regex::Match<'_>> = NONSPACE.find_iter(seg).collect();
+        // Python's `\S+`: runs of characters `str.isspace` does not count as space
+        let words = crate::corpus::word_spans(seg);
         if words.len() < MIN {
             continue;
         }
         if words.len() <= MAX {
-            out.push(&seg[words[0].start()..words[words.len() - 1].end()]);
+            out.push(&seg[words[0].0..words[words.len() - 1].1]);
             continue;
         }
         for w in words.chunks(MAX) {
             if w.len() >= MIN {
-                out.push(&seg[w[0].start()..w[w.len() - 1].end()]);
+                out.push(&seg[w[0].0..w[w.len() - 1].1]);
             }
         }
     }

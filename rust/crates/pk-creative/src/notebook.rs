@@ -107,7 +107,9 @@ pub fn clip<S: BuildHasher>(sentence: &str, terms: &HashSet<String, S>) -> (Stri
     {
         end = sp;
     }
-    let q: String = chars[start..end].iter().collect();
+    // `at` is a position in the lower-cased text (which can be longer: 'İ' lowers to two characters), applied to
+    // the original as the Python does; an out-of-range slice is empty there, never a panic
+    let q: String = chars.get(start..end).map_or_else(String::new, |s| s.iter().collect());
     (py::strip(&q).to_string(), start > 0, end < chars.len())
 }
 
@@ -429,6 +431,10 @@ mod tests {
 
     #[test]
     fn a_long_sentence_is_clipped_on_word_boundaries() {
+        // the lower-cased sentence is longer than the sentence: Python slices past the end and gets ""
+        let s = format!("{}{}needle.", "\u{130}".repeat(100), " x".repeat(60));
+        let terms: HashSet<String> = ["needle".to_string()].into_iter().collect();
+        assert_eq!(clip(&s, &terms), (String::new(), true, false));
         let s = format!("{} needle {}", "word ".repeat(40), "tail ".repeat(40));
         let terms: HashSet<String> = ["needle".to_string()].into_iter().collect();
         let (q, a, b) = clip(&s, &terms);
