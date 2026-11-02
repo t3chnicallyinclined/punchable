@@ -54,7 +54,9 @@ uuid = { version = "1", features = ["v4"] }
 # 3.3.x surrealdb-common uses std::hint::cold_path, stable only in a newer Rust. The client accepts servers
 # >=3.0.0-alpha.1, <4.0.0, so it talks to the 3.3.4 server. Moving the toolchain forward lets this become 3.3.x.
 surrealdb = { version = "=3.2.6", default-features = false, features = ["protocol-ws", "rustls"] }
-jsonwebtoken = "9"
+# jsonwebtoken: 10 with the aws-lc-rs backend, the build surrealdb-core already pulls in (one crypto stack in the
+# tree); pk-api uses it for the RS256 signature check only (docs/ARCHITECTURE.md section 2)
+jsonwebtoken = { version = "10", default-features = false, features = ["aws_lc_rs"] }
 prometheus = "0.14"
 sentry = { version = "0.42", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }
 jsonschema = { version = "0.33", default-features = false }
@@ -65,6 +67,10 @@ ort = { version = "=2.0.0-rc.15", features = ["ndarray"] }
 tokenizers = { version = "=0.22.1", default-features = false, features = ["onig"] }
 ndarray = "0.17"
 clap = { version = "4", features = ["derive"] }
+# pk-api: base64url read as leniently as Python's urlsafe_b64decode reads a token; Python's parse_qs for query strings
+base64 = "0.22"
+form_urlencoded = "1"
+tower = { version = "0.5", features = ["util"] }
 # pk-wire (feature `ts`, off by default): the app's TypeScript types from the wire structs after T9
 ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }
 # tests
@@ -72,6 +78,8 @@ insta = { version = "1", features = ["json"] }
 proptest = "1"
 wiremock = "0.6"
 tempfile = "3"
+# pk-api tests: a throwaway RSA key made at test time (the aws-lc-rs jsonwebtoken already uses), never a committed key
+aws-lc-rs = "1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
