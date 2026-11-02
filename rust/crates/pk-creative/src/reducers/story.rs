@@ -1,12 +1,14 @@
 //! Storyboards (`creative/story.py::_apply`): a titled, ordered list of joke ids with a target runtime. `source`
-//! is `his` once he has touched the board, `inferred` while only the AI has.
+//! is `his` once he has touched the board, `inferred` while only the AI has. `archive` / `unarchive` put a board
+//! away and back (`archived` is on an item only once one of them has touched it: absent means live); while archived
+//! every op but `delete` is refused. [`seed_reorders`] is the rule `seed_from_insights` applies to a draft it seeded.
 
 use serde_json::{Value, json};
 
 use super::{item_mut, list_mut, unknown_op};
 use crate::error::{CreativeError, CreativeResult};
 use crate::event::Event;
-use crate::pyish::{get, get_or_null, key, or, or_else};
+use crate::pyish::{Obj, get, get_or_null, key, or, or_else};
 use crate::store::{Items, Reducer};
 use pk_core::py;
 
@@ -54,6 +56,28 @@ impl Reducer for Storyboards {
             Some(board) if !py::truthy(board.get("deleted")) => board,
             _ => return Err(CreativeError::refused(format!("no storyboard {i}"))),
         };
+        let archived = py::truthy(board.get("archived"));
+        if op == "archive" || op == "unarchive" {
+            // never changes `source`: putting a draft away is not building it
+            if op == "archive" && archived {
+                return Err(CreativeError::refused(format!(
+                    "\"{}\" is already archived",
+                    title(board)?
+                )));
+            }
+            if op == "unarchive" && !archived {
+                return Err(CreativeError::refused(format!("\"{}\" is not archived", title(board)?)));
+            }
+            board.insert("archived".into(), json!(op == "archive"));
+            board.insert("updated_at".into(), json!(ev.ts));
+            return Ok(());
+        }
+        if archived && op != "delete" {
+            return Err(CreativeError::refused(format!(
+                "\"{}\" is archived: unarchive it first",
+                title(board)?
+            )));
+        }
         if !board.contains_key("joke_ids") {
             return Err(CreativeError::missing("joke_ids"));
         }
@@ -121,4 +145,29 @@ impl Reducer for Storyboards {
         board.insert("updated_at".into(), json!(ev.ts));
         Ok(())
     }
+}
+
+/// `b['title']` as the Python's f-string prints it, or the `KeyError` when a board has none.
+fn title(board: &Obj) -> CreativeResult<String> {
+    board
+        .get("title")
+        .map(py::str)
+        .ok_or_else(|| CreativeError::missing("title"))
+}
+
+/// Whether `seed_from_insights` re-orders an existing seeded draft to `order` (a `set_jokes` by `ai:seed`): only
+/// while he has never touched it (`source` is not `his`), it is not deleted, it is not archived (an archived draft
+/// is left as he put it away; absent means live) and its order differs. A live AI draft with no `joke_ids` is the
+/// Python's `KeyError`.
+pub fn seed_reorders(board: &Obj, order: &[Value]) -> CreativeResult<bool> {
+    if board.get("source").and_then(Value::as_str) == Some("his")
+        || py::truthy(board.get("deleted"))
+        || py::truthy(board.get("archived"))
+    {
+        return Ok(false);
+    }
+    let ids = board
+        .get("joke_ids")
+        .ok_or_else(|| CreativeError::missing("joke_ids"))?;
+    Ok(ids.as_array().map(Vec::as_slice) != Some(order))
 }

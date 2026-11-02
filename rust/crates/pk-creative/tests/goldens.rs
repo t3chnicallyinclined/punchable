@@ -6,7 +6,8 @@
 mod common;
 
 use common::{golden, same};
-use pk_creative::{CreativeError, Event, Store, for_store, ntok, parse_lines, verbatim};
+use pk_creative::reducers::story::seed_reorders;
+use pk_creative::{CreativeError, Event, Items, Store, for_store, ntok, parse_lines, verbatim};
 use serde_json::{Value, json};
 
 const STORES: [&str; 10] = [
@@ -162,6 +163,43 @@ fn the_verbatim_gate_matches_askchat() {
     assert!(
         !differ.is_empty(),
         "the corpus no longer shows the documented difference"
+    );
+}
+
+/// `seed_from_insights` over an already-seeded draft (`story_seed.json`): the same decision to re-order and, when it
+/// does, the same draft after the `set_jokes` by `ai:seed`. An archived draft is never re-ordered.
+#[test]
+fn story_seed_matches_python() {
+    let g = golden("story_seed.json");
+    let reducer = for_store("storyboards", "owner").expect("reducer");
+    let cases = g["cases"].as_array().expect("cases");
+    let mut reordered = 0;
+    for case in cases {
+        let name = case["name"].as_str().expect("name");
+        let board = case["board"].as_object().expect("board");
+        let order = case["order"].as_array().expect("order");
+        let want = case["reordered"].as_bool().expect("reordered");
+        assert_eq!(
+            seed_reorders(board, order).expect("a board with joke_ids"),
+            want,
+            "{name}: re-order?"
+        );
+        let id = board["id"].as_str().expect("id");
+        let mut items = Items::new();
+        items.insert(id.to_string(), Value::Object(board.clone()));
+        if want {
+            reordered += 1;
+            let ev: Event = serde_json::from_value(json!({
+                "ts": g["ts"], "op": "set_jokes", "id": id, "by": g["by"], "data": {"joke_ids": order},
+            }))
+            .expect("event");
+            reducer.apply(&mut items, &ev).expect("set_jokes");
+        }
+        same(name, &items[id], &case["after"]);
+    }
+    assert!(
+        reordered > 0 && reordered < cases.len(),
+        "the golden covers both answers"
     );
 }
 

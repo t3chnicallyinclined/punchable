@@ -124,6 +124,30 @@ EVENTS = {
         ("update", "sb:1", {"title": None}),
         ("create", "sb:3", {"title": "Keys", "joke_ids": {"joke:k": 1}}, "ai:story"),
         ("create", "sb:4", {"title": "Bad ids", "joke_ids": 5}),
+        # archive / unarchive (T18): an AI draft put away by him stays `inferred` (neither op touches `source`);
+        # while archived every op but delete is refused, an unknown op included; delete is still terminal
+        ("create", "sb:5", {"title": "Shelf", "joke_ids": ["joke:a", "joke:b", "joke:c"]}, "ai:seed"),
+        ("unarchive", "sb:5", {}),
+        ("archive", "sb:5", {}),
+        ("archive", "sb:5"),
+        ("update", "sb:5", {"title": "x"}),
+        ("set_jokes", "sb:5", {"joke_ids": ["joke:a"]}),
+        ("add", "sb:5", {"joke_id": "joke:d"}),
+        ("remove", "sb:5", {"joke_id": "joke:a"}),
+        ("move", "sb:5", {"from": 0, "to": 1}),
+        ("flip", "sb:5", {}),
+        ("unarchive", "sb:5", {}, "ai:seed"),
+        ("unarchive", "sb:5", {}),
+        ("move", "sb:5", {"from": 0, "to": 2}, "ai:seed"),
+        ("archive", "sb:5", {}, "ai:seed"),
+        ("delete", "sb:5"),
+        ("unarchive", "sb:5", {}),
+        ("archive", "sb:5", {}),
+        ("archive", "sb:nope", {}),
+        ("archive", "sb:2", {}),
+        ("archive", "sb:1", {"archived": False}),
+        ("update", "sb:1", {"notes": "while away"}),
+        ("unarchive", "sb:1", {}),
     ]),
     "workingsets": seq([
         ("promote", "ws:1", {"title": "Set A", "storyboard_id": "sb:1", "target_s": "900",
@@ -623,7 +647,7 @@ def main_ask() -> dict:
     notebook = {"sources": out_sources,
                 "rooms": {k: venue_short(s.get("venue"), None) for k, s in c.sets.items()},
                 "joke_titles": {jid: c.title(jid) for jid in c.jokes}}
-    (OUT / "ask_notebook.json").write_text(json.dumps(notebook, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "ask_notebook.json").write_text(json.dumps(notebook, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
 
     owners = []
     for name in OWNER_NAMES:
@@ -639,7 +663,7 @@ def main_ask() -> dict:
             "owners": owners, "rules": AC.RULES, "refusal": AC.REFUSAL,
             "headers": {sid: AC.header(s) for sid, s in S.items()},
             "chips": [AC.chip(s, i, "a quote" if i % 2 else None) for i, s in enumerate(S.values(), 1)]}
-    (OUT / "ask_text.json").write_text(json.dumps(text, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "ask_text.json").write_text(json.dumps(text, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
 
     retrieve = []
     for name, q, hist, cap, pin_joke in RETRIEVE_CASES:
@@ -647,7 +671,7 @@ def main_ask() -> dict:
         ids, score = retrieve_with_scores(c, q, hist, cap, pin)
         retrieve.append({"name": name, "question": q, "history": hist, "cap": cap, "pin_joke": pin_joke,
                          "pinned": sorted(pin), "rooms": sorted(AC.rooms_named(c, q)), "scores": score, "ids": ids})
-    (OUT / "ask_retrieve.json").write_text(json.dumps(retrieve, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "ask_retrieve.json").write_text(json.dumps(retrieve, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
 
     prompts = []
     for name, q, hist, scope_joke, named in PROMPT_CASES:
@@ -665,7 +689,7 @@ def main_ask() -> dict:
         assert str(x) == "'unit:nope'"
     else:
         raise AssertionError("prompt accepted an unknown id")
-    (OUT / "ask_prompt.json").write_text(json.dumps(prompts, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "ask_prompt.json").write_text(json.dumps(prompts, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
 
     finishes = []
     for name, data, provider, model in FINISH_CASES:
@@ -678,7 +702,7 @@ def main_ask() -> dict:
         finishes.append({"name": name, "ids": FIN_IDS, "data": data, "provider": provider, "model": model, "out": out})
     refusals = [{"ids": ids, "out": AC.refusal(ids)} for ids in ([], ["unit:b1", "x", "y"], None)]
     (OUT / "ask_finish.json").write_text(json.dumps({"finish": finishes, "refusal": refusals}, ensure_ascii=False, indent=1),
-                                         encoding="utf-8")
+                                         encoding="utf-8", newline="\n")
     return {"sources": len(S), "retrieve": len(retrieve), "prompt": len(prompts), "finish": len(finishes),
             "finish_errors": sum(1 for f in finishes if "error" in f), "tokens": len(TOKENS_CASES),
             "snippet": len(SNIPPET_CASES)}
@@ -700,13 +724,75 @@ def run(apply, events: list[dict]) -> list[dict]:
     return steps
 
 
+SEED_TS = "2026-10-29T13:00:00+00:00"
+SEED_CHUNK = {"name": "Family block", "fits_5_15": True, "minutes_est": 6, "jokes": ["joke:a", "joke:b", "joke:c"]}
+# (name, what happens to the seeded draft before the next seeding); a mover named "ai:..." keeps the draft `inferred`
+SEED_CASES = [
+    ("live AI draft, order moved by the AI", [("move", "ai:story")]),
+    ("live AI draft, order unchanged", []),
+    ("archived AI draft, order moved", [("move", "ai:story"), ("archive", OWNER)]),
+    ("archived AI draft, order unchanged", [("archive", OWNER)]),
+    ("archived by the AI", [("move", "ai:story"), ("archive", "ai:story")]),
+    ("archived then unarchived", [("move", "ai:story"), ("archive", OWNER), ("unarchive", OWNER)]),
+    ("his draft (he moved a bit)", [("move", OWNER)]),
+    ("deleted draft (deleted by the AI, so only `deleted` stops it)", [("move", "ai:story"), ("delete", "ai:story")]),
+]
+
+
+def main_seed() -> dict:
+    """`creative/story.seed_from_insights` over one Insights chunk, a second time after each case's edits: whether
+    it re-orders the draft (a `set_jokes` by `ai:seed`) and the draft after. The chain order is pinned (reversed
+    ids) so the golden tests the rule around it (never his, never deleted, never archived, only when it differs),
+    not `_order_chain`, which needs a whole Corpus and moves with T9."""
+    import tempfile
+
+    from creative import story as S
+    from creative.store import Store
+
+    class Chunks:  # the three Corpus members seed_from_insights reads
+        insights = {"chunks": {"chunks": [SEED_CHUNK]}}
+        jokes = {j: {} for j in SEED_CHUNK["jokes"]}
+
+        @staticmethod
+        def map_joke(x):
+            return x
+
+    real_chain = S._order_chain
+    S._order_chain = lambda c, ids: sorted(ids, reverse=True)
+    cases = []
+    try:
+        for name, edits in SEED_CASES:
+            with tempfile.TemporaryDirectory(prefix="pk-seed-") as d:
+                st = Store(Path(d), "storyboards", S._apply)
+                b = S.seed_from_insights(Chunks, st, ts="2026-10-29T12:00:00+00:00")[0]
+                sid = b["id"]
+                for n, (op, by) in enumerate(edits):
+                    ts = f"2026-10-29T12:30:{n:02d}+00:00"
+                    if op == "move":
+                        S.move(st, sid, 0, 2, by=by, ts=ts)
+                    else:
+                        st.append(op, sid, {}, by=by, ts=ts)
+                before = copy.deepcopy(st.items[sid])
+                n_before = st.n_events
+                order = S._order_chain(Chunks, list(SEED_CHUNK["jokes"]))
+                S.seed_from_insights(Chunks, st, ts=SEED_TS)
+                cases.append({"name": name, "board": before, "order": order, "reordered": st.n_events > n_before,
+                              "after": copy.deepcopy(st.items[sid])})
+    finally:
+        S._order_chain = real_chain
+    assert any(c["reordered"] for c in cases) and not all(c["reordered"] for c in cases)
+    (OUT / "story_seed.json").write_text(json.dumps({"ts": SEED_TS, "by": "ai:seed", "cases": cases}, ensure_ascii=False,
+                                                    indent=1), encoding="utf-8", newline="\n")
+    return {"cases": len(cases), "reordered": sum(c["reordered"] for c in cases)}
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     counts = {}
     for name, events in EVENTS.items():
         steps = run(CR.APPLY[name], events)
         (OUT / f"store_{name}.json").write_text(
-            json.dumps({"store": name, "owner": OWNER, "steps": steps}, ensure_ascii=False, indent=1), encoding="utf-8")
+            json.dumps({"store": name, "owner": OWNER, "steps": steps}, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
         counts[name] = (len(steps), sum(1 for s in steps if "error" in s))
     corpus = []
     differ = []
@@ -715,13 +801,15 @@ def main():
         corpus.append({"quote": q, "source": s, "askchat": a, "verify": v, "same": a == v})
         if a != v:
             differ.append((q, a, v))
-    (OUT / "verbatim.json").write_text(json.dumps(corpus, ensure_ascii=False, indent=1), encoding="utf-8")
-    (OUT / "ntok.json").write_text(json.dumps([[t, ntok(t)] for t in NTOK], ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "verbatim.json").write_text(json.dumps(corpus, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
+    (OUT / "ntok.json").write_text(json.dumps([[t, ntok(t)] for t in NTOK], ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
     print("wrote", OUT)
     for name, (n, bad) in counts.items():
         print(f"  {name}: {n} events, {bad} refused")
     print(f"  verbatim: {len(corpus)} pairs, {len(differ)} where askchat and verify differ: {differ!r}")
     print(f"  ntok: {len(NTOK)}")
+    seed = main_seed()
+    print(f"  story seed: {seed['cases']} cases, {seed['reordered']} re-ordered")
     ask = main_ask()
     print("  askchat: " + ", ".join(f"{k} {v}" for k, v in ask.items()))
 
