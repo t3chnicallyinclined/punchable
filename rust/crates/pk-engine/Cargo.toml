@@ -1,0 +1,28 @@
+[package]
+name = "pk-engine"
+description = "The retrieval and evidence engine forked from upstream (rust-successor 9dfedad): the one verbatim gate, the answer check, hybrid ranking with a versioned config, lessons with evidence, offline replay, cards and links; pure, no IO (FORK.md)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+pk-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+regex = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+futures = { workspace = true }
+rust-stemmers = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tokio = { workspace = true }
+# tests/boundary.rs reads this manifest's every dependency table
+toml = { workspace = true }
+
+[lints]
+workspace = true

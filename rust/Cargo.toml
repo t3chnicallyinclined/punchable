@@ -11,6 +11,7 @@ members = [
     "crates/pk-api",
     "crates/pk-worker",
     "crates/pk-wire",
+    "crates/pk-engine",
     "xtask",
     "tools/pk-load",
 ]
@@ -77,8 +78,10 @@ ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }
 # pk-load and the pk-embed memprobe example (T15, T17): a process's resident memory on Linux, Windows and macOS;
 # 0.38 is the last line that builds on the pinned 1.93.1 toolchain (0.39+ needs Rust 1.95)
 sysinfo = { version = "0.38", default-features = false, features = ["system"] }
+# pk-engine (ADR 0013): the Snowball English stemmer, the same algorithm as the `punch_en` analyzer's snowball(english)
+rust-stemmers = "1"
 # tests
-insta = { version = "1", features = ["json"] }
+insta ={ version = "1", features = ["json"] }
 proptest = "1"
 wiremock = "0.6"
 tempfile = "3"

@@ -20,6 +20,13 @@ hex = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
 pk-kb = { path = "../pk-kb" }
+# the engine's store seam (ADR 0013): pk-engine is tier 1 and pure, so this edge points down
+pk-engine = { path = "../pk-engine" }
+
+[dev-dependencies]
+# examples/engine_proof.rs only (the engine fork's offline proof, ADR 0013): the query vectors and a binary's errors
+pk-embed = { path = "../pk-embed" }
+anyhow = { workspace = true }
 
 [lints]
 workspace = true

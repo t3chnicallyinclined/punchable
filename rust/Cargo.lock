@@ -3491,6 +3491,7 @@ version = "0.1.0"
 dependencies = [
  "indexmap",
  "pk-core",
+ "pk-engine",
  "pk-kb",
  "proptest",
  "regex",
@@ -3515,6 +3516,24 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokenizers",
+]
+
+[[package]]
+name = "pk-engine"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "hex",
+ "pk-core",
+ "proptest",
+ "regex",
+ "rust-stemmers",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "thiserror 2.0.21",
+ "tokio",
+ "toml",
 ]
 
 [[package]]
@@ -3591,9 +3610,12 @@ dependencies = [
 name = "pk-store"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "futures",
  "hex",
  "pk-core",
+ "pk-embed",
+ "pk-engine",
  "pk-kb",
  "regex",
  "serde",

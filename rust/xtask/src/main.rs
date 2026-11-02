@@ -22,6 +22,7 @@ const CRATES: &[&str] = &[
     "pk-api",
     "pk-worker",
     "pk-load",
+    "pk-engine",
 ];
 
 fn main() -> anyhow::Result<()> {

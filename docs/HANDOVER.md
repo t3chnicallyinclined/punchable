@@ -233,6 +233,13 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 10. `docs/design/ARCHITECTURE.md` performance items (fonts, cold start, storage on iOS); prompt-audit items 6 / 8 / 9.
 11. Pin the Bugsink image by digest.
 12. Riff eval: five BEFORE/AFTER pairs await the owner's judgment (private folder).
+13. **The upstream engine fork (2026-11-02, branch `rust/engine-fork`, not pushed, not wired)**: `pk-engine` (ADR
+   0013, `rust/crates/pk-engine/FORK.md`), the one verbatim gate, the engine's store seam in `pk-store`, its schema
+   (applied only on an explicit call; never on the hosted database without his go). **Its offline proof did not pass**:
+   right bit within 24 places on 18/24 questions vs Search 24/24 and Ask 19/24; 175 ms vs Search's 34 ms
+   (`docs/RUST_WORKSTREAM.md` T19). Next: a held-out question set written before any change, a config that keeps
+   SurrealDB's own fusion as the store leg, the schema to gw-security before any wiring. The private questions, gold and
+   results are in his data repo's `docs/punchable/evals/engine-proof/`.
 
 Done 2026-11-02 (local commit, not pushed): the cloud map as a real 3D view (orbit, camera zoom, fly to a group, bit
 names when zoomed, Whole map, VoiceOver actions), and two latent phone bugs it found: `wrapAngle` called from the turn's

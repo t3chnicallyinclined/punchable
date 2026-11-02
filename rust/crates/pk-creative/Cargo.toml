@@ -15,6 +15,8 @@ regex = { workspace = true }
 indexmap = { workspace = true }
 pk-core = { workspace = true }
 pk-kb = { path = "../pk-kb" }
+# the one verbatim gate (ADR 0013): pk-engine is tier 1, so this edge points down
+pk-engine = { path = "../pk-engine" }
 
 [dev-dependencies]
 proptest = { workspace = true }
