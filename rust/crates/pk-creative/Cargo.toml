@@ -13,6 +13,9 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 regex = { workspace = true }
 indexmap = { workspace = true }
+sha1 = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
 pk-core = { workspace = true }
 pk-kb = { path = "../pk-kb" }
 # the one verbatim gate (ADR 0013): pk-engine is tier 1, so this edge points down

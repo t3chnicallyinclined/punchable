@@ -4,10 +4,12 @@
 # forbids on a box doing real work): in CI or on the PC, then `docker save` | ssh | `docker load` and pushed to the
 # cluster registry. Not wired into infra/deploy.sh yet: the swap is the owner's call (docs/RUST_WORKSTREAM.md T8).
 #
-# What is in it: one static-ish binary (rustls, no OpenSSL, no onnxruntime: the embedding kinds are not ported, so no
-# bge model either) on distroless cc (glibc + libgcc), non-root uid 10001, read-only root filesystem; the only writes
-# go to /tmp (the emptyDir in 35-worker.yaml: the heartbeat and the day's spend ledger). The engine config is compiled
-# in (engine/config.hosted.toml via pk-llm's include_str!), so no ENGINE_CONFIG path exists in this image.
+# What is in it: one binary (rustls, no OpenSSL; ONNX Runtime linked in by `ort` for the embedding kinds) on
+# distroless cc (glibc, libgcc, libstdc++), non-root uid 10001, read-only root filesystem; the bge-small model,
+# fetched and checked against the hub's hashes and the fingerprint by tools/kb/fetch_bge.py (the Python image's own
+# step); the only writes go to /tmp (the emptyDir in 35-worker.yaml: the heartbeat and the day's spend ledger). The
+# engine config is compiled in (engine/config.hosted.toml via pk-llm's include_str!), so no ENGINE_CONFIG path exists.
+# PK_WITH_BGE=0 builds without the model: the worker then does not claim embed (and says so at start).
 # Pin both bases by digest when this is first built for the cluster (the build log records them), as
 # infra/worker/Dockerfile pins its Python base.
 FROM rust:1.93.1-slim-bookworm AS build
@@ -19,15 +21,22 @@ WORKDIR /src/rust
 RUN cargo build --release --locked -p pk-worker \
  && cp target/release/pk-worker /pk-worker
 
+FROM python:3.13-slim-bookworm AS model
+ARG PK_WITH_BGE=1
+COPY engine/*.py /src/engine/
+COPY tools/kb/fetch_bge.py /src/tools/kb/fetch_bge.py
+RUN mkdir -p /opt/punchable/models  && if [ "$PK_WITH_BGE" = 1 ]; then       python -m pip install --no-cache-dir --only-binary=:all: onnxruntime==1.27.0 tokenizers==0.22.1 numpy==2.2.6       && python /src/tools/kb/fetch_bge.py --dest /opt/punchable/models/bge-small-en-v1.5;     fi
+
 FROM gcr.io/distroless/cc-debian12:nonroot
 COPY --from=build /pk-worker /pk-worker
+COPY --from=model /opt/punchable/models /opt/punchable/models
 ARG PK_BUILD_SHA=dev
 ENV PK_BUILD_SHA=$PK_BUILD_SHA \
     HOME=/tmp \
     PK_HOSTED=1 \
     PK_WORKSPACE=/tmp/pk-worker \
     PK_HEARTBEAT_FILE=/tmp/pk-worker/heartbeat \
-    PK_AI_SPEND_FILE=/tmp/pk-worker/ai_spend.json \
+    PK_AI_SPEND_FILE=/tmp/pk-worker/ai_spend.json     PK_BGE_DIR=/opt/punchable/models/bge-small-en-v1.5 \
     PUNCH_SECRETS=/nonexistent \
     RUST_LOG=info
 USER 10001:10001

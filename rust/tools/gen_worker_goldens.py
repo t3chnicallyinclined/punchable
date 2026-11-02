@@ -40,6 +40,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# the bge model for the embedding scenarios (tools/kb/fetch_bge.py); without it those goldens are kept as committed
+BGE = os.environ.get("PK_BGE_DIR") or ""
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import notebook_fixture as F  # noqa: E402
 OUT = ROOT / "rust" / "crates" / "pk-worker" / "tests" / "goldens"
@@ -169,6 +171,15 @@ RIFF = json.dumps({"ideas": [
     {"line": "My parrot billed me by the hour.", "built_on": [], "move": ""},
     {"line": "x" * 450, "built_on": ["riff"], "move": "m" * 100},
     {"line": "Over the cap.", "built_on": [], "move": "none"}]})
+HAIKU = "claude-haiku-5-5"
+JUDGED = json.dumps({"pairs": [{"id": f"p{k}", "same": k == 1, "confidence": [0.95, 0.6, 0.9][k - 1],
+                                "why": f"pair {k}"} for k in (1, 2, 3)]})
+TRIAGED_SHORT = json.dumps({"items": [{"id": "m1", "kind": "joke", "audience": False, "confidence": 0.9,
+                                       "why": "a bit about bins"},
+                                      {"id": "m2", "kind": "note", "audience": False, "confidence": 0.85,
+                                       "why": "pick up milk"}]})
+TRIAGED_LONG = json.dumps({"items": [{"id": "m1", "kind": "performed_set", "audience": True, "confidence": 0.8,
+                                      "why": "give it up"}]})
 PUNCH = json.dumps({"drafts": [
     {"line_no": 2, "alt": " He read me my rights, then billed me for the reading. ", "move": "the flat repeat"},
     {"line_no": 9, "alt": "out of range", "move": "x"},
@@ -253,6 +264,24 @@ SCENARIOS = [
     {"name": "bridge_refused", "env": {}, "notebook": True,
      "job": job("bridge", {"from": "joke:landlord-chat", "to": "joke:laundromat", "set": "ws:golden"}),
      "voice": voice_doc(), "model": [answer("", SONNET, stop_reason="refusal")]},
+    {"name": "embed_new_idea", "env": {}, "notebook": True, "bge": True, "job": job("embed", {}),
+     "voice": voice_doc(), "model": []},
+    {"name": "embed_current_and_gone", "env": {}, "notebook": True, "bge": True, "summary_current": True,
+     "job": job("embed", {}), "voice": voice_doc(), "model": []},
+    {"name": "memolink_all_steps", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {}), "voice": voice_doc(),
+     "model": [answer(JUDGED, HAIKU), answer(TRIAGED_SHORT, HAIKU), answer(TRIAGED_LONG, HAIKU)]},
+    {"name": "memolink_triage_only_refused", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {"steps": ["triage"]}), "voice": voice_doc(),
+     "model": [answer("", HAIKU, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal"),
+               answer(TRIAGED_LONG, HAIKU)]},
+    # a merges log the reducer refuses (the same attach twice): the job fails rather than attaching against an
+    # empty log
+    {"name": "memolink_merges_log_refused", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {"steps": ["attach"]}), "voice": voice_doc(), "model": [],
+     "creative": {"merges": [json.dumps({"ts": "2026-10-20T10:00:00+00:00", "op": "attach", "id": "at:dup",
+                                         "by": "owner", "data": {"joke": "joke:memo-bins",
+                                                                 "into": "joke:airport-bins"}})] * 2}},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -340,7 +369,8 @@ def make_handler(rec: Recorder, which: str):
                 return self._send(200, {"lines": [{"decision": d, "index": after + i} for i, d in enumerate(ds[after:])],
                                         "total": len(ds)})
             if p == "/api/worker/creative":
-                return self._send(200, {"lines": []})
+                store = urllib.parse.parse_qs(u.query).get("store", [""])[0]
+                return self._send(200, {"lines": (rec.sc.get("creative") or {}).get(store, [])})
             if p == "/api/worker/ideas":
                 rec.ideas += 1
                 return self._send(200, ideas_reply(rec.ideas))
@@ -362,11 +392,22 @@ REFUSED_RESULT = b'{"error": "body too large"}'
 
 
 def notebook_files(sc: dict) -> dict:
-    return F.files() if sc.get("notebook") else {}
+    files = F.files() if sc.get("notebook") else {}
+    if sc.get("summary_current"):
+        # the memo idea's vector is current (its text hash matches) and one row is for an idea that is gone
+        doc = json.loads(files["vectors/extra_summary.json"])
+        text = " ".join(next(d for d in F.decisions() if d["id"] == "joke:carousel-idea")["after"]["summary"].split())
+        doc["text_sha"]["summary:joke:carousel-idea"] = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        doc["rows"]["summary:joke:gone-idea"] = F.vector("gone")
+        doc["text_sha"]["summary:joke:gone-idea"] = "0" * 16
+        files["vectors/extra_summary.json"] = json.dumps(doc, separators=(",", ":"))
+    if sc.get("memos"):
+        files.update(F.memo_files())
+    return files
 
 
 def notebook_decisions(sc: dict) -> list:
-    return F.decisions() if sc.get("notebook") else []
+    return (F.decisions() + (F.memo_decisions() if sc.get("memos") else [])) if sc.get("notebook") else []
 
 
 def ideas_reply(n: int) -> dict:
@@ -417,7 +458,10 @@ def run_python(sc: dict) -> dict:
             "PUNCHABLE_LEGAL_RULES": str(tmp / "no-legal-rules.json"),
             "ANTHROPIC_API_KEY": KEY, "ANTHROPIC_BASE_URL": base(anth),
             "ENGINE_CONFIG": str(ROOT / "engine" / "config.hosted.toml"),
-            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "cache"), "PK_BGE_DIR": str(tmp / "no-bge"),
+            # the cache path the workspace activates (worker/online.py Workspace.env): the bootstrap imports
+            # creative.write first, which fixes creative.data.VECTORS_DIR from this variable at import time
+            "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "ws" / "cache"),
+            "PK_BGE_DIR": BGE if sc.get("bge") else str(tmp / "no-bge"),
             "PK_HEARTBEAT_FILE": str(tmp / "heartbeat"), "PK_AI_SPEND_FILE": str(spend),
             "PK_AI_DAILY_USD": str(sc.get("daily_usd", 5.0)), "PK_METRICS_PORT": "0", "PK_WORKER_NAME": WORKER_NAME,
         })
@@ -448,6 +492,13 @@ def normalise(x):
             if os.name != "nt" and not RUN_ID.search(x["text"]):
                 assert x["sha256"] == hashlib.sha256(x["text"].encode("utf-8")).hexdigest(), x["path"]
             out["sha256"] = hashlib.sha256(out["text"].encode("utf-8")).hexdigest()
+        # embed_summaries reports the vector file's absolute local path (this PC's temp folder): never written into a
+        # golden; the Rust worker reports the workspace path it posts the file under
+        if isinstance(out.get("file"), str) and out["file"].replace("\\", "/").endswith("/extra_summary.json"):
+            out["file"] = "vectors/extra_summary.json"
+        # a model call's id is a fresh uuid4 every run: kept as a marker so the goldens do not drift
+        if isinstance(out.get("call_id"), str) and re.fullmatch(r"[0-9a-f]{12}", out["call_id"]):
+            out["call_id"] = "<call_id>"
         return out
     if isinstance(x, list):
         return [normalise(v) for v in x]
@@ -549,6 +600,9 @@ def pages_golden() -> dict:
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for sc in SCENARIOS:
+        if sc.get("bge") and not BGE:
+            print(f"{sc['name']}: kept as committed (no PK_BGE_DIR: the bge model is not here)")
+            continue
         got = run_python(sc)
         doc = {k: v for k, v in sc.items()}
         if sc.get("notebook"):   # the Rust test serves the same notebook

@@ -5,4 +5,6 @@
 !db/schema.surql
 !db/schema_extra.surql
 !rust/
+!engine/*.py
+!tools/kb/fetch_bge.py
 rust/target/

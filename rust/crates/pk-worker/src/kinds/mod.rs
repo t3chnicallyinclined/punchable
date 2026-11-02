@@ -6,14 +6,18 @@
 
 pub mod ask_chat;
 pub mod bridge;
+pub mod embed;
 pub mod facts;
+pub mod memolink;
 pub mod punchup;
 pub mod riff;
 pub mod set_text;
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use pk_creative::corpus::Corpus;
+use pk_embed::Embedder;
 use pk_llm::Router;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -91,8 +95,15 @@ impl Kind {
     /// Whether this worker can run it yet.
     pub fn ported(self) -> bool {
         match self {
-            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Riff | Kind::Punchup | Kind::Bridge => true,
-            Kind::Embed | Kind::Memolink | Kind::Ask => false,
+            Kind::AskChat
+            | Kind::Facts
+            | Kind::SetText
+            | Kind::Riff
+            | Kind::Punchup
+            | Kind::Bridge
+            | Kind::Embed
+            | Kind::Memolink => true,
+            Kind::Ask => false,
         }
     }
 
@@ -132,6 +143,16 @@ impl Kind {
     }
 }
 
+/// The bge-small model behind the embedding kinds (a trait object: the real model, or the hash embedder in tests).
+#[derive(Clone)]
+pub struct Model(pub Arc<dyn Embedder>);
+
+impl std::fmt::Debug for Model {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.0.name())
+    }
+}
+
 /// A claimed job as the API hands it out; the input is typed per kind by its runner.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Job {
@@ -161,6 +182,14 @@ pub struct Ctx<'a> {
     pub pages: &'a Pages,
     /// His notebook, for the kinds that read it.
     pub corpus: Option<&'a Arc<Corpus>>,
+    /// The mirrored files the notebook was built from (path → text), for the kinds that read it.
+    pub files: Option<&'a BTreeMap<String, Arc<str>>>,
+    /// The bge-small model, when this worker has it.
+    pub embedder: Option<&'a Model>,
+    /// The creative logs mirrored with the notebook (store → lines), for the kinds that read it.
+    pub creative: Option<&'a BTreeMap<String, Vec<String>>>,
+    /// `PK_OWNER_ID`: the actor of his own edits (the merges store's reducer needs it).
+    pub owner: &'a str,
 }
 
 impl<'a> Ctx<'a> {
@@ -232,7 +261,9 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Riff => run_typed::<riff::Riff>(ctx, input).await,
         Kind::Punchup => run_typed::<punchup::Punchup>(ctx, input).await,
         Kind::Bridge => run_typed::<bridge::Bridge>(ctx, input).await,
-        Kind::Embed | Kind::Memolink | Kind::Ask => Err(JobError::Value(format!(
+        Kind::Embed => run_typed::<embed::Embed>(ctx, input).await,
+        Kind::Memolink => run_typed::<memolink::Memolink>(ctx, input).await,
+        Kind::Ask => Err(JobError::Value(format!(
             "{} is not ported to the Rust worker yet",
             kind.name()
         ))),

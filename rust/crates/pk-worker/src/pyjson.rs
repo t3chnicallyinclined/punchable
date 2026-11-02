@@ -3,6 +3,7 @@
 //! (`pk_core::py::float_repr`: `1e-05`, `2.8000000000000003`, `3.0`). Same bytes mean the same sha256, so a file the
 //! Python worker wrote and the one the Rust worker writes for the same set are one `srcfile` row, not a rewrite.
 
+use std::fmt::Write as _;
 use std::io;
 
 use pk_core::py;
@@ -58,8 +59,88 @@ pub fn dumps_indent1(value: &impl Serialize) -> String {
     String::from_utf8(out).unwrap_or_default()
 }
 
+/// `json.dumps(value, separators=(",", ":"))`: compact, every character outside printable ASCII escaped
+/// (`ensure_ascii`, astral characters as surrogate pairs), floats by Python's `repr`.
+pub fn dumps_compact_ascii(value: &serde_json::Value) -> String {
+    use serde_json::Value;
+    fn string(out: &mut String, s: &str) {
+        out.push('"');
+        for c in s.chars() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                '\u{8}' => out.push_str("\\b"),
+                '\u{c}' => out.push_str("\\f"),
+                ' '..='~' => out.push(c),
+                _ => {
+                    let mut buf = [0u16; 2];
+                    for unit in c.encode_utf16(&mut buf) {
+                        let _ = write!(out, "\\u{unit:04x}");
+                    }
+                }
+            }
+        }
+        out.push('"');
+    }
+    fn walk(out: &mut String, v: &Value) {
+        match v {
+            Value::Null => out.push_str("null"),
+            Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
+            Value::Number(n) if n.is_f64() => out.push_str(&py::float_repr(n.as_f64().unwrap_or(0.0))),
+            Value::Number(n) => out.push_str(&n.to_string()),
+            Value::String(s) => string(out, s),
+            Value::Array(a) => {
+                out.push('[');
+                for (i, x) in a.iter().enumerate() {
+                    if i > 0 {
+                        out.push(',');
+                    }
+                    walk(out, x);
+                }
+                out.push(']');
+            }
+            Value::Object(m) => {
+                out.push('{');
+                for (i, (k, x)) in m.iter().enumerate() {
+                    if i > 0 {
+                        out.push(',');
+                    }
+                    string(out, k);
+                    out.push(':');
+                    walk(out, x);
+                }
+                out.push('}');
+            }
+        }
+    }
+    let mut out = String::new();
+    walk(&mut out, value);
+    out
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn compact_and_ascii_like_python() {
+        let v = serde_json::json!({"a": [1, 2.5, 1e-05], "é": "x\u{1f600}\"", "n": null});
+        assert_eq!(
+            super::dumps_compact_ascii(&v),
+            concat!(
+                r#"{"a":[1,2.5,1e-05],""#,
+                r"\u00e9",
+                r#"":"x"#,
+                r"\ud83d\ude00",
+                r#"\"","n":null}"#
+            )
+        );
+    }
+}
+
+#[cfg(test)]
+mod indent_tests {
     use super::*;
     use serde_json::json;
 

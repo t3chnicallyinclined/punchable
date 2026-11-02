@@ -115,6 +115,13 @@ fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
         std::fs::read_to_string(&cfg.legal_rules).map_or_else(|_| Legal::default(), |t| Legal::from_rules_json(&t));
     let metrics = Arc::new(WorkerMetrics::new(VERSION, &pk_obs::sha12(&cfg.build_sha))?);
     let api = pk_worker::api::ApiClient::new(&cfg.api, cfg.creds.clone())?;
+    // the embedding kinds' model: one intra-op thread (the pod has one CPU), loaded once, shared by every job
+    let embedder: Option<pk_worker::kinds::Model> = match &cfg.bge_dir {
+        Some(dir) => Some(pk_worker::kinds::Model(Arc::new(
+            pk_embed::Bge::load_with_threads(dir, 1).with_context(|| format!("bge-small in {}", dir.display()))?,
+        ))),
+        None => None,
+    };
     let port = cfg.metrics_port;
     let once = cfg.once;
 
@@ -147,6 +154,7 @@ fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
             metrics,
             legal,
             pages: Pages::new()?,
+            embedder,
         });
         if let Some(m) = worker.model() {
             tracing::info!(model = %m, "writes with");

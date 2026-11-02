@@ -368,7 +368,7 @@
       ],
       "provider": "anthropic",
       "model": "claude-sonnet-5-5",
-      "call_id": "63b47f91a808",
+      "call_id": "<call_id>",
       "task": "creative_bridge",
       "online": {
        "refresh": {

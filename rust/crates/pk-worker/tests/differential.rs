@@ -181,7 +181,10 @@ impl Respond for Api {
                     .collect();
                 ok(json!({"lines": lines, "total": ds.len()}))
             }
-            ("GET", "/api/worker/creative") => ok(json!({"lines": []})),
+            ("GET", "/api/worker/creative") => {
+                let store = query_param(req, "store");
+                ok(json!({"lines": self.sc["creative"].get(&store).cloned().unwrap_or_else(|| json!([]))}))
+            }
             ("POST", "/api/worker/ideas") => {
                 let n = self.ideas.fetch_add(1, Ordering::SeqCst) + 1;
                 ok(
@@ -381,6 +384,11 @@ async fn rig(sc: &Value, stop_mid_call: Option<CancellationToken>) -> Rig {
         ("PK_AI_SPEND_FILE".into(), spend.display().to_string()),
         ("PK_METRICS_PORT".into(), "0".into()),
     ]);
+    if sc.get("bge") == Some(&json!(true))
+        && let Some(dir) = std::env::var_os("PK_BGE_DIR")
+    {
+        vars.insert("PK_BGE_DIR".into(), dir.to_string_lossy().into_owned());
+    }
     for (k, v) in sc["env"].as_object().into_iter().flatten() {
         vars.insert(k.clone(), v.as_str().unwrap_or_default().to_string());
     }
@@ -408,6 +416,7 @@ async fn rig(sc: &Value, stop_mid_call: Option<CancellationToken>) -> Rig {
         metrics: Arc::new(WorkerMetrics::new("0.1.0", "golden").unwrap()),
         legal: Legal::default(),
         pages: Pages::new().unwrap().via(pages.uri()),
+        embedder: bge(sc),
     });
     Rig {
         api,
@@ -418,8 +427,67 @@ async fn rig(sc: &Value, stop_mid_call: Option<CancellationToken>) -> Rig {
     }
 }
 
+/// The bge-small model for a scenario that needs it (`"bge": true`), loaded once per test run.
+fn bge(sc: &Value) -> Option<pk_worker::kinds::Model> {
+    static MODEL: std::sync::OnceLock<Option<pk_worker::kinds::Model>> = std::sync::OnceLock::new();
+    if sc.get("bge") != Some(&json!(true)) {
+        return None;
+    }
+    MODEL
+        .get_or_init(|| {
+            let dir = std::env::var_os("PK_BGE_DIR").map(std::path::PathBuf::from)?;
+            Some(pk_worker::kinds::Model(Arc::new(
+                pk_embed::Bge::load_with_threads(&dir, 1).ok()?,
+            )))
+        })
+        .clone()
+}
+
 fn body_of(r: &Request) -> Value {
     serde_json::from_slice::<Value>(&r.body).unwrap_or(Value::Null)
+}
+
+/// The posted vector file, compared as the Python's within float tolerance: pk-embed and the Python's ONNX Runtime
+/// agree to about 1e-6, not to the seventh printed digit, so the rows are checked here and replaced by a marker.
+fn vector_file(v: &mut Value) -> Option<&mut Value> {
+    v.pointer_mut("/body/files")?
+        .as_array_mut()?
+        .iter_mut()
+        .find(|f| f["path"] == "vectors/extra_summary.json")
+}
+
+fn vectors_checked(rust: &mut [Value], python: &mut [Value], name: &str) {
+    for (r, p) in rust.iter_mut().zip(python.iter_mut()) {
+        let (Some(rf), Some(pf)) = (vector_file(r), vector_file(p)) else {
+            continue;
+        };
+        let parse = |f: &Value| serde_json::from_str::<Value>(f["text"].as_str().unwrap_or("null")).unwrap();
+        let (mut rd, mut pd) = (parse(rf), parse(pf));
+        let (ro, po) = (
+            rd["rows"].as_object().cloned().unwrap(),
+            pd["rows"].as_object().cloned().unwrap(),
+        );
+        assert_eq!(
+            ro.keys().collect::<Vec<_>>(),
+            po.keys().collect::<Vec<_>>(),
+            "{name}: vector rows"
+        );
+        for (k, rv) in &ro {
+            let (a, b) = (rv.as_array().unwrap(), po[k].as_array().unwrap());
+            assert_eq!(a.len(), b.len(), "{name}: {k} width");
+            let worst = a
+                .iter()
+                .zip(b)
+                .map(|(x, y)| (x.as_f64().unwrap() - y.as_f64().unwrap()).abs())
+                .fold(0.0, f64::max);
+            assert!(worst <= 1e-5, "{name}: {k} differs by {worst}");
+        }
+        for (f, d) in [(rf, &mut rd), (pf, &mut pd)] {
+            d["rows"] = json!("<rows compared within 1e-5>");
+            f["text"] = d.take();
+            f["sha256"] = json!("<over the rows above>");
+        }
+    }
 }
 
 async fn run_scenario(name: &str, sc: &Value) {
@@ -478,6 +546,7 @@ async fn run_scenario(name: &str, sc: &Value) {
             }
         }
     }
+    vectors_checked(&mut effect, &mut want, name);
     same(&Value::Array(effect), &Value::Array(want), "api", name);
 
     let calls: Vec<Value> = anthropic
@@ -494,6 +563,15 @@ async fn run_scenario(name: &str, sc: &Value) {
 #[tokio::test]
 async fn the_rust_worker_does_what_the_python_worker_did() {
     for (name, sc) in goldens() {
+        if sc.get("bge") == Some(&json!(true)) && std::env::var_os("PK_BGE_DIR").is_none() {
+            // a skipped test is a failed test where the externals must be there (CI, the gate)
+            assert!(
+                std::env::var_os("PK_REQUIRE_EXTERNAL").is_none(),
+                "{name} needs the bge model: set PK_BGE_DIR"
+            );
+            eprintln!("{name}: skipped, no PK_BGE_DIR");
+            continue;
+        }
         run_scenario(&name, &sc).await;
     }
 }
