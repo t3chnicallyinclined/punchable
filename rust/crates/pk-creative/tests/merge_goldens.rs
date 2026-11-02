@@ -180,12 +180,13 @@ fn the_same_idea_index_judge_groups_and_memos() {
         "triage cache",
     );
     let recordings = memolink::set_recordings(Some(&g["triage_doc"]));
-    let sugg: Vec<Value> = suggestions(&ix, &cache, &st, &recordings, &mj)
+    let groups = memolink::memo_groups(&ix, &cache, &st, &recordings);
+    let sugg: Vec<Value> = suggestions(&groups, &mj)
         .iter()
         .map(|x| x["id"].clone())
         .collect();
     same(&Value::Array(sugg), &g["suggestions"], "suggestions");
-    let clear = clear_attaches(&ix, &c, &cache, &st, &recordings, &mj);
+    let clear = clear_attaches(&ix, &c, &cache, &st, &recordings, &mj, &groups);
     same(&Value::Array(clear.clone()), &g["clear"], "clear attaches");
     let events: Vec<Value> = clear
         .iter()

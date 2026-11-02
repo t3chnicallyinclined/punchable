@@ -30,13 +30,16 @@ pub enum JobError {
     /// The bge-small model refused (`RuntimeError` in the Python's embedder).
     #[error(transparent)]
     Embed(#[from] pk_embed::EmbedError),
+    /// A creative log that does not replay (the Python's `Store` raises the reducer's `ValueError`).
+    #[error("{}", .0.msg())]
+    Creative(#[from] pk_creative::CreativeError),
 }
 
 impl JobError {
     /// The Python exception class this failure is reported as.
     pub fn py_type(&self) -> &'static str {
         match self {
-            JobError::Value(_) => "ValueError",
+            JobError::Value(_) | JobError::Creative(_) => "ValueError",
             JobError::Llm(e) => llm_type(e),
             JobError::Api(e) => e.py_type(),
             JobError::Corpus(CorpusError::Missing(_)) => "FileNotFoundError",

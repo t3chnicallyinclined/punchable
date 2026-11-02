@@ -321,7 +321,9 @@ pub fn set_recordings(triage_doc: Option<&Value>) -> HashSet<String> {
         .collect()
 }
 
-fn groups_for(
+/// The same-idea groups both `clear_attaches` and `suggestions` read (`find_groups` with the attached ideas and the
+/// set recordings left out): built once per job, since both Python calls see the same merges items.
+pub fn memo_groups(
     ix: &crate::merge::Index,
     judgements: &Map<String, Value>,
     st: &crate::merge::MergeState,
@@ -332,15 +334,9 @@ fn groups_for(
 }
 
 /// `suggestions(c, creative_dir, mj, items)`: the "Same idea · Merge" groups that include a memo idea.
-pub fn suggestions(
-    ix: &crate::merge::Index,
-    judgements: &Map<String, Value>,
-    st: &crate::merge::MergeState,
-    recordings: &HashSet<String>,
-    mj: &IndexMap<String, String>,
-) -> Vec<Value> {
-    groups_for(ix, judgements, st, recordings)
-        .into_iter()
+pub fn suggestions(groups: &[Value], mj: &IndexMap<String, String>) -> Vec<Value> {
+    groups
+        .iter()
         .filter(|g| {
             g["members"]
                 .as_array()
@@ -348,6 +344,7 @@ pub fn suggestions(
                 .flatten()
                 .any(|m| m["joke_id"].as_str().is_some_and(|j| mj.contains_key(j)))
         })
+        .cloned()
         .collect()
 }
 
@@ -360,9 +357,9 @@ pub fn clear_attaches(
     st: &crate::merge::MergeState,
     recordings: &HashSet<String>,
     mj: &IndexMap<String, String>,
+    groups: &[Value],
 ) -> Vec<Value> {
     use crate::corpus::num;
-    let groups = groups_for(ix, judgements, st, recordings);
     let group_of: std::collections::HashMap<String, String> = groups
         .iter()
         .flat_map(|g| {

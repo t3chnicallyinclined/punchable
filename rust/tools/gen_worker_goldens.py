@@ -275,6 +275,13 @@ SCENARIOS = [
      "job": job("memolink", {"steps": ["triage"]}), "voice": voice_doc(),
      "model": [answer("", HAIKU, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal"),
                answer(TRIAGED_LONG, HAIKU)]},
+    # a merges log the reducer refuses (the same attach twice): the job fails rather than attaching against an
+    # empty log
+    {"name": "memolink_merges_log_refused", "env": {}, "notebook": True, "bge": True, "memos": True,
+     "job": job("memolink", {"steps": ["attach"]}), "voice": voice_doc(), "model": [],
+     "creative": {"merges": [json.dumps({"ts": "2026-10-20T10:00:00+00:00", "op": "attach", "id": "at:dup",
+                                         "by": "owner", "data": {"joke": "joke:memo-bins",
+                                                                 "into": "joke:airport-bins"}})] * 2}},
     {"name": "result_refused", "env": {}, "job": job("ask_chat", {"messages": ASK_MESSAGES}), "voice": voice_doc(),
      "model": [answer(ANSWER, SONNET)], "refuse_ok_result": True},
     {"name": "budget_paused", "env": {}, "daily_usd": 1.0, "spent_usd": 1.2,
@@ -362,7 +369,8 @@ def make_handler(rec: Recorder, which: str):
                 return self._send(200, {"lines": [{"decision": d, "index": after + i} for i, d in enumerate(ds[after:])],
                                         "total": len(ds)})
             if p == "/api/worker/creative":
-                return self._send(200, {"lines": []})
+                store = urllib.parse.parse_qs(u.query).get("store", [""])[0]
+                return self._send(200, {"lines": (rec.sc.get("creative") or {}).get(store, [])})
             if p == "/api/worker/ideas":
                 rec.ideas += 1
                 return self._send(200, ideas_reply(rec.ideas))

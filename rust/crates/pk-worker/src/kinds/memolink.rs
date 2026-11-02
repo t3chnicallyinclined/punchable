@@ -12,7 +12,7 @@ use std::sync::Arc;
 use pk_creative::corpus::Corpus;
 use pk_creative::memolink::{
     self as ml, JUDGE_FILE, SUMMARY_FILE, TRIAGE_FILE, TRIAGE_SCHEMA, TRIAGE_SYSTEM, attach_event, clear_attaches,
-    memo_jokes, memos, suggestions,
+    memo_groups, memo_jokes, memos, suggestions,
 };
 use pk_creative::merge::{
     Index, JUDGE_BATCH, JUDGE_SCHEMA, JUDGE_SYSTEM, MergeState, SECOND_BATCH, judge_candidates, judge_finish,
@@ -63,8 +63,10 @@ impl Runner for Memolink {
 
     #[allow(clippy::too_many_lines)]
     async fn run(ctx: Ctx<'_>, input: MemolinkInput) -> Result<Done, JobError> {
+        // `input.get("steps") or [...]`: an empty list runs every step
         let steps: Vec<String> = input
             .steps
+            .filter(|s| !s.is_empty())
             .unwrap_or_else(|| ["embed", "judge", "triage", "attach"].map(str::to_string).to_vec());
         let has = |s: &str| steps.iter().any(|x| x == s);
         let mut corpus: Arc<Corpus> = Arc::clone(ctx.corpus()?);
@@ -173,11 +175,12 @@ impl Runner for Memolink {
                 {
                     sorted += ml::triage_finish(&ms, b, Some(&data), &model, &mut cache);
                     // the Python writes the cache after an answered batch only (a failed one `continue`s past it)
-                    triage_doc["items"] = Value::Object(cache.clone());
                     wrote = true;
                 }
             }
+            let cached = cache.len();
             if wrote {
+                triage_doc["items"] = Value::Object(cache);
                 files.push(OutFile {
                     path: TRIAGE_FILE.to_string(),
                     text: dumps_indent1(&triage_doc),
@@ -185,21 +188,36 @@ impl Runner for Memolink {
             }
             out.insert(
                 "triage".into(),
-                json!({"asked": asked, "sorted": sorted, "legal_skipped": skipped, "cached": cache.len()}),
+                json!({"asked": asked, "sorted": sorted, "legal_skipped": skipped, "cached": cached}),
             );
         }
 
+        // the merges log replayed and the groups built once (CPU work over every unit pair: off the async thread);
+        // a log that does not replay fails the job, as the Python's `Store` raises, so no attach is guessed
         let lines = ctx.creative.and_then(|c| c.get("merges")).cloned().unwrap_or_default();
-        let items: Map<String, Value> = for_store("merges", ctx.owner)
-            .and_then(|r| Store::replay(r, lines.iter()).ok())
-            .map(|s| s.items().clone())
-            .unwrap_or_default();
-        let st = MergeState::from_items(&items);
-        let recordings: HashSet<String> = ml::set_recordings(Some(&triage_doc));
-        if has("attach") {
+        let owner = ctx.owner.to_string();
+        let attach = has("attach");
+        let (clear, n_groups) = tokio::task::spawn_blocking(move || -> Result<_, JobError> {
+            let items: Map<String, Value> = match for_store("merges", &owner) {
+                Some(r) => Store::replay(r, lines.iter())?.items().clone(),
+                None => Map::new(),
+            };
+            let st = MergeState::from_items(&items);
+            let recordings: HashSet<String> = ml::set_recordings(Some(&triage_doc));
+            let groups = memo_groups(&ix, &judgements, &st, &recordings);
+            let clear = if attach {
+                clear_attaches(&ix, &corpus, &judgements, &st, &recordings, &mj, &groups)
+            } else {
+                Vec::new()
+            };
+            Ok((clear, suggestions(&groups, &mj).len()))
+        })
+        .await
+        .map_err(|e| JobError::Value(format!("the same-idea groups: {e}")))??;
+        if attach {
             let today = pk_core::time::today();
             let mut done = Vec::new();
-            for x in clear_attaches(&ix, &corpus, &judgements, &st, &recordings, &mj) {
+            for x in clear {
                 let (aid, data) = attach_event(&x, &today);
                 let body = json!({"store": "merges", "op": "attach", "id": aid, "data": data, "actor": "ai:attach"});
                 let r = ctx
@@ -212,10 +230,7 @@ impl Runner for Memolink {
             }
             out.insert("attached".into(), Value::Array(done));
         }
-        out.insert(
-            "same_idea_groups".into(),
-            json!(suggestions(&ix, &judgements, &st, &recordings, &mj).len()),
-        );
+        out.insert("same_idea_groups".into(), json!(n_groups));
 
         // only what changed is posted (the Python's push compares each file's hash)
         let unchanged = |f: &OutFile| {

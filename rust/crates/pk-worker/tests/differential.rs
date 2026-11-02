@@ -181,7 +181,10 @@ impl Respond for Api {
                     .collect();
                 ok(json!({"lines": lines, "total": ds.len()}))
             }
-            ("GET", "/api/worker/creative") => ok(json!({"lines": []})),
+            ("GET", "/api/worker/creative") => {
+                let store = query_param(req, "store");
+                ok(json!({"lines": self.sc["creative"].get(&store).cloned().unwrap_or_else(|| json!([]))}))
+            }
             ("POST", "/api/worker/ideas") => {
                 let n = self.ideas.fetch_add(1, Ordering::SeqCst) + 1;
                 ok(

@@ -170,8 +170,21 @@ fn reference(row: &[f32]) -> f32 {
         return 0.99;
     }
     let mut v = row.to_vec();
-    v.sort_by(|a, b| b.total_cmp(a));
-    v[k - 1]
+    let (_, kth, _) = v.select_nth_unstable_by(k - 1, |a, b| b.total_cmp(a));
+    *kth
+}
+
+/// A float32 dot product in eight lanes (what a BLAS kernel does; the goldens compare cosines at float32 precision).
+fn dot(a: &[f32], b: &[f32]) -> f32 {
+    let mut acc = [0.0_f32; 8];
+    let (ca, cb) = (a.chunks_exact(8), b.chunks_exact(8));
+    let tail: f32 = ca.remainder().iter().zip(cb.remainder()).map(|(x, y)| x * y).sum();
+    for (x, y) in ca.zip(cb) {
+        for l in 0..8 {
+            acc[l] += x[l] * y[l];
+        }
+    }
+    ((acc[0] + acc[1]) + (acc[2] + acc[3])) + ((acc[4] + acc[5]) + (acc[6] + acc[7])) + tail
 }
 
 /// Everything pair scoring needs, built once per corpus (`merge.Index`).
@@ -289,16 +302,25 @@ impl Index {
             let norm = pairwise_sum(&sq).sqrt().max(1e-9);
             m.extend(v.iter().map(|x| x / norm));
         }
+        // `S = M @ M.T` with each joke's own block at -1: the upper triangle, mirrored (a dot product is the same
+        // both ways round), joke identity as a row index rather than a string compare per cell
         let n = vec_units.len();
+        let jix: HashMap<&str, usize> = jokes.iter().enumerate().map(|(i, j)| (j.as_str(), i)).collect();
+        let rj: Vec<usize> = vec_units
+            .iter()
+            .map(|u| ujoke.get(u).and_then(|j| jix.get(j.as_str())).copied().unwrap_or(usize::MAX))
+            .collect();
         let mut sm = vec![0.0_f32; n * n];
         for i in 0..n {
-            for k in 0..n {
-                let (a, b) = (&m[i * dim..(i + 1) * dim], &m[k * dim..(k + 1) * dim]);
-                sm[i * n + k] = if ujoke[&vec_units[i]] == ujoke[&vec_units[k]] {
+            let a = &m[i * dim..(i + 1) * dim];
+            for k in i..n {
+                let v = if rj[i] == rj[k] {
                     -1.0
                 } else {
-                    a.iter().zip(b).fold(0.0_f32, |acc, (x, y)| acc + x * y)
+                    dot(a, &m[k * dim..(k + 1) * dim])
                 };
+                sm[i * n + k] = v;
+                sm[k * n + i] = v;
             }
         }
         let p99: Vec<f32> = (0..n).map(|i| reference(&sm[i * n..(i + 1) * n])).collect();
