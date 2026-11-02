@@ -5,6 +5,7 @@
 //! this worker until then (`docs/RUST_WORKSTREAM.md` T8).
 
 pub mod ask_chat;
+pub mod bridge;
 pub mod facts;
 pub mod punchup;
 pub mod riff;
@@ -90,8 +91,8 @@ impl Kind {
     /// Whether this worker can run it yet.
     pub fn ported(self) -> bool {
         match self {
-            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Riff | Kind::Punchup => true,
-            Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => false,
+            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Riff | Kind::Punchup | Kind::Bridge => true,
+            Kind::Embed | Kind::Memolink | Kind::Ask => false,
         }
     }
 
@@ -230,7 +231,8 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::SetText => run_typed::<set_text::SetText>(ctx, input).await,
         Kind::Riff => run_typed::<riff::Riff>(ctx, input).await,
         Kind::Punchup => run_typed::<punchup::Punchup>(ctx, input).await,
-        Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => Err(JobError::Value(format!(
+        Kind::Bridge => run_typed::<bridge::Bridge>(ctx, input).await,
+        Kind::Embed | Kind::Memolink | Kind::Ask => Err(JobError::Value(format!(
             "{} is not ported to the Rust worker yet",
             kind.name()
         ))),
@@ -244,7 +246,7 @@ mod tests {
     #[test]
     fn claimable_is_the_hosted_order_ported_only() {
         let names: Vec<&str> = Kind::claimable(false).into_iter().map(Kind::name).collect();
-        assert_eq!(names, ["punchup", "facts", "riff", "ask_chat", "set_text"]);
+        assert_eq!(names, ["bridge", "punchup", "facts", "riff", "ask_chat", "set_text"]);
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));
         assert_eq!(Kind::parse("process_set"), None);
         assert!(

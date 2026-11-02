@@ -86,6 +86,88 @@ WORKING_SETS = {
 }
 
 
+class _Said:
+    def __init__(self, data):
+        self.data, self.provider, self.model, self.call_id = data, "anthropic", "claude-sonnet-5-5", "c0ffee000000"
+
+
+def story_golden(c) -> dict:
+    """transition, the bridge links / user turn / finish, the subject words, the cosines, for every ordered pair."""
+    from creative import story as S
+    from creative import voice as V
+    V.clear()
+    jokes = list(c.jokes)
+    pairs = {}
+    for a in jokes:
+        for b in jokes:
+            if a == b:
+                continue
+            seen = []
+
+            def complete(task, msgs, schema):
+                seen.append(msgs[-1]["content"])
+                return _Said({"bridge": "  So anyway, the parrot.  ", "uses": ["L2", "L9"]})
+
+            r = S.bridge_draft(c, a, b, complete=complete)
+            sc, ws, near = S.same_subject(c, [a], b)
+            pairs[f"{a}|{b}"] = {"transition": S.transition(c, a, b), "bridge": r, "user": seen[0] if seen else None,
+                                 "direct": [e["id"] for e in S._direct_edges(c, a, b)],
+                                 "personas": S.shared_labels(c, a, b, ("persona",), 0.4),
+                                 "topics": S.shared_labels(c, a, b, ("topic",), 0.4),
+                                 "same_subject": [sc, ws, near], "cos": c.cos(a, b)}
+    return {"pairs": pairs, "edge_text": {j: [S._edge_text(c, j, True), S._edge_text(c, j, False)] for j in jokes},
+            "cos_band": {j: list(S._cos_band(c, j)) for j in jokes}}
+
+
+WORDS = ["airport", "parrot", "landlord", "laundry", "gym", "mirror", "carousel", "luggage", "rent", "socks",
+         "scanner", "dryer", "receipt", "pigeon", "subway", "ticket"]
+
+
+def rnd(seed: str):
+    """384 deterministic pseudo-random floats in [-1, 1) from sha256 (no RNG state, the same on every machine)."""
+    import hashlib
+    import numpy as np
+    out = []
+    k = 0
+    while len(out) < 384:
+        h = hashlib.sha256(f"{seed}/{k}".encode()).digest()
+        out += [(x - 128) / 128 for x in h]
+        k += 1
+    return np.asarray(out[:384], dtype=np.float32)
+
+
+def big_corpus():
+    """60 bits, one unit each with a vector: near-duplicate pairs share most of a vector and two rare words, so the
+    vector band (it needs 50 other bits) and the rare-word score both decide links."""
+    import numpy as np
+    from creative import data as D
+    nodes, edges, table = [], [], {}
+    for n in range(60):
+        jid, uid = f"joke:big-{n:02d}", f"unit:big-{n:02d}"
+        w = [WORDS[n % 16], WORDS[(n * 7) % 16], WORDS[(n * 3 + 1) % 16]]
+        if n % 10 in (0, 1):    # pairs 0/1, 10/11, ... share two rare words
+            w = [f"zany{chr(97 + n // 10)}", f"quirk{chr(97 + n // 10)}"] + w[:1]
+        nodes.append({"id": jid, "type": "joke", "title": f"Big bit {n} {w[0]}"})
+        nodes.append({"id": uid, "type": "unit", "text": f"A bit about the {w[0]}, the {w[1]} and the {w[2]} again."})
+        edges.append({"id": f"e:big-part-{n}", "kind": "part_of", "src": uid, "dst": jid, "confidence": 0.9})
+        base = rnd(f"seed-{n // 2 if n < 20 else n}")
+        v = base + (0.15 if n < 20 else 0.0) * rnd(f"noise-{n}")
+        table[uid] = [float(x) for x in v.astype(np.float32)]
+    graph = {"nodes": nodes, "edges": edges}
+    return graph, table, D.Corpus(graph, vectors=D.Vectors(table=table))
+
+
+def big_golden() -> dict:
+    from creative import story as S
+    graph, table, c = big_corpus()
+    jokes = list(c.jokes)
+    probe = jokes[:4] + jokes[10:12] + jokes[30:32]
+    return {"graph": graph, "vectors": table,
+            "cos_band": {j: list(S._cos_band(c, j)) for j in probe},
+            "same_subject": {f"{a}|{b}": list(S.same_subject(c, [a], b)) for a in probe for b in jokes if a != b},
+            "transition": {f"{a}|{b}": S.transition(c, a, b) for a in probe for b in probe if a != b}}
+
+
 def punch_golden(c) -> dict:
     from creative import textdiff as T
     from creative import voice as V
@@ -160,6 +242,8 @@ def main():
                 ("Mabel's (upstairs)", None), ("Ab Comedy", None), ("Joe's Poets Cafe", "2020")]},
             "month_year": {d: N.month_year(d) for d in ["2015-06-26", "2015", "2015-13-01", "", "20xx-ab"]},
             "punch": punch_golden(c),
+            "story": story_golden(c),
+            "big": big_golden(),
         }
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "notebook.json").write_text(json.dumps(jsonable(out), indent=1, ensure_ascii=False) + "\n", encoding="utf-8",

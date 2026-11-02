@@ -277,6 +277,114 @@ fn lexical_related_and_riff_grounds() {
     }
 }
 
+/// Equal within float32 precision (numpy's BLAS dot products sum in the kernel's order).
+fn close(rust: Option<f64>, python: &Value, what: &str) {
+    match (rust, python.as_f64()) {
+        (None, None) => {}
+        (Some(r), Some(p)) => assert!((r - p).abs() <= 1e-5, "{what}: rust {r} vs python {p}"),
+        _ => panic!("{what}: rust {rust:?} vs python {python}"),
+    }
+}
+
+#[test]
+fn transitions_and_bridges() {
+    use pk_creative::story::{Story, bridge_finish};
+    let g = golden();
+    let c = corpus(&g);
+    let st = Story::new(&c);
+    let said = json!({"bridge": "  So anyway, the parrot.  ", "uses": ["L2", "L9"]});
+    for (pair, want) in g["story"]["pairs"].as_object().unwrap() {
+        let (a, b) = pair.split_once('|').unwrap();
+        same(&st.transition(a, b), &want["transition"], &format!("{pair} transition"));
+        let ids: Vec<Value> = st.direct_edges(a, b).iter().map(|e| e["id"].clone()).collect();
+        same(&json!(ids), &want["direct"], &format!("{pair} direct"));
+        same(
+            &json!(st.shared_labels(a, b, &["persona"], 0.4)),
+            &want["personas"],
+            &format!("{pair} personas"),
+        );
+        same(
+            &json!(st.shared_labels(a, b, &["topic"], 0.4)),
+            &want["topics"],
+            &format!("{pair} topics"),
+        );
+        let (sc, ws, near) = st.same_subject(&[a], b);
+        close(Some(sc), &want["same_subject"][0], &format!("{pair} subject score"));
+        same(
+            &json!([ws, near]),
+            &json!([want["same_subject"][1], want["same_subject"][2]]),
+            &format!("{pair} subject"),
+        );
+        close(st.cos(a, b), &want["cos"], &format!("{pair} cos"));
+        let links = st.bridge_links(a, b);
+        let user = (!links.is_empty()).then(|| st.bridge_user("he could say", a, b, &links));
+        same(&json!(user), &want["user"], &format!("{pair} bridge user"));
+        let bridge = &want["bridge"];
+        if links.is_empty() {
+            same(
+                &json!(bridge["status"]),
+                &json!("no_grounding"),
+                &format!("{pair} no grounding"),
+            );
+        } else {
+            let (text, grounded) = bridge_finish(Some(&said), &links);
+            same(&json!(text), &bridge["text"], &format!("{pair} bridge text"));
+            same(
+                &Value::Array(grounded),
+                &bridge["grounded_in"],
+                &format!("{pair} grounded_in"),
+            );
+            let all: Vec<Value> = links.iter().map(|x| x["id"].clone()).collect();
+            same(&Value::Array(all), &bridge["all_links"], &format!("{pair} all_links"));
+        }
+    }
+    for (j, want) in g["story"]["edge_text"].as_object().unwrap() {
+        same(
+            &json!([st.edge_text(j, true), st.edge_text(j, false)]),
+            want,
+            &format!("{j} edge_text"),
+        );
+    }
+    for (j, want) in g["story"]["cos_band"].as_object().unwrap() {
+        let (lo, hi) = st.cos_band(j);
+        close(Some(lo), &want[0], &format!("{j} band lo"));
+        close(Some(hi), &want[1], &format!("{j} band hi"));
+    }
+}
+
+#[test]
+fn the_vector_band_and_rare_words_decide_links() {
+    use pk_creative::story::Story;
+    let g = golden();
+    let big = &g["big"];
+    let extras = vec![("extra_big.json".to_string(), json!({"rows": big["vectors"]}))];
+    let c = Corpus::new(Parts {
+        graph: big["graph"].clone(),
+        vectors: std::sync::Arc::new(Vectors::from_parts(&[], &extras)),
+        owner: "owner".into(),
+        ..Parts::default()
+    });
+    let st = Story::new(&c);
+    for (j, want) in big["cos_band"].as_object().unwrap() {
+        let (lo, hi) = st.cos_band(j);
+        close(Some(lo), &want[0], &format!("{j} band lo"));
+        close(Some(hi), &want[1], &format!("{j} band hi"));
+    }
+    let mut linked = 0;
+    for (pair, want) in big["same_subject"].as_object().unwrap() {
+        let (a, b) = pair.split_once('|').unwrap();
+        let (sc, ws, near) = st.same_subject(&[a], b);
+        close(Some(sc), &want[0], &format!("{pair} score"));
+        same(&json!([ws, near]), &json!([want[1], want[2]]), &format!("{pair} words"));
+        linked += usize::from(sc >= 0.35);
+    }
+    assert!(linked > 0, "the big corpus links something by subject");
+    for (pair, want) in big["transition"].as_object().unwrap() {
+        let (a, b) = pair.split_once('|').unwrap();
+        same(&st.transition(a, b), want, &format!("{pair} transition"));
+    }
+}
+
 #[test]
 fn punch_up_halves() {
     use pk_creative::punch::{bit_locked, is_locked_line, latest_lines, laugh_marks, punch_user, same_line};

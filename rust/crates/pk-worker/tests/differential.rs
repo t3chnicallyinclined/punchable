@@ -277,7 +277,9 @@ fn normalise(x: &Value) -> Value {
             }
             // a model call's id is random on both sides (uuid4, 12 hex): present, not compared
             if let Some(id) = out.get_mut("call_id")
-                && id.as_str().is_some_and(|s| s.len() == 12 && s.chars().all(|c| c.is_ascii_hexdigit()))
+                && id
+                    .as_str()
+                    .is_some_and(|s| s.len() == 12 && s.chars().all(|c| c.is_ascii_hexdigit()))
             {
                 *id = json!("<call_id>");
             }

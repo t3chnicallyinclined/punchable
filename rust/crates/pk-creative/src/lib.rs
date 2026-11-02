@@ -20,6 +20,7 @@ pub mod punch;
 pub mod pyish;
 pub mod reducers;
 pub mod store;
+pub mod story;
 pub mod textdiff;
 pub mod verbatim;
 pub mod write;
