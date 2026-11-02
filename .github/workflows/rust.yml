@@ -28,6 +28,10 @@ on:
       - 'api-dev/**'
       - 'api/**'
       - 'db/**'
+      # the Python worker the pk-worker differential replays (rust/tools/gen_worker_goldens.py)
+      - 'worker/**'
+      - 'gsync/rules.py'
+      - 'db/srcpaths.py'
       # include_str!-compiled into the crates (docs/ARCHITECTURE.md section 6)
       - 'db/schema*.surql'
       - 'engine/config.hosted.toml'
@@ -45,6 +49,10 @@ on:
       - 'api-dev/**'
       - 'api/**'
       - 'db/**'
+      # the Python worker the pk-worker differential replays (rust/tools/gen_worker_goldens.py)
+      - 'worker/**'
+      - 'gsync/rules.py'
+      - 'db/srcpaths.py'
       - 'db/schema*.surql'
       - 'engine/config.hosted.toml'
       - '.github/workflows/rust.yml'
@@ -187,6 +195,8 @@ jobs:
           python rust/tools/gen_llm_goldens.py
           python rust/tools/gen_embed_goldens.py
           python rust/tools/gen_wire_goldens.py
+          python rust/tools/gen_corpus_goldens.py
+          python rust/tools/gen_worker_goldens.py
 
       - name: The committed goldens match
         run: git diff --exit-code -- rust/crates/*/tests/goldens

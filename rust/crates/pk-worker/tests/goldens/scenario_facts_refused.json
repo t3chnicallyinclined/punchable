@@ -1,0 +1,220 @@
+{
+ "name": "facts_refused",
+ "env": {},
+ "job": {
+  "id": "job:facts-golden000001",
+  "kind": "facts",
+  "input": {
+   "text": "parrots"
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [],
+   "dropped": [],
+   "updated_at": null
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "",
+   "model": "claude-sonnet-5-5",
+   "stop_reason": "refusal"
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/decisions",
+    "query": "after=0",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=storyboards",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=workingsets",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=venues",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=merges",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=suggestions",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Afacts-golden000001/result",
+    "query": "",
+    "body": {
+     "ok": true,
+     "result": {
+      "idea": "parrots",
+      "draft": true,
+      "label": "Checked by the AI against its sources · read the source",
+      "status": "provider_error",
+      "facts": [],
+      "dropped": 0,
+      "why": "Claude declined this one. Try rewording.",
+      "online": {
+       "refresh": {
+        "fetched": 0,
+        "files": 0,
+        "decisions": 0
+       },
+       "pushed": [],
+       "legal_refused": 0,
+       "media_deleted": 0,
+       "voice": {
+        "loaded": true,
+        "updated_at": "2026-10-19T08:00:00Z",
+        "sha": "34afd63ab5ca",
+        "chars": 884
+       }
+      }
+     }
+    }
+   }
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "A comedian is writing about this idea:\n\"parrots\"\n\nGive up to 5 short, plain, checkable facts that would help him understand the subject (how it works, real numbers, history). One sentence each. For each, the https URL of a public page (Wikipedia, an encyclopedia, a news or reference site) that states it. No jokes. If you are not sure of a fact or its source, leave it out."
+     }
+    ],
+    "model": "claude-sonnet-5-5",
+    "output_config": {
+     "effort": "medium",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "facts": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "fact": {
+            "type": "string"
+           },
+           "source_title": {
+            "type": "string"
+           },
+           "source_url": {
+            "type": "string"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "fact",
+           "source_title",
+           "source_url"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "facts"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "You are a careful fact checker. Every fact must be stated on the page you cite.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

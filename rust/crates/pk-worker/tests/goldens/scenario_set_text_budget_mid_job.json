@@ -1,0 +1,913 @@
+{
+ "name": "set_text_budget_mid_job",
+ "env": {},
+ "daily_usd": 1.0,
+ "job": {
+  "id": "job:set_text-golden000001",
+  "kind": "set_text",
+  "input": {
+   "segments": [
+    {
+     "text": "Line 0 about luggage and the carousel."
+    },
+    {
+     "text": "Line 1 about luggage and the carousel."
+    },
+    {
+     "text": "Line 2 about luggage and the carousel."
+    },
+    {
+     "text": "Line 3 about luggage and the carousel."
+    },
+    {
+     "text": "Line 4 about luggage and the carousel."
+    },
+    {
+     "text": "Line 5 about luggage and the carousel."
+    },
+    {
+     "text": "Line 6 about luggage and the carousel."
+    },
+    {
+     "text": "Line 7 about luggage and the carousel."
+    },
+    {
+     "text": "Line 8 about luggage and the carousel."
+    },
+    {
+     "text": "Line 9 about luggage and the carousel."
+    },
+    {
+     "text": "Line 10 about luggage and the carousel."
+    },
+    {
+     "text": "Line 11 about luggage and the carousel."
+    },
+    {
+     "text": "Line 12 about luggage and the carousel."
+    },
+    {
+     "text": "Line 13 about luggage and the carousel."
+    },
+    {
+     "text": "Line 14 about luggage and the carousel."
+    },
+    {
+     "text": "Line 15 about luggage and the carousel."
+    },
+    {
+     "text": "Line 16 about luggage and the carousel."
+    },
+    {
+     "text": "Line 17 about luggage and the carousel."
+    },
+    {
+     "text": "Line 18 about luggage and the carousel."
+    },
+    {
+     "text": "Line 19 about luggage and the carousel."
+    },
+    {
+     "text": "Line 20 about luggage and the carousel."
+    },
+    {
+     "text": "Line 21 about luggage and the carousel."
+    },
+    {
+     "text": "Line 22 about luggage and the carousel."
+    },
+    {
+     "text": "Line 23 about luggage and the carousel."
+    },
+    {
+     "text": "Line 24 about luggage and the carousel."
+    },
+    {
+     "text": "Line 25 about luggage and the carousel."
+    },
+    {
+     "text": "Line 26 about luggage and the carousel."
+    },
+    {
+     "text": "Line 27 about luggage and the carousel."
+    },
+    {
+     "text": "Line 28 about luggage and the carousel."
+    },
+    {
+     "text": "Line 29 about luggage and the carousel."
+    },
+    {
+     "text": "Line 30 about luggage and the carousel."
+    },
+    {
+     "text": "Line 31 about luggage and the carousel."
+    },
+    {
+     "text": "Line 32 about luggage and the carousel."
+    },
+    {
+     "text": "Line 33 about luggage and the carousel."
+    },
+    {
+     "text": "Line 34 about luggage and the carousel."
+    },
+    {
+     "text": "Line 35 about luggage and the carousel."
+    },
+    {
+     "text": "Line 36 about luggage and the carousel."
+    },
+    {
+     "text": "Line 37 about luggage and the carousel."
+    },
+    {
+     "text": "Line 38 about luggage and the carousel."
+    },
+    {
+     "text": "Line 39 about luggage and the carousel."
+    },
+    {
+     "text": "Line 40 about luggage and the carousel."
+    },
+    {
+     "text": "Line 41 about luggage and the carousel."
+    },
+    {
+     "text": "Line 42 about luggage and the carousel."
+    },
+    {
+     "text": "Line 43 about luggage and the carousel."
+    },
+    {
+     "text": "Line 44 about luggage and the carousel."
+    },
+    {
+     "text": "Line 45 about luggage and the carousel."
+    },
+    {
+     "text": "Line 46 about luggage and the carousel."
+    },
+    {
+     "text": "Line 47 about luggage and the carousel."
+    },
+    {
+     "text": "Line 48 about luggage and the carousel."
+    },
+    {
+     "text": "Line 49 about luggage and the carousel."
+    },
+    {
+     "text": "Line 50 about luggage and the carousel."
+    },
+    {
+     "text": "Line 51 about luggage and the carousel."
+    },
+    {
+     "text": "Line 52 about luggage and the carousel."
+    },
+    {
+     "text": "Line 53 about luggage and the carousel."
+    },
+    {
+     "text": "Line 54 about luggage and the carousel."
+    },
+    {
+     "text": "Line 55 about luggage and the carousel."
+    },
+    {
+     "text": "Line 56 about luggage and the carousel."
+    },
+    {
+     "text": "Line 57 about luggage and the carousel."
+    },
+    {
+     "text": "Line 58 about luggage and the carousel."
+    },
+    {
+     "text": "Line 59 about luggage and the carousel."
+    },
+    {
+     "text": "Line 60 about luggage and the carousel."
+    },
+    {
+     "text": "Line 61 about luggage and the carousel."
+    },
+    {
+     "text": "Line 62 about luggage and the carousel."
+    },
+    {
+     "text": "Line 63 about luggage and the carousel."
+    },
+    {
+     "text": "Line 64 about luggage and the carousel."
+    },
+    {
+     "text": "Line 65 about luggage and the carousel."
+    },
+    {
+     "text": "Line 66 about luggage and the carousel."
+    },
+    {
+     "text": "Line 67 about luggage and the carousel."
+    },
+    {
+     "text": "Line 68 about luggage and the carousel."
+    },
+    {
+     "text": "Line 69 about luggage and the carousel."
+    },
+    {
+     "text": "Line 70 about luggage and the carousel."
+    },
+    {
+     "text": "Line 71 about luggage and the carousel."
+    },
+    {
+     "text": "Line 72 about luggage and the carousel."
+    },
+    {
+     "text": "Line 73 about luggage and the carousel."
+    },
+    {
+     "text": "Line 74 about luggage and the carousel."
+    },
+    {
+     "text": "Line 75 about luggage and the carousel."
+    },
+    {
+     "text": "Line 76 about luggage and the carousel."
+    },
+    {
+     "text": "Line 77 about luggage and the carousel."
+    },
+    {
+     "text": "Line 78 about luggage and the carousel."
+    },
+    {
+     "text": "Line 79 about luggage and the carousel."
+    },
+    {
+     "text": "Line 80 about luggage and the carousel."
+    },
+    {
+     "text": "Line 81 about luggage and the carousel."
+    },
+    {
+     "text": "Line 82 about luggage and the carousel."
+    },
+    {
+     "text": "Line 83 about luggage and the carousel."
+    },
+    {
+     "text": "Line 84 about luggage and the carousel."
+    },
+    {
+     "text": "Line 85 about luggage and the carousel."
+    },
+    {
+     "text": "Line 86 about luggage and the carousel."
+    },
+    {
+     "text": "Line 87 about luggage and the carousel."
+    },
+    {
+     "text": "Line 88 about luggage and the carousel."
+    },
+    {
+     "text": "Line 89 about luggage and the carousel."
+    },
+    {
+     "text": "Line 90 about luggage and the carousel."
+    },
+    {
+     "text": "Line 91 about luggage and the carousel."
+    },
+    {
+     "text": "Line 92 about luggage and the carousel."
+    },
+    {
+     "text": "Line 93 about luggage and the carousel."
+    },
+    {
+     "text": "Line 94 about luggage and the carousel."
+    },
+    {
+     "text": "Line 95 about luggage and the carousel."
+    },
+    {
+     "text": "Line 96 about luggage and the carousel."
+    },
+    {
+     "text": "Line 97 about luggage and the carousel."
+    },
+    {
+     "text": "Line 98 about luggage and the carousel."
+    },
+    {
+     "text": "Line 99 about luggage and the carousel."
+    },
+    {
+     "text": "Line 100 about luggage and the carousel."
+    },
+    {
+     "text": "Line 101 about luggage and the carousel."
+    },
+    {
+     "text": "Line 102 about luggage and the carousel."
+    },
+    {
+     "text": "Line 103 about luggage and the carousel."
+    },
+    {
+     "text": "Line 104 about luggage and the carousel."
+    },
+    {
+     "text": "Line 105 about luggage and the carousel."
+    },
+    {
+     "text": "Line 106 about luggage and the carousel."
+    },
+    {
+     "text": "Line 107 about luggage and the carousel."
+    },
+    {
+     "text": "Line 108 about luggage and the carousel."
+    },
+    {
+     "text": "Line 109 about luggage and the carousel."
+    },
+    {
+     "text": "Line 110 about luggage and the carousel."
+    },
+    {
+     "text": "Line 111 about luggage and the carousel."
+    },
+    {
+     "text": "Line 112 about luggage and the carousel."
+    },
+    {
+     "text": "Line 113 about luggage and the carousel."
+    },
+    {
+     "text": "Line 114 about luggage and the carousel."
+    },
+    {
+     "text": "Line 115 about luggage and the carousel."
+    },
+    {
+     "text": "Line 116 about luggage and the carousel."
+    },
+    {
+     "text": "Line 117 about luggage and the carousel."
+    },
+    {
+     "text": "Line 118 about luggage and the carousel."
+    },
+    {
+     "text": "Line 119 about luggage and the carousel."
+    },
+    {
+     "text": "Line 120 about luggage and the carousel."
+    },
+    {
+     "text": "Line 121 about luggage and the carousel."
+    },
+    {
+     "text": "Line 122 about luggage and the carousel."
+    },
+    {
+     "text": "Line 123 about luggage and the carousel."
+    },
+    {
+     "text": "Line 124 about luggage and the carousel."
+    },
+    {
+     "text": "Line 125 about luggage and the carousel."
+    },
+    {
+     "text": "Line 126 about luggage and the carousel."
+    },
+    {
+     "text": "Line 127 about luggage and the carousel."
+    },
+    {
+     "text": "Line 128 about luggage and the carousel."
+    },
+    {
+     "text": "Line 129 about luggage and the carousel."
+    },
+    {
+     "text": "Line 130 about luggage and the carousel."
+    },
+    {
+     "text": "Line 131 about luggage and the carousel."
+    },
+    {
+     "text": "Line 132 about luggage and the carousel."
+    },
+    {
+     "text": "Line 133 about luggage and the carousel."
+    },
+    {
+     "text": "Line 134 about luggage and the carousel."
+    },
+    {
+     "text": "Line 135 about luggage and the carousel."
+    },
+    {
+     "text": "Line 136 about luggage and the carousel."
+    },
+    {
+     "text": "Line 137 about luggage and the carousel."
+    },
+    {
+     "text": "Line 138 about luggage and the carousel."
+    },
+    {
+     "text": "Line 139 about luggage and the carousel."
+    },
+    {
+     "text": "Line 140 about luggage and the carousel."
+    },
+    {
+     "text": "Line 141 about luggage and the carousel."
+    },
+    {
+     "text": "Line 142 about luggage and the carousel."
+    },
+    {
+     "text": "Line 143 about luggage and the carousel."
+    },
+    {
+     "text": "Line 144 about luggage and the carousel."
+    },
+    {
+     "text": "Line 145 about luggage and the carousel."
+    },
+    {
+     "text": "Line 146 about luggage and the carousel."
+    },
+    {
+     "text": "Line 147 about luggage and the carousel."
+    },
+    {
+     "text": "Line 148 about luggage and the carousel."
+    },
+    {
+     "text": "Line 149 about luggage and the carousel."
+    },
+    {
+     "text": "Line 150 about luggage and the carousel."
+    },
+    {
+     "text": "Line 151 about luggage and the carousel."
+    },
+    {
+     "text": "Line 152 about luggage and the carousel."
+    },
+    {
+     "text": "Line 153 about luggage and the carousel."
+    },
+    {
+     "text": "Line 154 about luggage and the carousel."
+    },
+    {
+     "text": "Line 155 about luggage and the carousel."
+    },
+    {
+     "text": "Line 156 about luggage and the carousel."
+    },
+    {
+     "text": "Line 157 about luggage and the carousel."
+    },
+    {
+     "text": "Line 158 about luggage and the carousel."
+    },
+    {
+     "text": "Line 159 about luggage and the carousel."
+    },
+    {
+     "text": "Line 160 about luggage and the carousel."
+    },
+    {
+     "text": "Line 161 about luggage and the carousel."
+    },
+    {
+     "text": "Line 162 about luggage and the carousel."
+    },
+    {
+     "text": "Line 163 about luggage and the carousel."
+    },
+    {
+     "text": "Line 164 about luggage and the carousel."
+    },
+    {
+     "text": "Line 165 about luggage and the carousel."
+    },
+    {
+     "text": "Line 166 about luggage and the carousel."
+    },
+    {
+     "text": "Line 167 about luggage and the carousel."
+    },
+    {
+     "text": "Line 168 about luggage and the carousel."
+    },
+    {
+     "text": "Line 169 about luggage and the carousel."
+    },
+    {
+     "text": "Line 170 about luggage and the carousel."
+    },
+    {
+     "text": "Line 171 about luggage and the carousel."
+    },
+    {
+     "text": "Line 172 about luggage and the carousel."
+    },
+    {
+     "text": "Line 173 about luggage and the carousel."
+    },
+    {
+     "text": "Line 174 about luggage and the carousel."
+    },
+    {
+     "text": "Line 175 about luggage and the carousel."
+    },
+    {
+     "text": "Line 176 about luggage and the carousel."
+    },
+    {
+     "text": "Line 177 about luggage and the carousel."
+    },
+    {
+     "text": "Line 178 about luggage and the carousel."
+    },
+    {
+     "text": "Line 179 about luggage and the carousel."
+    },
+    {
+     "text": "Line 180 about luggage and the carousel."
+    },
+    {
+     "text": "Line 181 about luggage and the carousel."
+    },
+    {
+     "text": "Line 182 about luggage and the carousel."
+    },
+    {
+     "text": "Line 183 about luggage and the carousel."
+    },
+    {
+     "text": "Line 184 about luggage and the carousel."
+    },
+    {
+     "text": "Line 185 about luggage and the carousel."
+    },
+    {
+     "text": "Line 186 about luggage and the carousel."
+    },
+    {
+     "text": "Line 187 about luggage and the carousel."
+    },
+    {
+     "text": "Line 188 about luggage and the carousel."
+    },
+    {
+     "text": "Line 189 about luggage and the carousel."
+    },
+    {
+     "text": "Line 190 about luggage and the carousel."
+    },
+    {
+     "text": "Line 191 about luggage and the carousel."
+    },
+    {
+     "text": "Line 192 about luggage and the carousel."
+    },
+    {
+     "text": "Line 193 about luggage and the carousel."
+    },
+    {
+     "text": "Line 194 about luggage and the carousel."
+    },
+    {
+     "text": "Line 195 about luggage and the carousel."
+    },
+    {
+     "text": "Line 196 about luggage and the carousel."
+    },
+    {
+     "text": "Line 197 about luggage and the carousel."
+    },
+    {
+     "text": "Line 198 about luggage and the carousel."
+    },
+    {
+     "text": "Line 199 about luggage and the carousel."
+    },
+    {
+     "text": "Line 200 about luggage and the carousel."
+    },
+    {
+     "text": "Line 201 about luggage and the carousel."
+    },
+    {
+     "text": "Line 202 about luggage and the carousel."
+    },
+    {
+     "text": "Line 203 about luggage and the carousel."
+    },
+    {
+     "text": "Line 204 about luggage and the carousel."
+    },
+    {
+     "text": "Line 205 about luggage and the carousel."
+    },
+    {
+     "text": "Line 206 about luggage and the carousel."
+    },
+    {
+     "text": "Line 207 about luggage and the carousel."
+    },
+    {
+     "text": "Line 208 about luggage and the carousel."
+    },
+    {
+     "text": "Line 209 about luggage and the carousel."
+    },
+    {
+     "text": "Line 210 about luggage and the carousel."
+    },
+    {
+     "text": "Line 211 about luggage and the carousel."
+    },
+    {
+     "text": "Line 212 about luggage and the carousel."
+    },
+    {
+     "text": "Line 213 about luggage and the carousel."
+    },
+    {
+     "text": "Line 214 about luggage and the carousel."
+    },
+    {
+     "text": "Line 215 about luggage and the carousel."
+    },
+    {
+     "text": "Line 216 about luggage and the carousel."
+    },
+    {
+     "text": "Line 217 about luggage and the carousel."
+    },
+    {
+     "text": "Line 218 about luggage and the carousel."
+    },
+    {
+     "text": "Line 219 about luggage and the carousel."
+    },
+    {
+     "text": "Line 220 about luggage and the carousel."
+    },
+    {
+     "text": "Line 221 about luggage and the carousel."
+    },
+    {
+     "text": "Line 222 about luggage and the carousel."
+    },
+    {
+     "text": "Line 223 about luggage and the carousel."
+    },
+    {
+     "text": "Line 224 about luggage and the carousel."
+    },
+    {
+     "text": "Line 225 about luggage and the carousel."
+    },
+    {
+     "text": "Line 226 about luggage and the carousel."
+    },
+    {
+     "text": "Line 227 about luggage and the carousel."
+    },
+    {
+     "text": "Line 228 about luggage and the carousel."
+    },
+    {
+     "text": "Line 229 about luggage and the carousel."
+    }
+   ],
+   "title": "Open mic",
+   "recorded_at": "2026-10-20T21:00:00-04:00",
+   "venue": "a room",
+   "duration_s": null,
+   "received_at": "2026-10-20T21:30:00Z",
+   "engine": "speech"
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [],
+   "dropped": [],
+   "updated_at": null
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "{\"units\": [{\"first\": 0, \"last\": 219, \"kind\": \"bit\", \"name\": \"Luggage\", \"funny\": true}]}",
+   "model": "claude-opus-5-5",
+   "input_tokens": 1000000
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5",
+    "paused": "over today's AI budget ($4.00 of $1.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/decisions",
+    "query": "after=0",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=storyboards",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=workingsets",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=venues",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=merges",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=suggestions",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Aset_text-golden000001/result",
+    "query": "",
+    "body": {
+     "ok": false,
+     "error": "over today's AI budget ($4.00 of $1.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD",
+     "retry": true
+    }
+   }
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "This is the transcript of a recorded stand-up SET. Units are: bit (a joke or bit he performs), crowd_work, banter (filler, transitions), intro (host/walk-on), outro, one numbered line each.\nSplit it into consecutive units. Each unit covers lines first..last (inclusive) and units must not overlap. A bit is ONE unit including its tags, act-outs and asides; start a new unit only when he moves to a different premise (watch for the turn: 'anyway', 'so', a new subject). intro = only the host introducing him / walk-on applause: his own first lines are material, even quick openers. outro = only his sign-off ('that's my time', socials). name = a short title for the unit (3-7 words). funny = true if it is comedic material.\n\n[0] (00:00) Line 0 about luggage and the carousel.\n[1] (00:02) Line 1 about luggage and the carousel.\n[2] (00:05) Line 2 about luggage and the carousel.\n[3] (00:08) Line 3 about luggage and the carousel.\n[4] (00:11) Line 4 about luggage and the carousel.\n[5] (00:14) Line 5 about luggage and the carousel.\n[6] (00:16) Line 6 about luggage and the carousel.\n[7] (00:19) Line 7 about luggage and the carousel.\n[8] (00:22) Line 8 about luggage and the carousel.\n[9] (00:25) Line 9 about luggage and the carousel.\n[10] (00:28) Line 10 about luggage and the carousel.\n[11] (00:30) Line 11 about luggage and the carousel.\n[12] (00:33) Line 12 about luggage and the carousel.\n[13] (00:36) Line 13 about luggage and the carousel.\n[14] (00:39) Line 14 about luggage and the carousel.\n[15] (00:41) Line 15 about luggage and the carousel.\n[16] (00:44) Line 16 about luggage and the carousel.\n[17] (00:47) Line 17 about luggage and the carousel.\n[18] (00:50) Line 18 about luggage and the carousel.\n[19] (00:53) Line 19 about luggage and the carousel.\n[20] (00:55) Line 20 about luggage and the carousel.\n[21] (00:58) Line 21 about luggage and the carousel.\n[22] (01:01) Line 22 about luggage and the carousel.\n[23] (01:04) Line 23 about luggage and the carousel.\n[24] (01:07) Line 24 about luggage and the carousel.\n[25] (01:09) Line 25 about luggage and the carousel.\n[26] (01:12) Line 26 about luggage and the carousel.\n[27] (01:15) Line 27 about luggage and the carousel.\n[28] (01:18) Line 28 about luggage and the carousel.\n[29] (01:21) Line 29 about luggage and the carousel.\n[30] (01:23) Line 30 about luggage and the carousel.\n[31] (01:26) Line 31 about luggage and the carousel.\n[32] (01:29) Line 32 about luggage and the carousel.\n[33] (01:32) Line 33 about luggage and the carousel.\n[34] (01:35) Line 34 about luggage and the carousel.\n[35] (01:37) Line 35 about luggage and the carousel.\n[36] (01:40) Line 36 about luggage and the carousel.\n[37] (01:43) Line 37 about luggage and the carousel.\n[38] (01:46) Line 38 about luggage and the carousel.\n[39] (01:49) Line 39 about luggage and the carousel.\n[40] (01:51) Line 40 about luggage and the carousel.\n[41] (01:54) Line 41 about luggage and the carousel.\n[42] (01:57) Line 42 about luggage and the carousel.\n[43] (02:00) Line 43 about luggage and the carousel.\n[44] (02:03) Line 44 about luggage and the carousel.\n[45] (02:05) Line 45 about luggage and the carousel.\n[46] (02:08) Line 46 about luggage and the carousel.\n[47] (02:11) Line 47 about luggage and the carousel.\n[48] (02:14) Line 48 about luggage and the carousel.\n[49] (02:17) Line 49 about luggage and the carousel.\n[50] (02:19) Line 50 about luggage and the carousel.\n[51] (02:22) Line 51 about luggage and the carousel.\n[52] (02:25) Line 52 about luggage and the carousel.\n[53] (02:28) Line 53 about luggage and the carousel.\n[54] (02:31) Line 54 about luggage and the carousel.\n[55] (02:34) Line 55 about luggage and the carousel.\n[56] (02:36) Line 56 about luggage and the carousel.\n[57] (02:39) Line 57 about luggage and the carousel.\n[58] (02:42) Line 58 about luggage and the carousel.\n[59] (02:45) Line 59 about luggage and the carousel.\n[60] (02:48) Line 60 about luggage and the carousel.\n[61] (02:50) Line 61 about luggage and the carousel.\n[62] (02:53) Line 62 about luggage and the carousel.\n[63] (02:56) Line 63 about luggage and the carousel.\n[64] (02:59) Line 64 about luggage and the carousel.\n[65] (03:02) Line 65 about luggage and the carousel.\n[66] (03:04) Line 66 about luggage and the carousel.\n[67] (03:07) Line 67 about luggage and the carousel.\n[68] (03:10) Line 68 about luggage and the carousel.\n[69] (03:13) Line 69 about luggage and the carousel.\n[70] (03:16) Line 70 about luggage and the carousel.\n[71] (03:18) Line 71 about luggage and the carousel.\n[72] (03:21) Line 72 about luggage and the carousel.\n[73] (03:24) Line 73 about luggage and the carousel.\n[74] (03:27) Line 74 about luggage and the carousel.\n[75] (03:30) Line 75 about luggage and the carousel.\n[76] (03:32) Line 76 about luggage and the carousel.\n[77] (03:35) Line 77 about luggage and the carousel.\n[78] (03:38) Line 78 about luggage and the carousel.\n[79] (03:41) Line 79 about luggage and the carousel.\n[80] (03:44) Line 80 about luggage and the carousel.\n[81] (03:46) Line 81 about luggage and the carousel.\n[82] (03:49) Line 82 about luggage and the carousel.\n[83] (03:52) Line 83 about luggage and the carousel.\n[84] (03:55) Line 84 about luggage and the carousel.\n[85] (03:58) Line 85 about luggage and the carousel.\n[86] (04:00) Line 86 about luggage and the carousel.\n[87] (04:03) Line 87 about luggage and the carousel.\n[88] (04:06) Line 88 about luggage and the carousel.\n[89] (04:09) Line 89 about luggage and the carousel.\n[90] (04:12) Line 90 about luggage and the carousel.\n[91] (04:14) Line 91 about luggage and the carousel.\n[92] (04:17) Line 92 about luggage and the carousel.\n[93] (04:20) Line 93 about luggage and the carousel.\n[94] (04:23) Line 94 about luggage and the carousel.\n[95] (04:26) Line 95 about luggage and the carousel.\n[96] (04:28) Line 96 about luggage and the carousel.\n[97] (04:31) Line 97 about luggage and the carousel.\n[98] (04:34) Line 98 about luggage and the carousel.\n[99] (04:37) Line 99 about luggage and the carousel.\n[100] (04:40) Line 100 about luggage and the carousel.\n[101] (04:42) Line 101 about luggage and the carousel.\n[102] (04:45) Line 102 about luggage and the carousel.\n[103] (04:48) Line 103 about luggage and the carousel.\n[104] (04:51) Line 104 about luggage and the carousel.\n[105] (04:54) Line 105 about luggage and the carousel.\n[106] (04:56) Line 106 about luggage and the carousel.\n[107] (04:59) Line 107 about luggage and the carousel.\n[108] (05:02) Line 108 about luggage and the carousel.\n[109] (05:05) Line 109 about luggage and the carousel.\n[110] (05:08) Line 110 about luggage and the carousel.\n[111] (05:10) Line 111 about luggage and the carousel.\n[112] (05:13) Line 112 about luggage and the carousel.\n[113] (05:16) Line 113 about luggage and the carousel.\n[114] (05:19) Line 114 about luggage and the carousel.\n[115] (05:22) Line 115 about luggage and the carousel.\n[116] (05:24) Line 116 about luggage and the carousel.\n[117] (05:27) Line 117 about luggage and the carousel.\n[118] (05:30) Line 118 about luggage and the carousel.\n[119] (05:33) Line 119 about luggage and the carousel.\n[120] (05:36) Line 120 about luggage and the carousel.\n[121] (05:38) Line 121 about luggage and the carousel.\n[122] (05:41) Line 122 about luggage and the carousel.\n[123] (05:44) Line 123 about luggage and the carousel.\n[124] (05:47) Line 124 about luggage and the carousel.\n[125] (05:50) Line 125 about luggage and the carousel.\n[126] (05:52) Line 126 about luggage and the carousel.\n[127] (05:55) Line 127 about luggage and the carousel.\n[128] (05:58) Line 128 about luggage and the carousel.\n[129] (06:01) Line 129 about luggage and the carousel.\n[130] (06:04) Line 130 about luggage and the carousel.\n[131] (06:06) Line 131 about luggage and the carousel.\n[132] (06:09) Line 132 about luggage and the carousel.\n[133] (06:12) Line 133 about luggage and the carousel.\n[134] (06:15) Line 134 about luggage and the carousel.\n[135] (06:18) Line 135 about luggage and the carousel.\n[136] (06:20) Line 136 about luggage and the carousel.\n[137] (06:23) Line 137 about luggage and the carousel.\n[138] (06:26) Line 138 about luggage and the carousel.\n[139] (06:29) Line 139 about luggage and the carousel.\n[140] (06:32) Line 140 about luggage and the carousel.\n[141] (06:34) Line 141 about luggage and the carousel.\n[142] (06:37) Line 142 about luggage and the carousel.\n[143] (06:40) Line 143 about luggage and the carousel.\n[144] (06:43) Line 144 about luggage and the carousel.\n[145] (06:46) Line 145 about luggage and the carousel.\n[146] (06:48) Line 146 about luggage and the carousel.\n[147] (06:51) Line 147 about luggage and the carousel.\n[148] (06:54) Line 148 about luggage and the carousel.\n[149] (06:57) Line 149 about luggage and the carousel.\n[150] (07:00) Line 150 about luggage and the carousel.\n[151] (07:02) Line 151 about luggage and the carousel.\n[152] (07:05) Line 152 about luggage and the carousel.\n[153] (07:08) Line 153 about luggage and the carousel.\n[154] (07:11) Line 154 about luggage and the carousel.\n[155] (07:14) Line 155 about luggage and the carousel.\n[156] (07:16) Line 156 about luggage and the carousel.\n[157] (07:19) Line 157 about luggage and the carousel.\n[158] (07:22) Line 158 about luggage and the carousel.\n[159] (07:25) Line 159 about luggage and the carousel.\n[160] (07:28) Line 160 about luggage and the carousel.\n[161] (07:30) Line 161 about luggage and the carousel.\n[162] (07:33) Line 162 about luggage and the carousel.\n[163] (07:36) Line 163 about luggage and the carousel.\n[164] (07:39) Line 164 about luggage and the carousel.\n[165] (07:42) Line 165 about luggage and the carousel.\n[166] (07:44) Line 166 about luggage and the carousel.\n[167] (07:47) Line 167 about luggage and the carousel.\n[168] (07:50) Line 168 about luggage and the carousel.\n[169] (07:53) Line 169 about luggage and the carousel.\n[170] (07:56) Line 170 about luggage and the carousel.\n[171] (07:58) Line 171 about luggage and the carousel.\n[172] (08:01) Line 172 about luggage and the carousel.\n[173] (08:04) Line 173 about luggage and the carousel.\n[174] (08:07) Line 174 about luggage and the carousel.\n[175] (08:10) Line 175 about luggage and the carousel.\n[176] (08:12) Line 176 about luggage and the carousel.\n[177] (08:15) Line 177 about luggage and the carousel.\n[178] (08:18) Line 178 about luggage and the carousel.\n[179] (08:21) Line 179 about luggage and the carousel.\n[180] (08:24) Line 180 about luggage and the carousel.\n[181] (08:26) Line 181 about luggage and the carousel.\n[182] (08:29) Line 182 about luggage and the carousel.\n[183] (08:32) Line 183 about luggage and the carousel.\n[184] (08:35) Line 184 about luggage and the carousel.\n[185] (08:38) Line 185 about luggage and the carousel.\n[186] (08:40) Line 186 about luggage and the carousel.\n[187] (08:43) Line 187 about luggage and the carousel.\n[188] (08:46) Line 188 about luggage and the carousel.\n[189] (08:49) Line 189 about luggage and the carousel.\n[190] (08:52) Line 190 about luggage and the carousel.\n[191] (08:54) Line 191 about luggage and the carousel.\n[192] (08:57) Line 192 about luggage and the carousel.\n[193] (09:00) Line 193 about luggage and the carousel.\n[194] (09:03) Line 194 about luggage and the carousel.\n[195] (09:06) Line 195 about luggage and the carousel.\n[196] (09:08) Line 196 about luggage and the carousel.\n[197] (09:11) Line 197 about luggage and the carousel.\n[198] (09:14) Line 198 about luggage and the carousel.\n[199] (09:17) Line 199 about luggage and the carousel.\n[200] (09:20) Line 200 about luggage and the carousel.\n[201] (09:22) Line 201 about luggage and the carousel.\n[202] (09:25) Line 202 about luggage and the carousel.\n[203] (09:28) Line 203 about luggage and the carousel.\n[204] (09:31) Line 204 about luggage and the carousel.\n[205] (09:34) Line 205 about luggage and the carousel.\n[206] (09:36) Line 206 about luggage and the carousel.\n[207] (09:39) Line 207 about luggage and the carousel.\n[208] (09:42) Line 208 about luggage and the carousel.\n[209] (09:45) Line 209 about luggage and the carousel.\n[210] (09:48) Line 210 about luggage and the carousel.\n[211] (09:50) Line 211 about luggage and the carousel.\n[212] (09:53) Line 212 about luggage and the carousel.\n[213] (09:56) Line 213 about luggage and the carousel.\n[214] (09:59) Line 214 about luggage and the carousel.\n[215] (10:02) Line 215 about luggage and the carousel.\n[216] (10:04) Line 216 about luggage and the carousel.\n[217] (10:07) Line 217 about luggage and the carousel.\n[218] (10:10) Line 218 about luggage and the carousel.\n[219] (10:13) Line 219 about luggage and the carousel."
+     }
+    ],
+    "model": "claude-opus-5-5",
+    "output_config": {
+     "effort": "high",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "units": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "first": {
+            "type": "integer"
+           },
+           "last": {
+            "type": "integer"
+           },
+           "kind": {
+            "type": "string",
+            "enum": [
+             "bit",
+             "idea",
+             "crowd_work",
+             "banter",
+             "intro",
+             "outro",
+             "note"
+            ]
+           },
+           "name": {
+            "type": "string"
+           },
+           "funny": {
+            "type": "boolean"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "first",
+           "last",
+           "kind",
+           "name",
+           "funny"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "units"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "You work on a stand-up comic's own material. Be literal and exact. Every quote you give must be copied character for character from the text it names; never paraphrase a quote. Reasons are one plain sentence a comic would understand.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

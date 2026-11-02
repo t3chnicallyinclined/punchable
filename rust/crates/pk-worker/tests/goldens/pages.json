@@ -1,0 +1,144 @@
+{
+ "texts": [
+  {
+   "html": "<p>Plain words.</p>",
+   "text": " plain words. ",
+   "legacy_entities": false
+  },
+  {
+   "html": "<html><head><STYLE type='text/css'>p{}</STYLE><Script>alert('x')</Script></head><body>Visible</body></html>",
+   "text": "      visible  ",
+   "legacy_entities": false
+  },
+  {
+   "html": "<script>a</style>b</script>tail",
+   "text": " tail",
+   "legacy_entities": false
+  },
+  {
+   "html": "<style>unterminated <p>text</p>",
+   "text": " unterminated  text ",
+   "legacy_entities": false
+  },
+  {
+   "html": "Fish &amp; chips &lt;b&gt; &quot;quoted&quot; &#39;single&#39; &#x41;&#66; caf&eacute; &mdash; &nbsp;end",
+   "text": "fish & chips <b> \"quoted\" 'single' ab café —  end",
+   "legacy_entities": false
+  },
+  {
+   "html": "<a href='x'>link</a> and <br/> line<br>break",
+   "text": " link  and   line break",
+   "legacy_entities": false
+  },
+  {
+   "html": "UPPER Case ÄÖÜ İstanbul ΣΑΣ",
+   "text": "upper case äöü i̇stanbul σας",
+   "legacy_entities": false
+  },
+  {
+   "html": "<scripts>not a script tag</scripts> kept?",
+   "text": " not a script tag  kept?",
+   "legacy_entities": false
+  },
+  {
+   "html": "a < b > c",
+   "text": "a   c",
+   "legacy_entities": false
+  },
+  {
+   "html": "<p>Parrots &copy; 2026</p>",
+   "text": " parrots © 2026 ",
+   "legacy_entities": false
+  },
+  {
+   "html": "Fish &amp chips &copy 2026 &notit",
+   "text": "fish & chips © 2026 ¬it",
+   "legacy_entities": true
+  }
+ ],
+ "missing": null,
+ "supported": [
+  {
+   "fact": "Airport security bins were introduced for laptops.",
+   "page": "airport security bins were introduced for laptops.",
+   "ok": true
+  },
+  {
+   "fact": "Airport security bins were introduced for laptops.",
+   "page": "airport only",
+   "ok": false
+  },
+  {
+   "fact": "Cats nap.",
+   "page": "cats nap a lot",
+   "ok": false
+  },
+  {
+   "fact": "Parrots mimic speech, parrots mimic speech.",
+   "page": "parrots mimic",
+   "ok": true
+  },
+  {
+   "fact": "The parrot's owners' disclaimers",
+   "page": "parrot owner disclaimer",
+   "ok": true
+  },
+  {
+   "fact": "Screening lanes average many passengers each hour.",
+   "page": "screening lanes process passengers; the average is many",
+   "ok": true
+  },
+  {
+   "fact": "",
+   "page": "anything",
+   "ok": false
+  },
+  {
+   "fact": "Words words words",
+   "page": "",
+   "ok": false
+  }
+ ],
+ "url_ok": [
+  {
+   "url": "https://facts.example.org/bins",
+   "ok": true
+  },
+  {
+   "url": "http://facts.example.org/x",
+   "ok": false
+  },
+  {
+   "url": "https://localhost/x",
+   "ok": false
+  },
+  {
+   "url": "https://a.b.co",
+   "ok": true
+  },
+  {
+   "url": "https://a.b.c0/x",
+   "ok": false
+  },
+  {
+   "url": "https://x.example.org/with space",
+   "ok": false
+  },
+  {
+   "url": "https://x.example.org/ü",
+   "ok": true
+  },
+  {
+   "url": "https://ex-ample.org/path?q=1#f",
+   "ok": true
+  },
+  {
+   "url": "https://.org",
+   "ok": false
+  },
+  {
+   "url": "ftp://x.example.org",
+   "ok": false
+  }
+ ]
+}

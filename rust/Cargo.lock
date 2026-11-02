@@ -1930,6 +1930,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "html-escape"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9356095b4b41197bba32173600e1582792cda618f65d12f68e2e77d273413c5"
+
+[[package]]
 name = "html5ever"
 version = "0.40.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3641,7 +3647,29 @@ name = "pk-worker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "pk-kb",
+ "axum",
+ "chrono",
+ "clap",
+ "futures",
+ "hex",
+ "html-escape",
+ "percent-encoding",
+ "pk-core",
+ "pk-creative",
+ "pk-llm",
+ "pk-obs",
+ "pk-wire",
+ "regex",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "wiremock",
 ]
 
 [[package]]

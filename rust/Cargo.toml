@@ -80,6 +80,11 @@ ts-rs = { version = "=12.0.1", features = ["serde-json-impl"] }
 sysinfo = { version = "0.38", default-features = false, features = ["system"] }
 # pk-engine (ADR 0013): the Snowball English stemmer, the same algorithm as the `punch_en` analyzer's snowball(english)
 rust-stemmers = "1"
+# pk-worker (T8): the cancellation token for the claim loop and its jobs; `urllib.parse.quote` for a job id in a path;
+# `html.unescape` for the fact-check pages
+tokio-util = { version = "0.7", default-features = false }
+percent-encoding = "2"
+html-escape = "0.2"
 # tests
 insta ={ version = "1", features = ["json"] }
 proptest = "1"

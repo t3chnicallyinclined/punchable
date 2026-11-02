@@ -1,0 +1,108 @@
+# PREPARED, NOT APPLIED (T8, docs/RUST_WORKSTREAM.md): infra/k8s/35-worker.yaml for the Rust worker image
+# (rust/Dockerfile.worker). It lives outside infra/k8s/ so infra/deploy.sh never applies it; the swap is the owner's
+# call: copy it over infra/k8s/35-worker.yaml in the swap commit, build the image off the node, roll out by digest,
+# and log it in the private deploy log (the day's spend ledger on the emptyDir resets with the pod: say so there).
+# Changes against the Python worker's manifest, nothing else:
+#   - no ENGINE_CONFIG / PK_ONLINE_FIRST / PK_CACHE_DIR: the engine config is compiled in, there is no workspace mirror
+#   - the liveness probe is `pk-worker probe` (the distroless image has no shell, no find)
+#   - RUST_LOG=info
+# Rollback: the previous image digest with infra/k8s/35-worker.yaml as it is on main.
+# Punchable hosted worker: infra/worker/Dockerfile (python -m worker --hosted over the in-cluster API). Rolled out only
+# when told (infra/ship.sh rollout worker). __IMAGE_REF__ is a digest (localhost:32000/punchable-worker@sha256:...)
+# filled by infra/ship.sh rollout worker.
+# Since 2026-10-27 this is where every AI job runs (owner: "all phone / frontier models"; the PC is retired): the
+# Anthropic API per engine/config.hosted.toml, key from Secret punchable-anthropic (infra/ship.sh ai-secret),
+# worker credentials from Secret punchable-worker (infra/ship.sh worker-secret: the pk-worker client secret).
+# Outbound only, but for one thing: GET /metrics on port 9100 (worker/metrics.py) for Prometheus, admitted from the
+# observability namespace alone (10-networkpolicy.yaml punchable-worker). It talks to the API Service (punchable-api,
+# port 80 -> 8080), to Keycloak on the public auth host for its token, to api.anthropic.com on 443, and to Bugsink
+# in-cluster (crash reports, worker/crashreport.py; SENTRY_DSN from the optional Secret punchable-sentry, the API's).
+# It never claims a kind that needs audio (process_set, import_youtube): transcription happens on the phone.
+# Liveness = the worker's own heartbeat file (touched every poll and around every job; a job is at most ~15 min,
+# STALE_CLAIM_S): older than 20 minutes three times in a row -> restart. Recreate strategy: never two workers at once.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: punchable-worker, namespace: punchable }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  progressDeadlineSeconds: 600
+  selector: { matchLabels: { app: punchable-worker } }
+  template:
+    metadata: { labels: { app: punchable-worker } }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: worker
+          image: __IMAGE_REF__
+          ports:
+            - { name: metrics, containerPort: 9100 }
+          env:
+            # worker/metrics.py: pk_worker_* and pk_ai_* on :9100/metrics (0 = off)
+            - { name: PK_METRICS_PORT, value: "9100" }
+            # the API inside the cluster (Service punchable-api, port 80 -> the pod's 8080); never the public hostname
+            - { name: PK_API, value: "http://punchable-api" }
+            # the token comes from the public issuer so `iss` matches what the API checks (OIDC_ISSUER in 30-api.yaml)
+            - { name: PK_TOKEN_URL, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__/protocol/openid-connect/token" }
+            - { name: PK_WORKER_CLIENT_ID, value: pk-worker }
+            - { name: PK_HOSTED, value: "1" }
+            - { name: RUST_LOG, value: info }
+            - { name: PK_WORKSPACE, value: /tmp/pk-worker }
+            - { name: PK_HEARTBEAT_FILE, value: /tmp/pk-worker/heartbeat }
+            - { name: PK_AI_SPEND_FILE, value: /tmp/pk-worker/ai_spend.json }
+            # the cost guard (engine/budget.py): USD per UTC day across every job kind; over it, jobs stay queued
+            # with the reason shown in the app. Owner's call; 2.00 is the default.
+            - { name: PK_AI_DAILY_USD, value: "2.00" }
+            # how the prompts name the comic (creative/voice.py; PK_COMIC_NAME / PK_COMIC_FIRST in infra/config.env,
+            # "the comic" when unset: the prompts then read "a stand-up comic's", "his idea", never "the comic's idea")
+            - { name: PK_COMIC_NAME, value: "__PK_COMIC_NAME__" }
+            - { name: PK_COMIC_FIRST, value: "__PK_COMIC_FIRST__" }
+            # the comic's actor id on the ideas the worker posts is set by the API; this is the worker's own name
+            - name: PK_WORKER_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+          envFrom:
+            # PK_WORKER_SECRET: the pk-worker client secret (infra/ship.sh worker-secret). Required.
+            - secretRef: { name: punchable-worker }
+            # ANTHROPIC_API_KEY (infra/ship.sh ai-secret). Required: without it no task has a provider.
+            - secretRef: { name: punchable-anthropic }
+            # SENTRY_DSN: crash reports to the self-hosted Bugsink (70-bugsink.yaml; infra/ship.sh sentry-secret), the
+            # same Secret the API reads (30-api.yaml). Optional: without it worker/crashreport.py is a no-op.
+            - secretRef: { name: punchable-sentry, optional: true }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          # Burstable on purpose: evicted before the box's Guaranteed databases. No GPU, no whisper: the engine, the
+          # SDK and the bge-small model (onnxruntime) over a workspace of text files.
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          livenessProbe:
+            exec:
+              command: ["/pk-worker", "probe", "--max-age", "20m", "--file", "/tmp/pk-worker/heartbeat"]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          # the disposable workspace (rebuilt from the API on every job), the heartbeat and the day's spend ledger
+          emptyDir: { sizeLimit: 2Gi }
+---
+# The worker's metrics for Prometheus (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker).
+apiVersion: v1
+kind: Service
+metadata: { name: punchable-worker-metrics, namespace: punchable, labels: { app: punchable-worker } }
+spec:
+  selector: { app: punchable-worker }
+  ports: [ { name: metrics, port: 9100, targetPort: 9100 } ]

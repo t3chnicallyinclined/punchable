@@ -1,0 +1,8 @@
+# BuildKit reads <Dockerfile>.dockerignore: send only what rust/Dockerfile.worker copies (never rust/target, never
+# app/node_modules, never data, never a .env).
+*
+!engine/config.hosted.toml
+!db/schema.surql
+!db/schema_extra.surql
+!rust/
+rust/target/

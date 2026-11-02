@@ -1,0 +1,354 @@
+{
+ "name": "set_text_synthetic",
+ "env": {},
+ "job": {
+  "id": "job:set_text-golden000001",
+  "kind": "set_text",
+  "input": {
+   "segments": [
+    {
+     "text": "Give it up for our next comic, he flew in today!"
+    },
+    {
+     "text": "So airport security wants my belt in a bin."
+    },
+    {
+     "text": "The bin gets my belt, my shoes and most of my confidence."
+    },
+    {
+     "text": "Anyway, quick sip of water."
+    },
+    {
+     "text": "I bought a parrot that only says legal disclaimers."
+    },
+    {
+     "text": "Past results are no guarantee of future crackers."
+    }
+   ],
+   "title": "Open mic",
+   "recorded_at": "2026-10-20T21:00:00-04:00",
+   "venue": "a room",
+   "duration_s": null,
+   "received_at": "2026-10-20T21:30:00Z",
+   "engine": "speech"
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [
+    {
+     "text": "The bin gets my belt, my shoes and most of my confidence.",
+     "bit": "joke:airport-bins",
+     "date": "2026-10-20"
+    },
+    {
+     "text": "My parrot read me my rights.",
+     "bit": null,
+     "date": "2026-10-18",
+     "edited": true
+    }
+   ],
+   "dropped": [
+    {
+     "text": "Airports, am I right?",
+     "bit": "joke:airport-bins",
+     "date": "2026-10-21"
+    }
+   ],
+   "updated_at": "2026-10-21T10:00:00Z"
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "{\"units\": [{\"first\": 0, \"last\": 0, \"kind\": \"intro\", \"name\": \"Host intro\", \"funny\": false}, {\"first\": 1, \"last\": 2, \"kind\": \"bit\", \"name\": \"  Belt in a bin  \", \"funny\": true}, {\"first\": 3, \"last\": 3, \"kind\": \"banter\", \"name\": \"Water break\", \"funny\": false}, {\"first\": 4, \"last\": 5, \"kind\": \"bit\", \"name\": \"Disclaimer parrot\", \"funny\": true}]}",
+   "model": "claude-opus-5-5"
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/decisions",
+    "query": "after=0",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=storyboards",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=workingsets",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=venues",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=merges",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=suggestions",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/ideas",
+    "query": "",
+    "body": {
+     "text": "So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence.",
+     "title": "Belt in a bin",
+     "actor": "ai:set_text",
+     "from": {
+      "set": "20261020_phdf01ec2d8",
+      "unit": "perf:20261020_phdf01ec2d8@4400"
+     },
+     "reason": "[set_text] bit from 'Open mic' (2026-10-20), transcribed on the phone; no audio"
+    }
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/ideas",
+    "query": "",
+    "body": {
+     "text": "I bought a parrot that only says legal disclaimers. Past results are no guarantee of future crackers.",
+     "title": "Disclaimer parrot",
+     "actor": "ai:set_text",
+     "from": {
+      "set": "20261020_phdf01ec2d8",
+      "unit": "perf:20261020_phdf01ec2d8@14800"
+     },
+     "reason": "[set_text] bit from 'Open mic' (2026-10-20), transcribed on the phone; no audio"
+    }
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": {
+     "files": [
+      {
+       "path": "corpus/sets/20261020_phdf01ec2d8/analysis.json",
+       "text": "{\n \"set\": \"20261020_phdf01ec2d8\",\n \"source\": \"set_text\",\n \"run_id\": \"settext-<time>-df01ec2d\",\n \"audio\": {\n  \"status\": \"unavailable\",\n  \"why\": \"transcribed on the phone; laughs, room heat and timing need the recording\",\n  \"timestamps\": \"synthetic\"\n },\n \"rows\": [\n  {\n   \"id\": \"perf:20261020_phdf01ec2d8@4400\",\n   \"name\": \"Belt in a bin\",\n   \"kind\": \"bit\",\n   \"text\": \"So airport security wants my belt in a bin. The bin gets my belt, my shoes and most of my confidence.\",\n   \"funny\": true,\n   \"start_ms\": 4400,\n   \"end_ms\": 12800,\n   \"laugh_s\": null,\n   \"laugh_s_per_min\": null,\n   \"pct_laughing\": null,\n   \"vs_room\": null,\n   \"time_to_first_laugh_s\": null,\n   \"dead_air_max_s\": null\n  },\n  {\n   \"id\": \"perf:20261020_phdf01ec2d8@12800\",\n   \"name\": \"Water break\",\n   \"kind\": \"banter\",\n   \"text\": \"Anyway, quick sip of water.\",\n   \"funny\": false,\n   \"start_ms\": 12800,\n   \"end_ms\": 14800,\n   \"laugh_s\": null,\n   \"laugh_s_per_min\": null,\n   \"pct_laughing\": null,\n   \"vs_room\": null,\n   \"time_to_first_laugh_s\": null,\n   \"dead_air_max_s\": null\n  },\n  {\n   \"id\": \"perf:20261020_phdf01ec2d8@14800\",\n   \"name\": \"Disclaimer parrot\",\n   \"kind\": \"bit\",\n   \"text\": \"I bought a parrot that only says legal disclaimers. Past results are no guarantee of future crackers.\",\n   \"funny\": true,\n   \"start_ms\": 14800,\n   \"end_ms\": 21600,\n   \"laugh_s\": null,\n   \"laugh_s_per_min\": null,\n   \"pct_laughing\": null,\n   \"vs_room\": null,\n   \"time_to_first_laugh_s\": null,\n   \"dead_air_max_s\": null\n  }\n ],\n \"summary\": {\n  \"material_s\": null,\n  \"laugh_s_total\": null,\n  \"laugh_s_per_min\": null,\n  \"pct_laughing\": null,\n  \"laughs_merged\": null,\n  \"laughs_per_min_merged\": null,\n  \"applause_s\": null,\n  \"longest_laugh_s\": null,\n  \"longest_laugh_joke\": null,\n  \"dead_air_max_s\": null,\n  \"dead_air_max_at_ms\": null,\n  \"room_heat\": null,\n  \"room_heat_basis\": \"unavailable: no audio\",\n  \"units\": 3,\n  \"funny_units\": 2\n }\n}",
+       "sha256": "1d5deaf7cdd836240f189b2f5c1cb4a458aeda097bdbb94829fcf440f5a2423c"
+      },
+      {
+       "path": "corpus/sets/20261020_phdf01ec2d8/meta.json",
+       "text": "{\n \"id\": \"phdf01ec2d8\",\n \"title\": \"Open mic\",\n \"source\": \"phone_transcript\",\n \"recorded_at\": \"2026-10-20T21:00:00-04:00\",\n \"show_date\": \"2026-10-20\",\n \"show_date_source\": \"the phone (when it was recorded)\",\n \"show_venue\": \"a room\",\n \"duration_s\": 21.6,\n \"transcript_sha256\": \"df01ec2d801f124e1fbcd0417e86fd7cc344be6b5008874950fb5cdeda6be18d\",\n \"audio\": {\n  \"status\": \"unavailable\",\n  \"why\": \"transcribed on the phone; laughs, room heat and timing need the recording\",\n  \"timestamps\": \"synthetic\"\n },\n \"received_at\": \"2026-10-20T21:30:00Z\"\n}",
+       "sha256": "b0d68f88bb429c6f1af00edf633c7bcd471dcb5a1bba2411769fdf93ee398556"
+      },
+      {
+       "path": "corpus/sets/20261020_phdf01ec2d8/transcript.json",
+       "text": "{\n \"model\": \"phone:speech\",\n \"segments\": [\n  {\n   \"start\": 0.0,\n   \"end\": 4.4,\n   \"text\": \"Give it up for our next comic, he flew in today!\",\n   \"words\": []\n  },\n  {\n   \"start\": 4.4,\n   \"end\": 8.0,\n   \"text\": \"So airport security wants my belt in a bin.\",\n   \"words\": []\n  },\n  {\n   \"start\": 8.0,\n   \"end\": 12.8,\n   \"text\": \"The bin gets my belt, my shoes and most of my confidence.\",\n   \"words\": []\n  },\n  {\n   \"start\": 12.8,\n   \"end\": 14.8,\n   \"text\": \"Anyway, quick sip of water.\",\n   \"words\": []\n  },\n  {\n   \"start\": 14.8,\n   \"end\": 18.400000000000002,\n   \"text\": \"I bought a parrot that only says legal disclaimers.\",\n   \"words\": []\n  },\n  {\n   \"start\": 18.400000000000002,\n   \"end\": 21.6,\n   \"text\": \"Past results are no guarantee of future crackers.\",\n   \"words\": []\n  }\n ],\n \"timestamps\": \"synthetic\"\n}",
+       "sha256": "21ef7fa47ea4882ce7a03b3da7c23701e481f837333c9f168bb4646560857178"
+      }
+     ],
+     "actor": "ai:set_text"
+    }
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Aset_text-golden000001/result",
+    "query": "",
+    "body": {
+     "ok": true,
+     "result": {
+      "status": "analyzed_text",
+      "kind": "set",
+      "set_dir": "20261020_phdf01ec2d8",
+      "units": 3,
+      "funny_units": 2,
+      "audio": {
+       "status": "unavailable",
+       "why": "transcribed on the phone; laughs, room heat and timing need the recording",
+       "timestamps": "synthetic"
+      },
+      "run_id": "settext-<time>-df01ec2d",
+      "ideas": [
+       {
+        "unit": "perf:20261020_phdf01ec2d8@4400",
+        "joke_id": "joke:golden-idea-1",
+        "attach": "new"
+       },
+       {
+        "unit": "perf:20261020_phdf01ec2d8@14800",
+        "joke_id": "joke:golden-idea-2",
+        "attach": "attached"
+       }
+      ],
+      "online": {
+       "refresh": {
+        "fetched": 0,
+        "files": 0,
+        "decisions": 0
+       },
+       "pushed": [
+        "corpus/sets/20261020_phdf01ec2d8/analysis.json",
+        "corpus/sets/20261020_phdf01ec2d8/meta.json",
+        "corpus/sets/20261020_phdf01ec2d8/transcript.json"
+       ],
+       "legal_refused": 0,
+       "media_deleted": 0,
+       "voice": {
+        "loaded": true,
+        "updated_at": "2026-10-19T08:00:00Z",
+        "sha": "34afd63ab5ca",
+        "chars": 884
+       }
+      }
+     }
+    }
+   }
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "This is the transcript of a recorded stand-up SET. Units are: bit (a joke or bit he performs), crowd_work, banter (filler, transitions), intro (host/walk-on), outro, one numbered line each.\nSplit it into consecutive units. Each unit covers lines first..last (inclusive) and units must not overlap. A bit is ONE unit including its tags, act-outs and asides; start a new unit only when he moves to a different premise (watch for the turn: 'anyway', 'so', a new subject). intro = only the host introducing him / walk-on applause: his own first lines are material, even quick openers. outro = only his sign-off ('that's my time', socials). name = a short title for the unit (3-7 words). funny = true if it is comedic material.\n\n[0] (00:00) Give it up for our next comic, he flew in today!\n[1] (00:04) So airport security wants my belt in a bin.\n[2] (00:08) The bin gets my belt, my shoes and most of my confidence.\n[3] (00:12) Anyway, quick sip of water.\n[4] (00:14) I bought a parrot that only says legal disclaimers.\n[5] (00:18) Past results are no guarantee of future crackers."
+     }
+    ],
+    "model": "claude-opus-5-5",
+    "output_config": {
+     "effort": "high",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "units": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "first": {
+            "type": "integer"
+           },
+           "last": {
+            "type": "integer"
+           },
+           "kind": {
+            "type": "string",
+            "enum": [
+             "bit",
+             "idea",
+             "crowd_work",
+             "banter",
+             "intro",
+             "outro",
+             "note"
+            ]
+           },
+           "name": {
+            "type": "string"
+           },
+           "funny": {
+            "type": "boolean"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "first",
+           "last",
+           "kind",
+           "name",
+           "funny"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "units"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "You work on a stand-up comic's own material. Be literal and exact. Every quote you give must be copied character for character from the text it names; never paraphrase a quote. Reasons are one plain sentence a comic would understand.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

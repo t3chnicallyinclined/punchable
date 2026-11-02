@@ -1,0 +1,2125 @@
+{
+ "cases": [
+  {
+   "env": {},
+   "doc": "profile_learned_laughs",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": [
+     {
+      "text": "The parrot settled out of court.",
+      "bit": "joke:parrot",
+      "date": "2026-09-30",
+      "laugh_s": 2.5
+     },
+     {
+      "text": "TSA patted down my personality.",
+      "bit": "joke:airport-bins",
+      "date": null,
+      "laugh_s": 3.4999
+     }
+    ]
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {},
+   "doc": "profile_only",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {},
+   "doc": "learned_only",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {},
+   "doc": "nothing",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {},
+   "doc": "blank_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "  \n ",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 4,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {},
+   "doc": "short_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "Deadpan.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 8,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "af554eb5af06",
+    "chars": 8
+   },
+   "names": {
+    "whose_idea": "His idea",
+    "he_could_say": "he could say",
+    "material_owner": "a stand-up comic's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "profile_learned_laughs",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": [
+     {
+      "text": "The parrot settled out of court.",
+      "bit": "joke:parrot",
+      "date": "2026-09-30",
+      "laugh_s": 2.5
+     },
+     {
+      "text": "TSA patted down my personality.",
+      "bit": "joke:airport-bins",
+      "date": null,
+      "laugh_s": 3.4999
+     }
+    ]
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "profile_only",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "learned_only",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "nothing",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "blank_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "  \n ",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 4,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "Pat Example",
+    "PK_COMIC_FIRST": "Pat"
+   },
+   "doc": "short_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "Deadpan.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 8,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "af554eb5af06",
+    "chars": 8
+   },
+   "names": {
+    "whose_idea": "Pat's idea",
+    "he_could_say": "Pat could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "profile_learned_laughs",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": [
+     {
+      "text": "The parrot settled out of court.",
+      "bit": "joke:parrot",
+      "date": "2026-09-30",
+      "laugh_s": 2.5
+     },
+     {
+      "text": "TSA patted down my personality.",
+      "bit": "joke:airport-bins",
+      "date": null,
+      "laugh_s": 3.4999
+     }
+    ]
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)\n\nLines of his that got the biggest laughs on tape (verbatim), for the shape and the rhythm:\n- \"The parrot settled out of court.\" (2 s)\n- \"TSA patted down my personality.\" (3 s)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "profile_only",
+   "voice": {
+    "kind": "voice",
+    "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 884,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "34afd63ab5ca",
+    "chars": 884
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "learned_only",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "nothing",
+   "voice": {
+    "kind": "voice",
+    "text": null,
+    "updated_at": null,
+    "by": null,
+    "by_kind": null,
+    "chars": 0,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "blank_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "  \n ",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 4,
+    "learned": {
+     "kept": [],
+     "dropped": [],
+     "updated_at": null
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": null,
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": false,
+    "updated_at": null,
+    "sha": null,
+    "chars": 0
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  },
+  {
+   "env": {
+    "PK_COMIC_NAME": "  Pat Example  "
+   },
+   "doc": "short_profile",
+   "voice": {
+    "kind": "voice",
+    "text": "Deadpan.",
+    "updated_at": "2026-10-19T08:00:00Z",
+    "by": "owner",
+    "by_kind": "owner",
+    "chars": 8,
+    "learned": {
+     "kept": [
+      {
+       "text": "The bin gets my belt, my shoes and most of my confidence.",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-20"
+      },
+      {
+       "text": "My parrot read me my rights.",
+       "bit": null,
+       "date": "2026-10-18",
+       "edited": true
+      }
+     ],
+     "dropped": [
+      {
+       "text": "Airports, am I right?",
+       "bit": "joke:airport-bins",
+       "date": "2026-10-21"
+      }
+     ],
+     "updated_at": "2026-10-21T10:00:00Z"
+    },
+    "laugh_lines": []
+   },
+   "tasks": {
+    "creative_riff": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_punchup": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "creative_bridge": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+     "learned_block": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+     "cacheable_learned": "alone_too_short",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest."
+      },
+      {
+       "role": "system",
+       "content": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)"
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    },
+    "ask_chat": {
+     "system_block": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below.",
+     "learned_block": null,
+     "cacheable_learned": "none",
+     "messages": [
+      {
+       "role": "system",
+       "content": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nDeadpan.\n\nThis profile is background for reading his notebook: it tells you who the people and the recurring premises in his material are, and how he talks. It is not a source. Never cite it, never quote it, never answer from it; answer only from the numbered SOURCES and the rules below."
+      },
+      {
+       "role": "system",
+       "content": "TASK LINE"
+      },
+      {
+       "role": "user",
+       "content": "USER TURN"
+      }
+     ]
+    }
+   },
+   "status": {
+    "loaded": true,
+    "updated_at": "2026-10-19T08:00:00Z",
+    "sha": "af554eb5af06",
+    "chars": 8
+   },
+   "names": {
+    "whose_idea": "Pat Example's idea",
+    "he_could_say": "Pat Example could say",
+    "material_owner": "stand-up comic Pat Example's"
+   }
+  }
+ ]
+}
