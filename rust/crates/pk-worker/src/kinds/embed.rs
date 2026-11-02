@@ -44,13 +44,13 @@ pub async fn embed_summaries(ctx: &Ctx<'_>, c: &Corpus) -> Result<(Map<String, V
     let todo = to_embed(&doc, &want, |t| ctx.legal.is_legal(t));
     let mut done_rows = Vec::with_capacity(todo.len());
     if !todo.is_empty() {
-        let embedder = Arc::clone(
-            &ctx.embedder
-                .ok_or_else(|| {
-                    JobError::Value("no bge-small model in this worker: embed runs only where the model is".into())
-                })?
-                .0,
-        );
+        let embedder = ctx
+            .embedder
+            .ok_or_else(|| {
+                JobError::Value("no bge-small model in this worker: embed runs only where the model is".into())
+            })?
+            .get()
+            .await?;
         let texts: Vec<String> = todo.iter().map(|(_, t)| t.clone()).collect();
         // the model is CPU work: off the async threads
         let vecs = tokio::task::spawn_blocking(move || {

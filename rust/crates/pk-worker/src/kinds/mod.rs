@@ -143,13 +143,67 @@ impl Kind {
     }
 }
 
-/// The bge-small model behind the embedding kinds (a trait object: the real model, or the hash embedder in tests).
+/// The bge-small model behind the embedding kinds, loaded on the first job that needs it (the Python's `Embedder`
+/// loads on first use too): a worker that never embeds never holds the model, and a model file that will not load
+/// fails only the embed / memolink job that asked, never the worker. A failed load is not kept: the next job tries
+/// again. Cheap to clone (one shared cell).
 #[derive(Clone)]
-pub struct Model(pub Arc<dyn Embedder>);
+pub struct Model(Arc<ModelCell>);
+
+struct ModelCell {
+    dir: Option<std::path::PathBuf>,
+    cell: tokio::sync::OnceCell<Arc<dyn Embedder>>,
+}
+
+impl Model {
+    /// The model in `dir`, loaded when a job first asks (one intra-op thread: the pod has one CPU).
+    pub fn lazy(dir: std::path::PathBuf) -> Self {
+        Self(Arc::new(ModelCell {
+            dir: Some(dir),
+            cell: tokio::sync::OnceCell::new(),
+        }))
+    }
+
+    /// A model already loaded (tests: the real model shared across scenarios, or a hash embedder).
+    pub fn loaded(e: Arc<dyn Embedder>) -> Self {
+        Self(Arc::new(ModelCell {
+            dir: None,
+            cell: tokio::sync::OnceCell::new_with(Some(e)),
+        }))
+    }
+
+    /// Whether it is in memory now.
+    pub fn is_loaded(&self) -> bool {
+        self.0.cell.initialized()
+    }
+
+    /// The model, loading it off the async threads the first time.
+    pub async fn get(&self) -> Result<Arc<dyn Embedder>, JobError> {
+        let e = self
+            .0
+            .cell
+            .get_or_try_init(|| async {
+                let Some(dir) = self.0.dir.clone() else {
+                    return Err(JobError::Value("no bge-small model in this worker".into()));
+                };
+                let t = std::time::Instant::now();
+                let bge = tokio::task::spawn_blocking(move || pk_embed::Bge::load_with_threads(&dir, 1))
+                    .await
+                    .map_err(|e| JobError::Value(format!("loading the bge model: {e}")))??;
+                tracing::info!(ms = t.elapsed().as_millis(), "bge-small loaded");
+                Ok::<Arc<dyn Embedder>, JobError>(Arc::new(bge))
+            })
+            .await?;
+        Ok(Arc::clone(e))
+    }
+}
 
 impl std::fmt::Debug for Model {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.0.name())
+        match self.0.cell.get() {
+            Some(e) => f.write_str(e.name()),
+            None => f.write_str("bge-small (not loaded)"),
+        }
     }
 }
 
@@ -273,6 +327,22 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn a_model_that_will_not_load_fails_each_ask_and_is_never_kept() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(d.path().join("onnx")).unwrap();
+        std::fs::write(d.path().join("onnx").join("model.onnx"), b"not an onnx model\n").unwrap();
+        std::fs::write(d.path().join("tokenizer.json"), b"{}").unwrap();
+        // building it reads nothing: a worker that never embeds never loads the model
+        let m = Model::lazy(d.path().to_path_buf());
+        assert!(!m.is_loaded());
+        assert!(m.get().await.is_err());
+        assert!(!m.is_loaded(), "a failed load is not kept");
+        assert!(m.get().await.is_err(), "the next job tries again");
+        let none = Model::lazy(d.path().join("missing"));
+        assert!(none.get().await.is_err());
+    }
 
     #[test]
     fn claimable_is_the_hosted_order_ported_only() {

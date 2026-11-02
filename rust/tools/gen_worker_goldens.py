@@ -268,6 +268,10 @@ SCENARIOS = [
      "voice": voice_doc(), "model": []},
     {"name": "embed_current_and_gone", "env": {}, "notebook": True, "bge": True, "summary_current": True,
      "job": job("embed", {}), "voice": voice_doc(), "model": []},
+    # a model file that will not load: the embed job fails (not retried) and nothing is posted; the worker keeps
+    # running. The exception's words are the runtime's own (onnxruntime's vs ort's), so they are redacted on both sides
+    {"name": "embed_bad_model", "env": {}, "notebook": True, "bge": True, "bad_bge": True, "job": job("embed", {}),
+     "voice": voice_doc(), "model": []},
     {"name": "memolink_all_steps", "env": {}, "notebook": True, "bge": True, "memos": True,
      "job": job("memolink", {}), "voice": voice_doc(),
      "model": [answer(JUDGED, HAIKU), answer(TRIAGED_SHORT, HAIKU), answer(TRIAGED_LONG, HAIKU)]},
@@ -439,6 +443,26 @@ sys.exit(M.main(["--hosted", "--once", "--no-auth", "--api", {api!r}]))
 """
 
 
+def bad_bge(tmp: Path) -> str:
+    """A model folder that passes the presence check (onnx/model.onnx + tokenizer.json) but will not load."""
+    d = tmp / "bad-bge"
+    (d / "onnx").mkdir(parents=True)
+    (d / "onnx" / "model.onnx").write_bytes(b"not an onnx model\n")
+    (d / "tokenizer.json").write_bytes((Path(BGE) / "tokenizer.json").read_bytes())
+    return str(d)
+
+
+BAD_MODEL = "<the model would not load>"
+
+
+def redact_model_error(api: list) -> list:
+    for r in api:
+        b = r.get("body")
+        if isinstance(b, dict) and b.get("ok") is False and isinstance(b.get("error"), str):
+            b["error"] = BAD_MODEL
+    return api
+
+
 def run_python(sc: dict) -> dict:
     rec = Recorder(sc)
     api, anth, pages = serve(rec, "api"), serve(rec, "anthropic"), serve(rec, "pages")
@@ -461,7 +485,7 @@ def run_python(sc: dict) -> dict:
             # the cache path the workspace activates (worker/online.py Workspace.env): the bootstrap imports
             # creative.write first, which fixes creative.data.VECTORS_DIR from this variable at import time
             "PK_WORKSPACE": str(tmp / "ws"), "PK_CACHE_DIR": str(tmp / "ws" / "cache"),
-            "PK_BGE_DIR": BGE if sc.get("bge") else str(tmp / "no-bge"),
+            "PK_BGE_DIR": (bad_bge(tmp) if sc.get("bad_bge") else BGE) if sc.get("bge") else str(tmp / "no-bge"),
             "PK_HEARTBEAT_FILE": str(tmp / "heartbeat"), "PK_AI_SPEND_FILE": str(spend),
             "PK_AI_DAILY_USD": str(sc.get("daily_usd", 5.0)), "PK_METRICS_PORT": "0", "PK_WORKER_NAME": WORKER_NAME,
         })
@@ -475,10 +499,13 @@ def run_python(sc: dict) -> dict:
         raise SystemExit(f"{sc['name']}: the Python worker exited {p.returncode}\n{p.stdout}\n{p.stderr}")
     claims = [r["body"] for r in rec.api if r["path"] == "/api/worker/claim"]
     effect = [r for r in rec.api if r["path"] != "/api/worker/claim"]
-    return {"exit": p.returncode, "claims": claims,
-            "api": [normalise({"method": r["method"], "path": r["path"], "query": r["query"], "body": r["body"]})
-                    for r in effect],
-            "anthropic": rec.anthropic}
+    if sc.get("bad_bge"):
+        print(f"{sc['name']}: the Python's own words: {[r['body'].get('error') for r in effect if r['body']]}")
+    api = [normalise({"method": r["method"], "path": r["path"], "query": r["query"], "body": r["body"]})
+           for r in effect]
+    if sc.get("bad_bge"):
+        api = redact_model_error(api)
+    return {"exit": p.returncode, "claims": claims, "api": api, "anthropic": rec.anthropic}
 
 
 def normalise(x):

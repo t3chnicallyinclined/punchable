@@ -384,10 +384,25 @@ async fn rig(sc: &Value, stop_mid_call: Option<CancellationToken>) -> Rig {
         ("PK_AI_SPEND_FILE".into(), spend.display().to_string()),
         ("PK_METRICS_PORT".into(), "0".into()),
     ]);
+    let mut embedder = bge(sc);
     if sc.get("bge") == Some(&json!(true))
         && let Some(dir) = std::env::var_os("PK_BGE_DIR")
     {
-        vars.insert("PK_BGE_DIR".into(), dir.to_string_lossy().into_owned());
+        if sc.get("bad_bge") == Some(&json!(true)) {
+            // a folder that passes the presence check but will not load (gen_worker_goldens.py `bad_bge`)
+            let bad = tmp.path().join("bad-bge");
+            std::fs::create_dir_all(bad.join("onnx")).unwrap();
+            std::fs::write(bad.join("onnx").join("model.onnx"), b"not an onnx model\n").unwrap();
+            std::fs::copy(
+                std::path::Path::new(&dir).join("tokenizer.json"),
+                bad.join("tokenizer.json"),
+            )
+            .unwrap();
+            vars.insert("PK_BGE_DIR".into(), bad.display().to_string());
+            embedder = Some(pk_worker::kinds::Model::lazy(bad));
+        } else {
+            vars.insert("PK_BGE_DIR".into(), dir.to_string_lossy().into_owned());
+        }
     }
     for (k, v) in sc["env"].as_object().into_iter().flatten() {
         vars.insert(k.clone(), v.as_str().unwrap_or_default().to_string());
@@ -416,7 +431,7 @@ async fn rig(sc: &Value, stop_mid_call: Option<CancellationToken>) -> Rig {
         metrics: Arc::new(WorkerMetrics::new("0.1.0", "golden").unwrap()),
         legal: Legal::default(),
         pages: Pages::new().unwrap().via(pages.uri()),
-        embedder: bge(sc),
+        embedder,
     });
     Rig {
         api,
@@ -436,7 +451,7 @@ fn bge(sc: &Value) -> Option<pk_worker::kinds::Model> {
     MODEL
         .get_or_init(|| {
             let dir = std::env::var_os("PK_BGE_DIR").map(std::path::PathBuf::from)?;
-            Some(pk_worker::kinds::Model(Arc::new(
+            Some(pk_worker::kinds::Model::loaded(Arc::new(
                 pk_embed::Bge::load_with_threads(&dir, 1).ok()?,
             )))
         })
@@ -547,6 +562,14 @@ async fn run_scenario(name: &str, sc: &Value) {
         }
     }
     vectors_checked(&mut effect, &mut want, name);
+    if sc.get("bad_bge") == Some(&json!(true)) {
+        // the load error's words are the runtime's own (onnxruntime's vs ort's): the generator redacts the Python's
+        for v in &mut effect {
+            if v["body"]["ok"] == json!(false) && v["body"]["error"].is_string() {
+                v["body"]["error"] = json!("<the model would not load>");
+            }
+        }
+    }
     same(&Value::Array(effect), &Value::Array(want), "api", name);
 
     let calls: Vec<Value> = anthropic
