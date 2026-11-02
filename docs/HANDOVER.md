@@ -222,10 +222,10 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    against the hosted Python over one scratch database (`rust/tools/diff_api_reads.py`, empty allow-list), the
    read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t9-api-rs.yaml`).
    Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query).
-   **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and six of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge) over
-   a `pk-creative` port of the notebook `Corpus`, proven equal to the Python worker over 29 recorded scenarios (the learned block second
+   **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and eight of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge, embed, memolink) over
+   a `pk-creative` port of the notebook `Corpus` and creative/merge.py, proven equal to the Python worker over 33 recorded scenarios (the learned block second
    on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python
-   worker yet**: `embed`, `memolink`, `ask` remain (T8 row). Image and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
+   worker yet**: `ask` remains (T8 row; embed and memolink are on the branch after the local merge). Image and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
    `~/.punchable/bin/`). Nothing ships until the worker swap (T8).
 6. Laugh detection on the hosted worker (audio processing returns `laugh_lines`; today the set's laugh map is frozen).

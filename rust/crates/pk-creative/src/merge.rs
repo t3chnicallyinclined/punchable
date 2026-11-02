@@ -308,7 +308,13 @@ impl Index {
         let jix: HashMap<&str, usize> = jokes.iter().enumerate().map(|(i, j)| (j.as_str(), i)).collect();
         let rj: Vec<usize> = vec_units
             .iter()
-            .map(|u| ujoke.get(u).and_then(|j| jix.get(j.as_str())).copied().unwrap_or(usize::MAX))
+            .map(|u| {
+                ujoke
+                    .get(u)
+                    .and_then(|j| jix.get(j.as_str()))
+                    .copied()
+                    .unwrap_or(usize::MAX)
+            })
             .collect();
         let mut sm = vec![0.0_f32; n * n];
         for i in 0..n {

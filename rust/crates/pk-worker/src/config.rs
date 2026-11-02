@@ -235,7 +235,9 @@ mod tests {
             ..RunArgs::default()
         };
         assert!(WorkerConfig::from_env(&base(), &args).unwrap().creds.is_none());
-        assert!(parse_kinds("memolink").is_err());
+        // the one hosted kind not ported yet
+        assert!(parse_kinds("ask").is_err());
+        assert_eq!(parse_kinds("memolink").unwrap(), vec![Kind::Memolink]);
         assert!(parse_kinds("nope").is_err());
         assert_eq!(parse_kinds("process_set,facts,facts").unwrap(), vec![Kind::Facts]);
         let mut env = Env::from_map([
