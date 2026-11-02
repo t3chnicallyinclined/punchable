@@ -226,7 +226,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    snapshot patch after writes; under a write-heavy load the Rust reads still rebuild ~130 ms per write, so
    `/api/health` is slower than the Python's there (RUST_WORKSTREAM T9 row has the numbers and the next fixes).
    **`pk-worker` (2026-11-02, branch `rust/t8-worker`, merged into main locally, not deployed)**: the loop and eight of the nine hosted kinds (ask_chat, facts, set_text, riff, punchup, bridge, embed, memolink) over
-   a `pk-creative` port of the notebook `Corpus` and creative/merge.py, proven equal to the Python worker over 33 recorded scenarios (the learned block second
+   a `pk-creative` port of the notebook `Corpus` and creative/merge.py, proven equal to the Python worker over 34 recorded scenarios (bge loaded on first use) (the learned block second
    on every writing request); per job 3.6 ms vs 580 ms and 35 vs 95 MiB idle on the PC (mock model). **It cannot replace the Python
    worker yet**: `ask` remains (T8 row; embed and memolink are on the branch after the local merge). Image and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
