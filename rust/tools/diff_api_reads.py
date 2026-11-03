@@ -12,7 +12,8 @@ auth ON, write through pk-api (every write is forwarded to the Python: the T9 pr
 GET from pk-api sees it (the read-after-write gate, docs/ARCHITECTURE.md section 2), run the request matrix, and
 optionally time each route group on both (p50 / p95, sequential, warm) and read both processes' memory.
 Exit 1 on any difference outside ALLOW. Needs: surreal 3.3.4 (PUNCH_SURREAL or ~/.punchable/bin/surreal[.exe]), the
-repo's Python deps (the API's), and a built pk-api.
+repo's Python deps (the API's), the bge-small model folder in PK_BGE_DIR (both servers embed search queries and
+passages with it; tools/kb/fetch_bge.py), and a built pk-api.
 """
 from __future__ import annotations
 
@@ -52,6 +53,11 @@ ALLOW: dict[tuple[str, str], str] = {}
 TODAY = ["/api/today", "/api/today?include_hidden=1", "/api/today?backend=files", "after his tonight list: /api/today"]
 ALLOW |= {(p, "$.inbox"): "the Python pod's upload folder, not in the database until T10; the app does not read it"
           for p in TODAY}
+# Round 6: Python's int() has no bound and the Bits list echoes `offset` back; pk-api reads integers as i64 and saturates
+# one past it (every other use clamps it, so only this echo can differ). The app sends offsets in the hundreds.
+BIG_OFFSET = "/api/jokes?offset=99999999999999999999"
+ALLOW |= {(lbl, "$.offset"): "an offset past 2^63 echoes 9223372036854775807 (i64); the Python echoes the number"
+          for lbl in (BIG_OFFSET, "no model: " + BIG_OFFSET)}
 # Numbers that cannot be bit-equal, compared within a tolerance instead: the cloud's coordinates come from numpy's
 # float32 LAPACK SVD on the Python side and a float64 eigen-decomposition in Rust (crates/pk-api/src/cloud.rs); they
 # agree to ~1e-6 before the 4-decimal rounding. Everything else in the cloud (ids, clusters, labels, counts) is exact.
@@ -61,6 +67,16 @@ TOLERANCE = 1e-3
 # the 1e-9 cut lets through, so the Python stretches noise to +/-1; the float64 eigen-decomposition gives ~1e-17 and
 # Rust leaves the axis at 0. The coordinates of these two requests are not compared (everything else is).
 DEGENERATE = {"/api/map/cloud?cap=2", "/api/map/cloud?cap=3"}
+# Round 6. /similar's `distance` (a bit's) and `score` (a moment's: its distance) come from a passage vector each server
+# makes itself: onnxruntime in the Python, `ort` in pk-api, equal to cosine >= 0.99999 (pk-embed's goldens), so the
+# distances SurrealDB returns agree to ~1e-7, not bit for bit. Compared within VECTOR_TOLERANCE; the order and every
+# other field are exact. Search's own `score` is a reciprocal-rank sum and stays exact.
+VECTOR_TOLERANCE = 1e-5
+# Round 6. SurrealDB's order among equal scores (equal BM25 scores of near-identical lines, then equal RRF sums) is not
+# stable: the Python asked the same search twice answers in two orders (CONFIRMED 2026-11-02, /api/search?q=pilot).
+# When pk-api's answer differs, the Python is asked 11 more times; if it disagrees with itself, the ranked lists are
+# compared up to that tie order (compare_ranked), everything else exactly.
+RANKED_LISTS = ("bits", "moments", "items")
 
 # ---------------------------------------------------------------- the synthetic data folder
 TEXT = {
@@ -112,6 +128,12 @@ def make_graph() -> dict:
                       "text": f"The {topic} and the {words[i % 3]}. Then the {words[(i + 1) % 3]} again, number {i}.", "source": "gdoc"})
         edges.append({"id": f"e:p{k}", "src": f"unit:{k}1", "dst": f"joke:{k}", "kind": "part_of", "status": "inferred",
                       "confidence": 0.9, "evidence": []})
+    # round 6: an older version of another bit that repeats Charlie's whole line, so /similar with no model (a words
+    # search over the bit's first twelve words, every word required) finds another bit
+    nodes.append({"id": "unit:x03b", "type": "unit", "kind": "setup+punch", "date": "2022-01-01", "source": "gdoc",
+                  "text": "Old draft: Charlie premise about cars and traffic and more traffic today, said twice."})
+    edges.append({"id": "e:px03b", "src": "unit:x03b", "dst": "joke:x03", "kind": "part_of", "status": "inferred",
+                  "confidence": 0.9, "evidence": []})
     nodes.append({"id": "unit:a0", "type": "unit", "kind": "setup+punch", "text": "Alpha opener, first draft.", "date": "2023-02-02"})
     edges.append({"id": "e:pa0", "src": "unit:a0", "dst": "joke:a", "kind": "part_of", "status": "proposed", "confidence": 0.6,
                   "evidence": []})
@@ -474,8 +496,42 @@ def compare(label: str, py: tuple, rs: tuple) -> list[str]:
         for p, x, y in diff(a, b):
             if label in DEGENERATE and p.rsplit(".", 1)[-1] in TOLERANT_KEYS:
                 continue
+            if ("/similar" in label and p.rsplit(".", 1)[-1] in ("distance", "score")
+                    and isinstance(x, (int, float)) and isinstance(y, (int, float)) and abs(x - y) <= VECTOR_TOLERANCE):
+                continue
             if (label, p) not in ALLOW:
                 bad.append(f"{label}: {p}: python {json.dumps(x)[:120]} rust {json.dumps(y)[:120]}")
+    return bad
+
+
+def compare_ranked(label: str, pys: list, rs) -> list[str]:
+    """pk-api's answer against several of the Python's own answers to the same request, which differ only in the
+    database's tie order. Outside the ranked lists the answer must equal one of the Python's exactly. Each ranked list
+    must hold exactly the rows (as a multiset) of one of the Python's lists; a place where every Python answer has the
+    same row must hold that row; any other place must hold a row some Python answer put at that same place."""
+    # /similar nests its two ranked lists under `like`
+    flat = lambda d: {**{k: v for k, v in d.items() if k != "like"},  # noqa: E731
+                      **{f"like.{k}": v for k, v in (d.get("like") or {}).items()}}
+    pys, rs = [flat(p) for p in pys], flat(rs)
+    rest = lambda d: {k: v for k, v in d.items() if k.rsplit(".", 1)[-1] not in RANKED_LISTS}  # noqa: E731
+    rows_of = lambda xs: sorted(json.dumps(x, sort_keys=True) for x in xs)  # noqa: E731
+    bad = []
+    if all(diff(rest(p), rest(rs)) for p in pys):
+        bad.append(f"{label}: outside the ranked lists pk-api equals none of the Python's {len(pys)} answers")
+    for key in [k for k in rs if k.rsplit(".", 1)[-1] in RANKED_LISTS]:
+        lists = [p.get(key) or [] for p in pys]
+        mine = rs[key]
+        if rows_of(mine) not in [rows_of(x) for x in lists]:
+            bad.append(f"{label}: $.{key} is not a reordering of any of the Python's {len(lists)} lists")
+            continue
+        for i, row in enumerate(mine):
+            here = [y[i] for y in lists if i < len(y)]
+            stable = len(here) == len(lists) and all(r == here[0] for r in here)
+            if stable and row != here[0]:
+                bad.append(f"{label}: $.{key}[{i}] differs where the Python never varies: "
+                           f"python {json.dumps(here[0])[:120]} rust {json.dumps(row)[:120]}")
+            elif not stable and row not in here:
+                bad.append(f"{label}: $.{key}[{i}] is a row the Python never put at that place: {json.dumps(row)[:160]}")
     return bad
 
 
@@ -520,6 +576,19 @@ def coverage(py: str, app: dict) -> list[str]:
                "today: minutes in testing": bool(td["minutes"]["n_testing"])}
     checks["jokes: the hidden view keeps the attached note"] = any(
         x["id"] == "joke:x05" for x in get("/api/jokes?limit=5000&include_hidden=1")["items"])
+    sr = get("/api/search?q=niece")
+    checks["search: vectors, bits with the matched line, moments"] = bool(
+        sr["vectors"] and sr["bits"] and any(b["why"] for b in sr["bits"]) and get("/api/search?q=traffic")["moments"])
+    checks["search: a moment performed as a bit, with its room and place on the tape"] = any(
+        m["joke"] and m["venue_short"] and m["at_label"] for m in get("/api/search?q=traffic")["moments"])
+    checks["search: the hidden bit only in the hidden view"] = (
+        all(b["id"] != "joke:g" for b in get("/api/search?q=grocery")["bits"])
+        and any(b["id"] == "joke:g" for b in get("/api/search?q=grocery&include_hidden=1")["bits"]))
+    sm = get("/api/jokes/joke:a/similar")
+    checks["similar: performed moments, other bits with distances, unlinked moments"] = bool(
+        sm["vectors"] and sm["performed"] and sm["like"]["bits"] and sm["like"]["bits"][0]["distance"] is not None
+        and sm["like"]["moments"] and sm["text"])
+    checks["hybrid: a ranked list"] = len(get("/api/jokes?q=niece&mode=hybrid")["items"]) >= 2
     for what, ok_ in checks.items():
         if not ok_:
             out.append(f"coverage: the synthetic data no longer reaches '{what}'")
@@ -549,8 +618,16 @@ def main() -> int:
            # pk-api reads PUNCH_SECRETS (default ~/.punchable/secrets.env) under the process env: point it at nothing, so
            # no real DSN, database user or token can reach this run
            "PUNCH_SECRETS": str(home / "secrets.env")}
-    for k in ("SURREAL_URL", "SURREAL_API_USER", "SURREAL_API_PASS", "PK_BGE_DIR", "SENTRY_DSN", "PUNCHABLE_LEGAL_RULES"):
+    for k in ("SURREAL_URL", "SURREAL_API_USER", "SURREAL_API_PASS", "SENTRY_DSN", "PUNCHABLE_LEGAL_RULES",
+              "PK_EMBEDDER"):
         env.pop(k, None)
+    # round 6: search embeds on both sides, with the same bge-small folder (tools/kb/fetch_bge.py); the Python's
+    # sweeper makes one pass at start (the stored vectors) and no second one while the matrix runs
+    bge = env.get("PK_BGE_DIR", "")
+    if not (Path(bge) / "onnx" / "model.onnx").is_file() or not (Path(bge) / "tokenizer.json").is_file():
+        raise SystemExit("set PK_BGE_DIR to the bge-small folder (python tools/kb/fetch_bge.py --dest <dir>): "
+                         "search, /similar and the hybrid list embed on both servers")
+    env["PK_VEC_SWEEP_S"] = "86400"
     procs: list[subprocess.Popen] = []
     logs = []
 
@@ -591,6 +668,18 @@ def main() -> int:
         now = time.time()
         app = {"Authorization": "Bearer " + JK.token(key, now=now)}
         tok = lambda **c: {"Authorization": "Bearer " + JK.token(key, now=now, **c)}  # noqa: E731
+        # the Python's first vector sweep (typed ideas and moments embedded with the model) before anything is compared
+        deadline = time.time() + 300
+        while True:
+            vec = ((json.loads(call(py, "GET", "/api/backend", app)[2]).get("backends") or {}).get("surreal") or {}).get("vectors") or {}
+            if vec.get("runs", 0) >= 1:
+                break
+            if time.time() > deadline:
+                raise SystemExit(f"the Python's vector sweep did not finish: {vec}")
+            time.sleep(0.5)
+        if vec.get("embedder") != "bge-small-en-v1.5" or vec.get("error"):
+            raise SystemExit(f"the Python is not searching with the model: {vec}")
+        report["python_sweep"] = vec.get("last")
 
         # -- writes through pk-api (forwarded to the Python), each followed at once by a pk-api read
         raw_ms = []
@@ -660,6 +749,30 @@ def main() -> int:
         jokes += [f"/api/jokes?sort={s}&limit=5000" + h for s in ("recent", "performed", "strongest", "written", "untouched")
                   for h in ("", "&include_hidden=1")]
         reqs += [(p, "GET", p, app) for p in jokes]
+        # round 6: search (words and vectors fused), one bit's neighbours, the hybrid Bits list; both views, the misses,
+        # the refusals
+        search = ["/api/search", "/api/search?q=%20", "/api/search?q=niece", "/api/search?q=NIECE%20laundromat",
+                  "/api/search?q=niece&limit=1", "/api/search?q=niece&limit=0", "/api/search?q=dog&limit=99",
+                  "/api/search?q=dog&limit=abc", "/api/search?q=traffic", "/api/search?q=car", "/api/search?q=alpha%20punch",
+                  "/api/search?q=grocery", "/api/search?q=grocery&include_hidden=1", "/api/search?q=nothingmatcheszz",
+                  "/api/search?q=dog&backend=files", "/api/search?q=pilot%20luggage", "/api/search?q=the",
+                  "/api/search?q=opener", "/api/search?q=crowd&include_hidden=1",
+                  "/api/search?q=dog&limit=99999999999999999999", "/api/search?q=dog&limit=-99999999999999999999"]
+        similar = [f"/api/jokes/joke:{k}/similar" for k in "abcdef"] + [
+            "/api/jokes/joke:a/similar?limit=1", "/api/jokes/joke:a/similar?limit=0", "/api/jokes/joke:a/similar?limit=abc",
+            "/api/jokes/joke:b/similar?limit=50", "/api/jokes/joke:g/similar", "/api/jokes/joke:g/similar?include_hidden=1",
+            "/api/jokes/joke:a/similar?include_hidden=1", "/api/jokes/joke:nope/similar", "/api/jokes/unit:a1/similar",
+            "/api/jokes/joke%3Ac/similar", "/api/jokes/joke:x05/similar", "/api/jokes/joke:x10/similar?limit=3",
+            "/api/jokes/a/b/similar", "/api/jokes/joke:a/similar?limit=99999999999999999999"]
+        hybrid = ["/api/jokes?q=niece&mode=hybrid", "/api/jokes?q=dog&mode=hybrid&limit=3",
+                  "/api/jokes?q=traffic&mode=hybrid&sort=recent", "/api/jokes?q=grocery&mode=hybrid",
+                  "/api/jokes?q=grocery&mode=hybrid&include_hidden=1", "/api/jokes?q=dog&mode=hybrid&limit=abc",
+                  "/api/jokes?q=car&mode=hybrid&stage=idea", "/api/jokes?q=x05&mode=hybrid",
+                  "/api/jokes?q=dog&mode=hybrid&offset=2&limit=2", "/api/jokes?q=pilot&mode=hybrid&limit=-4",
+                  "/api/jokes?q=pilot&mode=hybrid&limit=7", "/api/search?q=pilot&limit=7",
+                  "/api/jokes?q=dog&mode=hybrid&limit=99999999999999999999", "/api/jokes?offset=99999999999999999999",
+                  "/api/decisions?limit=99999999999999999999"]
+        reqs += [(p, "GET", p, app) for p in search + similar + hybrid]
         reqs += [("proxied connections", "GET", "/api/jokes/joke:a/connections", app),
                  ("proxied clips", "GET", f"/api/sets/set:{SX}/clips", app)]
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
@@ -691,12 +804,30 @@ def main() -> int:
                  ("no kid", "GET", "/api/labels", {"Authorization": "Bearer " + JK.token(key, now=now, header={"kid": None})}),
                  ("bad sig", "GET", "/api/labels", {"Authorization": "Bearer " + JK.token(key, now=now)[:-6] + "AAAAAA"}),
                  ("proxied 404", "GET", "/api/nothing-here", app),
-                 ("proxied hybrid", "GET", "/api/jokes?q=dog&mode=hybrid", app)]
-        n_ok = 0
-        for label, m, p, h in reqs:
-            got = compare(label, call(py, m, p, h), call(rs, m, p, h))
-            problems += got
-            n_ok += not got
+                 ("search no token", "GET", "/api/search?q=dog", {}),
+                 ("similar no token", "GET", "/api/jokes/joke:a/similar", {})]
+        ranked = set(search + similar + hybrid)
+        unstable: dict[str, int] = {}
+
+        def matrix(py: str, rs: str, reqs: list) -> tuple[list[str], int]:
+            bad, n = [], 0
+            for label, m, p, h in reqs:
+                pyr, rsr = call(py, m, p, h), call(rs, m, p, h)
+                got = compare(label, pyr, rsr)
+                if got and p in ranked and pyr[0] == rsr[0] == 200:
+                    # the database's tie order: ask the Python again; if it disagrees with itself, compare up to the ties
+                    seen = [pyr] + [call(py, m, p, h) for _ in range(11)]
+                    if len({x[2] for x in seen}) > 1:
+                        unstable[label] = len({x[2] for x in seen})
+                        got = [g for g in got if g.startswith(f"{label}: header ")] + compare_ranked(
+                            label, [json.loads(x[2]) for x in seen], json.loads(rsr[2]))
+                bad += got
+                n += not got
+            return bad, n
+
+        got, n_ok = matrix(py, rs, reqs)
+        problems += got
+        report["tie_order_requests"] = unstable
         problems += coverage(py, app)
         # a transcript the worker rewrites (POST /api/worker/files through pk-api): files_rev moves, the Python pod
         # refreshes its disk copy within a poll, pk-api's transcript cache misses on the new hash; both pages again
@@ -770,17 +901,20 @@ def main() -> int:
         mtext = call(rs, "GET", "/metrics")[2].decode()
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
                       "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}",
-                      "/api/jokes", "/api/today"):
+                      "/api/jokes", "/api/today", "/api/search", "/api/jokes/{id}/similar"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
-        # a forwarded request is counted by nobody here: the hybrid search goes to the Python before pk-api's layers
-        def jokes_count() -> float:
+        # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)
+        def counted() -> float:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
-                       if ln.startswith("pk_http_requests_total{") and 'route="/api/jokes"' in ln)
-        n0 = jokes_count()
-        call(rs, "GET", "/api/jokes?q=dog&mode=hybrid", app)
-        if jokes_count() != n0:
-            problems.append("pk-api counted a forwarded request (/api/jokes?mode=hybrid): the fallback must count nothing")
+                       if ln.startswith("pk_http_requests_total{"))
+        n0 = counted()
+        call(rs, "GET", "/api/jokes/joke:a/connections", app)
+        if counted() != n0:
+            problems.append("pk-api counted a forwarded request (/api/jokes/<id>/connections): the fallback must count nothing")
+        # and the model was used here: pk-api's own search answered with vectors, not words only
+        if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
+            problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")
 
         # -- timing and memory
         if a.bench:
@@ -807,6 +941,30 @@ def main() -> int:
                 timing[g] = row_
             report["timing"] = timing
             report["rss_mib"] = {"python": rss_mib(pp.pid), "rust": rss_mib(rp.pid)}
+
+        # -- round 6: no model on either side (search_api.make_embedder finds none): words-only search, /similar over
+        # the bit's first twelve words, the hybrid list on words; the same database
+        for p_ in (rp, pp):
+            p_.terminate()
+            p_.wait(15)
+        env.pop("PK_BGE_DIR", None)
+        py2, rs2 = f"http://127.0.0.1:{free_port()}", f"http://127.0.0.1:{free_port()}"
+        pp2 = start([sys.executable, str(ROOT / "api" / "entry.py")], {**auth_env, "PORT": py2.rsplit(":", 1)[1]}, "python-api-words")
+        wait_http(py2 + "/api/health?ready=1", pp2, "python api (no model)")
+        rp2 = start([str(a.pk_api)], {**auth_env, "PORT": rs2.rsplit(":", 1)[1], "PK_PYTHON_URL": py2,
+                                      "RUST_LOG": os.environ.get("RUST_LOG", "info")}, "pk-api-words")
+        wait_http(rs2 + "/api/health?ready=1", rp2, "pk-api (no model)")
+        words = [("no model: " + p, "GET", p, app) for p in search + similar + hybrid]
+        got, n_words = matrix(py2, rs2, words)
+        problems += got
+        for base, who in ((py2, "the Python"), (rs2, "pk-api")):
+            if json.loads(call(base, "GET", "/api/search?q=dog", app)[2]).get("vectors") is not False:
+                problems.append(f"no model: {who} still searched with vectors")
+        likes = [json.loads(call(py2, "GET", p, app)[2]).get("like") or {} for p in similar]
+        if not any(x_.get("bits") for x_ in likes) or not any(x_.get("moments") for x_ in likes):
+            problems.append("coverage: no model: /similar over the first words found no other bit or no moment")
+        report["requests"] += len(words)
+        report["equal"] += n_words
     finally:
         for p in reversed(procs):
             p.terminate()

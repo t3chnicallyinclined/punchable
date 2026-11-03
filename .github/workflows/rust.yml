@@ -240,6 +240,23 @@ jobs:
           mkdir -p "$HOME/.punchable/bin"
           tar -xzf "$RUNNER_TEMP/surreal.tgz" -C "$HOME/.punchable/bin" surreal
 
+      # round 6: search embeds on both sides (the Python's api/entry.py and pk-api), so both need the model
+      - name: bge model (cached by the model file's hash)
+        id: bge
+        uses: actions/cache@v4
+        with:
+          path: ~/.punchable/models/bge-small-en-v1.5
+          key: bge-small-en-v1.5-${{ env.BGE_MODEL_SHA256 }}
+
+      - name: Fetch the bge model (tools/kb/fetch_bge.py, the hub hashes and then the fingerprint)
+        if: steps.bge.outputs.cache-hit != 'true'
+        run: python tools/kb/fetch_bge.py --dest "$HOME/.punchable/models/bge-small-en-v1.5"
+
+      - name: The model on disk is the one the goldens were made with
+        run: |
+          echo "${BGE_MODEL_SHA256}  $HOME/.punchable/models/bge-small-en-v1.5/onnx/model.onnx" | sha256sum -c -
+          echo "${BGE_TOKENIZER_SHA256}  $HOME/.punchable/models/bge-small-en-v1.5/tokenizer.json" | sha256sum -c -
+
       - name: Build pk-api with the diagnostics route (the whole Bits-list row is compared too)
         working-directory: rust
         run: cargo build -p pk-api --features diagnostics
@@ -247,4 +264,5 @@ jobs:
       - name: The differential (exit 1 on any difference outside ALLOW)
         run: |
           export PUNCH_SURREAL="$HOME/.punchable/bin/surreal"
+          export PK_BGE_DIR="$HOME/.punchable/models/bge-small-en-v1.5"
           python rust/tools/diff_api_reads.py --pk-api rust/target/debug/pk-api

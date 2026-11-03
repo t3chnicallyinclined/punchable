@@ -160,8 +160,22 @@ def main() -> int:
     ap.add_argument("--write-every", type=float, default=0.5)
     ap.add_argument("--phases", default="seq,conc,writes")
     ap.add_argument("--json", type=Path)
+    ap.add_argument("--routes", default=None,
+                    help="comma-separated paths instead of the forwarded five; `{joke}` is replaced by bit ids from "
+                         "the Python's /api/jokes, one per round (for routes pk-api answers itself: the same request "
+                         "at the same rate on both)")
     a = ap.parse_args()
     pair = json.loads(a.pair.read_text(encoding="utf-8"))
+    if a.routes:
+        global ROUTES
+        ROUTES = a.routes.split(",")
+        if any("{joke}" in r for r in ROUTES):
+            c = Conn(pair["python"])
+            c.c = http.client.HTTPConnection(c.host, c.port, timeout=120)
+            c.c.request("GET", "/api/jokes?limit=40")
+            ids = [x["id"] for x in json.loads(c.c.getresponse().read())["items"]]
+            ROUTES = [r.replace("{joke}", urllib.parse.quote(ids[i % len(ids)], safe=":")) if "{joke}" in r else r
+                      for i, r in enumerate(ROUTES)]
     res = {}
     for ph in a.phases.split(","):
         name, _, n = ph.partition(":")  # conc:4 / writes:1 = that many threads instead of --conc

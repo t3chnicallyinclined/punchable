@@ -267,7 +267,9 @@ def main() -> int:
         # pk-load run (its routes not ported yet measure the forward plus the Python, so read only the ported ones)
         rport = free_port()
         rs_env = {**db_env, "PORT": str(rport), "HOST": "127.0.0.1", "PK_AUTH": "0", "PK_ALLOW_NO_AUTH": "1",
-                  "PK_DATA": str(root / "data"), "PK_PYTHON_URL": base, "RUST_LOG": "info"}
+                  "PK_DATA": str(root / "data"), "PK_PYTHON_URL": base, "RUST_LOG": "info",
+                  # round 6: pk-api searches with the same model (loaded on its first search)
+                  "PK_BGE_DIR": bge}
         rlog = open(root / "pk-api.log", "w", encoding="utf-8")
         rs = subprocess.Popen([str(a.rust)], env=rs_env, stdout=rlog, stderr=subprocess.STDOUT)
         procs.append(rs)

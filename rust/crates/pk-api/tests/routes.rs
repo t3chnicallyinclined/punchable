@@ -153,16 +153,23 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
 }
 
 #[tokio::test]
-async fn the_hybrid_search_goes_to_the_python_and_the_list_stays_here() {
-    // no PK_PYTHON_URL: forwarded = the fallback's 404; answered here = the boot 503 (no data yet), never the 401 of
-    // this service's own auth layer, which the forward skips
+async fn search_similar_and_the_hybrid_list_are_answered_here() {
+    // no PK_PYTHON_URL: forwarded = the fallback's 404; answered here = this service's own auth layer's 401
     let st = state(true);
-    let (s, _, _) = send(&st, get("/api/jokes?q=dog&mode=hybrid").body(Body::empty()).unwrap()).await;
-    assert_eq!(s, StatusCode::NOT_FOUND);
-    let (s, _, _) = send(&st, get("/api/jokes?q=dog").body(Body::empty()).unwrap()).await;
-    assert_eq!(s, StatusCode::UNAUTHORIZED);
-    let (s, _, _) = send(&st, get("/api/jokes?q=%20&mode=hybrid").body(Body::empty()).unwrap()).await;
-    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    for p in [
+        "/api/jokes?q=dog&mode=hybrid",
+        "/api/jokes?q=dog",
+        "/api/jokes?q=%20&mode=hybrid",
+        "/api/search?q=dog",
+        "/api/search",
+        "/api/jokes/joke:a/similar",
+        "/api/jokes/joke%3Aa/similar?limit=3",
+    ] {
+        let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED, "{p}");
+    }
+    let (s, _, _) = send(&st, get("/api/jokes/a/b/similar").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::NOT_FOUND, "an id with a slash is forwarded");
 }
 
 #[tokio::test]
@@ -236,7 +243,6 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
     for p in [
         "/api/jokes/joke:a/connections",
         "/api/jokes/joke:a/map",
-        "/api/jokes/joke:a/similar",
         "/api/sets/set:x/clips",
         "/api/jokes/a/b",
         "/api/jokes/",

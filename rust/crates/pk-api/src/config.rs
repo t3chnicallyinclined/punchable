@@ -31,6 +31,9 @@ pub struct ApiConfig {
     pub store: pk_store::Config,
     /// `PK_BUILD_SHA` (the image's git sha; `dev` when unset).
     pub build_sha: String,
+    /// Search's embedder: `PK_EMBEDDER=hash`, else the bge-small folder (`PK_BGE_DIR` /
+    /// `PK_CACHE_DIR`), else none (loaded on first use: `embed`).
+    pub embedder: crate::embed::Choice,
 }
 
 /// Keycloak.
@@ -105,6 +108,7 @@ impl ApiConfig {
                 .filter(|u| !u.is_empty()),
             store: pk_store::Config::from_env(env, None, Some(&ns), Some(&db))?,
             build_sha: env.opt("PK_BUILD_SHA").unwrap_or("").to_string(),
+            embedder: crate::embed::Choice::from_env(env)?,
         })
     }
 }
