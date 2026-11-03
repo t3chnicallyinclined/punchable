@@ -103,6 +103,22 @@
           "speechRecognitionPermission": "Punchable turns your memos and sets into text on this iPhone so it can file each idea on the right bit. Only the words leave your phone."
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Punchable films you reading a bit so you can post it. The video stays on your phone.",
+          "microphonePermission": "Punchable records your sets and voice memos on this iPhone. The audio stays on your phone.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Punchable finds set-length videos you taped elsewhere so you can import their words.",
+          "savePhotosPermission": "Punchable saves the videos you film to Photos."
+        }
+      ],
       "expo-asset",
       "expo-web-browser",
       [

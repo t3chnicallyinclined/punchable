@@ -4,13 +4,16 @@
 // row → the bit; a failed one → Try again; one that needs permission → Settings. The same verbs live on a swipe,
 // the long-press context menu (HIG.md: menus keep a visible path) and VoiceOver's actions. Delete cannot be undone,
 // so it confirms with an action sheet (HIG/action-sheets: destructive first) that says where the words stay.
-import { Linking, Platform, Pressable, View } from 'react-native';
+// A filmed take (kind `film`, Film it SPEC 2026-11-03 §2.7) is a row on the bit's On tape screen: "Filmed · Nov 3 ·
+// 0:48" · "112 words"; its play glyph opens the take full-screen (/take/[rec]) while the .mov is still on the phone,
+// Photos once the one copy lives there; "Share captions…" hands the .srt to the share sheet; Delete is the words'.
+import { Linking, Platform, Pressable, Share, View } from 'react-native';
 import { router } from 'expo-router';
 import { actionSheet } from './actionSheet';
 import { haptics } from './haptics';
 import { Icon } from './Icon';
 import { playLocal, useLocalPlaying } from './localPlay';
-import { deleteRec, notThisBit, retryRec, uriOf } from './recordings';
+import { deleteRec, notThisBit, retryRec, srtUriOf, uriOf } from './recordings';
 import type { LocalRec } from './recordings';
 import { RowMenu, rowActions } from './RowMenu';
 import { SwipeRow } from './SwipeRow';
@@ -19,9 +22,11 @@ import { IconBtn, List, T, useUI } from './ui';
 import type { MenuItem } from './ui';
 import { isRecording } from './audioBusy';
 import { clockMs, fmtDate } from '@/rules/format';
+import { takeRow } from '@/rules/filmRules';
 import { deleteMessage, recTitle, statusWords } from '@/rules/memoRules';
 
 const enc = encodeURIComponent;
+
 /** Where the row's words are on the server, if anywhere he can open. */
 function openTarget(r: LocalRec): string | null {
   if (r.state === 'filed' && r.filed_on) return `/joke/${enc(r.filed_on.id)}`;
@@ -40,19 +45,25 @@ function Row({ r }: { r: LocalRec }) {
   const key = `rec:${r.id}`;
   const on = p.key === key && p.playing;
   const target = openTarget(r);
-  const kindWord = r.kind === 'memo' ? 'memo' : 'set';
+  const film = r.kind === 'film';
+  const kindWord = r.kind === 'memo' ? 'memo' : film ? 'take' : 'set';
+  const inPhotos = film && !!r.video_gone;
+  const srt = film ? srtUriOf(r) : null;
 
+  const openPhotos = () => void Linking.openURL('photos-redirect://').catch(() => ui.snack('Open Photos to find it.'));
   const play = () => {
+    if (film) return inPhotos ? openPhotos() : router.push(`/take/${enc(r.id)}` as any);
     if (isRecording()) return ui.snack('Stop the recording first.');
     playLocal(uriOf(r), key).catch((e) => ui.snack(e?.message || 'Couldn’t play it'));
   };
   const del = () => actionSheet({
-    title: 'Delete the recording?', message: deleteMessage(r),
+    title: film ? 'Delete the words?' : 'Delete the recording?', message: deleteMessage(r),
     options: [
-      { label: 'Delete the recording', destructive: true, onPress: () => { haptics.warning(); void deleteRec(r.id); } },
+      { label: film ? 'Delete the words' : 'Delete the recording', destructive: true, onPress: () => { haptics.warning(); void deleteRec(r.id); } },
       { label: 'Cancel', cancel: true },
     ],
   });
+  const shareCaptions = () => { if (srt) Share.share({ url: srt, title: 'Captions' }).catch(() => ui.snack('Sharing is not available here')); };
   const detach = async () => {
     try {
       await notThisBit(r.id);
@@ -69,22 +80,25 @@ function Row({ r }: { r: LocalRec }) {
   };
 
   const items: MenuItem[] = [
-    { label: on ? 'Pause' : 'Play', icon: on ? 'pause.fill' : 'play.fill', onPress: play },
-    ...(target ? [{ label: r.state === 'filed' ? 'Open the bit' : 'Open the idea', icon: 'doc.text', onPress: () => router.push(target as any) }] : []),
-    ...(r.state === 'filed' && r.merge_id ? [{ label: 'Not this bit', icon: 'arrow.uturn.backward', onPress: detach }] : []),
+    film ? { label: inPhotos ? 'Open Photos' : 'Play', icon: inPhotos ? 'photo.on.rectangle' : 'play.fill', onPress: play } : { label: on ? 'Pause' : 'Play', icon: on ? 'pause.fill' : 'play.fill', onPress: play },
+    ...(srt ? [{ label: 'Share captions…', icon: 'square.and.arrow.up', onPress: shareCaptions }] : []),
+    ...(target && !film ? [{ label: r.state === 'filed' ? 'Open the bit' : 'Open the idea', icon: 'doc.text', onPress: () => router.push(target as any) }] : []),
+    ...(r.state === 'filed' && r.merge_id && !film ? [{ label: 'Not this bit', icon: 'arrow.uturn.backward', onPress: detach }] : []),
     ...(canRetry(r) ? [{ label: 'Try again', icon: 'arrow.clockwise', onPress: () => retryRec(r.id) }] : []),
     ...(r.state === 'needs_permission' ? [{ label: 'Open Settings', icon: 'gear', onPress: () => void Linking.openSettings() }] : []),
-    { label: 'Delete', icon: 'trash', destructive: true, onPress: del },
+    { label: film ? 'Delete the words' : 'Delete', icon: 'trash', destructive: true, onPress: del },
   ];
-  const sub = [fmtDate(r.recorded_at), r.duration_s > 0 ? clockMs(r.duration_s * 1000) : null, statusWords(r)].filter(Boolean).join(' · ');
-  const title = recTitle(r);
-  const label = [r.kind === 'memo' ? 'Memo' : 'Set', title === 'Set' || title === 'Memo' ? null : title, fmtDate(r.recorded_at), r.duration_s > 0 ? clockMs(r.duration_s * 1000) : null, statusWords(r)].filter(Boolean).join(', ');
+  const take = film ? takeRow(r, statusWords(r)) : null;
+  const sub = take ? take.sub : [fmtDate(r.recorded_at), r.duration_s > 0 ? clockMs(r.duration_s * 1000) : null, statusWords(r)].filter(Boolean).join(' · ');
+  const title = take ? take.label : recTitle(r);
+  const label = take ? [take.label.replace(/ · /g, ', '), take.sub].filter(Boolean).join(', ')
+    : [r.kind === 'memo' ? 'Memo' : 'Set', title === 'Set' || title === 'Memo' ? null : title, fmtDate(r.recorded_at), r.duration_s > 0 ? clockMs(r.duration_s * 1000) : null, statusWords(r)].filter(Boolean).join(', ');
   const hint = does === 'open' ? (r.state === 'filed' ? `Opens ${r.filed_on?.title || 'the bit'}` : 'Opens the idea') : does === 'settings' ? 'Opens Settings' : does === 'retry' ? 'Transcribes it again' : undefined;
 
   return (
     <SwipeRow testID={`rec-swipe-${r.id}`} a11yPassThrough
-      trailing={{ label: 'Delete', destructive: true, color: C.red, onPress: del, testID: `rec-delete-${r.id}` }}
-      leading={r.state === 'filed' && r.merge_id ? { label: 'Not this bit', color: C.tabOff, onPress: detach, testID: `rec-notthis-${r.id}` } : null}
+      trailing={{ label: film ? 'Delete the words' : 'Delete', destructive: true, color: C.red, onPress: del, testID: `rec-delete-${r.id}` }}
+      leading={r.state === 'filed' && r.merge_id && !film ? { label: 'Not this bit', color: C.tabOff, onPress: detach, testID: `rec-notthis-${r.id}` } : null}
       onLongPress={Platform.OS === 'ios' ? undefined : () => actionSheet({ title, options: [...items.map((it) => ({ label: it.label, onPress: it.onPress, destructive: it.destructive })), { label: 'Cancel', cancel: true }] })}>
       {/* the play button is a sibling of the row's text, so VoiceOver reaches both (an accessible parent hides its children) */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56 }}>
@@ -95,8 +109,8 @@ function Row({ r }: { r: LocalRec }) {
             <T v="mut">{sub}</T>
           </Pressable>
         </RowMenu>
-        <IconBtn testID={`rec-play-${r.id}`} label={on ? 'Pause' : `Play ${kindWord}`} onPress={play}>
-          <Icon name={on ? 'pause' : 'play'} size={20} color={C.amber} />
+        <IconBtn testID={`rec-play-${r.id}`} label={inPhotos ? 'Open Photos' : on ? 'Pause' : `Play ${kindWord}`} onPress={play}>
+          <Icon name={inPhotos ? 'photos' : on ? 'pause' : 'play'} size={20} color={C.amber} />
         </IconBtn>
       </View>
     </SwipeRow>

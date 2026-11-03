@@ -38,6 +38,7 @@ const fileOf = (url) => table.find(([, p]) => matches(url, p))?.[0] || "";
 check(fileOf("/").startsWith("(tabs)/(tonight)/") && fileOf("/bits").startsWith("(tabs)/(bits)/") && fileOf("/sets").startsWith("(tabs)/(sets)/"), "the three tab roots live in their groups");
 check(fileOf("/joke/x").startsWith("(tabs)/(bits)/") && fileOf("/list/x").startsWith("(tabs)/(sets)/") && fileOf("/inbox").startsWith("(tabs)/(tonight)/"), "pushed screens live under their tab (Back goes to it)");
 check(!fileOf("/stage/x").startsWith("(tabs)") && !fileOf("/record").startsWith("(tabs)") && !fileOf("/review").startsWith("(tabs)"), "the stage, the recorder and the review are root-level full-screen modals");
+check(!fileOf("/film/x").startsWith("(tabs)") && !fileOf("/take/x").startsWith("(tabs)"), "the camera (Film it) and the take player are root-level full-screen modals (SPEC 2026-11-03)");
 check(!fileOf("/add/x").startsWith("(tabs)"), "the form sheet (add a joke) is a root-level route that covers the tab bar");
 check(fileOf("/create") === "", "no /create route: the \"+\" acts at once (SPEC 2026-10-30), the create sheet is gone");
 check(!fileOf("/login").startsWith("(tabs)") && !fileOf("/auth/callback").startsWith("(tabs)") && !fileOf("/auth/logout").startsWith("(tabs)"), "login and the auth routes stay at the root, outside the tabs");

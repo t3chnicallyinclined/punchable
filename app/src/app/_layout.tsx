@@ -158,6 +158,9 @@ function RootLayout() {
                 {/* Full-screen tasks (HIG/modality: "a full-screen modal style for ... a complex task"); nothing swipes him off the stage. */}
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
                 <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
+                {/* Film it (SPEC 2026-11-03): the camera is a full-screen modal like the stage; a take plays in its own */}
+                <Stack.Screen name="film/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('Film it') }} />
+                <Stack.Screen name="take/[rec]" options={{ ...fullScreen, title: t('Filmed') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
                 {/* the focus-mode mock for device checks 2 and 3 (SPEC 2026-11-03 §4.1): Slice 1 only, removed in Slice 2 */}
                 <Stack.Screen name="spike-write" options={{ ...fullScreen, title: t('Focus mock') }} />

@@ -170,11 +170,32 @@ export function killedWord(n: number): string {
   if (n === 2) return 'killed twice';
   return `killed ${n} times`;
 }
-/** The On tape row's meta; null hides the row (never taped, nothing sounds like it). */
-export function tapeMeta(nights: number, killed: number, echoes = 0): string | null {
-  if (nights > 0) return [countWord(nights, 'night', 'nights'), killedWord(killed)].filter(Boolean).join(' · ');
+/** The On tape row's meta; null hides the row (never taped, never filmed, nothing sounds like it). `filmed` = kept
+ *  takes on this phone (Film it, SPEC 2026-11-03 §2.7): "3 nights · killed twice · filmed 2"; never performed but
+ *  filmed reads "filmed 1". */
+export function tapeMeta(nights: number, killed: number, echoes = 0, filmed = 0): string | null {
+  const f = filmed > 0 ? `filmed ${filmed}` : '';
+  if (nights > 0) return [countWord(nights, 'night', 'nights'), killedWord(killed), f].filter(Boolean).join(' · ');
+  if (f) return f;
   if (echoes > 0) return `not yet · ${countWord(echoes, 'sounds like it', 'sound like it')}`;
   return null;
+}
+
+/** A version of the bit as the page and the camera read it from GET /api/jokes/<id>: every unit with text, newest
+ *  first, labelled vN from the newest; the typed idea stands in when a bit of his has no unit yet. The punch marks
+ *  ride on the row once the read carries them (line_meta, 3c Slice 3). */
+export type BitVersion = { key: string; label: string; date: string | null; text: string; doc?: string | null; punch?: number[] };
+export function versionsOf(d: any): BitVersion[] {
+  const out: BitVersion[] = [];
+  for (const g of d?.versions || []) {
+    for (const u of g.units || []) {
+      if (!u.text) continue;
+      out.push({ key: u.id || `${g.date}-${out.length}`, label: '', date: u.date || g.date || null, text: u.text, doc: u.doc_title, punch: u.line_meta?.punch ?? u.punch });
+    }
+  }
+  if (!out.length && d?.joke?.summary && d?.yours) out.push({ key: 'idea', label: '', date: d.joke.first_seen || null, text: d.joke.summary });
+  out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return out.map((v, i) => ({ ...v, label: `v${out.length - i}` }));
 }
 /** How many performed rows he rated "killed" (the rows that carry a rating; unrated rows count nothing). */
 export function killedCount(rows: { rating?: string | null }[]): number {

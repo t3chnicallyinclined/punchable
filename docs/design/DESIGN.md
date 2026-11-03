@@ -164,6 +164,7 @@ deviation from the HIG/branding sentence above (HIG.md §6); the cost is Bold Te
 | `type.display` | — (ours) | 40 / 44 | Space Grotesk 700 tabular, ls −1 | 1.6 (a figure beside its label; PROPOSED) | `big` 40 / 44 | the set time, "6:40" |
 | `type.clock` | — (ours) | 84 / 90 | Inter 800 tabular, ls −2 | **1.2** | `RecordControl.tsx:76` | the one clock; the status word beside it is `subhead` at 1.4 |
 | `type.stageProse` | — (ours) | 20 / 26 | Inter 400; the reveal Inter 600 (the punch stands out by weight, not colour) | **2.0** (prose) | `ui.tsx` `buildTv` `stageProse` (2026-10-29) | a bit's words read at arm's length in the dark: the notes sheet's setup and reveal (SPEC-2026-10-29 §2); no other role sits between body 17 and title3 20 Grotesk |
+| `type.prompter` | — (ours) | 26 / 32 | Inter 600; the punch Inter 700 with the amber dot (weight, the dot and the word "punch", never colour alone) | **1.6** (the band is a control's height: it must leave the camera preview a face) | `lib/Prompter.tsx` `PROMPTER_SIZE` / `PROMPTER_LEADING` / `PROMPTER_CAP` (2026-11-03) | a line read at arm's length from the front camera (Film it, SPEC-2026-11-03 §2.3): 26 pt at ~60 cm subtends what 17 pt does at ~40 cm; the lines after the current one are a dim step (`mut2`), never a smaller size; the owner's device check D7 may move it to 34-40 |
 
 The Dynamic Type caps, by class (owner signed; ARCHITECTURE.md §7 item 4): **prose 2.0×, titles 1.8×, captions and
 controls 1.6×, the clock 1.2×.** Today every `T` caps at 1.6× (`ui.tsx:36`) and the inline caps are spread 14 × 1.2,
@@ -245,6 +246,7 @@ Snapping moves a value by at most 2 pt (ARCHITECTURE.md decision 5): 3 → 2 or 
 | `size.avatar` | 34 (header), 44 (tap) | the face | `Face` (`ui.tsx:308`) |
 | `size.badge` | 24 min | `Badge` | `ui.tsx:95` |
 | `size.bar`, `size.dock` | 120 / 96 | reserved height under the input bar and a task dock | `Screen.native.tsx:35-36` |
+| `size.band` | 4 lines × 32 + 24 (≈ 152), 2 lines from font scale 1.3, never over 40 % of the window | the prompter band under the Dynamic Island (Film it, SPEC-2026-11-03 §2.3; the spike's §5: the current line at the top, nearest the lens) | `lib/Prompter.tsx` (`bandLines`, `MAX_SHARE`); `rules/prompterRules.ts` `BAND_LINES` |
 
 ### 5.4 Layer, elevation, material
 

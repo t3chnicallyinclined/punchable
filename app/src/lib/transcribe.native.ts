@@ -21,14 +21,19 @@
 //   4. one event stream for every run: a run that ended on our own timer (an abort that never sent `end`) leaves the
 //      recognizer running, and its late `end` would land on the NEXT run and read as "no speech" [review]. So after
 //      such an end the module is `dirty`, and the next run first aborts and waits for that `end` before it listens.
-// The finals become segments in rules/memoRules (addFinal: one per utterance, leading space, repeated last final).
-// The file route never touches AVAudioSession (:337-342): the recorder's audio mode is left alone.
+// The finals become segments in rules/memoRules (addFinal: one per utterance, leading space, repeated last final),
+// and the per-segment timings become `words` (a filmed take's captions, SPEC 2026-11-03 Film it; the memo and set
+// paths ignore them). The file route never touches AVAudioSession (:337-342): the recorder's audio mode is left alone.
+// A filmed take is a QuickTime .mov on the same route (the spike's v1 path): whether AVAudioFile opens it is the
+// owner's device check D3. If it does not, the package's catch (ExpoSpeechRecognizer.swift:336-339) ends an EMPTY
+// request, which the recognizer reports as no speech: the row reads "no words" on a take with clear speech (not
+// "Couldn't transcribe"), the .mov stays in Documents, and a 30-line Swift export to .m4a before this call is the fix.
 import type { ExpoSpeechRecognitionErrorEvent, ExpoSpeechRecognitionResultEvent } from 'expo-speech-recognition';
 import { ENGINE, addFinal, emptyAcc, isCleanFileUri, outcomeOf, progressOf, watchdogMs } from '@/rules/memoRules';
-import type { Acc, Outcome, Seg } from '@/rules/memoRules';
+import type { Acc, Outcome, Seg, Word } from '@/rules/memoRules';
 
 export const transcribeSupported = true;
-export type TranscribeResult = { outcome: Outcome; segs: Seg[]; error: string | null; engine: string };
+export type TranscribeResult = { outcome: Outcome; segs: Seg[]; words: Word[]; error: string | null; engine: string };
 export type TranscribeRun = { done: Promise<TranscribeResult>; abort: () => void };
 
 type SRModule = typeof import('expo-speech-recognition').ExpoSpeechRecognitionModule;
@@ -83,7 +88,7 @@ async function drain(SR: SRModule) {
   dirty = false;
 }
 
-const end = (outcome: Outcome, error: string | null, segs: Seg[] = []): TranscribeResult => ({ outcome, segs, error, engine: ENGINE });
+const end = (outcome: Outcome, error: string | null, segs: Seg[] = [], words: Word[] = []): TranscribeResult => ({ outcome, segs, words, error, engine: ENGINE });
 
 /** Transcribe one file. Never rejects: the result says what happened (rules/memoRules outcomeOf). */
 export function transcribeFile(uri: string, durationS: number, onProgress?: (p: number) => void): TranscribeRun {
@@ -130,7 +135,7 @@ export function transcribeFile(uri: string, durationS: number, onProgress?: (p: 
         if (dog) clearTimeout(dog);
         if (late) clearTimeout(late);
         subs.forEach((s) => s.remove());
-        resolve(end(outcomeOf(error, acc.segs.length, ours), error, acc.segs));
+        resolve(end(outcomeOf(error, acc.segs.length, ours), error, acc.segs, acc.words));
       };
       const stop = () => {
         try { SR.abort(); } catch {}

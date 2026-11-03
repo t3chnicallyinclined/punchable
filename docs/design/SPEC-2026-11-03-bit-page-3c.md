@@ -159,11 +159,15 @@ set at that second), then "Sounds like it, on tape" with **link it** (a `perform
 map. The row's meta: nights = `performed.length`; "killed twice" = the count of `rating === 'killed'` among them
 (the set rows carry `rating`, CONFIRMED `lib/api.ts:346,352`; **INFERRED that `/similar`'s moments do not carry it
 today**, so the new `GET /api/bits/{id}/tape` route sends it, §6). Offline: rows whose audio is not in
-`Documents/recordings` dim with "audio on the server".
+`Documents/recordings` dim with "audio on the server". **Film it (2026-11-03, SPEC-2026-11-03-film-it.md §2.7, built
+v1):** the row's meta gains "filmed N" (kept takes on this phone, `tapeMeta`'s fourth argument; "filmed 1" alone when
+never performed) and the screen gains the **Filmed** rows under the performed ones ("Filmed · Nov 3 · 0:48" · "112
+words"; play while the .mov is on the phone, Photos once the one copy lives there; Share captions…; Delete the words).
 
 ### 3.8 The More menu (in frequency order, the destructive item last)
 
-**Reorder lines · Record a memo · — · Pick a set list… · Merge with… · Share… · — · Rename short name… · Stage ›
+**Reorder lines · Record a memo · Film it… (2026-11-03; phone only, greyed "nothing to read" on an empty bit) · — ·
+Pick a set list… · Merge with… · Share… · — · Rename short name… · Stage ›
 (Idea · To try · Testing · Working; the AI's guess carries the badge until he picks) · — · Retire.** Today's items
 keep their handlers (CONFIRMED `:187-193`: `recordMemo`, `setRename`, `boards.pick`, `/merge`, `Share.share`,
 `retire`). "Add to tonight's set" leaves the menu (it is the bar's To a set). "Reorder lines" is unavailable while an

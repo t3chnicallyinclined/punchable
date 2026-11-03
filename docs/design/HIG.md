@@ -282,6 +282,18 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   records until the disc": it starts as it opens (the tap on "Record a memo" is the decision, as in Voice Memos).
   Title "Memo", "For <bit>" under the clock when started on a bit, no target chips or Mark, the same square and the
   same Close sheet ("Leave the memo?").
+- **Film it** (`/film/{id}`, 2026-11-03, SPEC-2026-11-03-film-it.md built on the spike's v1 path): the third
+  full-screen modal with the same record control. Nothing records until the disc; the disc starts a 3 · 2 · 1 count
+  (a selection tick each, tap to skip), then the take; **no haptics while recording** (HIG/playing-haptics: haptics
+  must not disrupt the camera or the microphone); the square goes to the **review** (the take in the system player,
+  `expo-video` with `nativeControls`, HIG/playing-video), where **Keep** (prominent) saves the one copy to Photos with
+  add-only access and queues the words, and **Redo** discards and counts down again (HIG/feedback: no warning when the
+  loss is expected); Discard is behind Close ("Leave the take?" · Discard the take · Keep the take · Keep going). The
+  band of his lines sits under the Dynamic Island, the current line at the top (nearest the lens), at most four lines,
+  advancing at his pace; Hold / Go and Next line are the 60-pt dock controls, a tap and a long-press on the band do the
+  same (HIG/accessibility: alternatives to gestures). A greyed disc carries its one word (no camera · no mic · no
+  room); a call or the background ends the take into the review ("cut short by a call"). The take plays from
+  `/take/{rec}` (full-screen modal) while it is on the phone; the one copy is in Photos.
 
 ### 3.10 All-bits map (`/map`): the galaxy (built 2026-10-28, `lib/Galaxy.tsx`)
 - **The cloud (default since 2026-10-29, `lib/Cloud.native.tsx` on Skia / `lib/Cloud.tsx` SVG on the web, `GET /api/map/cloud`)**: every bit placed by what it SAYS: a
