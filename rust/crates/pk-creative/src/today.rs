@@ -48,7 +48,7 @@ pub fn mmss_opt(x: Option<f64>) -> String {
 /// `util.mean`: the mean of the values that are there.
 pub fn mean(xs: impl IntoIterator<Item = Option<f64>>) -> Option<f64> {
     let v: Vec<f64> = xs.into_iter().flatten().collect();
-    (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)
+    (!v.is_empty()).then(|| py::sum(v.iter().copied()) / v.len() as f64)
 }
 
 /// `util.cv`: sample sd / mean; `None` with fewer than two values or a mean at or below zero.
@@ -57,11 +57,11 @@ pub fn cv(xs: impl IntoIterator<Item = Option<f64>>) -> Option<f64> {
     if v.len() < 2 {
         return None;
     }
-    let mu = v.iter().sum::<f64>() / v.len() as f64;
+    let mu = py::sum(v.iter().copied()) / v.len() as f64;
     if mu <= 0.0 {
         return None;
     }
-    let var = v.iter().map(|x| (x - mu).powi(2)).sum::<f64>() / (v.len() - 1) as f64;
+    let var = py::sum(v.iter().map(|x| (x - mu).powi(2))) / (v.len() - 1) as f64;
     Some(var.sqrt() / mu)
 }
 
@@ -72,9 +72,9 @@ fn r1(x: f64) -> f64 {
 /// `util.first_line`: the first line of three words or more, cut on a word boundary (always a substring), else the
 /// first twelve words.
 pub fn first_line(text: &str, max_chars: usize) -> String {
-    for line in text.lines() {
+    for line in py::splitlines(text) {
         let s = py::strip(line);
-        if s.split_whitespace().count() >= 3 {
+        if py::split(s).count() >= 3 {
             let n = s.chars().count();
             if n <= max_chars {
                 return s.to_string();
@@ -207,7 +207,8 @@ pub fn align(c: &Corpus, ws: &Obj, set_key: &str) -> Value {
         }
     }
     let mut rows = Vec::new();
-    let (mut done_s, mut ls, mut wsum, mut n_done) = (0.0, 0.0, 0.0, 0usize);
+    // the Python adds these with `sum()` (compensated since 3.12): collect, then `py::sum`
+    let (mut done_s, mut ls, mut wsum) = (Vec::new(), Vec::new(), Vec::new());
     for (i, b) in vbits.iter().enumerate() {
         let j = bit_id(b);
         let p = perf_by.get(j.as_str());
@@ -229,22 +230,21 @@ pub fn align(c: &Corpus, ws: &Obj, set_key: &str) -> Value {
                 "evidence": c.seg_evidence(&p.main_seg).into_iter().collect::<Vec<_>>(),
             });
             r.extend(more.as_object().cloned().unwrap_or_default());
-            done_s += p.duration_s;
-            ls += p.laugh_s;
-            wsum += p.window_s;
-            n_done += 1;
+            done_s.push(p.duration_s);
+            ls.push(p.laugh_s);
+            wsum.push(p.window_s);
         }
         rows.push(row);
     }
     let mut added = Vec::new();
-    let mut added_s = 0.0;
+    let mut added_s = Vec::new();
     for x in &segs {
         let j = x.get("joke").map(py::str);
         if j.as_ref().is_some_and(|j| plan.contains(j)) && known_or_new(x) {
             continue;
         }
         let t = r1((num(x.get("end_ms")).unwrap_or(0.0) - num(x.get("start_ms")).unwrap_or(0.0)) / 1000.0);
-        added_s += t;
+        added_s.push(t);
         added.push(
             json!({"idx": get(x, "idx"), "title": get(x, "title"), "status": get(x, "status"),
                           "joke_id": get(x, "joke"), "time_s": t, "laugh_s_per_min": get(x, "laugh_s_per_min"),
@@ -252,6 +252,8 @@ pub fn align(c: &Corpus, ws: &Obj, set_key: &str) -> Value {
         );
     }
     let summ = s.summary.as_object().cloned().unwrap_or_default();
+    let n_done = done_s.len();
+    let (ls, wsum) = (py::sum(ls), py::sum(wsum));
     let in_set: HashSet<&String> = performed.iter().collect();
     json!({
         "working_set": get(ws, "id"), "version": get(ver, "v"), "set": set_key, "date": s.date, "venue": s.venue,
@@ -262,8 +264,8 @@ pub fn align(c: &Corpus, ws: &Obj, set_key: &str) -> Value {
         "dropped": plan.iter().filter(|j| !first_pos.contains_key(*j)).collect::<Vec<_>>(),
         "added": added,
         "bits": rows,
-        "totals": {"planned_target_s": vbits.iter().map(|b| target(b)).sum::<f64>(),
-                   "performed_planned_s": r1(done_s), "added_s": r1(added_s),
+        "totals": {"planned_target_s": py::sum(vbits.iter().map(|b| target(b))),
+                   "performed_planned_s": r1(py::sum(done_s)), "added_s": r1(py::sum(added_s)),
                    "bits_performed": n_done, "bits_planned": plan.len(),
                    "ws_laugh_s_per_min": if wsum == 0.0 { Value::Null } else { json!(round_to(ls / (wsum / 60.0), 2)) },
                    "set_laugh_s_per_min": get(&summ, "laugh_s_per_min"), "room_heat": get(&summ, "room_heat"),
@@ -555,7 +557,7 @@ fn try_tonight(c: &Corpus, ws: &Obj, hist: &[History], cap: usize) -> Vec<Value>
 fn perfected(c: &Corpus, ws: &Obj, hist: &[History]) -> f64 {
     let hist: HashMap<&str, &History> = hist.iter().map(|h| (h.joke_id.as_str(), h)).collect();
     let vbits = bits(current(ws));
-    let total: f64 = vbits.iter().map(|b| target(b)).sum();
+    let total = py::sum(vbits.iter().map(|b| target(b)));
     let tot = if total == 0.0 { 1.0 } else { total };
     let (mut locked_s, mut stab_w, mut stab_sum) = (0.0, 0.0, 0.0);
     for b in &vbits {
@@ -608,7 +610,7 @@ fn status(c: &Corpus, ws: &Obj, n_notes: usize) -> Value {
         _ => None,
     };
     let ver = current(ws);
-    let target_s: f64 = bits(ver).iter().map(|b| target(b)).sum();
+    let target_s = py::sum(bits(ver).iter().map(|b| target(b)));
     let mut line = format!(
         "{} v{} · {}",
         ws.get("title").map(py::str).unwrap_or_default(),
@@ -780,10 +782,10 @@ fn minutes(c: &Corpus) -> Value {
     let proven = by[0] / 60.0;
     let both = (by[0] + by[1]) / 60.0;
     #[expect(clippy::cast_possible_truncation, reason = "a percentage")]
-    let pct = |x: f64| ((100.0 * x).round_ties_even() as i64).min(100);
+    let pct = |x: f64, g: f64| ((100.0 * x / g).round_ties_even() as i64).min(100);
     let toward: Vec<Value> = [5.0, 15.0, 30.0, 60.0]
         .iter()
-        .map(|g| json!({"goal_min": *g as i64, "working_pct": pct(proven / g), "with_testing_pct": pct(both / g)}))
+        .map(|g| json!({"goal_min": *g as i64, "working_pct": pct(proven, *g), "with_testing_pct": pct(both, *g)}))
         .collect();
     json!({"working_min": r1(proven), "testing_min": r1(by[1] / 60.0), "working_plus_testing_min": r1(both),
            "measured_share": r1(100.0 * (measured[0] + measured[1]) / (by[0] + by[1]).max(1.0)),
@@ -815,7 +817,7 @@ pub fn build(c: &Corpus, ws: Option<&Obj>, day: &str) -> Map<String, Value> {
             json!(notes.into_iter().take(3).collect::<Vec<_>>()),
         );
     }
-    if let Some(tl) = c.his_lists.get("list:tonight") {
+    if let Some(tl) = c.his_lists.get("list:tonight").filter(|tl| !tl.is_empty()) {
         let items: Vec<Value> = tl
             .get("items")
             .and_then(Value::as_array)
@@ -837,6 +839,8 @@ pub fn latest_ws(items: &Map<String, Value>) -> Option<&Obj> {
         .values()
         .filter_map(Value::as_object)
         .filter(|w| !py::truthy(w.get("deleted")))
+        // Python's `max` keeps the first of equals: the last of the reversed order
+        .rev()
         .max_by(|a, b| {
             let k = |w: &Obj| (w.get("updated_at").map(py::str), w.get("id").map(py::str));
             k(a).cmp(&k(b))

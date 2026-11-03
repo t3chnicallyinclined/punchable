@@ -233,6 +233,55 @@ pub fn strip(s: &str) -> &str {
     s.trim_matches(isspace)
 }
 
+/// `s.split()` with no separator: runs of Python whitespace, no empty pieces.
+pub fn split(s: &str) -> impl Iterator<Item = &str> {
+    s.split(isspace).filter(|w| !w.is_empty())
+}
+
+/// `str.splitlines()`: Python's line boundaries (`\r\n` is one).
+pub fn splitlines(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut it = text.char_indices().peekable();
+    while let Some((i, ch)) = it.next() {
+        let boundary = matches!(
+            ch,
+            '\n' | '\r' | '\u{b}' | '\u{c}' | '\u{1c}' | '\u{1d}' | '\u{1e}' | '\u{85}' | '\u{2028}' | '\u{2029}'
+        );
+        if boundary {
+            out.push(&text[start..i]);
+            let mut next = i + ch.len_utf8();
+            if ch == '\r'
+                && let Some((j, '\n')) = it.peek().copied()
+            {
+                it.next();
+                next = j + 1;
+            }
+            start = next;
+        }
+    }
+    if start < text.len() {
+        out.push(&text[start..]);
+    }
+    out
+}
+
+/// `sum()` over floats as `CPython` 3.12+ adds them (Neumaier compensated summation); a plain `+=` loop in the
+/// Python stays a plain fold.
+pub fn sum(xs: impl IntoIterator<Item = f64>) -> f64 {
+    let (mut f, mut c) = (0.0_f64, 0.0_f64);
+    for x in xs {
+        let t = f + x;
+        if f.abs() >= x.abs() {
+            c += (f - t) + x;
+        } else {
+            c += (x - t) + f;
+        }
+        f = t;
+    }
+    if c != 0.0 && c.is_finite() { f + c } else { f }
+}
+
 /// `len(s)` in code points.
 pub fn len(s: &str) -> usize {
     s.chars().count()
@@ -436,5 +485,15 @@ mod tests {
             sorted_set(&[json!([1])]).unwrap_err(),
             PyError::Type("unhashable type: 'list'".into())
         );
+    }
+    #[test]
+    #[expect(clippy::float_cmp, reason = "the exact float CPython returns")]
+    fn sum_is_compensated_like_cpython_and_splitlines_is_python_s() {
+        // CPython 3.12+: sum([0.1] * 10) == 1.0; a plain fold gives 0.9999999999999999
+        assert_eq!(sum([0.1; 10]), 1.0);
+        assert_ne!([0.1f64; 10].iter().fold(0.0, |a, b| a + b), 1.0);
+        assert_eq!(sum([1e100, 1.0, -1e100]), 1.0);
+        assert_eq!(splitlines("a\r\nb\u{2028}c\rd\n"), ["a", "b", "c", "d"]);
+        assert_eq!(split(" a\u{1c}b  c ").collect::<Vec<_>>(), ["a", "b", "c"]);
     }
 }

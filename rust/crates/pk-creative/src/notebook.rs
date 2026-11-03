@@ -335,30 +335,7 @@ impl Index {
 
 /// `str.splitlines()`: Python's line boundaries.
 pub fn py_splitlines(text: &str) -> Vec<&str> {
-    let mut out = Vec::new();
-    let mut start = 0;
-    let mut it = text.char_indices().peekable();
-    while let Some((i, ch)) = it.next() {
-        let boundary = matches!(
-            ch,
-            '\n' | '\r' | '\u{b}' | '\u{c}' | '\u{1c}' | '\u{1d}' | '\u{1e}' | '\u{85}' | '\u{2028}' | '\u{2029}'
-        );
-        if boundary {
-            out.push(&text[start..i]);
-            let mut next = i + ch.len_utf8();
-            if ch == '\r'
-                && let Some((j, '\n')) = it.peek().copied()
-            {
-                it.next();
-                next = j + 1;
-            }
-            start = next;
-        }
-    }
-    if start < text.len() {
-        out.push(&text[start..]);
-    }
-    out
+    pk_core::py::splitlines(text)
 }
 
 /// A bit as `related` lists it (the card fields the writing kinds read).
