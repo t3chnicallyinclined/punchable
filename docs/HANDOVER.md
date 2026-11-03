@@ -149,7 +149,40 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    per-line inputs) → 2 focus mode + the offline outbox → 3 the pile, its pk-api routes (`db/schema_bit.surql`, per-role
    login first), the deck, the capture proposal → 4 line actions and sessions with Claude (needs T8 + pk-api deployed)
    → 5 Gather, overnight filing, the Bits list, desktop focus. The lead's calls on the design's questions are its §1
-   (owner may flip); what stays open is its §13. Next step: Slice 1.
+   (owner may flip); what stays open is its §13.
+   **Slice 1 is built (2026-11-03, branch `app/slice1-bit-page`, not pushed, not built; the spec's §14 "Built" row
+   lists the twelve calls recorded against the spec):** the 3c page on today's data (`joke/[id].tsx`; new
+   `lib/SectionRow`, `BitLines`, `VersionStepper`, `IdeaLine`, `Pile`, `KeyboardBar*`; `rules/bitLines.ts` with
+   `tests/bitLines.test.mjs` and its `--red` arm), the On tape screen (`joke/[id]/tape`), the offline/reason footnote
+   slot in both `Screen` twins (`offlineAt`, `footnote`), `prefs.tips.pile` / `prefs.focus`, Settings › About (version,
+   build) › **Device checks**: the spike (`(bits)/spike`, `spike-write`) for the three §4.1 checks, removed in Slice 2.
+   No server change. Gates: tsc, `test:unit`, `static.worklets`, guard green; eslint 54 / 38 (the ceiling, warnings
+   down from 42); **expo-doctor 19/20 only because Expo published new SDK 58 patches mid-session** (it was 20/20 with
+   the same `package.json` an hour earlier): `npx expo install --fix` is the usual pre-build bump and needs the go
+   (lockfile + the shared `node_modules`). Reviewed by ios-design-expert and ios-dev-expert; every must-fix landed.
+   **Owner checks on build 22** (the Slice 1 build), in this order:
+   - A bit's page, dark and light: the bar is the short name · a greyed sparkle · To a set · ⋯; one muted idea line
+     (tap: edit); the lines at 44 pt; the rows Pile · N, Versions · v8 · Nov 2 (· 1:40 when the bit has a run time),
+     On tape · 3 nights (· killed twice when rated); **Write** alone at the bottom. Nothing explains itself.
+   - Tap a line: it highlights with Move · Cut under it; tap it again: the editor opens with the caret on that line.
+     Cut → "Line cut" with Undo, and the Versions row reads "v9 · just now · Undo" (tap Undo there: it comes back).
+   - Versions row › the stepper: ◀ steps to v5 (hold to repeat), the lines above re-render, Write greys with
+     "Reading v5" above it, "Restore v5 as a new version" appears; ▶ back to v8 wakes Write.
+   - More › Reorder lines (or Move under a line): drag by the grip, Done → "Reordered" with Undo. More › Stage ›
+     Testing: the snack says "Now testing" and the Bits list's dot follows.
+   - To a set from the bar: the snack "Added to <list>" (or the picker when no list is open).
+   - Pile · N opens inline: this phone's memos (play glyph) and attached notes; + puts the words after the selected
+     line ("Added", Undo); the scrap then reads "in the bit". Pile · 0 opens on "Gather from your notes ›" (the inbox).
+   - Airplane mode: "Offline · reading only" sits above Write; Write and To a set are greyed; reading still works.
+   - **Settings › About › Device checks**, then tell us which way each went (SPEC §4.1 says what each outcome decides):
+     1 the bottom toolbar: scroll down and up on the spike page, tap Write (a snack), note whether the footnote line
+     sits just above Write or under it, Back to Bits: is an empty bar strip left behind? 2 the glass bar: open the
+     focus mock, tap a line, hide and bring back the keyboard: flush on the keyboard with no gap or overlap, and the
+     bar says "Liquid Glass" or "flat". 3 dictation: mic, "line one, new line, line two", stop; then dictate and tap
+     another line mid-sentence: read the log's last lines (which path "new line" took, whether dictation died).
+   Slice 2 needs from those: check 1 → keep `Stack.Toolbar placement="bottom"` or build the in-page glass bar; check
+   2 → KAV + GlassView as drawn, or a `keyboardVerticalOffset`; check 3 → per-line inputs (the settle rule) or the
+   one-multiline fallback. Next step: the owner's go to bump the SDK patches, push and build 22.
 0a. **Owner checks on the build after 20: the 3D cloud map.** Bits › Map:
    - It turns slowly by itself (on 17-18 it most likely never did) and stops when you touch it.
    - Drag one finger: it turns any way you push it and keeps coasting after a flick.

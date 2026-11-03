@@ -22,4 +22,10 @@ export type ScreenProps = {
   search?: SearchBarProps;
   /** Phone only: more native header options, merged last (headerTitle, headerBackTitle, ...). */
   nativeHeader?: Partial<NativeHeaderOptions>;
+  /** Where the offline line sits: under the bar (default), or as one footnote line pinned above the bottom, by the
+   *  controls it describes (the bit page: HIG/feedback, SPEC 2026-11-03 §3.1). */
+  offlineAt?: 'top' | 'bottom';
+  /** One short line pinned above the bottom while online (the reason under the bottom button: "Reading v5");
+   *  the offline line takes the slot when there is no signal. */
+  footnote?: string | null;
 };

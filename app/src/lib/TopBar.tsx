@@ -1,9 +1,9 @@
 // The custom top bar (web; on the phone only the full-screen tasks: Stage, Record, Review, Import, the old set list)
 // and the offline strip. The three tab roots live here because the bar's back fallback goes to one.
-import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { C, F } from './theme';
+import { C, F, linkColor } from './theme';
 import { useOnline } from './api';
 import { useSession } from './auth';
 import { Icon, SignInBtn, useUI } from './ui';
@@ -45,12 +45,35 @@ function TopBarRight() {
   return sess.enabled && !sess.signedIn && !sess.checking ? <SignInBtn testID="topbar-signin" /> : <View style={{ width: 44 }} />;
 }
 
-export function OfflineStrip() {
+/**
+ * The offline line. `top` (default): the strip under the bar. `bottom`: one footnote line pinned above the bottom
+ * (the bit page: status near the controls it describes, HIG/feedback); while online that slot shows `note` instead
+ * (the one-word reason under the bottom button, "Reading v5"), or nothing.
+ */
+export function OfflineStrip({ placement = 'top', note }: { placement?: 'top' | 'bottom'; note?: string | null }) {
   const online = useOnline();
+  const text = placement === 'bottom' ? (online ? note : 'Offline · reading only') : null;
+  // iOS has no live region (accessibilityLiveRegion is Android-only): say the change once
+  useEffect(() => {
+    if (text) AccessibilityInfo.announceForAccessibility?.(text);
+  }, [text]);
+  if (placement === 'bottom') {
+    if (!text) return null;
+    return (
+      <View testID={online ? 'footnote' : 'offline'} pointerEvents="none" style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+        <Text maxFontSizeMultiplier={1.6} numberOfLines={2} style={{ fontFamily: F.semi, fontSize: 13, lineHeight: 18, color: online ? C.mut2 : linkColor(), textAlign: 'center' }}>{text}</Text>
+      </View>
+    );
+  }
   if (online) return null;
   return (
     <View testID="offline" style={{ paddingHorizontal: 16, paddingVertical: 6, backgroundColor: C.warnBg, borderBottomWidth: 1, borderBottomColor: C.addBorder }}>
       <Text style={{ fontFamily: F.semi, fontSize: 13, color: C.amber, textAlign: 'center' }}>Offline · showing what this phone saved · imports wait in your outbox</Text>
     </View>
   );
+}
+/** Is the bottom slot showing anything (so a shell can pad its scroll content for it)? */
+export function useBottomNote(note?: string | null): boolean {
+  const online = useOnline();
+  return !online || !!note;
 }

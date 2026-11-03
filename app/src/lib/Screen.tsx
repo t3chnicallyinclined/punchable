@@ -8,7 +8,7 @@ import { C, F } from './theme';
 import { useSession } from './auth';
 import { haptics } from './haptics';
 import type { ScreenProps } from './screenTypes';
-import { OfflineStrip, ROOTS, TopBar, goRoot } from './TopBar';
+import { OfflineStrip, ROOTS, TopBar, goRoot, useBottomNote } from './TopBar';
 import { Face, Icon, SignInBtn, useUI, useWide } from './ui';
 
 export type { ScreenProps } from './screenTypes';
@@ -102,7 +102,7 @@ function SidebarYou() {
  * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
  * `scroll={false}` hands the body to the child (a virtualized list).
  */
-export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle }: ScreenProps) {
+export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, offlineAt = 'top', footnote }: ScreenProps) {
   const wide = useWide();
   const sv = useRef<any>(null);
   useEffect(() => {
@@ -116,10 +116,13 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
   }, [active, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   const ins = useSafeAreaInsets();
   const showNav = !wide && !task && !dock;
-  const bottomPad = dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0);
+  const noteOn = useBottomNote(footnote) && offlineAt === 'bottom';
+  const [noteMeasured, setNoteMeasured] = useState(0);
+  const noteH = noteOn ? noteMeasured : 0;
+  const bottomPad = (dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0)) + noteH;
   const mw = maxWidth || (wide ? 1120 : 720);
   // the snackbar sits above whatever is pinned at the bottom (the input bar, the dock, the tabs)
-  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + (showNav ? 64 : 0) + (dock || showNav ? ins.bottom : 0);
+  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + (showNav ? 64 : 0) + noteH + (dock || showNav ? ins.bottom : 0);
   useEffect(() => {
     ui.setPinnedHeight(pinned);
   }, [pinned]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -146,7 +149,7 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
         <View testID="header-inset" style={{ zIndex: 4, paddingTop: ins.top, backgroundColor: task || deep ? C.bgDeep : C.bg }}>
           {header || <TopBar title={barTitle} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
         </View>
-        <OfflineStrip />
+        {offlineAt === 'top' && <OfflineStrip />}
         {scroll ? (
           <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: wide ? 24 : 12, paddingBottom: bottomPad }}
@@ -168,6 +171,11 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
         {dock && (
           <View testID="dock" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: ins.bottom + 12, backgroundColor: deep ? C.bgDeep : C.surface, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
             <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', gap: 8 }}>{dock}</View>
+          </View>
+        )}
+        {offlineAt === 'bottom' && noteOn && (
+          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: (showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom) + (dock ? 96 : 0) + (bar ? 120 : 0), zIndex: 5 }}>
+            <OfflineStrip placement="bottom" note={footnote} />
           </View>
         )}
         {showNav && <BottomNav active={active} />}
