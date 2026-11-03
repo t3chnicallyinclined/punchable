@@ -16,27 +16,32 @@ const DISC = 80;
 const SQUARE = 30;
 
 /** `busy`: the microphone is being opened (the tap landed; nothing to do but wait). The disc dims and ignores taps
- *  until the recorder answers, so a second tap cannot start a second take over the first. */
-export function RecordButton({ state, interrupted, busy, onStart, onStop, onResume, testID = 'rec', stopLabel = 'Stop and save the recording' }: {
+ *  until the recorder answers, so a second tap cannot start a second take over the first. `reason`: the one word why
+ *  the disc cannot start ("no camera", "no room"; Film it, SPEC 2026-11-03 §2.9): the disc greys and carries it. */
+export function RecordButton({ state, interrupted, busy, onStart, onStop, onResume, testID = 'rec', stopLabel = 'Stop and save the recording', reason }: {
   state: RecordState; interrupted?: boolean; busy?: boolean; onStart: () => void; onStop: () => void; onResume: () => void; testID?: string;
   /** VoiceOver's word for the square ("Stop and save the memo" on the memo recorder) */
   stopLabel?: string;
+  /** a greyed control shows its reason in one word (only while idle) */
+  reason?: string | null;
 }) {
   const recording = state === 'recording' && !interrupted;
   const paused = state === 'paused' || (state === 'recording' && !!interrupted);
   const saving = state === 'saving';
   const starting = !!busy && state === 'idle';
-  const held = saving || starting;
-  const label = saving ? 'Saving' : starting ? 'Starting' : recording ? stopLabel : paused ? 'Resume recording' : 'Start recording';
+  const off = !!reason && state === 'idle' && !starting;
+  const held = saving || starting || off;
+  const label = saving ? 'Saving' : starting ? 'Starting' : recording ? stopLabel : paused ? 'Resume recording' : off ? `Start recording, ${reason}` : 'Start recording';
   const press = () => { if (held) return; if (recording) onStop(); else if (paused) onResume(); else onStart(); };
   return (
-    <Pressable testID={`${testID}-main`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: held, busy: held }} disabled={held} onPress={press}
+    <Pressable testID={`${testID}-main`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: held, busy: saving || starting }} disabled={held} onPress={press}
       style={({ pressed }) => ({ width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
       {recording ? (
         <View style={{ width: SQUARE, height: SQUARE, borderRadius: 7, backgroundColor: RED }} />
       ) : (
-        <View style={{ width: DISC, height: DISC, borderRadius: DISC / 2, backgroundColor: saving ? C.border : RED, opacity: starting ? 0.6 : 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: DISC, height: DISC, borderRadius: DISC / 2, backgroundColor: saving || off ? C.border : RED, opacity: starting ? 0.6 : 1, alignItems: 'center', justifyContent: 'center' }}>
           {paused && <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 15, color: '#fff' }}>Resume</Text>}
+          {off && <Text testID={`${testID}-reason`} maxFontSizeMultiplier={1.2} numberOfLines={2} style={{ fontFamily: F.semi, fontSize: 13, color: C.text, textAlign: 'center', paddingHorizontal: 6 }}>{reason}</Text>}
         </View>
       )}
     </Pressable>
@@ -51,7 +56,8 @@ export function SideButton({ label, onPress, disabled, tone = 'plain', testID, p
     <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel || label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress}
       style={({ pressed }) => ({ flex: 1, minHeight: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
         backgroundColor: prominent ? C.amber : C.card, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 })}>
-      <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={{ fontFamily: F.semi, fontSize: 17, color: prominent ? C.bg : tone === 'amber' ? C.amber : C.text }}>{label}</Text>
+      {/* two lines before truncation at large text sizes (HIG/typography: avoid truncating text) */}
+      <Text numberOfLines={2} maxFontSizeMultiplier={1.3} style={{ fontFamily: F.semi, fontSize: 17, textAlign: 'center', color: prominent ? C.bg : tone === 'amber' ? C.amber : C.text }}>{label}</Text>
     </Pressable>
   );
 }

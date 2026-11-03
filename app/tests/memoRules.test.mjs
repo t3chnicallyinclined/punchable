@@ -105,5 +105,24 @@ const idx = M.parseIndex([rec(), rec({ id: "bad", file: "../../etc" }), null, { 
 check(idx.length === 2 && idx[1].state === "queued", "the index drops malformed rows and recovers a killed run");
 check(M.parseIndex("nope").length === 0, "a broken index reads as empty");
 
+// ---- a filmed take (kind film, Film it SPEC 2026-11-03): per-word timings, the queue order, where the words go
+const fw = (transcript, words) => ({ isFinal: true, results: [{ transcript, segments: words.map(([segment, s, e]) => ({ startTimeMillis: s, endTimeMillis: e, segment })) }] });
+let fa = M.emptyAcc();
+fa = M.addFinal(fa, fw("Self checkout is", [["Self", 100, 400], ["checkout", 450, 900], ["is", 950, 1100]]));
+fa = M.addFinal(fa, fw(" the store", [["the", 200, 300], ["store", 350, 800]]));
+check(fa.words.length === 5 && fa.words[0].w === "Self" && fa.words[0].s === 0.1 && fa.words[0].e === 0.4, "per-segment words keep their seconds");
+check(fa.words[3].w === "the" && fa.words[3].s >= fa.words[2].e && fa.words[4].s >= fa.words[3].e, "a final whose clock restarted shifts its words after the ones before (monotonic)");
+check(M.addFinal(M.emptyAcc(), fin("no segment text", 0, 500)).words.length === 0 && M.addFinal(M.emptyAcc(), fin("no segment text", 0, 500)).segs.length === 1, "a segment with no text is no word (the utterance still counts)");
+const fq = [rec({ id: "s", kind: "set", recorded_at: "2026-10-30T00:00:00Z" }), rec({ id: "f", kind: "film", recorded_at: "2026-10-29T00:00:00Z" }), rec({ id: "m", recorded_at: "2026-10-31T00:00:00Z" })];
+check(M.nextToTranscribe(fq)?.id === "m" && M.nextToTranscribe(fq.filter((r) => r.id !== "m"))?.id === "f", "memos, then filmed takes, then sets");
+check(M.routeOf({ kind: "film" }, "short") === "idea" && M.routeOf({ kind: "film" }, "x".repeat(4001)) === "set", "a take's words go as an idea (a long one as a set transcript)");
+const fb = M.ideaBody(rec({ kind: "film", bit: { id: "j1", title: "Self-checkout" } }), "words");
+check(fb.from.note === "Film it, 2026-10-31" && fb.reason.startsWith("[film]") && fb.reason.includes("Self-checkout"), "a take's idea body says it was filmed, and on which bit");
+check(M.setBody(rec({ kind: "film", script: "line one\nline two" }), [], "e").title === "Film it 2026-10-31", "a long take's set title is not its script");
+check(M.recTitle(rec({ kind: "film", text: "" })) === "Take" && M.recTitle(rec({ kind: "film", text: "what I said" })) === "what I said", "a take's title");
+check(M.deleteMessage(rec({ kind: "film", state: "filed", filed_on: { id: "j", title: "Raccoons" } })) === "The words stay on Raccoons. The video stays in Photos.", "deleting a take's words says the video stays in Photos");
+check(M.parseIndex([rec({ kind: "film" }), rec({ id: "x", kind: "video" })]).length === 1, "the index reads film rows and drops an unknown kind");
+check(M.parseIndex([rec({ kind: "constructor" })]).length === 0, "a kind named after an Object property is not a kind");
+
 if (fails.length) { console.error(`\n${fails.length} failed`); process.exit(1); }
 console.log("\nmemoRules: all passed");

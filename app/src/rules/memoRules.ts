@@ -2,10 +2,13 @@
 // (tests/memoRules.test.mjs). The audio stays in Documents/recordings; each recording has one row in a small local
 // index; it is transcribed ON the phone (lib/transcribe.native) and only the words go to the server: a memo as an
 // idea (POST /api/ideas, filed on a bit), a set (and a memo too long for one idea) as POST /api/sets/transcript.
-// lib/recordings.native.ts is the wiring (files, the queue, the network); everything that decides is here.
+// A filmed take (kind `film`, SPEC 2026-11-03 Film it on the spike's v1 path) is the same row over a .mov: it is
+// transcribed here with its per-word timings kept (`words`), its words go up like a memo's (an idea filed on the bit)
+// and the .mov leaves Documents once the words exist (the one copy is in Photos). rules/filmRules holds what is the
+// camera's alone. lib/recordings.native.ts is the wiring (files, the queue, the network); everything that decides is here.
 import { backoffMs } from './uploadsCore.ts';
 
-export type RecKind = 'memo' | 'set';
+export type RecKind = 'memo' | 'set' | 'film';
 export type RecState =
   | 'queued' | 'transcribing'                                 // waiting for, or in, the on-device transcriber
   | 'words' | 'sending'                                       // words on the phone, not yet on the server
@@ -32,9 +35,22 @@ export type LocalRec = {
   idea_id?: string | null; merge_id?: string | null; filed_on?: { id: string; title: string } | null;
   error?: string | null;
   marks_ms?: number[];
+  /** a filmed take: the words with their seconds (the captions' source), the Photos asset id, how it ended, the .srt's
+   *  NAME, and the script it was read from (one line per newline: the captions break at its line ends) */
+  words?: Word[] | null;
+  asset_id?: string | null;
+  cut_short?: CutShort | null;
+  srt?: string | null;
+  script?: string | null;
+  /** the .mov left Documents once the words existed (the copy in Photos is the one that stays) */
+  video_gone?: boolean;
   attempts: number; next_at: number;
 };
 export type Seg = { text: string; start: number; end: number };
+/** One recognised word with its seconds from the first frame (the recognizer's per-segment timings). */
+export type Word = { w: string; s: number; e: number };
+/** Why a take ended before the square: a phone call (the capture session was taken), or the app left the foreground. */
+export type CutShort = 'call' | 'background';
 
 /** The API's caps (creative_api.set_transcript; server.idea_result). */
 export const SEGMENTS_MAX = 5000;
@@ -50,9 +66,9 @@ export const KEEP_AWAKE_TRANSCRIBE = 'punchable-transcribe';
 
 // ------------------------------------------------------------------ the transcript, from the recognizer's finals
 /** What the recognizer has said so far in one run. */
-export type Acc = { segs: Seg[]; prev: string; lastEnd: number };
-export const emptyAcc = (): Acc => ({ segs: [], prev: '', lastEnd: 0 });
-type FinalSeg = { startTimeMillis: number; endTimeMillis: number };
+export type Acc = { segs: Seg[]; prev: string; lastEnd: number; words: Word[] };
+export const emptyAcc = (): Acc => ({ segs: [], prev: '', lastEnd: 0, words: [] });
+type FinalSeg = { startTimeMillis: number; endTimeMillis: number; segment?: string };
 
 /** One `result` event. Only finals count (interimResults is off); each final is one utterance of a long file; the
  *  second and later carry a leading space; the last can be empty or repeat the one before (package source,
@@ -67,14 +83,30 @@ export function addFinal(acc: Acc, ev: { isFinal: boolean; results: { transcript
   let start = segs.length ? segs[0].startTimeMillis / 1000 : acc.lastEnd;
   let end = segs.length ? segs[segs.length - 1].endTimeMillis / 1000 : start;
   if (!(start >= 0) || !(end >= 0)) { start = acc.lastEnd; end = acc.lastEnd; }
+  let shift = 0;
   if (start < acc.lastEnd - 1) {
-    const shift = acc.lastEnd - start;
+    shift = acc.lastEnd - start;
     start += shift;
     end += shift;
   }
   end = Math.max(end, start);
   const seg = { text, start: round2(start), end: round2(end) };
-  return { segs: [...acc.segs, seg], prev: text, lastEnd: seg.end };
+  // the per-word timings (a filmed take's captions): one segment per word on iOS (SPIKE 2026-11-03 §4.1: usual, not
+  // promised), shifted with the utterance, never earlier than the word before (monotonic)
+  const words = [...acc.words];
+  let last = words.length ? words[words.length - 1].e : 0;
+  for (const g of segs) {
+    const w = (g.segment || '').trim();
+    if (!w) continue;
+    let ws = g.startTimeMillis / 1000 + shift;
+    let we = g.endTimeMillis / 1000 + shift;
+    if (!(ws >= 0) || !(we >= 0)) { ws = last; we = last; }
+    ws = Math.max(ws, last);
+    we = Math.max(we, ws);
+    words.push({ w, s: round2(ws), e: round2(we) });
+    last = we;
+  }
+  return { segs: [...acc.segs, seg], prev: text, lastEnd: seg.end, words };
 }
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
@@ -129,12 +161,13 @@ export function afterRequeue(r: LocalRec, now: number, byUs: 'bg' | 'rec' | null
 }
 
 // ------------------------------------------------------------------ the queue
-/** The next recording to transcribe: memos before sets (seconds, not minutes), oldest first; none while one runs; a
- *  row backing off after a busy recognizer waits for its `next_at` [review]. */
+const KIND_ORDER: Record<RecKind, number> = { memo: 0, film: 1, set: 2 };
+/** The next recording to transcribe: memos, then filmed takes (a minute), then sets (an hour), oldest first; none
+ *  while one runs; a row backing off after a busy recognizer waits for its `next_at` [review]. */
 export function nextToTranscribe(recs: LocalRec[], now = Number.MAX_SAFE_INTEGER): LocalRec | null {
   if (recs.some((r) => r.state === 'transcribing')) return null;
   const q = recs.filter((r) => r.state === 'queued' && (r.next_at || 0) <= now);
-  q.sort((a, b) => (a.kind === b.kind ? a.recorded_at.localeCompare(b.recorded_at) : a.kind === 'memo' ? -1 : 1));
+  q.sort((a, b) => (a.kind === b.kind ? a.recorded_at.localeCompare(b.recorded_at) : KIND_ORDER[a.kind] - KIND_ORDER[b.kind]));
   return q[0] || null;
 }
 /** Words waiting for the server whose backoff has passed. */
@@ -162,24 +195,33 @@ export function retry(r: LocalRec): LocalRec {
 }
 
 // ------------------------------------------------------------------ where the words go
-/** A memo is one idea; one too long for an idea (or a set) is a set transcript, which the server splits into bits. */
+/** A memo (or a filmed take) is one idea; one too long for an idea (or a set) is a set transcript, which the server
+ *  splits into bits. */
 export function routeOf(r: Pick<LocalRec, 'kind'>, text: string): 'idea' | 'set' {
-  return r.kind === 'memo' && text.length <= IDEA_MAX ? 'idea' : 'set';
+  return r.kind !== 'set' && text.length <= IDEA_MAX ? 'idea' : 'set';
 }
 export function dayOf(iso: string): string {
   return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : 'unknown';
 }
 /** POST /api/ideas: the words, where they came from (server.idea_result keeps `from.note`). */
 export function ideaBody(r: LocalRec, text: string) {
+  const len = r.duration_s > 0 ? `, ${Math.round(r.duration_s)} s` : '';
+  if (r.kind === 'film') {
+    return {
+      text,
+      from: { note: `Film it, ${dayOf(r.recorded_at)}` },
+      reason: `[film] a take filmed on the phone ${dayOf(r.recorded_at)}${len}, transcribed on the phone${r.bit ? ` (reading ${r.bit.title})` : ''}`,
+    };
+  }
   return {
     text,
     from: { note: `Voice memo, ${dayOf(r.recorded_at)}` },
-    reason: `[memo] voice memo recorded on the phone ${dayOf(r.recorded_at)}${r.duration_s > 0 ? `, ${Math.round(r.duration_s)} s` : ''}, transcribed on the phone${r.bit ? ` (from ${r.bit.title})` : ''}`,
+    reason: `[memo] voice memo recorded on the phone ${dayOf(r.recorded_at)}${len}, transcribed on the phone${r.bit ? ` (from ${r.bit.title})` : ''}`,
   };
 }
 /** POST /api/sets/transcript: seconds, at most 5000 segments, 200-character title. */
 export function setBody(r: LocalRec, segs: Seg[], engine: string) {
-  const title = (r.title || r.board?.title || (r.kind === 'memo' ? `Voice memo ${dayOf(r.recorded_at)}` : `Set ${dayOf(r.recorded_at)}`)).slice(0, 200);
+  const title = (r.title || r.board?.title || (r.kind === 'memo' ? `Voice memo ${dayOf(r.recorded_at)}` : r.kind === 'film' ? `Film it ${dayOf(r.recorded_at)}` : `Set ${dayOf(r.recorded_at)}`)).slice(0, 200);
   return { segments: capSegments(segs), title, recorded_at: r.recorded_at, duration_s: Math.max(0, Math.round(r.duration_s)), engine };
 }
 /** What filing a memo started on a bit takes, from what POST /api/ideas answered: nothing (it auto-attached there),
@@ -199,6 +241,7 @@ export function wordsTitle(text: string | null | undefined, fallback: string): s
 }
 export function recTitle(r: LocalRec): string {
   if (r.kind === 'set') return r.title || r.board?.title || 'Set';
+  if (r.kind === 'film') return wordsTitle(r.text, 'Take');
   return wordsTitle(r.text, 'Memo');
 }
 /** The percent to show, or null: never below what an earlier run reached (a restart begins at zero). */
@@ -227,12 +270,14 @@ export function statusWords(r: LocalRec, online = true): string {
     case 'unavailable': return 'Turn on Dictation to transcribe · Try again';
   }
 }
-/** The Delete sheet's message (SPEC §6): only a filed or sent row keeps its words anywhere. */
+/** The Delete sheet's message (SPEC §6): only a filed or sent row keeps its words anywhere. A filmed take's video is
+ *  his in Photos either way (Film it SPEC §2.7: the video in Photos is his to delete there). */
 export function deleteMessage(r: LocalRec): string {
-  if (r.state === 'filed') return `The words stay on ${r.filed_on?.title || 'the bit'}.`;
-  if (r.state === 'new_idea' || r.state === 'sent') return 'The words stay in Punchable.';
-  if (r.text) return 'The words haven’t reached Punchable yet. This can’t be undone.';
-  return 'It hasn’t been transcribed. This can’t be undone.';
+  const video = r.kind === 'film' ? ' The video stays in Photos.' : '';
+  if (r.state === 'filed') return `The words stay on ${r.filed_on?.title || 'the bit'}.${video}`;
+  if (r.state === 'new_idea' || r.state === 'sent') return `The words stay in Punchable.${video}`;
+  if (r.text) return `The words haven’t reached Punchable yet. This can’t be undone.${video}`;
+  return `It hasn’t been transcribed. This can’t be undone.${video}`;
 }
 /** Waiting on this phone: not done, not stopped on something he must fix. */
 export const isPending = (r: LocalRec) => r.state === 'queued' || r.state === 'transcribing' || r.state === 'words' || r.state === 'sending';
@@ -253,6 +298,6 @@ export function parseIndex(raw: unknown): LocalRec[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((x): x is LocalRec => !!x && typeof x === 'object' && typeof (x as any).id === 'string' && typeof (x as any).file === 'string'
-      && isSafeFileName((x as any).file) && ((x as any).kind === 'memo' || (x as any).kind === 'set') && typeof (x as any).state === 'string')
+      && isSafeFileName((x as any).file) && Object.prototype.hasOwnProperty.call(KIND_ORDER, (x as any).kind) && typeof (x as any).state === 'string')
     .map((x) => recover({ ...x, attempts: x.attempts || 0, next_at: x.next_at || 0 }));
 }

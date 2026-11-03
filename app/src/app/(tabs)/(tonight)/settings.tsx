@@ -178,6 +178,7 @@ const PROVIDERS: { k: Settings['provider']; title: string; sub: string }[] = [
 ];
 const ROUTES: [string, string][] = [
   ['Audio of your sets and memos', 'Recorded in Punchable: stays on this iPhone and is transcribed here; only the words go to Punchable. An imported video sends only its audio to your server.'],
+  ['Videos you film', 'Stay in Photos on this iPhone. Only the words go to Punchable.'],
   ['Text for writing tasks (drafts, bridges, Ask)', 'The AI provider below, only the bit you’re working on.'],
   ['Map tiles', 'OpenStreetMap on the web, Apple Maps on iPhone: they see the area you look at, never your sets.'],
   ['Google Docs', 'Reads your docs to keep jokes in sync; writes only to the Punchable folder and docs it created. Court documents are never opened.'],

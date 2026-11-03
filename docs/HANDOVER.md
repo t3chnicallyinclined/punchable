@@ -91,6 +91,8 @@ writes them as a version of the main first.
   memos are recorded in Punchable, the audio stays on his phone, the words go to the server. A cloud backup of the
   audio comes later as a paid add-on, so the same recordings play on the phone and the web/desktop (the words already
   show everywhere). The memo recorder and on-device transcription are built (2026-10-31, item 4); the paid backup is not.
+  **Film it (2026-11-03, item 0d): the video he films stays in Photos on the phone (one copy, add-only access); only
+  its words go to the server, through the same routes as a memo's.**
 - HIG first on iPhone: standard, familiar, one-handed in the dark. Dark default, light must work.
 - No review step is ever required; AI inferences show as the current state with an AI badge and he edits.
 - No Sentry SaaS: crash reports go to the self-hosted Bugsink.
@@ -143,6 +145,40 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0d. **Film it, v1 (owner: "lets get this in", 2026-11-03): `docs/design/SPEC-2026-11-03-film-it.md` (the screens, the
+   copy) built on `docs/design/SPIKE-2026-11-03-film-it-feasibility.md` (the technical path; the lead took the spike's
+   side on every §9a point).** Branch `app/film-it-v1` (from `7147fda`), **not pushed, not built**; the spec's §11 v1
+   "Built" row lists what is in and the ten deviations. The owner rules hold: the video and the audio never leave the
+   phone (one copy in Photos, add-only access, no album); the words go to the server through today's routes (an idea
+   filed on the bit); the set and memo recorders are untouched. **Two new native modules (`expo-camera`, `expo-video`),
+   so the next binary is required**; both are loaded lazily and an older build reads "Not in this build yet.".
+   **`app/package-lock.json` changed: run `npm install` in `app/` on main after the merge** (the shared `node_modules`
+   has neither module until then). Gates on the branch: tsc, `test:unit` (two new suites, `prompterRules` and
+   `filmRules`, each with a `--red` arm shown failing a planted lenient rule), the six static checks, expo-doctor 20/20,
+   eslint 54 / 38 (the baseline), guard. **Owner device checks on that build, in the spike's §7.1 order, one line each:**
+   - **D1** a 20-second take; open it in Photos: portrait 1080 × 1920, plays, has sound at a normal level with the phone
+     at arm's length (the preset, the orientation and the audio input). Two more one-liners from the same take: does
+     the review (before Keep) play through the speaker at a normal level? Is the start thud (the `medium` haptic on
+     the first frame) audible in the first half-second of the file? (if yes, it goes: the count's last tick is the cue).
+   - **D2** a shirt with text: the Photos copy reads correctly (unmirrored); the preview read mirrored (the mirror
+     default; whether a "Mirror the take" switch is wanted).
+   - **D3** after Keep, the bit's On tape row › the Filmed row: "Transcribing…" then "N words"; `Share captions…` hands
+     over an `.srt` with per-word cues of 1-4 words (whether `AVAudioFile` opens a `.mov`: **if a take with clear
+     speech reads "no words"**, it did not (the package ends an empty request, which reads as no speech; the console
+     shows OSStatus 1954115647 'typ?'), and the 30-line Swift export to `.m4a` is the next step; also whether the
+     cues are one word each, which says the segments are per word).
+   - **D4** lock the phone at 0:15 of a take; unlock: the review is there with "0:15 · cut short" and the file is whole.
+   - **D5** a phone call (or an alarm) at 0:15: the review reads "0:15 · cut short by a call", the preview comes back
+     after Redo (what the promise returns; what the status word should say).
+   - **D6** a 3-minute take: the file size in Photos (expect about 180 MB), the phone's warmth, the battery drop (the
+     1080p / HEVC choice; whether 4K is ever offered).
+   - **D7** read a 30-second bit off the band at arm's length, then watch it: does he look at the camera? (the band's
+     height, 26 pt vs 34-40, and the "current line at the top" rule).
+   - **D8** VoiceOver on: the disc ("Start recording"), Next line, Hold and the band's current line are announced, the
+     countdown counts aloud; Reduce Motion on: the lines cut instead of fading.
+   Also from the spec's v1 list: the More menu greys "Film it…" with "nothing to read" on an empty bit; Keep with
+   Photos denied greys with "no Photos" and Open Settings; in airplane mode the whole thing works and the row says
+   "Waiting for a connection"; text size at AX1: the band is two lines.
 0c. **The bit page, design option 3c (owner: "lets get it in", 2026-11-03): `docs/design/SPEC-2026-11-03-bit-page-3c.md`.**
    Five slices in its §14, smallest first, each its own TestFlight build: 1 the page app-only + the three device
    checks as a spike screen (bottom toolbar vs the minimising tabs; the glass bar above the keyboard; dictation into

@@ -39,19 +39,8 @@ const STAGE_MENU: [string, string][] = [['idea', 'Idea'], ['to_try', 'To try'], 
 const enc = encodeURIComponent;
 const native = Platform.OS !== 'web';
 
-function versionsOf(d: any): V[] {
-  const out: V[] = [];
-  for (const g of d?.versions || []) {
-    for (const u of g.units || []) {
-      if (!u.text) continue;
-      // the punch marks ride on the version row once the read carries them (line_meta, Slice 3); nothing today
-      out.push({ key: u.id || `${g.date}-${out.length}`, label: '', date: u.date || g.date || null, text: u.text, doc: u.doc_title, punch: u.line_meta?.punch ?? u.punch });
-    }
-  }
-  if (!out.length && d?.joke?.summary && d?.yours) out.push({ key: 'idea', label: '', date: d.joke.first_seen || null, text: d.joke.summary });
-  out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  return out.map((v, i) => ({ ...v, label: `v${out.length - i}` }));
-}
+/** The versions as the page reads them (rules/bitLines versionsOf; the camera reads the same list). */
+const versionsOf = (d: any): V[] => R.versionsOf(d);
 
 export default function BitPage() {
   const p = useLocalSearchParams<{ id: string; edit?: string }>();
@@ -85,6 +74,10 @@ export default function BitPage() {
   // voice memos on this phone that are on this bit: started here, or filed here (SPEC 2026-10-31 §6)
   const recs = useRecordings();
   const memos = useMemo(() => recs.filter((r) => r.kind === 'memo' && (r.bit?.id === id || r.filed_on?.id === id)), [recs, id]);
+  // filmed takes read from this bit (Film it, SPEC 2026-11-03 §2.7): counted on the On tape row; their words go up as
+  // an idea filed here, and that note is NOT a scrap in the pile (the words he said live on the On tape row, §12 Q6)
+  const takes = useMemo(() => recs.filter((r) => r.kind === 'film' && r.bit?.id === id), [recs, id]);
+  const takeNotes = useMemo(() => new Set(takes.map((t) => t.merge_id).filter(Boolean) as string[]), [takes]);
   const J = d.data?.joke;
   // a fresh bit (lib/newBit) carries a marker title until its first Save names it; the page says "New bit" meanwhile
   const fresh = isFreshBit(J?.title);
@@ -94,7 +87,7 @@ export default function BitPage() {
   const lines = useMemo(() => R.linesOf(v?.text), [v?.text]);
   const punch = useMemo(() => R.cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
   const reading = vi > 0;
-  const scraps = useMemo(() => R.pileScraps(cand.data?.history?.notes || [], memos), [cand.data, memos]);
+  const scraps = useMemo(() => R.pileScraps((cand.data?.history?.notes || []).filter((n: Note) => !takeNotes.has(n.id)), memos), [cand.data, memos, takeNotes]);
   const barOn = R.barEnabled(lines, J?.summary) && !fresh;
   const canWrite = online && !reading && editing == null && order == null;
   const footnote = R.writeReason({ vi, count: versions.length, online: true });
@@ -170,6 +163,8 @@ export default function BitPage() {
   const toSet = () => afterWrite(() => boards.add(id, title), (ok) => ok, haptics);
   // a memo started here is filed on this bit (lib/recordings: POST /api/merge/attach after the idea)
   const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
+  // Film it (SPEC 2026-11-03 §2.1): the front camera with the newest version's lines on the band; phone only
+  const filmIt = () => router.push(`/film/${enc(id)}` as any);
   const share = () => Share.share({ message: [title, v?.text || ''].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'));
   const retire = async () => {
     try {
@@ -220,7 +215,7 @@ export default function BitPage() {
   const nights = sim.data?.performed.length || 0;
   const killed = R.killedCount((sim.data?.performed || []) as { rating?: string | null }[]);
   const echoes = (sim.data?.like.moments.length || 0) + (sim.data?.like.bits.length || 0);
-  const tape = R.tapeMeta(nights, killed, echoes);
+  const tape = R.tapeMeta(nights, killed, echoes, takes.length);
   const vmeta = { count: versions.length, newestDate: versions[0]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
   // the line's actions (Slice 1: Move · Cut; Punch waits for its home in Slice 3, the Claude asks for Slice 4). Move is
   // not shown on a one-line bit (a greyed control that leads nowhere is not rendered, §14).
@@ -258,6 +253,8 @@ export default function BitPage() {
           <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More">
             <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
+            {/* Film it sits with the two "make something from this bit" items; greyed with its one-word reason when there is nothing to read */}
+            <Stack.Toolbar.MenuAction icon="video" disabled={!lines.length} subtitle={lines.length ? undefined : 'nothing to read'} onPress={filmIt}>Film it…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.Menu inline>
               <Stack.Toolbar.MenuAction icon="list.bullet" onPress={() => boards.pick(id, title)}>Pick a set list…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="arrow.triangle.merge" onPress={() => router.push('/merge' as any)}>Merge with…</Stack.Toolbar.MenuAction>

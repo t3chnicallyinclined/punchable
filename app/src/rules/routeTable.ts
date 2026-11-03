@@ -9,7 +9,7 @@ export const REQUIRED_URLS = [
   '/settings', '/write', '/builder/x', '/notebook', '/boards', '/review', '/ask', '/ask/x', '/login', '/auth/callback',
   '/auth/logout', '/profile', '/record', '/today', '/import', '/learned', '/notes', '/desk', '/shows', '/calendar',
   '/bit/x', '/map/x', '/venue/x', '/myset/x', '/workingset/x', '/setlist/x', '/add/x', '/voice',
-  '/archived', '/bitnotes',
+  '/archived', '/bitnotes', '/film/x', '/take/x',
 ];
 /** Served as static files by the web image (app/public), outside the router. */
 export const STATIC_URLS: Record<string, string> = { '/privacy': 'privacy.html', '/terms': 'terms.html' };

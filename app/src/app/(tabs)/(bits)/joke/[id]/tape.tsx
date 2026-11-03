@@ -1,13 +1,17 @@
 // On tape (SPEC 2026-11-03 §3.7): a bit's tape history, pushed from the On tape row. Today's "Elsewhere" block in
 // full: the performed rows (each a deep link into the set at that second), the taped moments that sound like it but
 // are not linked ("link it": a performed_as edge, undoable), and the bits that sound like it ("merge it in", an
-// action sheet on the phone). One read: /api/jokes/<id>/similar (api-dev/search_api.py). No map.
-import React from 'react';
+// action sheet on the phone). One read: /api/jokes/<id>/similar (api-dev/search_api.py). No map. Plus, from Film it
+// (SPEC 2026-11-03 §2.7), the FILMED rows: the takes he kept on this phone, read from the recordings index
+// ("Filmed · Nov 3 · 0:48 · 112 words"; the play glyph opens the take; Delete the words is the row's own).
+import React, { useMemo } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi } from '@/lib/api';
 import { mergeInto, undoMerge } from '@/lib/bitWork';
 import { MomentRow } from '@/lib/MomentRow';
+import { RecRows } from '@/lib/RecRows';
+import { useRecordings } from '@/lib/recordings';
 import { closeness, oneLine, type SimilarResult } from '@/rules/searchRows';
 import { countWord, killedCount, killedWord } from '@/rules/bitLines';
 import { shortNameOf } from '@/lib/say';
@@ -29,6 +33,8 @@ export default function TapePage() {
   const J = d.data?.joke;
   const shortName = shortNameOf(J?.title || '', J?.short_name);
   const reload = () => { d.reload(); sim.reload(); };
+  const recs = useRecordings();
+  const takes = useMemo(() => recs.filter((r) => r.kind === 'film' && r.bit?.id === id), [recs, id]);
 
   const mergeLike = (b: { id: string; title: string; short_name?: string | null }) => {
     const name = shortNameOf(b.title, b.short_name);
@@ -67,6 +73,12 @@ export default function TapePage() {
         <T v="eb" accessibilityRole="header">{nights ? [countWord(nights, 'night', 'nights'), killedWord(killed)].filter(Boolean).join(' · ') : 'Never on tape'}</T>
         {s.performed.map((x, i) => <MomentRow key={x.id} m={x} showBit={false} testID={`tape-performed-${i}`} />)}
       </View>
+      {!!takes.length && (
+        <View style={{ gap: 8 }} testID="tape-filmed">
+          <T v="eb" accessibilityRole="header">{countWord(takes.length, 'take filmed', 'takes filmed')}</T>
+          <RecRows recs={takes} testID="tape-take" />
+        </View>
+      )}
       {!!s.like.moments.length && (
         <View style={{ gap: 8 }} testID="tape-echoes">
           <T v="eb" accessibilityRole="header">Sounds like it, on tape</T>
@@ -97,7 +109,7 @@ export default function TapePage() {
           ))}
         </View>
       )}
-      {!nights && !s.like.moments.length && !s.like.bits.length && <T v="mut">Nothing on tape sounds like it{s.vectors ? '' : ' (by its words; the model is off)'}.</T>}
+      {!nights && !takes.length && !s.like.moments.length && !s.like.bits.length && <T v="mut">Nothing on tape sounds like it{s.vectors ? '' : ' (by its words; the model is off)'}.</T>}
     </Screen>
   );
 }

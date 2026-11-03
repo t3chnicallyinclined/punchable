@@ -12,6 +12,7 @@
     "expo-asset": "~58.0.18",
     "expo-audio": "~58.0.11",
     "expo-auth-session": "~58.0.17",
+    "expo-camera": "~58.0.14",
     "expo-constants": "~58.0.14",
     "expo-crypto": "~58.0.7",
     "expo-dev-client": "~58.0.18",
@@ -32,6 +33,7 @@
     "expo-status-bar": "58.0.4",
     "expo-symbols": "58.0.4",
     "expo-system-ui": "~58.0.7",
+    "expo-video": "~58.0.13",
     "expo-web-browser": "~58.0.7",
     "leaflet": "1.9.4",
     "react": "19.3.0",
@@ -61,7 +63,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e.mjs",
     "lint": "expo lint",
-    "test:unit": "node --experimental-strip-types --no-warnings tests/format.test.mjs && node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs && node --experimental-strip-types --no-warnings tests/galaxy.test.mjs && node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs && node --experimental-strip-types --no-warnings tests/routes.test.mjs && node --experimental-strip-types --no-warnings tests/feedback.test.mjs && node --experimental-strip-types --no-warnings tests/selfImport.test.mjs && node --experimental-strip-types --no-warnings tests/crash.test.mjs && node --experimental-strip-types --no-warnings tests/crashlog.test.mjs && node --experimental-strip-types --no-warnings tests/flags.test.mjs && node --experimental-strip-types --no-warnings tests/retry.test.mjs && node --experimental-strip-types --no-warnings tests/tokenMachine.test.mjs && node --experimental-strip-types --no-warnings tests/voiceProfile.test.mjs && node --experimental-strip-types --no-warnings tests/recorder.test.mjs && node --experimental-strip-types --no-warnings tests/searchRows.test.mjs && node --experimental-strip-types --no-warnings tests/cloudMath.test.mjs && node --experimental-strip-types --no-warnings tests/bitWork.test.mjs && node --experimental-strip-types --no-warnings tests/setListRules.test.mjs && node --experimental-strip-types --no-warnings tests/memoRules.test.mjs && node --experimental-strip-types --no-warnings tests/bitLines.test.mjs",
+    "test:unit": "node --experimental-strip-types --no-warnings tests/format.test.mjs && node --experimental-strip-types --no-warnings tests/laughs.test.mjs && node --experimental-strip-types --no-warnings tests/session.test.mjs && node --experimental-strip-types --no-warnings tests/say.test.mjs && node --experimental-strip-types --no-warnings tests/uploadQueue.test.mjs && node --experimental-strip-types --no-warnings tests/allmap.test.mjs && node --experimental-strip-types --no-warnings tests/galaxy.test.mjs && node --experimental-strip-types --no-warnings tests/layoutRules.test.mjs && node --experimental-strip-types --no-warnings tests/routes.test.mjs && node --experimental-strip-types --no-warnings tests/feedback.test.mjs && node --experimental-strip-types --no-warnings tests/selfImport.test.mjs && node --experimental-strip-types --no-warnings tests/crash.test.mjs && node --experimental-strip-types --no-warnings tests/crashlog.test.mjs && node --experimental-strip-types --no-warnings tests/flags.test.mjs && node --experimental-strip-types --no-warnings tests/retry.test.mjs && node --experimental-strip-types --no-warnings tests/tokenMachine.test.mjs && node --experimental-strip-types --no-warnings tests/voiceProfile.test.mjs && node --experimental-strip-types --no-warnings tests/recorder.test.mjs && node --experimental-strip-types --no-warnings tests/searchRows.test.mjs && node --experimental-strip-types --no-warnings tests/cloudMath.test.mjs && node --experimental-strip-types --no-warnings tests/bitWork.test.mjs && node --experimental-strip-types --no-warnings tests/setListRules.test.mjs && node --experimental-strip-types --no-warnings tests/memoRules.test.mjs && node --experimental-strip-types --no-warnings tests/bitLines.test.mjs && node --experimental-strip-types --no-warnings tests/prompterRules.test.mjs && node --experimental-strip-types --no-warnings tests/filmRules.test.mjs",
     "dev-fixtures": "node scripts/dev-fixtures.mjs"
   },
   "private": true

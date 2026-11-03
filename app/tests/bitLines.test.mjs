@@ -67,6 +67,12 @@ check(B.restoreLabel(3, 8) === "Restore v5 as a new version", "the restore row")
 check(B.killedWord(0) === "" && B.killedWord(1) === "killed once" && B.killedWord(2) === "killed twice" && B.killedWord(3) === "killed 3 times", "killed in words");
 check(B.tapeMeta(3, 2) === "3 nights · killed twice" && B.tapeMeta(1, 0) === "1 night" && B.tapeMeta(0, 0) === null && B.tapeMeta(0, 0, 2) === "not yet · 2 sound like it" && B.tapeMeta(0, 0, 1) === "not yet · 1 sounds like it", "the row's meta: nights and his ratings; hidden at nothing; echoes when never taped");
 check(B.killedCount([{ rating: "killed" }, { rating: "worked" }, {}, { rating: "killed" }]) === 2 && B.killedCount([]) === 0, "killed = his rating on the performed rows");
+check(B.tapeMeta(3, 2, 0, 2) === "3 nights · killed twice · filmed 2" && B.tapeMeta(0, 0, 0, 1) === "filmed 1" && B.tapeMeta(0, 0, 2, 1) === "filmed 1", "filmed takes on the row (Film it): after the nights; alone when never performed; before the echoes");
+
+// the versions as the page and the camera read them
+const vs = B.versionsOf({ versions: [{ date: "2026-10-01", units: [{ id: "u1", text: "old" }, { id: "skip", text: "" }] }, { date: "2026-11-02", units: [{ id: "u2", text: "new\nline", line_meta: { punch: [1] } }] }] });
+check(vs.length === 2 && vs[0].key === "u2" && vs[0].label === "v2" && vs[1].label === "v1" && JSON.stringify(vs[0].punch) === "[1]", "versionsOf: newest first, vN from the newest, empty units skipped, the punch from line_meta");
+check(B.versionsOf({ joke: { summary: "an idea", first_seen: "2026-09-01" }, yours: true })[0].text === "an idea" && B.versionsOf({ joke: { summary: "an idea" } }).length === 0 && B.versionsOf(null).length === 0, "the typed idea stands in for a bit of his with no unit; nothing for nothing");
 
 // the reason under Write, the bar, the AX rules
 check(B.writeReason({ vi: 0, count: 8, online: true }) === null && B.writeReason({ vi: 3, count: 8, online: true }) === "Reading v5" && B.writeReason({ vi: 3, count: 8, online: false }) === "Offline · reading only", "one reason: offline wins, then Reading vN, else none");

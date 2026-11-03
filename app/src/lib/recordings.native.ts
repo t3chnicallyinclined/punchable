@@ -9,6 +9,10 @@
 //     it was started from: POST /api/merge/undo + /api/merge/attach); a set, or a memo over 4000 characters -> POST
 //     /api/sets/transcript. No signal, a 5xx or a 401 -> kept with the backoff in rules/uploadsCore; a refusal ->
 //     failed with the audio kept. Every decision is in rules/memoRules (tested); this file is the wiring.
+//   - a filmed take (kind `film`, SPEC 2026-11-03 Film it, the spike's v1 path) is a .mov on the same queue: once its
+//     words exist the per-word timings become an .srt beside it (rules/filmRules srtOf) and the .mov leaves Documents
+//     (the copy Keep put in Photos is the one that stays: one copy, his, under his iCloud Photos settings); the words
+//     go up like a memo's, filed on the bit it was read from.
 // The paid cloud backup (later) syncs these same files and rows.
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
@@ -26,7 +30,9 @@ import {
   KEEP_AWAKE_TRANSCRIBE, afterRefusal, afterRequeue, afterSendFailure, dueToSend, filingSteps, ideaBody, isSafeFileName,
   nextToTranscribe, parseIndex, retry, routeOf, safeFileName, setBody, textOf,
 } from '@/rules/memoRules';
-import type { LocalRec, RecKind } from '@/rules/memoRules';
+import type { CutShort, LocalRec, RecKind } from '@/rules/memoRules';
+import { srtNameOf, srtOf } from '@/rules/filmRules';
+import { linesOf } from '@/rules/bitLines';
 
 export type { LocalRec } from '@/rules/memoRules';
 export const recordingsSupported = true;
@@ -48,6 +54,10 @@ const indexPath = () => `${dir()}index.json`;
 /** The file:// URI of a row's audio, rebuilt from documentDirectory every time (never stored). */
 export function uriOf(r: Pick<LocalRec, 'file'>): string {
   return dir() + r.file;
+}
+/** The file:// URI of a filmed take's caption sidecar, or null before the words exist. */
+export function srtUriOf(r: Pick<LocalRec, 'srt'>): string | null {
+  return r.srt && isSafeFileName(r.srt) ? dir() + r.srt : null;
 }
 
 async function load() {
@@ -112,15 +122,32 @@ async function pump() {
       case 'done': {
         const text = textOf(res.segs);
         const keepSegs = routeOf(r, text) === 'set';
-        return { ...r, state: 'words', text, segments: keepSegs ? res.segs : null, engine: res.engine, progress: 1, paused: false, attempts: 0, next_at: 0, error: null };
+        return { ...r, state: 'words', text, segments: keepSegs ? res.segs : null, words: r.kind === 'film' ? res.words : undefined, engine: res.engine, progress: 1, paused: false, attempts: 0, next_at: 0, error: null };
       }
       case 'requeue': return afterRequeue(r, Date.now(), byUs, res.error);
       case 'no_speech': return { ...r, state: 'no_speech', progress: 0, paused: false, error: null };
       default: return { ...r, state: res.outcome, error: res.error, progress: 0, paused: false };
     }
   });
+  if (res.outcome === 'done') await afterFilmWords(id);
   void sendDue();
   void pump();
+}
+
+/** A filmed take's words exist: the .srt is written beside the .mov, then the .mov leaves Documents (Keep already
+ *  put the one copy in Photos; the row keeps the Photos asset id). The sidecar is small and stays. */
+async function afterFilmWords(id: string) {
+  const r = find(id);
+  if (!r || r.kind !== 'film' || r.video_gone) return;
+  const srt = srtNameOf(r.file);
+  try {
+    const text = srtOf(r.words || [], linesOf(r.script));
+    if (text) await FS.writeAsStringAsync(dir() + srt, text);
+  } catch {
+    return;   // no sidecar: the .mov stays until the next try (Try again on the row runs the transcription again)
+  }
+  await FS.deleteAsync(uriOf(r), { idempotent: true }).catch(() => {});
+  set(id, (x) => ({ ...x, srt, video_gone: true }));
 }
 
 /** The app went to the background, or a recording started: stop the run; it goes back in the queue as ours. */
@@ -235,7 +262,9 @@ export function useRecordings(): LocalRec[] {
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[] };
+/** `cutShort`, `assetId`, `script`: a filmed take's (how it ended; the Photos asset Keep made; the lines it was read
+ *  from, one per newline, where the captions may break). */
+export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[]; cutShort?: CutShort | null; assetId?: string | null; script?: string | null };
 /** A stopped recording (already moved into Documents/recordings by the recorder) becomes a row and joins the queue. */
 export async function addRecording(rec: Recording, meta: AddMeta): Promise<LocalRec> {
   await load();
@@ -249,6 +278,9 @@ export async function addRecording(rec: Recording, meta: AddMeta): Promise<Local
     id: newId(), kind: meta.kind, file, recorded_at: meta.recordedAt, duration_s: Math.max(0, rec.durationMs / 1000),
     bit: meta.bit || null, board: meta.board || null, title: meta.title || null, state: 'queued', attempts: 0, next_at: 0,
     ...(meta.marksMs?.length ? { marks_ms: meta.marksMs } : {}),
+    ...(meta.cutShort ? { cut_short: meta.cutShort } : {}),
+    ...(meta.assetId ? { asset_id: meta.assetId } : {}),
+    ...(meta.script ? { script: meta.script.slice(0, 20_000) } : {}),
   };
   recs = [r, ...recs];
   notify();
@@ -273,6 +305,8 @@ export async function deleteRec(id: string) {
   notify();
   await persist();
   await FS.deleteAsync(uriOf(r), { idempotent: true }).catch(() => {});
+  const srt = srtUriOf(r);
+  if (srt) await FS.deleteAsync(srt, { idempotent: true }).catch(() => {});
 }
 
 /** "Not this bit": detach the memo's idea from the bit it was filed on; it stays a new idea. */
