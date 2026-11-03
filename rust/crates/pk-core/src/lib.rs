@@ -8,10 +8,12 @@
 //!   fixed time.
 //! - [`config`]: [`config::Env`], the one place that reads `secrets.env` and the process environment; library crates
 //!   take typed values from it and never call `std::env` themselves.
+//! - [`legal`]: the one court-material rule every service applies to a text on its way in (`content_is_legal`).
 //!
 //! Dependencies: `serde_json`, `chrono`, `thiserror`. No IO crate, no regex.
 
 pub mod config;
+pub mod legal;
 pub mod py;
 pub mod text;
 pub mod time;

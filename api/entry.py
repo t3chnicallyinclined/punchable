@@ -131,6 +131,8 @@ def hosted_kb_class():
     class HostedKB(cls):
         """The database is canonical here: decisions are read from it (the /tmp jsonl is only a cache)."""
 
+        decisions_in_db = True  # surreal_kb._append_once: no file count to compare with the database's
+
         def _read_file_decisions(self):
             return [row_to_decision(x) for x in self.rpc.last("SELECT * FROM decision ORDER BY seq;")], 0
 

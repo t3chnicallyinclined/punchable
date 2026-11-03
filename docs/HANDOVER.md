@@ -220,7 +220,7 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    not deployed):** six GETs (health, labels, decisions, meta, pipeline, learned) answered from the database snapshot
    behind the Python's exact auth, CORS and errors, everything else forwarded to the Python; 57 of 57 requests equal
    against the hosted Python over one scratch database (`rust/tools/diff_api_reads.py`, empty allow-list), the
-   read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t9-api-rs.yaml`).
+   read-after-write gate met; the Ingress change is prepared, not applied (`infra/k8s/prepared/t10-api-rs.yaml` (renamed from `t9-api-rs.yaml` at T10)).
    Trap found: never clone `pk_store::Store` per request (a clone is a new session, ~17 ms a query). Second group
    (same day): `/api/map/cloud` in Rust (67/67 equal, numpy's random stream ported bit for bit) and an incremental
    snapshot patch after writes; under a write-heavy load the Rust reads still rebuild ~130 ms per write, so
@@ -283,6 +283,27 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    forwarded: `/api/ask/chats` (a GET that writes), `/api/merge/candidates`, `/api/memos`, `/api/inbox`,
    `/api/venues`, `/api/live`: T10 with the writes. **Deploy order stands: the Python with `GET /api/ai/worker`
    first, then pk-api's Ingress.** Numbers, the review and the prerequisites: the RUST_WORKSTREAM T9 row.
+   **T10 round 1 (branch `rust/t10-round1`, not merged, not deployed): the first writes.** pk-api answers **`POST
+   /api/ideas`, `POST /api/sets/transcript`** (group 1: what the app does most) and **`POST /api/jokes/<id>/versions`,
+   `/api/decision`, `/api/undo`, `/api/merge`, `/api/merge/attach`, `/api/merge/dismiss`, `/api/merge/undo`** (group 2:
+   one bit's writes). A decision goes through the same one-transaction append the Python uses, so the database's own
+   event bumps the generation both servers' reads and the Python's `/api/live` follow; a creative write creates the
+   next `creative_event` row, which the Python's next request finds (its file is extended, never diverged); the job
+   queue is rows on both sides, never process memory. Two processes write until T11: each serialises its own writes
+   (the Python's `kb.lock` / `cr.lock` order), the unique indexes refuse the second of two appends racing for one
+   place, and the loser retries from scratch (a decision rebuilt from a fresh view, an undo's inverse rebuilt, a
+   route's own check run again); the Python got the same bounded retry, because before it a lost race was a 500.
+   Proof: `rust/tools/diff_api_writes.py` (CI): 720 checks, 0 differences, through pk-api and through the Python,
+   the rows, 8 writers at once, no model on either side; two red arms fail it (7 and 6 checks); `tests/writes.rs`
+   on a scratch SurrealDB (the raw race, eight racers, four undos of one line). Same rate (`forward_probe.py`, which
+   now takes `POST` routes): pk-api at or below the Python on every write route in every phase. Found and written
+   down: a failed SurrealDB transaction marks every statement "not executed" and only one carries the cause
+   (`pk_store::Store::query` and `db/sdb.py` now report it); under two writers the hosted Python's own
+   decisions-count check could 409 (skipped hosted: `decisions_in_db`). The prepared manifest is now
+   `infra/k8s/prepared/t10-api-rs.yaml` (the write paths added; deploy order and the rollback in it). Deploy
+   prerequisites unchanged plus one: **the Python image with this round's `api-dev` changes goes out before any
+   write path moves.** Numbers, the review, the documented differences and the next groups: the RUST_WORKSTREAM T10
+   row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):

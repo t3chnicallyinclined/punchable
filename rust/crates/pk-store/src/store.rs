@@ -191,7 +191,15 @@ impl Store {
                 }
                 return Ok(out);
             }
-            let index = *errors.keys().min().expect("not empty");
+            // in a transaction every statement but the one that failed says "not executed due to a failed
+            // transaction": report the cause (the lowest statement whose text is its own), not the echo
+            let echo = |m: &str| m.contains("not executed due to a failed transaction");
+            let index = errors
+                .iter()
+                .filter(|(_, e)| !echo(&e.to_string()))
+                .map(|(i, _)| *i)
+                .min()
+                .unwrap_or_else(|| *errors.keys().min().expect("not empty"));
             let msg = errors.remove(&index).expect("present").to_string();
             let atomic = n == 1 || begins;
             if attempt < RETRY_WAITS.len() && atomic && msg.contains("can be retried") {

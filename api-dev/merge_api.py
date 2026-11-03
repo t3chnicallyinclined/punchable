@@ -76,7 +76,7 @@ def store(cr, kb) -> Store:
             raise CR.HttpError(409, cr.conflicts[name] + "; writes are refused until they agree")
         m.create(name, seq, line, ev)
         CR._append_file(cr.dir / f"{name}.jsonl", line)
-    return CR.LineStore(cr.dir, STORE, dl, writer)
+    return CR.LineStore(cr.dir, STORE, dl, writer, reload=lambda: cr.reconcile_lines(m, STORE))
 
 
 def judgements(cr) -> dict:

@@ -303,27 +303,43 @@ def _append_file(p: Path, line: str) -> None:
 
 
 class LineStore(Store):
-    """creative/store.Store replayed from a given list of lines (the database's), writing through `writer`."""
+    """creative/store.Store replayed from a given list of lines (the database's), writing through `writer`. `reload`
+    (the database's lines, read again) lets an append try again from the rows as they are when another writer
+    (pk-api, lane T10) took the row it meant to write: the unique index on (store, seq) refuses the second CREATE."""
 
-    def __init__(self, directory: Path, name: str, lines: list[str], writer):
+    APPEND_RETRIES = 6
+
+    def __init__(self, directory: Path, name: str, lines: list[str], writer, reload=None):
         self._lines = lines
         self._writer = writer
+        self._reload = reload
         super().__init__(directory, name, APPLY[name])
 
     def events(self) -> list[dict]:
         return [json.loads(x) for x in self._lines]
 
     def append(self, op: str, id_: str, data: dict, by: str = OWNER_ID, ts: str | None = None) -> dict:
-        ev = {"ts": ts or now_iso(), "op": op, "id": id_, "by": by, "data": data}
-        probe = json.loads(json.dumps(self.items))  # validate on a copy: a bad op never reaches the log
-        self._apply(probe, ev)
-        line = json.dumps(ev, ensure_ascii=False)
-        self._writer(self.name, len(self._lines), line, ev)
-        self._lines.append(line)
-        self.items = probe
-        self.n_events += 1
-        self.write_snapshot(ev["ts"])
-        return self.items.get(id_)
+        for attempt in range(self.APPEND_RETRIES):
+            ev = {"ts": ts or now_iso(), "op": op, "id": id_, "by": by, "data": data}
+            probe = json.loads(json.dumps(self.items))  # validate on a copy: a bad op never reaches the log
+            self._apply(probe, ev)
+            line = json.dumps(ev, ensure_ascii=False)
+            try:
+                self._writer(self.name, len(self._lines), line, ev)
+            except Exception as e:  # noqa: BLE001
+                taken = "creative_event_store_seq` already contains" in str(e)
+                if not taken or self._reload is None or attempt + 1 == self.APPEND_RETRIES:
+                    raise
+                sys.stderr.write(f"{self.name}: another writer took row {len(self._lines)} (attempt {attempt + 1}); reading again\n")
+                self._lines = self._reload()
+                self.rebuild()
+                continue
+            self._lines.append(line)
+            self.items = probe
+            self.n_events += 1
+            self.write_snapshot(ev["ts"])
+            return self.items.get(id_)
+        raise AssertionError("unreachable")
 
 
 class Mirror:
@@ -393,6 +409,17 @@ class Creative:
                                         f"({len(fl)} lines in the file, {len(dl)} in the database)")
             return dl
 
+    def reconcile_lines(self, m: Mirror, name: str) -> list[str]:
+        """The database's lines again, the file brought up to them (a row another writer appended is copied into
+        the file, as `reconcile` does): what a `LineStore` retries an append from."""
+        dl = m.lines(name)
+        p = self.dir / f"{name}.jsonl"
+        fl = file_lines(p)
+        if dl[:len(fl)] == fl:
+            for line in dl[len(fl):]:
+                _append_file(p, line)
+        return dl
+
     def stores(self, kb) -> dict[str, Store]:
         """Fresh stores for this request, replayed from this backend's source."""
         out = {}
@@ -408,7 +435,7 @@ class Creative:
                         raise HttpError(409, self.conflicts[store] + "; writes are refused until they agree")
                     m.create(store, seq, line, ev)                 # the database first (unique store+seq) ...
                     _append_file(self.dir / f"{store}.jsonl", line)  # ... then the same line in the jsonl
-                out[name] = LineStore(self.dir, name, dl, writer)
+                out[name] = LineStore(self.dir, name, dl, writer, reload=lambda m=m, name=name: self.reconcile_lines(m, name))
         return out
 
     # ---------------------------------------------------------------- corpus

@@ -1,4 +1,4 @@
-# PREPARED, NOT APPLIED (lane T9, 2026-11-02). Nothing in infra/ship.sh reads this folder; applying it is the owner's
+# PREPARED, NOT APPLIED (lane T9, 2026-11-02; lane T10 adds the writes, 2026-11-03). Nothing in infra/ship.sh reads this folder; applying it is the owner's
 # call, after the Rust image is built off the node (docs/ARCHITECTURE.md section 6) and its digest is in the private
 # deploy log with this rollback: `kubectl -n punchable delete ingress punchable-api-rs` (the Python takes every path
 # back at once: its Ingress, 50-ingress.yaml, is not touched), then delete the rest of this file's objects.
@@ -6,10 +6,11 @@
 # What it adds, beside the Python API (30-api.yaml), never instead of it:
 #   - pk-api as its own Deployment + Service (`app: punchable-api-rs`, `impl: rust`), so no Grafana panel mixes the two
 #     (the Prometheus job is `punchable-api-rs`; `impl` is copied onto every series by podTargetLabels).
-#   - an Ingress with EXACT paths for the six routes pk-api answers itself (pk-api `OWN_PATHS`). An exact path still
-#     routes every method, so pk-api forwards any method it does not answer (POST, PATCH, PUT, DELETE) to the Python
-#     Service unchanged (`PK_PYTHON_URL`, crates/pk-api/src/proxy.rs): a write can never be swallowed. No prefix moves
-#     at T9: `/api/jokes`, `/api/sets`, `/api/map` carry writes and stay whole on the Python until T10.
+#   - an Ingress with EXACT paths for the routes pk-api answers itself (pk-api `OWN_PATHS` for the GETs,
+#     `OWN_WRITE_PATHS` for the POSTs). An exact path still routes every method, so pk-api forwards any method it does
+#     not answer to the Python Service unchanged (`PK_PYTHON_URL`, crates/pk-api/src/proxy.rs): a write can never be
+#     swallowed. No prefix moves: `/api/jokes`, `/api/sets`, `/api/map` carry routes of both kinds and stay split by
+#     exact and regex paths until the Python is retired (T11).
 #   - NetworkPolicies, additive only (policies are a union): pk-api in from the ingress host and Prometheus; out to
 #     SurrealDB, the Python API (the fallback), Keycloak (JWKS) and Bugsink. Three small policies let SurrealDB, the
 #     Python API and Bugsink accept pk-api; 10-networkpolicy.yaml is unchanged.
@@ -154,10 +155,25 @@ spec:
           - { path: /api/workingsets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # round 8: "From your notebook" (GET only; the fused search with the model, as /api/search)
           - { path: /api/notebook/related, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 group 1 (POST only on the Python too): a jot, a set transcribed on the phone. pk-api writes the
+          # decision row (the database's own event bumps `gen`, which the Python's reads and /api/live hub follow) and
+          # the creative_event rows (the Python's next request finds them: its file is extended, never diverged).
+          # DEPLOY ORDER: this step needs nothing new on the Python side; move group 1 and watch the Python's log for
+          # "differ" lines (a divergence refuses its creative writes) before group 2.
+          - { path: /api/ideas, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/sets/transcript, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 group 2 (POST only on the Python too): one bit's writes and the merges. /api/merge is an exact path:
+          # /api/merge/candidates and /api/merge/history (GETs) stay the Python's until round 2.
+          - { path: /api/decision, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/undo, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/merge, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/merge/attach, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/merge/dismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/merge/undo, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
-# anchored to exactly one id segment; /api/jokes/<id>/versions (POST) and the other paths under an id stay on the
+# anchored to exactly one id segment; the other paths under an id stay on the
 # Python's Ingress; /api/jokes/<id>/similar (GET-only on the Python too) moved in round 6, /connections, /map and the
 # board / set pages in round 8. Its own object, so it can be deleted alone.
 # Check before applying (UNKNOWN on this cluster): ingress-nginx applies use-regex to every path of the host, across
@@ -199,6 +215,8 @@ spec:
           - { path: "/api/workingsets/[^/]+/nights$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/workingsets/[^/]+/bits/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/sets/[^/]+/clips$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 group 2: his new version of a bit (POST only on the Python too)
+          - { path: "/api/jokes/[^/]+/versions$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

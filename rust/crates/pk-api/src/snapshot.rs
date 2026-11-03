@@ -129,6 +129,9 @@ pub struct Data {
     cpu: Arc<Semaphore>,
     /// The notebook (`Creative.corpus`), built on first use: one per generation, the same in both views.
     corpus: OnceCell<Arc<GenCorpus>>,
+    /// The merge index over the notebook (`merge.index(c)`, kept on the Python's corpus object), built on the first
+    /// jot that is placed.
+    merge_index: OnceCell<Arc<pk_creative::merge::Index>>,
 }
 
 /// One view of a generation and its index, each built at most once, on first use, in `spawn_blocking`.
@@ -175,6 +178,7 @@ impl Data {
             owner: owner_id.to_string(),
             cpu,
             corpus: OnceCell::new(),
+            merge_index: OnceCell::new(),
             snap,
         }
     }
@@ -309,6 +313,37 @@ impl Data {
                     built
                         .map(|c| Arc::new(GenCorpus::new(c)))
                         .map_err(|e| ApiError::internal("CorpusError", e))
+                })
+                .await
+                .cloned()
+        });
+        task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
+    /// The merge index over this generation's notebook (`merge.index(c)`: pair scoring and the placing of a new jot),
+    /// built once per generation under the CPU permit, after the notebook.
+    pub async fn merge_index(
+        self: &Arc<Self>,
+        st: &crate::state::AppState,
+    ) -> Result<Arc<pk_creative::merge::Index>, ApiError> {
+        if let Some(ix) = self.merge_index.get() {
+            return Ok(Arc::clone(ix));
+        }
+        let c = self.corpus(st).await?;
+        let me = Arc::clone(self);
+        let task = tokio::spawn(async move {
+            let it = Arc::clone(&me);
+            me.merge_index
+                .get_or_try_init(|| async move {
+                    let built = it
+                        .cpu_build(move |_| {
+                            let t = std::time::Instant::now();
+                            let ix = pk_creative::merge::Index::new(c.shared());
+                            tracing::debug!(ms = t.elapsed().as_secs_f64() * 1000.0, "merge index built");
+                            ix
+                        })
+                        .await?;
+                    Ok::<_, ApiError>(built)
                 })
                 .await
                 .cloned()

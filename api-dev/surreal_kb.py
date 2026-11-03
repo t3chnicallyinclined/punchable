@@ -311,17 +311,39 @@ class SurrealKB:
         return self._snap["laughs"].get(d)
 
     # ---- writes: DB first (the event applies it), then the canonical jsonl --------
+    APPEND_RETRIES = 6
+
     def _append(self, d: dict) -> int:
+        """`_append_once`, tried again from a fresh count when another writer (pk-api, lane T10) took the same
+        `seq` in the same moment: the unique index refuses the second CREATE, never a silent duplicate."""
+        for attempt in range(self.APPEND_RETRIES):
+            try:
+                return self._append_once(d)
+            except Exception as e:  # noqa: BLE001
+                # only a line that still holds against whatever the other writer did (an edit merges, an add upserts, a
+                # confirm or reject sets a status); an undo or a delete built against the old view is not re-sent
+                retry = (d.get("action") in ("add", "edit", "confirm", "reject") and "undo_of" not in d
+                         and "decision_seq` already contains" in str(e))
+                if not retry or attempt + 1 == self.APPEND_RETRIES:
+                    raise
+                sys.stderr.write(f"decision: another writer took seq (attempt {attempt + 1}); trying again\n")
+                time.sleep(0.002 * (attempt + 1))
+        raise AssertionError("unreachable")
+
+    def _append_once(self, d: dict) -> int:
         with self.lock:
             self.full_view()  # a current snapshot to patch
             q = self.rpc.query("SELECT gen, loading, orphans FROM ONLY meta:state; RETURN count(SELECT id FROM decision);")
             st, n_db = sdb.strip_none(q[0]["result"]), q[1]["result"]
             if st.get("loading"):
                 raise K.DecisionError("the database is reloading; try again in a few seconds", 503)
-            lines, bad = self._read_file_decisions()
-            if n_db != len(lines):
-                raise K.DecisionError(f"SurrealDB has {n_db} decisions but decisions.jsonl has {len(lines)}; "
-                                      "run python db/load.py to resync before writing", 409)
+            # hosted (api/entry.py HostedKB), the "file" is the database itself: no second count to disagree with,
+            # and another writer (pk-api, T10) may land between two reads
+            if not getattr(self, "decisions_in_db", False):
+                lines, bad = self._read_file_decisions()
+                if n_db != len(lines):
+                    raise K.DecisionError(f"SurrealDB has {n_db} decisions but decisions.jsonl has {len(lines)}; "
+                                          "run python db/load.py to resync before writing", 409)
             seq = n_db
             row = decision_to_row(d, seq)
             # The decision and its effect (apply_decision event, then the Working events) commit together; the

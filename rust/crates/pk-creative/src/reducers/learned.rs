@@ -39,8 +39,77 @@ fn collapse(text: &str) -> String {
 }
 
 /// `_norm(text)`: the comparison key of a line.
-fn norm(text: &str) -> String {
+pub fn norm(text: &str) -> String {
     collapse(text).to_lowercase()
+}
+
+/// The job kinds whose drafts he can keep (`DRAFT_KINDS`).
+pub const DRAFT_KINDS: [&str; 2] = ["riff", "punchup"];
+
+/// `counts(learned)`: how many lines each list holds and when it last moved.
+pub fn counts(learned: Option<&Value>) -> Value {
+    let empty_v = empty();
+    let l = learned
+        .and_then(Value::as_object)
+        .unwrap_or_else(|| empty_v.as_object().expect("an object"));
+    let n = |k: &str| l.get(k).and_then(Value::as_array).map_or(0, Vec::len);
+    json!({"kept": n("kept"), "dropped": n("dropped"), "updated_at": l.get("updated_at").cloned().unwrap_or(Value::Null)})
+}
+
+/// `drafted(jobs, text)`: was `text` one of the app's drafts? Looks through the finished riff and punch-up jobs
+/// (`result.ideas[].text` / `result.drafts[].alt`); `(kind, the other drafts of the newest such job)`, or `(None,
+/// [])` when the text is his own. Exact words, case and spacing aside.
+pub fn drafted(jobs: &Obj, text: &str) -> (Option<String>, Vec<String>) {
+    let key = norm(text);
+    if key.is_empty() {
+        return (None, Vec::new());
+    }
+    let mut best: Option<(String, Vec<String>)> = None;
+    let mut best_ts = String::new();
+    for j in jobs.values().filter_map(Value::as_object) {
+        if j.get("status").and_then(Value::as_str) != Some("done") {
+            continue;
+        }
+        let Some(kind) = j
+            .get("kind")
+            .and_then(Value::as_str)
+            .filter(|k| DRAFT_KINDS.contains(k))
+        else {
+            continue;
+        };
+        let r = j.get("result").filter(|r| py::truthy(Some(r)));
+        let items = r.and_then(|r| r.get(if kind == "riff" { "ideas" } else { "drafts" }));
+        let texts: Vec<&str> = items
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_object)
+            .filter_map(|x| x.get(if kind == "riff" { "text" } else { "alt" }))
+            .filter_map(Value::as_str)
+            .filter(|t| !py::strip(t).is_empty())
+            .collect();
+        if !texts.iter().any(|t| norm(t) == key) {
+            continue;
+        }
+        let ts = j
+            .get("done_at")
+            .filter(|t| py::truthy(Some(t)))
+            .map(py::str)
+            .unwrap_or_default();
+        if best.is_none() || ts > best_ts {
+            let others = texts
+                .iter()
+                .filter(|t| norm(t) != key)
+                .map(|t| (*t).to_string())
+                .collect();
+            best = Some((kind.to_string(), others));
+            best_ts = ts;
+        }
+    }
+    match best {
+        Some((kind, others)) => (Some(kind), others),
+        None => (None, Vec::new()),
+    }
 }
 
 /// `_entry(x, ts)`: one line as stored, `{text, bit, date}` (+ `edited`), or nothing when it has no words.
@@ -150,6 +219,35 @@ mod tests {
         assert_eq!(t.chars().count(), 207);
         assert!(t.ends_with("xxxxxx [...]"));
         assert_eq!(m["kept"][0]["date"], json!("2026-10-29"));
+    }
+
+    #[test]
+    fn drafted_finds_the_newest_finished_draft_job_and_its_other_lines() {
+        let jobs: Obj = json!({
+            "job:riff-1": {"kind": "riff", "status": "done", "done_at": "2026-01-01T00:00:00+00:00",
+                           "result": {"ideas": [{"text": "A  LINE he kept"}, {"text": "another one"}, {"text": "  "}]}},
+            "job:riff-2": {"kind": "riff", "status": "done", "done_at": "2026-02-01T00:00:00+00:00",
+                           "result": {"ideas": [{"text": "a line he kept"}, {"text": "the newer sibling"}]}},
+            "job:punch-1": {"kind": "punchup", "status": "done", "done_at": "2026-03-01T00:00:00+00:00",
+                            "result": {"drafts": [{"alt": "a line he kept"}, {"alt": "punch sibling"}]}},
+            "job:riff-3": {"kind": "riff", "status": "queued", "result": null},
+            "job:ask-1": {"kind": "ask", "status": "done", "done_at": "2026-04-01T00:00:00+00:00",
+                          "result": {"ideas": [{"text": "a line he kept"}]}},
+        })
+        .as_object()
+        .cloned()
+        .expect("an object");
+        assert_eq!(
+            drafted(&jobs, "a line he kept"),
+            (Some("punchup".into()), vec!["punch sibling".to_string()])
+        );
+        assert_eq!(drafted(&jobs, "his own words"), (None, Vec::new()));
+        assert_eq!(drafted(&jobs, "   "), (None, Vec::new()));
+        assert_eq!(
+            counts(Some(&json!({"kept": [1, 2], "dropped": [], "updated_at": "t"}))),
+            json!({"kept": 2, "dropped": 0, "updated_at": "t"})
+        );
+        assert_eq!(counts(None), json!({"kept": 0, "dropped": 0, "updated_at": null}));
     }
 
     #[test]
