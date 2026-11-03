@@ -143,6 +143,13 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0c. **The bit page, design option 3c (owner: "lets get it in", 2026-11-03): `docs/design/SPEC-2026-11-03-bit-page-3c.md`.**
+   Five slices in its §14, smallest first, each its own TestFlight build: 1 the page app-only + the three device
+   checks as a spike screen (bottom toolbar vs the minimising tabs; the glass bar above the keyboard; dictation into
+   per-line inputs) → 2 focus mode + the offline outbox → 3 the pile, its pk-api routes (`db/schema_bit.surql`, per-role
+   login first), the deck, the capture proposal → 4 line actions and sessions with Claude (needs T8 + pk-api deployed)
+   → 5 Gather, overnight filing, the Bits list, desktop focus. The lead's calls on the design's questions are its §1
+   (owner may flip); what stays open is its §13. Next step: Slice 1.
 0a. **Owner checks on the build after 20: the 3D cloud map.** Bits › Map:
    - It turns slowly by itself (on 17-18 it most likely never did) and stops when you touch it.
    - Drag one finger: it turns any way you push it and keeps coasting after a flick.

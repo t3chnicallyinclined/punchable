@@ -256,7 +256,7 @@ or semi-opaque background color beneath controls, use a scroll edge effect to vi
 
 | Layer | What draws it | Our values |
 |---|---|---|
-| Navigation (glass) | the system: `NativeTabs` (`TabsShell.native.tsx`), the stack header (`Screen.native.tsx:69`), form sheets (`_layout.tsx:55`), menus, action sheets, the bottom accessory (`accessory.native.ts`, gated by `isLiquidGlassAvailable()`) | `tint` only; no background colour (HIG/toolbars "Reduce the use of toolbar backgrounds"); `headerTransparent: false` where a screen brings its own body (HANDOVER trap). **No `GlassView` anywhere today (CONFIRMED: no import)**; if one is ever used it is the floating input bar and nothing else (HIG.md §5). |
+| Navigation (glass) | the system: `NativeTabs` (`TabsShell.native.tsx`), the stack header (`Screen.native.tsx:69`), form sheets (`_layout.tsx:55`), menus, action sheets, the bottom accessory (`accessory.native.ts`, gated by `isLiquidGlassAvailable()`) | `tint` only; no background colour (HIG/toolbars "Reduce the use of toolbar backgrounds"); `headerTransparent: false` where a screen brings its own body (HANDOVER trap). **No `GlassView` anywhere today (CONFIRMED: no import)**; if one is ever used it is the floating input bar or the keyboard bar in focus mode (SPEC-2026-11-03-bit-page-3c §3.3, amended 2026-11-03) and nothing else (HIG.md §5). |
 | Content, flat | our tokens | ground → `bg.elevated` → `bg.card` → `bg.card2`: each step brighter in dark (the base/elevated idea), each step whiter-on-grey in light; a 1-pt `separator` border, no shadow, no blur. `elevation` is a colour step, not a `shadow*`. |
 | Content, the one shadow | `PaperCard` | §3.3; measured in light before it is a token. |
 | Scrim | the web `Sheet` | `scrim`; native sheets dim themselves. |
@@ -408,4 +408,5 @@ the count. A value that fits no step and no role is a design question, not an ex
 sixth radius.
 
 **Never**: a hex in a screen file; `maxFontSizeMultiplier` inline; a `shadow*` outside `PaperCard`; a `GlassView`
-outside the input bar; a font size under 11; white text on amber; amber text on light.
+outside the input bar and the keyboard bar in focus mode (SPEC-2026-11-03-bit-page-3c §3.3: both are
+navigation-layer controls, HIG/virtual-keyboards); a font size under 11; white text on amber; amber text on light.

@@ -1,5 +1,10 @@
 # SPEC 2026-11-02: sessions on a bit, and teaching Claude his misdirect method
 
+> **Superseded in part (2026-11-03).** The screens (§3) and the build order (§11) are replaced by
+> `SPEC-2026-11-03-bit-page-3c.md` (design option 3c, approved by the owner, with the build slices). **§1 his
+> method, §5 the data model, §6 learning without weights, §7 server, §8 cost, §9 measurement and §10 privacy still
+> hold** and are referenced from there, not repeated.
+
 Status: **draft for the owner** (design only, no code). The iPhone sections come from ios-design-expert (HIG, read
 live on developer.apple.com 2026-11-02) and ios-dev-expert (native feasibility). Server, data and worker are the
 lead's. Tags: **CONFIRMED** = a file:line, a doc page or a guard run; **INFERRED** = design reasoning, not proven.
