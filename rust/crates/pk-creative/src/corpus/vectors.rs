@@ -73,6 +73,28 @@ impl Vectors {
         v
     }
 
+    /// `rebuild_vectors` + `Vectors` over the `srcfile` rows under `vectors/` (path, text), in path order: the parts
+    /// (files named `*.part*.json`, not `extra_*`) in that order, the `extra_*.json` files after. A file that does
+    /// not parse is skipped. Shared by the worker's mirror and the API, which read the same rows.
+    pub fn from_files<T: AsRef<str>>(files: &[(String, T)]) -> Self {
+        let mut parts = Vec::new();
+        let mut extras = Vec::new();
+        for (p, t) in files {
+            let name = p.rsplit('/').next().unwrap_or(p);
+            if name.starts_with("extra_") {
+                if let Ok(v) = serde_json::from_str::<Value>(t.as_ref()) {
+                    extras.push((name.to_string(), v));
+                }
+            } else if name.contains(".part")
+                && std::path::Path::new(name).extension().is_some_and(|x| x == "json")
+                && let Ok(part) = serde_json::from_str::<VectorPart>(t.as_ref())
+            {
+                parts.push(part);
+            }
+        }
+        Self::from_parts(&parts, &extras)
+    }
+
     /// Whether any vector is loaded.
     pub fn available(&self) -> bool {
         !self.row.is_empty()

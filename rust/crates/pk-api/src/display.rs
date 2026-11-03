@@ -119,17 +119,7 @@ pub fn punch_line(text: &str) -> Option<String> {
 
 /// `CPython`'s `sum()` over floats (3.12+: Neumaier compensated summation).
 pub fn py_sum(xs: &[f64]) -> f64 {
-    let (mut f, mut c) = (0.0_f64, 0.0_f64);
-    for &x in xs {
-        let t = f + x;
-        if f.abs() >= x.abs() {
-            c += (f - t) + x;
-        } else {
-            c += (x - t) + f;
-        }
-        f = t;
-    }
-    if c != 0.0 && c.is_finite() { f + c } else { f }
+    pk_core::py::sum(xs.iter().copied())
 }
 
 /// `round(x, 2)`: the decimal correctly rounded from the exact binary value (ties to even), read back.

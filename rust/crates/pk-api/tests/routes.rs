@@ -148,8 +148,21 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
         let (s, _, b) = send(&st, req).await;
         assert_eq!((s, error_of(&b).as_str()), (StatusCode::NOT_FOUND, "not found"), "{m}");
     }
-    let (s, _, _) = send(&st, get("/api/jokes").body(Body::empty()).unwrap()).await;
+    let (s, _, _) = send(&st, get("/api/inbox").body(Body::empty()).unwrap()).await;
     assert_eq!(s, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn the_hybrid_search_goes_to_the_python_and_the_list_stays_here() {
+    // no PK_PYTHON_URL: forwarded = the fallback's 404; answered here = the boot 503 (no data yet), never the 401 of
+    // this service's own auth layer, which the forward skips
+    let st = state(true);
+    let (s, _, _) = send(&st, get("/api/jokes?q=dog&mode=hybrid").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, _, _) = send(&st, get("/api/jokes?q=dog").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    let (s, _, _) = send(&st, get("/api/jokes?q=%20&mode=hybrid").body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]

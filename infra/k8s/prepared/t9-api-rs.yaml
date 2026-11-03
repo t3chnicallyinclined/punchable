@@ -125,6 +125,12 @@ spec:
           - { path: /api/map/cloud, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # step 3 (GET-only on the Python too): the Sets list
           - { path: /api/sets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 5 (GET-only on the Python too): the Bits list (its `?mode=hybrid` search is forwarded by pk-api to
+          # the Python until the model runs in pk-api)
+          - { path: /api/jokes, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 5 (GET-only on the Python too): the Today feed (its `inbox` count is the Python pod's upload folder until
+          # T10; the app does not read it)
+          - { path: /api/today, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each

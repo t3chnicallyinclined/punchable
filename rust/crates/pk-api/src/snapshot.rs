@@ -8,11 +8,13 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write as _;
 use std::sync::Arc;
 
+use pk_creative::corpus::Corpus;
 use pk_kb::{Decision, View};
 use pk_store::{DecisionRow, EdgeRow, NodeRow, Snapshot, Store, StoreError, from_db, vars};
 use serde_json::{Map, Value, json};
 use tokio::sync::{OnceCell, Semaphore};
 
+use crate::creative::SrcShas;
 use crate::error::ApiError;
 use crate::index::{Ai, AppIndex, SetMetas, hidden_ids, view_of};
 use crate::tape::{Tape, TranscriptShas};
@@ -107,6 +109,8 @@ pub struct Data {
     pub metas: Arc<SetMetas>,
     /// The laughs and the transcript hashes (unchanged by a patch).
     pub tape: Arc<Tape>,
+    /// The `srcfile` hashes the creative layer reads by (unchanged by a patch).
+    pub files: Arc<SrcShas>,
     /// The rows this generation was built from (the next one patches them).
     snap: Arc<Rows>,
     /// `kb/v0/learning.json` as stored, when there is one.
@@ -123,6 +127,8 @@ pub struct Data {
     owner: String,
     /// The service's one-at-a-time bound on CPU builds (`AppState::cpu`).
     cpu: Arc<Semaphore>,
+    /// The notebook (`Creative.corpus`), built on first use: one per generation, the same in both views.
+    corpus: OnceCell<Arc<Corpus>>,
 }
 
 /// One view of a generation and its index, each built at most once, on first use, in `spawn_blocking`.
@@ -146,6 +152,7 @@ impl Data {
         ai: Arc<Ai>,
         metas: Arc<SetMetas>,
         tape: Arc<Tape>,
+        files: Arc<SrcShas>,
         learning: Option<String>,
         st: State,
         fetch_s: f64,
@@ -159,6 +166,7 @@ impl Data {
             ai,
             metas,
             tape,
+            files,
             learning,
             fetch_s,
             undone: snap.decisions.iter().filter_map(|d| d.undo_of()).collect(),
@@ -166,6 +174,7 @@ impl Data {
             lazy: [Lazy::default(), Lazy::default()],
             owner: owner_id.to_string(),
             cpu,
+            corpus: OnceCell::new(),
             snap,
         }
     }
@@ -255,6 +264,51 @@ impl Data {
         task.await.map_err(|e| ApiError::internal("JoinError", e))?
     }
 
+    /// The notebook over this generation (`Creative.corpus`: the API's files and every decision line), built once
+    /// per generation like [`Data::view`]: the files it lacks are read by key first, then the build runs under the
+    /// CPU permit. The Python rebuilds it on every decision too (its cache key holds the decision count).
+    pub async fn corpus(self: &Arc<Self>, st: &crate::state::AppState) -> Result<Arc<Corpus>, ApiError> {
+        if let Some(c) = self.corpus.get() {
+            return Ok(Arc::clone(c));
+        }
+        let store = st.store_handle();
+        let st = st.clone();
+        let me = Arc::clone(self);
+        let task = tokio::spawn(async move {
+            let it = Arc::clone(&me);
+            me.corpus
+                .get_or_try_init(|| async move {
+                    let inputs = crate::creative::corpus_inputs(&it.state.bundle, &it.files)
+                        .map_err(|e| ApiError::internal("CorpusError", e))?;
+                    let want: Vec<(String, String)> = inputs
+                        .iter()
+                        .filter_map(|(p, _)| it.files.get(p).map(|h| (p.clone(), h.clone())))
+                        .collect();
+                    let texts = st
+                        .src_texts()
+                        .get(store.as_deref(), &want)
+                        .await
+                        .map_err(|e| ApiError::internal("StoreError", e))?;
+                    let built = it
+                        .cpu_build(move |d| {
+                            let t = std::time::Instant::now();
+                            let decisions = d.snap.decisions.iter().map(|x| Value::Object(x.0.clone())).collect();
+                            let c = crate::creative::build_corpus(&inputs, &texts, decisions, &d.owner);
+                            tracing::debug!(ms = t.elapsed().as_secs_f64() * 1000.0, "corpus built");
+                            c
+                        })
+                        .await?;
+                    // `cpu_build` hands back the only reference
+                    let built = Arc::try_unwrap(built)
+                        .map_err(|_| ApiError::internal("CorpusError", "the build result is shared"))?;
+                    built.map(Arc::new).map_err(|e| ApiError::internal("CorpusError", e))
+                })
+                .await
+                .cloned()
+        });
+        task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
     /// Run `f` over this generation in `spawn_blocking`, holding the service's CPU permit.
     async fn cpu_build<T: Send + Sync + 'static>(
         self: Arc<Self>,
@@ -315,7 +369,8 @@ pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>)
         .query(
             "SELECT set, meta, rows FROM analysis ORDER BY ord;\
              SELECT path, sha256, (IF path = $learning OR string::ends_with(path, '/meta.json') { text } ELSE { NONE }) \
-               AS text FROM srcfile WHERE path = $learning OR string::starts_with(path, 'corpus/sets/');\
+               AS text FROM srcfile WHERE path = $learning OR string::starts_with(path, 'corpus/sets/') \
+               OR string::starts_with(path, 'kb/') OR string::starts_with(path, 'vectors/');\
              SELECT set, set_dir, doc FROM laugh_run;\
              SELECT * FROM laugh ORDER BY ord;",
             vars([("learning", pk_store::to_db(&json!(LEARNING)))]),
@@ -329,7 +384,7 @@ pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>)
     let owner = owner_id.to_string();
     // what is left is CPU (mapping the rows, parsing the set metas, grouping the laughs): off the runtime
     tokio::task::spawn_blocking(move || {
-        let (ai, metas, learning, shas) = files_of(inferred, rows(from_db(analysis)), rows(from_db(files)));
+        let (ai, metas, learning, shas, files) = files_of(inferred, rows(from_db(analysis)), rows(from_db(files)));
         let laughs = pk_store::store::rows_of(laughs)
             .into_iter()
             .map(pk_store::kbmap::row_to_set_laugh)
@@ -340,6 +395,7 @@ pub async fn load(store: &Store, st: State, owner_id: &str, cpu: Arc<Semaphore>)
             Arc::new(ai),
             Arc::new(metas),
             Arc::new(tape),
+            Arc::new(files),
             learning,
             st,
             fetch_s,
@@ -356,7 +412,7 @@ fn files_of(
     inferred: Value,
     analysis: Vec<Value>,
     files: Vec<Value>,
-) -> (Ai, SetMetas, Option<String>, TranscriptShas) {
+) -> (Ai, SetMetas, Option<String>, TranscriptShas, SrcShas) {
     let mut ai = Ai {
         inferred,
         ..Ai::default()
@@ -384,10 +440,18 @@ fn files_of(
     let mut metas = SetMetas::new();
     let mut learning = None;
     let mut shas = TranscriptShas::new();
+    let mut src = SrcShas::new();
     for f in files {
         let Some(path) = f.get("path").and_then(Value::as_str) else {
             continue;
         };
+        if let Some(sha) = f
+            .get("sha256")
+            .and_then(Value::as_str)
+            .filter(|_| crate::creative::wanted(path))
+        {
+            src.insert(path.to_string(), sha.to_string());
+        }
         let text = f.get("text").and_then(Value::as_str);
         let dir_of = |suffix: &str| {
             path.strip_prefix("corpus/sets/")
@@ -404,7 +468,7 @@ fn files_of(
             shas.insert(dir.to_string(), sha.to_string());
         }
     }
-    (ai, metas, learning, shas)
+    (ai, metas, learning, shas, src)
 }
 
 /// The next generation from the previous one when only decisions were appended since (each one bumps `gen` by
@@ -566,6 +630,7 @@ impl Patch {
             Arc::clone(&old.ai),
             Arc::clone(&old.metas),
             Arc::clone(&old.tape),
+            Arc::clone(&old.files),
             old.learning.clone(),
             st,
             fetch_s,

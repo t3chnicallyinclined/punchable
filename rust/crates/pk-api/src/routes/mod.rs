@@ -4,10 +4,12 @@
 
 pub mod cloud;
 pub mod health;
+pub mod jokes;
 pub mod kb;
 pub mod learned;
 pub mod metrics;
 pub mod sets;
+pub mod today;
 
 use std::sync::Arc;
 
