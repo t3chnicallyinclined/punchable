@@ -246,6 +246,24 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    forwarded to the Python (it needs the model). 147/147 equal; the only allow-list entry is Today's `inbox` (the
    Python pod's upload folder until T10; the app does not read it). Under the write-heavy load on the owner's PC (another build running, compare within a run), p50 / p95 Python vs pk-api: `/api/today` 3,937 / 4,261 vs 75 / 92 ms, `/api/jokes` 58 / 135 vs 11 / 17 ms; memory peak 519 vs 146 MiB. The still-forwarded creative and search routes were slower behind pk-api in the same run (e.g. `/api/settings` p95 256 vs 522 ms; causes INFERRED, in the T9 row). Not done: `/api/search`, `/similar`,
    `/api/jokes?mode=hybrid` (pk-embed in pk-api); exact next steps in the RUST_WORKSTREAM T9 row.
+   **Round 6 (branch `rust/t9-round6`, not merged, not deployed):** (1) **the forward is not what is slow.** Asked the
+   same request at the same rate, interleaved (`tools/load/forward_probe.py`), the Python direct and through pk-api
+   are within about 2 ms at 1, 2, 4 and 8 in flight, with and without writes (owner's PC). The forwarded routes look
+   slower behind pk-api because the Python itself slows with the number of calls it runs at once (`/api/settings`
+   p50 3 ms alone, 76 ms at 8 at once; writes add more) and pk-api, answering its own routes in milliseconds, keeps
+   the Python's slots full of exactly those calls. The cure is porting them. pk-api now turns Nagle off on its
+   sockets (hardening; it changed nothing measurable here). (2) pk-api answers **`/api/search`,
+   `/api/jokes/<id>/similar` and `/api/jokes?q=&mode=hybrid`** with bge-small loaded on the first search; the fused
+   search starts right after the request's state read and runs while the data is made ready. 260/260 equal against
+   the Python, both with the model and with no model on either side. Two findings: SurrealDB's order among equal
+   scores is not stable (the Python disagrees with itself on repeated searches; compared up to that order), and
+   distances from the two servers' query vectors agree to 1e-5, not exactly. Under the write-heavy load, p50 / p95
+   Python vs pk-api: search 114 / 553 vs 49 / 137 ms, hybrid 209 / 303 vs 148 / 229 ms; **`/similar` 71 / 129 vs
+   110 / 142 ms: not at or below the Python in that run** (pk-api's run made twice the calls per second); asked at
+   the same rate with writes, pk-api is several times faster (`/similar` p50 45-56 vs 294-410 ms). Memory peak with
+   the model: 332 MiB vs the Python's 530. The pk-api
+   image still has no Dockerfile; it must ship the model. Next: the creative GETs (`/api/settings`, `/api/boards`,
+   `/api/mysets`, `/api/tonight/screen`); details in the RUST_WORKSTREAM T9 row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):
