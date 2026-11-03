@@ -11,6 +11,8 @@ pub mod learned;
 pub mod metrics;
 pub mod search;
 pub mod sets;
+pub mod sets_detail;
+pub mod stores;
 pub mod today;
 
 use std::sync::Arc;

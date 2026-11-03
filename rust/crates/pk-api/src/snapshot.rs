@@ -289,11 +289,16 @@ impl Data {
                         .get(store.as_deref(), &want)
                         .await
                         .map_err(|e| ApiError::internal("StoreError", e))?;
+                    let vectors = st
+                        .vectors()
+                        .get(store.as_deref(), &it.files)
+                        .await
+                        .map_err(|e| ApiError::internal("StoreError", e))?;
                     let built = it
                         .cpu_build(move |d| {
                             let t = std::time::Instant::now();
                             let decisions = d.snap.decisions.iter().map(|x| Value::Object(x.0.clone())).collect();
-                            let c = crate::creative::build_corpus(&inputs, &texts, decisions, &d.owner);
+                            let c = crate::creative::build_corpus(&inputs, &texts, decisions, vectors, &d.owner);
                             tracing::debug!(ms = t.elapsed().as_secs_f64() * 1000.0, "corpus built");
                             c
                         })

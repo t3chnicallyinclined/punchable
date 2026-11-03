@@ -44,7 +44,7 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 15] = [
+pub const OWN_PATHS: [&str; 19] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -60,22 +60,39 @@ pub const OWN_PATHS: [&str; 15] = [
     "/api/boards",
     "/api/mysets",
     "/api/tonight/screen",
+    "/api/profile/voice",
+    "/api/suggestions/not-a-joke",
+    "/api/workingsets",
+    "/api/notebook/related",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
-/// ([`ingress_regex`] gives each one's path), never with a prefix: `/api/jokes/<id>/versions` (POST),
-/// `/connections`, `/map` and `/api/sets/<id>/clips` stay the Python's, and an id path with more segments than these
-/// patterns falls through to the fallback and is forwarded.
-pub const OWN_PATTERNS: [&str; 4] = [
+/// ([`ingress_regex`] gives each one's path), never with a prefix: `/api/jokes/<id>/versions` (POST) and every
+/// other path under an id stays the Python's, and an id path with more segments than these patterns falls through to
+/// the fallback and is forwarded. A write on one of these paths (PATCH `/api/boards/<id>`, PATCH `/api/mysets/<id>`)
+/// is forwarded too (`read_route`), and `/api/mysets/match` (the Python's route, not a set id) is forwarded whatever
+/// the method.
+pub const OWN_PATTERNS: [&str; 15] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
     "/api/sets/{id}/review",
+    "/api/boards/{id}",
+    "/api/boards/{id}/build",
+    "/api/mysets/{id}",
+    "/api/mysets/{id}/trim",
+    "/api/jokes/{id}/connections",
+    "/api/jokes/{id}/map",
+    "/api/jobs/{id}",
+    "/api/workingsets/{id}",
+    "/api/workingsets/{id}/nights",
+    "/api/workingsets/{id}/bits/{id2}",
+    "/api/sets/{id}/clips",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
 pub fn ingress_regex(pattern: &str) -> String {
-    format!("{}$", pattern.replace("{id}", "[^/]+"))
+    format!("{}$", pattern.replace("{id}", "[^/]+").replace("{id2}", "[^/]+"))
 }
 
 /// A read route: GET (and HEAD) answered here behind CORS, metrics and auth; OPTIONS is the preflight; any other
@@ -119,6 +136,41 @@ pub fn app(st: AppState) -> Router {
         .route("/api/boards", read_route(&st, routes::creative::boards))
         .route("/api/mysets", read_route(&st, routes::creative::mysets))
         .route("/api/tonight/screen", read_route(&st, routes::creative::tonight_screen))
+        .route("/api/boards/{id}", read_route(&st, routes::sets_detail::board))
+        .route(
+            "/api/boards/{id}/build",
+            read_route(&st, routes::sets_detail::board_build),
+        )
+        // `/api/mysets/match` is the Python's (`mysets_api` matches it before an id): never read as a set id here
+        .route("/api/mysets/match", axum::routing::any(proxy::forward))
+        .route("/api/mysets/{id}", read_route(&st, routes::sets_detail::myset))
+        .route("/api/mysets/{id}/trim", read_route(&st, routes::sets_detail::trim))
+        .route(
+            "/api/jokes/{id}/connections",
+            read_route(&st, routes::sets_detail::connections),
+        )
+        .route("/api/jokes/{id}/map", read_route(&st, routes::sets_detail::joke_map))
+        .route("/api/profile/voice", read_route(&st, routes::stores::voice))
+        .route(
+            "/api/suggestions/not-a-joke",
+            read_route(&st, routes::stores::not_a_joke),
+        )
+        .route("/api/jobs/{id}", read_route(&st, routes::stores::job))
+        .route("/api/workingsets", read_route(&st, routes::sets_detail::workingsets))
+        .route("/api/notebook/related", read_route(&st, routes::sets_detail::related))
+        .route("/api/sets/{id}/clips", read_route(&st, routes::sets_detail::clips))
+        .route(
+            "/api/workingsets/{id}",
+            read_route(&st, routes::sets_detail::workingset),
+        )
+        .route(
+            "/api/workingsets/{id}/nights",
+            read_route(&st, routes::sets_detail::ws_nights),
+        )
+        .route(
+            "/api/workingsets/{id}/bits/{id2}",
+            read_route(&st, routes::sets_detail::ws_bit),
+        )
         .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));

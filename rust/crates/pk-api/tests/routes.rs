@@ -227,7 +227,7 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
 #[tokio::test]
 async fn every_moved_path_is_answered_here() {
     let st = state(true);
-    let ids = pk_api::OWN_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb"));
+    let ids = pk_api::OWN_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb").replace("{id2}", "joke:c"));
     for p in pk_api::OWN_PATHS.iter().copied().chain(ids.iter().map(String::as_str)) {
         let (s, _, b) = send(&st, get(p).body(Body::empty()).unwrap()).await;
         let answered_here =
@@ -241,11 +241,12 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
     // no Python configured in these tests: anything forwarded is the fallback's 404, never the auth check's 401
     let st = state(true);
     for p in [
-        "/api/jokes/joke:a/connections",
-        "/api/jokes/joke:a/map",
-        "/api/sets/set:x/clips",
+        "/api/sets/set:x/clips/x",
         "/api/jokes/a/b",
         "/api/jokes/",
+        "/api/boards/b/items",
+        "/api/mysets/match",
+        "/api/mysets/s/x",
     ] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
         assert_eq!(s, StatusCode::NOT_FOUND, "{p}");
@@ -260,6 +261,14 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         StatusCode::NOT_FOUND,
         "a POST under a moved id path is forwarded"
     );
+    for (m, p) in [
+        ("PATCH", "/api/boards/b"),
+        ("PATCH", "/api/mysets/s"),
+        ("POST", "/api/mysets/match"),
+    ] {
+        let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
+        assert_eq!(send(&st, r).await.0, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
+    }
 }
 
 #[tokio::test]

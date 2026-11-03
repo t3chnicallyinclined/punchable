@@ -12,11 +12,12 @@ use pk_creative::Items;
 use pk_creative::corpus::{Corpus, CorpusError, Parts, Vectors};
 use pk_store::{Store, StoreError, from_db, vars};
 use serde_json::{Value, json};
+use tokio::sync::Mutex as AsyncMutex;
 
 use crate::tape::srcfile_key;
 
 /// `srcfile` path -> `sha256`, for the rows a generation may read the text of (under `kb/`, `vectors/` and every
-/// set's `analysis.json` / `meta.json`).
+/// set's `analysis.json` / `meta.json` / `clips.json`).
 pub type SrcShas = BTreeMap<String, String>;
 
 /// Whether a scanned `srcfile` path is one the creative layer reads.
@@ -28,6 +29,7 @@ pub fn wanted(path: &str) -> bool {
             .and_then(|p| {
                 p.strip_suffix("/analysis.json")
                     .or_else(|| p.strip_suffix("/meta.json"))
+                    .or_else(|| p.strip_suffix("/clips.json"))
             })
             .is_some_and(|d| !d.contains('/'))
 }
@@ -95,6 +97,87 @@ impl SrcTexts {
     }
 }
 
+impl SrcTexts {
+    /// The texts of `want` read by key and NOT kept (the vector parts: megabytes of JSON floats that are parsed once
+    /// and dropped). A row gone since the generation listed it is left out.
+    pub async fn read_uncached(
+        store: Option<&Store>,
+        want: &[(String, String)],
+    ) -> Result<Vec<(String, String, Arc<str>)>, StoreError> {
+        let store = store.ok_or_else(|| StoreError::mapping("the database is not connected"))?;
+        let mut out = Vec::new();
+        for chunk in want.chunks(READ_CHUNK) {
+            let keys: Vec<String> = chunk.iter().map(|(p, _)| srcfile_key(p)).collect();
+            let rows = store
+                .last(
+                    "LET $ids = array::map($ks, |$k| type::record('srcfile', $k));\
+                     SELECT path, sha256, text FROM $ids;",
+                    vars([("ks", pk_store::to_db(&json!(keys)))]),
+                )
+                .await?;
+            for r in pk_store::store::rows_of(rows).into_iter().map(from_db) {
+                if let (Some(p), Some(h), Some(t)) = (
+                    r.get("path").and_then(Value::as_str),
+                    r.get("sha256").and_then(Value::as_str),
+                    r.get("text").and_then(Value::as_str),
+                ) {
+                    out.push((p.to_string(), h.to_string(), Arc::from(t)));
+                }
+            }
+        }
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(out)
+    }
+}
+
+/// The notebook's vectors (`Creative.vectors()`: rebuilt when the vector files change), keyed by the exact
+/// `vectors/` rows (path and hash) they were parsed from. A generation asks with its own rows and gets vectors parsed
+/// from exactly those (never an older set); parsing happens once per change, under a lock, so two generations never
+/// parse the same rows twice.
+#[derive(Debug, Default)]
+pub struct VectorCache(AsyncMutex<Option<ParsedVectors>>);
+
+/// The `vectors/` rows (path, sha256) a set of vectors was parsed from, and the vectors.
+type ParsedVectors = (Vec<(String, String)>, Arc<Vectors>);
+
+impl VectorCache {
+    /// The vectors of the `vectors/` rows in `files`.
+    pub async fn get(&self, store: Option<&Store>, files: &SrcShas) -> Result<Arc<Vectors>, StoreError> {
+        let want: Vec<(String, String)> = files
+            .iter()
+            .filter(|(p, _)| p.starts_with("vectors/"))
+            .map(|(p, h)| (p.clone(), h.clone()))
+            .collect();
+        let mut slot = self.0.lock().await;
+        if let Some((k, v)) = &*slot
+            && *k == want
+        {
+            return Ok(Arc::clone(v));
+        }
+        if want.is_empty() {
+            let v = Arc::new(Vectors::default());
+            *slot = Some((want, Arc::clone(&v)));
+            return Ok(v);
+        }
+        let rows = SrcTexts::read_uncached(store, &want).await?;
+        // the rows read are exactly the ones listed (a part rewritten or removed since the listing is not)
+        let exact = rows.len() == want.len() && rows.iter().zip(&want).all(|((p, h, _), (wp, wh))| p == wp && h == wh);
+        let texts: Vec<(String, Arc<str>)> = rows.into_iter().map(|(p, _, t)| (p, t)).collect();
+        // parsing megabytes of JSON floats is CPU work: off the async threads
+        let vectors = tokio::task::spawn_blocking(move || Arc::new(Vectors::from_files(&texts)))
+            .await
+            .map_err(|e| StoreError::mapping(format!("parsing the vectors: {e}")))?;
+        if exact {
+            *slot = Some((want, Arc::clone(&vectors)));
+        } else {
+            // the newest rows, as the Python reads its disk now; not kept under a listing they do not match, so the
+            // next generation (whose listing names them) reads again
+            tracing::info!("vectors: the rows moved since the listing; parsed what is there, not cached");
+        }
+        Ok(vectors)
+    }
+}
+
 /// The parent folder of a `srcfile` path (`kb/v0/graph.json` -> `kb/v0`).
 fn parent(p: &str) -> &str {
     p.rsplit_once('/').map_or("", |(d, _)| d)
@@ -123,27 +206,28 @@ pub fn corpus_inputs(bundle: &Value, files: &SrcShas) -> Result<Vec<(String, Str
         out.push((p.into(), p.into()));
     }
     for p in files.keys() {
-        if p.starts_with("corpus/sets/") && wanted(p) {
+        if p.starts_with("corpus/sets/") && wanted(p) && (p.ends_with("/analysis.json") || p.ends_with("/meta.json")) {
             out.push((p.clone(), p.clone()));
         }
     }
     Ok(out)
 }
 
-/// `build_corpus` over the fetched texts (by `srcfile` path) and the database's decision lines. Without the vectors the
-/// Python's corpus carries: nothing served from it reads them (`duration`, the Today feed); a route that needs
-/// similarity must add them (`Vectors::from_files` over the `vectors/` rows).
+/// `build_corpus` over the fetched texts (by `srcfile` path), the database's decision lines and the vectors the
+/// Python's corpus carries (`Creative.vectors()`, from the `vectors/` rows: the story layer's subject links and the
+/// connections' tag query read them).
 pub fn build_corpus(
     inputs: &[(String, String)],
     texts: &BTreeMap<String, Arc<str>>,
     decisions: Vec<Value>,
+    vectors: Arc<Vectors>,
     owner: &str,
 ) -> Result<Corpus, CorpusError> {
     let files: BTreeMap<String, Arc<str>> = inputs
         .iter()
         .filter_map(|(src, key)| texts.get(src).map(|t| (key.clone(), Arc::clone(t))))
         .collect();
-    let mut parts = Parts::from_files(&files, decisions, Arc::new(Vectors::default()), owner)?;
+    let mut parts = Parts::from_files(&files, decisions, vectors, owner)?;
     // `Corpus(..., laughs)` is not passed by the API's `build_corpus`
     parts.laughs.clear();
     // `self.insights = insights or {}`: an empty file reads as none
@@ -214,6 +298,10 @@ pub struct Stores {
     pub workingsets: Replayed,
     /// His answers to "not a joke?".
     pub suggestions: Replayed,
+    /// The job queue.
+    pub jobs: Replayed,
+    /// His voice profile.
+    pub profile: Replayed,
 }
 
 impl Default for Stores {
@@ -223,6 +311,8 @@ impl Default for Stores {
             storyboards: Replayed::new("storyboards"),
             workingsets: Replayed::new("workingsets"),
             suggestions: Replayed::new("suggestions"),
+            jobs: Replayed::new("jobs"),
+            profile: Replayed::new("profile"),
         }
     }
 }
@@ -288,6 +378,7 @@ mod tests {
             "corpus/sets/20240101_x/meta.json",
             "corpus/sets/20240101_x/laughs_auto.json",
             "corpus/sets/20240101_x/transcript.json",
+            "corpus/sets/20240101_x/clips.json",
         ]);
         let got = corpus_inputs(&json!({"graph": "kb/v0/graph.json"}), &f).unwrap();
         let keys: Vec<&str> = got.iter().map(|(_, k)| k.as_str()).collect();
@@ -317,6 +408,7 @@ mod tests {
         assert!(wanted("vectors/vectors.f32.part000.json"));
         assert!(wanted("corpus/sets/d/analysis.json"));
         assert!(wanted("corpus/sets/d/meta.json"));
+        assert!(wanted("corpus/sets/d/clips.json"));
         assert!(!wanted("corpus/sets/d/transcript.json"));
         assert!(!wanted("corpus/sets/d/x/meta.json"));
         assert!(!wanted("corpus/notes/a.json"));

@@ -94,6 +94,7 @@ STAGE = {"a": "testing", "b": "working", "c": "testing", "d": "to_try", "e": "id
 UNIT_DATE = {"a": "2024-01-10", "b": "2023-05-01", "c": "2024-04-04", "d": "2015-03-03", "e": "2024-08-08",
              "f": "2016-07-07", "g": "2024-09-09"}
 SX, SY, SZ = "2024-01-01_x", "2024-02-01_y", "2024-03-01_z"
+N_EXTRA = 46
 EXTRA = [("dog", ["leash", "park", "bark"]), ("car", ["traffic", "parking", "engine"]),
          ("plane", ["pilot", "luggage", "airport"]), ("family", ["niece", "uncle", "dinner"])]
 TOPIC_OF = {"a": 0, "b": 0, "c": 1, "d": 3, "e": 3, "f": 2, "g": 3}
@@ -117,8 +118,9 @@ def make_graph() -> dict:
         nodes += [j, u]
         edges.append({"id": f"e:p{k}", "src": f"unit:{k}1", "dst": f"joke:{k}", "kind": "part_of", "status": "inferred",
                       "confidence": 0.9, "evidence": []})
-    # 36 more bits on four invented topics, so the cloud has real clusters to find (k = 6 at 43 bits)
-    for i in range(36):
+    # 46 more bits on four invented topics, so the cloud has real clusters to find, and (round 8) more than 50 bits
+    # with vectors, so the story layer's similarity band (`story._cos_band`, (1, 1) under 50) is really computed
+    for i in range(N_EXTRA):
         topic, words = EXTRA[i % 4]
         k = f"x{i:02d}"
         nodes.append({"id": f"joke:{k}", "type": "joke", "title": f"{topic.title()} {words[i % 3]} number {i}", "stage": "idea",
@@ -157,6 +159,38 @@ def make_graph() -> dict:
     lab("g", "label:topic:kids", 0.5, "grocery list")
     edges.append({"id": "e:seg_bc", "src": "joke:b", "dst": "joke:c", "kind": "segue", "status": "proposed", "confidence": 0.7,
                   "reason": "dog leads to cars", "evidence": [{"node": "unit:b1", "quote": "Bravo closer words."}]})
+    # round 8: what one bit's connections and its map read: a line of another bit tagging it, a callback, a
+    # shared premise, the same shape (two shared moves), attitudes (another angle), the reveal of a bit and its note
+    for lid, kind, name in [("label:structure:s2", "structure", "S-two"), ("label:attitude:mad", "attitude", "Mad"),
+                            ("label:attitude:calm", "attitude", "Calm"), ("label:topic:dogs", "topic", "Dogs")]:
+        nodes.append({"id": lid, "type": "label", "kind": kind, "name": name, "definition": f"{name}, as a label"})
+    lab("a", "label:structure:s1", 0.8, "Alpha opener")
+    lab("b", "label:structure:s1", 0.8, "Bravo setup")
+    lab("x01", "label:device:d1", 0.7, "The car and the")
+    lab("x01", "label:structure:s2", 0.7, "The car and the")
+    lab("b", "label:topic:dogs", 0.8, "about the dog")
+    lab("x00", "label:topic:dogs", 0.8, "The dog and the")
+    lab("x04", "label:topic:dogs", 0.8, "The dog and the")
+    lab("b", "label:attitude:calm", 0.7, "Bravo setup")
+    lab("x00", "label:attitude:mad", 0.7, "The dog and the")
+    lab("c", "label:topic:kids", 0.6, "Charlie premise")
+    lab("c", "label:persona:dad", 0.6, "Charlie premise")
+    edges.append({"id": "e:tag_x01a", "src": "unit:x011", "dst": "joke:a", "kind": "tag_of", "status": "confirmed",
+                  "confidence": 0.8, "reason": "the car line tags the alpha punch",
+                  "evidence": [{"node": "unit:x011", "quote": "The car and the parking."}]})
+    edges.append({"id": "e:cb_ed", "src": "joke:e", "dst": "joke:d", "kind": "callback_to", "status": "inferred",
+                  "confidence": 0.6, "reason": "the niece again", "evidence": [{"node": "unit:e1", "quote": "my niece"}]})
+    edges.append({"id": "e:prem_dx03", "src": "joke:d", "dst": "joke:x03", "kind": "same_premise", "status": "proposed",
+                  "confidence": 0.5, "reason": "errands", "evidence": []})
+    edges.append({"id": "e:shape_ab", "src": "joke:a", "dst": "joke:b", "kind": "same_shape", "status": "proposed",
+                  "confidence": 0.55, "reason": "both list then flip", "evidence": []})
+    for n in nodes:
+        if n["id"] == "joke:a":
+            n["anatomy"] = {"reveal": "The alpha punch lands here every time."}
+        if n["id"] == "joke:b":
+            n["quality"] = {"notes": "the dog part runs long"}
+        if n["id"] == "unit:x001":
+            n["anatomy"] = {"reveal": "The dog and the leash."}
     for key, title, venue, dur in ((SX, "Corner Room, Tuesday", "The Corner Room", 300),
                                    (SY, "Seaside open mic", "Seaside Comedy Club", 240),
                                    (SZ, "Mabel's, March", "Mabel's (upstairs)", 120)):
@@ -283,6 +317,9 @@ def build_comedy(comedy: Path) -> None:
         segs = [{"start": a, "end": b, "text": t} for a, b, t in tape.get("segments", [(0, 5, "Hello.")])]
         write_json(d / "transcript.json", {"segments": segs})
         write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": tape.get("laughs", [])})
+        if key == SX:  # round 8: a set's clips file, served as it is
+            write_json(d / "clips.json", {"set": f"set:{SX}", "source": "clipper-1",
+                                          "clips": [{"start_ms": 0, "end_ms": 20000, "title": "Alpha", "score": 0.8}]})
     (comedy / "kb" / "creative").mkdir(parents=True)
     # the Today feed's inputs: gems and orphans (serendipity), and a working set with a locked bit and a locked line
     write_json(v0 / "insights.json", INSIGHTS)
@@ -302,7 +339,9 @@ INSIGHTS = {"gems": {"gems": [
      "score": 0.52},
     {"joke": "joke:x04", "like": "joke:x04", "like_title": "itself", "shared_shape": [], "score": 0.4},
     {"joke": "joke:a", "like": "joke:b", "like_title": "Bravo bit", "shared_shape": ["d"], "score": 0.9}]},
-    "orphans": {"active_orphans": ["joke:x07", "joke:x08", "joke:nope", "joke:f", "joke:x11"]}}
+    "orphans": {"active_orphans": ["joke:x07", "joke:x08", "joke:nope", "joke:f", "joke:x11"]},
+    "chunks": {"chunks": [{"name": "Family errands", "jokes": ["joke:d", "joke:e", "joke:x03", "joke:nope"],
+                           "fits_5_15": True, "minutes_est": 6}]}}
 WS_BITS = [{"joke_id": "joke:a", "title": "Alpha bit", "target_s": 40}, {"joke_id": "joke:b", "title": "Bravo bit", "target_s": 60},
            {"joke_id": "joke:x01", "title": "Car one", "target_s": 30}, {"joke_id": "joke:c", "title": "Charlie bit", "target_s": 50},
            {"joke_id": "joke:d", "title": "Delta bit", "target_s": 45}]
@@ -339,6 +378,48 @@ SUGGEST_JUDGE = {"version": 1, "items": {
     "memo:6": {"kind": "conversation", "confidence": 0.8, "joke_id": "joke:x09"},
     "memo:7": {"kind": "joke", "confidence": 0.99, "joke_id": "joke:x10"},
     "memo:8": {"kind": "unclear", "confidence": 0.9, "chars": 400, "joke_id": "joke:x11"}}}
+# round 8: one set list (each of the bundle's, archived and deleted ones, a miss), one of his sets and its trim, one
+# bit's connections and map (every kind of bit, the caps, the misses and the refusals)
+CREATIVE_IDS = ([f"/api/boards/{b}" for b in ("sb:seed1", "sb:old", "sb:empty", "sb:gone", "sb:nope")]
+                + [f"/api/boards/{b}/build" for b in ("sb:seed1", "sb:old", "sb:empty", "sb:gone", "sb:nope")]
+                + ["/api/boards/sb:old?include_hidden=1", "/api/boards/sb:old/build?include_hidden=1",
+                   "/api/boards/sb:old?backend=files", "/api/boards/sb%3Aold"]
+                + ["/api/mysets/ws:main", "/api/mysets/ws:old", "/api/mysets/ws:nope", "/api/mysets/ws:main?backend=x",
+                   "/api/mysets/ws:main/trim?target_s=120", "/api/mysets/ws:main/trim?target_s=300",
+                   "/api/mysets/ws:main/trim?target_s=60", "/api/mysets/ws:main/trim?target_s=59",
+                   "/api/mysets/ws:main/trim?target_s=14401", "/api/mysets/ws:main/trim?target_s=abc",
+                   "/api/mysets/ws:main/trim", "/api/mysets/ws:nope/trim?target_s=300",
+                   "/api/mysets/ws:nope/trim?target_s=1", "/api/mysets/ws:main/trim?target_s=99999999999999999999999",
+                   f"/api/mysets/match?set={SX}", f"/api/mysets/match?set=set:{SY}", "/api/mysets/match?set=nope"]
+                + [f"/api/jokes/joke:{k}/connections" for k in ("a", "b", "c", "d", "e", "f", "x00", "x01", "x03", "x04")]
+                + [f"/api/jokes/joke:{k}/map" for k in ("a", "b", "c", "d", "e", "f", "x00", "x01", "x03", "x04")]
+                + ["/api/jokes/joke:a/connections?cap=1", "/api/jokes/joke:a/connections?cap=20",
+                   "/api/jokes/joke:a/connections?cap=0", "/api/jokes/joke:a/connections?cap=21",
+                   "/api/jokes/joke:a/connections?cap=abc", "/api/jokes/joke:a/connections?cap=",
+                   "/api/jokes/joke:nope/connections", "/api/jokes/unit:a1/connections",
+                   "/api/jokes/joke%20a/connections", "/api/jokes/joke:g/connections?include_hidden=1",
+                   "/api/jokes/joke:nope/connections?cap=0", "/api/jokes/joke:a/map?cap=1", "/api/jokes/joke:b/map?cap=20",
+                   "/api/jokes/joke:a/map?cap=0", "/api/jokes/joke:a/map?cap=x", "/api/jokes/joke:nope/map",
+                   "/api/jokes/joke:g/map", "/api/jokes/joke%3Ab/map", "/api/jokes/joke:a/map?backend=files"])
+# round 8: the working sets, his voice profile, the "not a joke?" list, one job, "From your notebook"
+LONG_Q = "dog " * 1001
+STORE_READS = ["/api/workingsets", "/api/workingsets?backend=files", "/api/workingsets/ws:main", "/api/workingsets/ws:old",
+               "/api/workingsets/ws:nope", "/api/workingsets/ws:main/nights", "/api/workingsets/ws:nope/nights",
+               "/api/workingsets/ws:main/bits/joke:a", "/api/workingsets/ws:main/bits/joke:b",
+               "/api/workingsets/ws:main/bits/joke:d", "/api/workingsets/ws:main/bits/joke:f",
+               "/api/workingsets/ws:main/bits/joke:nope", "/api/workingsets/ws:main/bits/joke%20a",
+               "/api/workingsets/ws:nope/bits/joke:a", "/api/workingsets/ws:main/bits/joke:g",
+               "/api/profile/voice", "/api/profile/voice?backend=files", "/api/suggestions/not-a-joke",
+               "/api/suggestions/not-a-joke?include_hidden=1", "/api/suggestions/not-a-joke?backend=x",
+               "/api/jobs/job:nope", "/api/jobs/x?backend=files",
+               "/api/notebook/related?q=niece", "/api/notebook/related?q=dog%20leash%20park&cap=3",
+               "/api/notebook/related?q=traffic&cap=30", "/api/notebook/related?q=traffic&cap=0",
+               "/api/notebook/related?q=traffic&cap=31", "/api/notebook/related?q=traffic&cap=x",
+               "/api/notebook/related", "/api/notebook/related?q=%20%20", "/api/notebook/related?q=" + LONG_Q.replace(" ", "%20"),
+               "/api/notebook/related?q=niece&exclude=joke:d&exclude=joke:e",
+               "/api/notebook/related?q=the%20car%0Aparking%20engine%20traffic",
+               "/api/notebook/related?q=alpha%20punch&include_hidden=1", "/api/notebook/related?q=zzqqxx",
+               "/api/notebook/related?q=niece&backend=files"]
 CREATIVE_LISTS = ["/api/settings", "/api/settings?backend=files", "/api/boards", "/api/boards?archived=1",
                   "/api/boards?archived=true", "/api/boards?archived=yes", "/api/boards?include_hidden=1",
                   "/api/boards?backend=files", "/api/mysets", "/api/mysets?include_hidden=1", "/api/mysets?backend=x",
@@ -401,6 +482,16 @@ def write_vectors(cache_kb: Path, graph: dict) -> None:
         v = centres[topic] + 0.8 * rng.normal(size=384)
         rows.append(v / np.linalg.norm(v))
         ids.append(n["id"])
+    # round 8: reveal vectors (`reveal:<unit>`), what one bit's "could tag it" query compares; x00's lands on a's note
+    reveal = {}
+    for uid, v in zip(list(ids), list(rows)):
+        r = v + 0.3 * rng.normal(size=384)
+        reveal[uid] = r / np.linalg.norm(r)
+    reveal["unit:x001"] = reveal["unit:a1"] + 0.05 * rng.normal(size=384)
+    reveal["unit:x001"] /= np.linalg.norm(reveal["unit:x001"])
+    for uid, r in reveal.items():
+        ids.append("reveal:" + uid.split(":", 1)[1])
+        rows.append(r)
     cache_kb.mkdir(parents=True, exist_ok=True)
     (cache_kb / "vectors_ids.json").write_text(json.dumps(ids), encoding="utf-8")
     np.asarray(rows, dtype=np.float32).tofile(cache_kb / "vectors.f32")
@@ -608,6 +699,43 @@ def coverage(py: str, app: dict) -> list[str]:
                "today: minutes in testing": bool(td["minutes"]["n_testing"])}
     checks["jokes: the hidden view keeps the attached note"] = any(
         x["id"] == "joke:x05" for x in get("/api/jokes?limit=5000&include_hidden=1")["items"])
+    # round 8: one bit's connections and map, one set list, one of his sets
+    con = {g["key"]: g["items"] for g in get("/api/jokes/joke:a/connections?cap=20")["groups"]}
+    checks["connections: a confirmed tag, a tag by the reveal, next by tape, same shape"] = bool(
+        any(x.get("source") == "inferred" for x in con["tags"]) and any("reveal_query" in x["basis"] for x in con["tags"])
+        and any("back_to_back" in x["basis"] for x in con["next"]) and con["same_shape"])
+    cd = get("/api/jokes/joke:d/connections")
+    cdg = {g["key"]: g["items"] for g in cd["groups"]}
+    checks["connections: a callback, a chunk, a persona and the stage trend"] = bool(
+        cdg["callbacks"] and any("chunk" in x["basis"] for x in cdg["same_world"])
+        and any(x.get("personas") for x in cdg["same_world"]))
+    cb = {g["key"]: g["items"] for g in get("/api/jokes/joke:b/connections")["groups"]}
+    checks["connections: another angle, his note, a trend"] = bool(cb["contrasts"]) and bool(
+        get("/api/jokes/joke:b/connections")["land_harder"]) and get("/api/jokes/joke:a/connections")["stage_trend"]["trend"]
+    mp = {g["key"]: g["items"] for g in get("/api/jokes/joke:a/map")["groups"]}
+    checks["map: next, a tag with its line, the same world, an older version"] = bool(
+        mp["next"] and mp["tags"] and mp["tags"][0]["quote"] and mp["same_world"] and mp["versions"])
+    subj = [x for k in ("a", "b", "c", "d", "x00", "x01", "x03") for x in
+            {g["key"]: g["items"] for g in get(f"/api/jokes/joke:{k}/map")["groups"]}["same_world"] if "subject" in x]
+    checks["map: a same-subject bit (the similarity band computed past 50 bits)"] = bool(subj)
+    bv = get("/api/boards/sb:old")
+    checks["board: a jump, a closer note, best next with a reason"] = bool(
+        any(t["label"] == "jump" for t in bv["health"]["transitions"])
+        and any(c["rule"] == "closer" for c in bv["health"]["checks"]) and bv["best_next"])
+    bb = get("/api/boards/sb:seed1/build")
+    checks["build: steps with text, next cards"] = bool(bb["steps"] and bb["steps"][0]["text"] and bb["next"])
+    ms_ = get("/api/mysets/ws:main")
+    checks["myset: tough spots with actions, a tape that lines up, versions"] = bool(
+        any(sp["actions"] for b_ in ms_["bits"] for sp in b_["tough"]) and ms_["tapes"]["n"] and len(ms_["versions"]) > 1)
+    wsd = get("/api/workingsets/ws:main")
+    checks["workingset: try tonight with ids, a last night, a perfected score with rows"] = bool(
+        wsd["try_tonight"] and all("id" in t for t in wsd["try_tonight"])
+        and any(b_["last_night"] for b_ in wsd["bits"]) and wsd["perfected"]["bits"])
+    wb = get("/api/workingsets/ws:main/bits/joke:a")
+    checks["workingset bit: wording effects and night-to-night changes"] = bool(
+        wb["wording"]["effects"] and wb["wording"]["changes"] and wb["best_night"])
+    rl = get("/api/notebook/related?q=niece")
+    checks["related: cards with a line and a reason"] = bool(rl["items"] and rl["items"][0]["quote"] and rl["items"][0]["why"])
     sr = get("/api/search?q=niece")
     checks["search: vectors, bits with the matched line, moments"] = bool(
         sr["vectors"] and sr["bits"] and any(b["why"] for b in sr["bits"]) and get("/api/search?q=traffic")["moments"])
@@ -819,9 +947,17 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in search + similar + hybrid]
         # round 7: the creative lists over the bundle's stores (no write of his yet), and their refusals
         reqs += [(p, "GET", p, app) for p in CREATIVE_LISTS]
+        reqs += [(p, "GET", p, app) for p in CREATIVE_IDS]
+        reqs += [(p, "GET", p, app) for p in STORE_READS]
+        reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
+                 ("workingsets signed out", "GET", "/api/workingsets", {})]
+        reqs += [("board signed out", "GET", "/api/boards/sb:old", {}),
+                 ("connections signed out", "GET", "/api/jokes/joke:a/connections", {})]
         reqs += [("tonight signed out", "GET", "/api/tonight/screen", {}), ("settings signed out", "GET", "/api/settings", {})]
-        reqs += [("proxied connections", "GET", "/api/jokes/joke:a/connections", app),
-                 ("proxied clips", "GET", f"/api/sets/set:{SX}/clips", app)]
+        # round 8: a set's clips (one with a clips file, one without, a miss)
+        reqs += [(p, "GET", p, app) for p in (f"/api/sets/set:{SX}/clips", f"/api/sets/set:{SY}/clips",
+                                              "/api/sets/set:nope/clips", "/api/sets/joke:a/clips",
+                                              f"/api/sets/set:{SX}/clips?include_hidden=1")]
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
                  ("health signed out", "GET", "/api/health", {}),
                  ("health bad token", "GET", "/api/health", {"Authorization": "Bearer x.y.z"}),
@@ -933,7 +1069,7 @@ def main() -> int:
         # of his), one archived, his settings, a set made and one deleted, a "not a joke?" he keeps, the worker's claim
         def cwrite(m: str, p: str, b: dict, h: dict | None = None) -> dict:
             st_, _, body_ = call(rs, m, p, h or app, b)
-            if st_ not in (200, 201, 204):
+            if st_ not in (200, 201, 202, 204):
                 raise SystemExit(f"{m} {p} through pk-api: HTTP {st_} {body_[:300]!r}")
             return json.loads(body_) if body_ else {}
 
@@ -962,8 +1098,24 @@ def main() -> int:
         cwrite("POST", "/api/mysets", {"title": "One minute", "target_s": 60, "joke_ids": ["joke:a"]})
         cwrite("PATCH", "/api/mysets/ws:old", {"delete": True})
         again("after his sets", ["/api/mysets"])
+        mine = [x["id"] for x in json.loads(call(py, "GET", "/api/mysets", app)[2])["sets"]]
+        again("round 8, after the writes", [f"/api/boards/{q_(b1, safe='')}", f"/api/boards/{q_(b1, safe='')}/build",
+                                            f"/api/boards/{q_(b2, safe='')}", f"/api/boards/{q_(b2, safe='')}/build",
+                                            "/api/mysets/ws:old"]
+              + [f"/api/mysets/{q_(m_, safe='')}" for m_ in mine]
+              + [f"/api/mysets/{q_(m_, safe='')}/trim?target_s={t_}" for m_ in mine for t_ in (60, 300)])
         cwrite("POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "joke:x09"})
-        again("after a keep", ["/api/tonight/screen", "/api/tonight/screen?include_hidden=1"])
+        again("after a keep", ["/api/tonight/screen", "/api/tonight/screen?include_hidden=1",
+                               "/api/suggestions/not-a-joke", "/api/suggestions/not-a-joke?include_hidden=1"])
+        # round 8: his voice profile saved twice (the previous rides along), a draft dismissed, a job queued
+        cwrite("PUT", "/api/profile/voice", {"text": "I talk fast and land on the last word."})
+        cwrite("PUT", "/api/profile/voice", {"text": "I talk fast, then I wait.\nShort lines."})
+        cwrite("POST", "/api/profile/voice/learn", {"dropped": [{"text": "A drafted line he passed on.", "bit": "joke:a"}]})
+        job = cwrite("POST", "/api/riff", {"idea": "parking meters that talk back", "lines": ["a line of his"]})
+        again("round 8, after his profile and a job", ["/api/profile/voice", f"/api/jobs/{q_(job['job']['id'], safe='')}",
+                                                       "/api/workingsets", "/api/workingsets/ws:main"]
+              + [f"/api/workingsets/{q_(m_, safe='')}" for m_ in mine]
+              + [f"/api/workingsets/{q_(m_, safe='')}/nights" for m_ in mine[:2]])
         cwrite("POST", "/api/worker/claim", {"kinds": ["riff"], "worker": "t9-worker", "hosted": True},
                tok(realm_access={"roles": ["worker"]}))
         again("after a claim", ["/api/tonight/screen"])
@@ -1001,7 +1153,11 @@ def main() -> int:
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
                       "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}",
                       "/api/jokes", "/api/today", "/api/search", "/api/jokes/{id}/similar", "/api/settings",
-                      "/api/boards", "/api/mysets", "/api/tonight/screen"):
+                      "/api/boards", "/api/mysets", "/api/tonight/screen", "/api/boards/{id}", "/api/boards/{id}/build",
+                      "/api/mysets/{id}", "/api/mysets/{id}/trim", "/api/jokes/{id}/connections", "/api/jokes/{id}/map",
+                      "/api/profile/voice", "/api/suggestions/not-a-joke", "/api/jobs/{id}", "/api/workingsets",
+                      "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
+                      "/api/notebook/related", "/api/sets/{id}/clips"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)
@@ -1009,9 +1165,9 @@ def main() -> int:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
                        if ln.startswith("pk_http_requests_total{"))
         n0 = counted()
-        call(rs, "GET", "/api/jokes/joke:a/connections", app)
+        call(rs, "GET", "/api/merge/candidates", app)
         if counted() != n0:
-            problems.append("pk-api counted a forwarded request (/api/jokes/<id>/connections): the fallback must count nothing")
+            problems.append("pk-api counted a forwarded request (/api/merge/candidates): the fallback must count nothing")
         # and the model was used here: pk-api's own search answered with vectors, not words only
         if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
             problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")

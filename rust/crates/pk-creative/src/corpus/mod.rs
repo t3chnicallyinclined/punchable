@@ -380,6 +380,8 @@ pub struct Corpus {
     pub vectors: Arc<Vectors>,
     /// `insights.json` (`self.insights = insights or {}`; `Null` when there is none).
     pub insights: Value,
+    /// Each set's `meta.json` by set key (`self.metas`).
+    pub metas: HashMap<String, Value>,
 }
 
 impl Corpus {
@@ -395,6 +397,7 @@ impl Corpus {
         };
         c.build_graph(p.graph, &p.decisions, &p.inferred);
         c.build_sets(&p.analyses, &p.metas);
+        c.metas = p.metas;
         c
     }
 

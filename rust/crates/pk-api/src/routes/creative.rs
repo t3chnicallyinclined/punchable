@@ -22,7 +22,10 @@ use crate::snapshot::Data;
 use crate::state::AppState;
 
 /// A store's items for this request, or the 500 the Python's exception would be.
-async fn items_of(st: &AppState, which: fn(&crate::creative::Stores) -> &Replayed) -> Result<Arc<Items>, ApiError> {
+pub(super) async fn items_of(
+    st: &AppState,
+    which: fn(&crate::creative::Stores) -> &Replayed,
+) -> Result<Arc<Items>, ApiError> {
     let store = st.store_handle();
     which(st.stores())
         .items(store.as_deref(), &st.config().owner_id)
@@ -32,7 +35,7 @@ async fn items_of(st: &AppState, which: fn(&crate::creative::Stores) -> &Replaye
 
 /// The data, its notebook and a store's items: the 503 while booting first, then `?backend=`; the store's lines are
 /// read right after this request's `meta:state` read, while the data and the notebook are made ready.
-async fn corpus_and_items(
+pub(super) async fn corpus_and_items(
     st: &AppState,
     q: &Query,
     which: fn(&crate::creative::Stores) -> &Replayed,
@@ -78,7 +81,7 @@ pub async fn mysets(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiR
 }
 
 /// `memolink.flagged(v)`: a triage verdict that makes a "not a joke?" suggestion.
-fn flagged(v: &Map<String, Value>) -> bool {
+pub(super) fn flagged(v: &Map<String, Value>) -> bool {
     const NOTJOKE_MIN: f64 = 0.75;
     const EMPTY_CHARS: f64 = 60.0;
     let conf = pk_creative::corpus::num(Some(v.get("confidence").unwrap_or(&json!(0)))).unwrap_or(0.0);
@@ -124,6 +127,26 @@ fn worker_never_seen(st: &AppState) -> Value {
 /// The path of the judge's verdicts.
 const SUGGEST_JUDGE: &str = "kb/creative/suggest_judge.json";
 
+/// The judge's verdicts file of this generation (`suggest_api.judged`): `None` when there is none, or when it cannot be
+/// read (the Python's `except (OSError, ValueError)` counts nothing).
+pub(super) async fn judge_text(st: &AppState, d: &Data) -> Option<Arc<str>> {
+    let sha = d.files.get(SUGGEST_JUDGE)?;
+    match st
+        .src_texts()
+        .get(
+            st.store_handle().as_deref(),
+            &[(SUGGEST_JUDGE.to_string(), sha.clone())],
+        )
+        .await
+    {
+        Ok(mut t) => t.remove(SUGGEST_JUDGE),
+        Err(e) => {
+            tracing::warn!("reading {SUGGEST_JUDGE}: {e}; nothing flagged");
+            None
+        }
+    }
+}
+
 /// `GET /api/tonight/screen` (`say_api.tonight_screen`): the whole Tonight tab in one call: tonight's list, the
 /// newest set, the suggested questions, how many "not a joke?" suggestions wait, the worker and the counts. The
 /// worker's status is the Python process's memory of its last claim until T10: asked of the Python
@@ -150,24 +173,7 @@ pub async fn tonight_screen(
     });
     let (idx, c) = tokio::try_join!(d.index(q.include_hidden()), d.corpus(&st))?;
     let (boards, kept) = super::finish(stores).await??;
-    let judge = match d.files.get(SUGGEST_JUDGE) {
-        // `suggest_api.judged`: a file that cannot be read counts nothing (its `except (OSError, ValueError)`)
-        Some(sha) => match st
-            .src_texts()
-            .get(
-                st.store_handle().as_deref(),
-                &[(SUGGEST_JUDGE.to_string(), sha.clone())],
-            )
-            .await
-        {
-            Ok(mut t) => t.remove(SUGGEST_JUDGE),
-            Err(e) => {
-                tracing::warn!("tonight: reading {SUGGEST_JUDGE}: {e}; nothing to sort counted");
-                None
-            }
-        },
-        None => None,
-    };
+    let judge = judge_text(&st, &d).await;
     // `time.strftime` on the Python pod: its local day
     let now = chrono::Local::now();
     let (date, weekday) = (now.format("%Y-%m-%d").to_string(), now.format("%A").to_string());

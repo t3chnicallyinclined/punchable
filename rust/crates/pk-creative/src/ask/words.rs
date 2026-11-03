@@ -24,6 +24,11 @@ static STOP: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         .collect()
 });
 
+/// Whether `w` is one of the notebook's `STOP` words.
+pub fn is_stop(w: &str) -> bool {
+    STOP.contains(w)
+}
+
 /// `KEEP_SHORT`: two-letter words that are subjects.
 const KEEP_SHORT: [&str; 12] = ["ai", "tv", "dj", "pc", "uk", "la", "ny", "gf", "bf", "ex", "go", "us"];
 
