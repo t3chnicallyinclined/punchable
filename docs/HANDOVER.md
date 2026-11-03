@@ -239,6 +239,13 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    regex Ingress (prepared; check ingress-nginx's host-wide `use-regex` first). Not done this round: `/api/jokes` and
    `/api/today` (need the creative Corpus built from `srcfile` rows inside pk-api; `/api/today`'s `inbox` count is the
    Python pod's own upload folder, T10), `/api/search` + `/similar`. Exact next steps: RUST_WORKSTREAM T9 row.
+   **Round 5 (branch `rust/t9-round5`, not merged, not deployed):** pk-api also answers `/api/jokes` (the Bits list:
+   filters, the attached-note filter over the merges store, the five sorts, each row's duration from the creative
+   notebook, which pk-api now builds from the `srcfile` rows once per generation) and `/api/today` (the older feed plus
+   `today.build`, with the working-set reads ported into `pk-creative/src/today.rs`). `?q=&mode=hybrid` is still
+   forwarded to the Python (it needs the model). 147/147 equal; the only allow-list entry is Today's `inbox` (the
+   Python pod's upload folder until T10; the app does not read it). Under the write-heavy load on the owner's PC (another build running, compare within a run), p50 / p95 Python vs pk-api: `/api/today` 3,937 / 4,261 vs 75 / 92 ms, `/api/jokes` 58 / 135 vs 11 / 17 ms; memory peak 519 vs 146 MiB. The still-forwarded creative and search routes were slower behind pk-api in the same run (e.g. `/api/settings` p95 256 vs 522 ms; causes INFERRED, in the T9 row). Not done: `/api/search`, `/similar`,
+   `/api/jokes?mode=hybrid` (pk-embed in pk-api); exact next steps in the RUST_WORKSTREAM T9 row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):
