@@ -285,6 +285,9 @@ older, different rule the pk-creative goldens pin ("Mabel's (upstairs)" -> "Mabe
     responses (`ask_api.worker_status`).
   - `transcriber`: how many queued jobs wait for a transcript from the phone (`waiting`), and the note shown.
   - Hosted, gsync runs on his PC, so the pod has no gsync files until the worker reports them (not built).
+- **`GET /api/ai/worker`** (read-only, app auth): the same `ai.worker` object alone (`worker_status`), with no store,
+  no corpus and no lock. The app does not call it: the Rust API (pk-api, T9) asks it while it builds
+  `GET /api/tonight/screen`, because the last claim lives in this process's memory until the worker routes move (T10).
 
 ## Voice profile (2026-10-28, `profile_api.py`)
 His voice profile is **data in the database**, the single source of truth for every writing prompt (riff, punch-up,

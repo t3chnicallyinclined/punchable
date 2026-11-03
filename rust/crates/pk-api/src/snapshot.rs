@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write as _;
 use std::sync::Arc;
 
-use pk_creative::corpus::Corpus;
+use crate::creative::GenCorpus;
 use pk_kb::{Decision, View};
 use pk_store::{DecisionRow, EdgeRow, NodeRow, Snapshot, Store, StoreError, from_db, vars};
 use serde_json::{Map, Value, json};
@@ -128,7 +128,7 @@ pub struct Data {
     /// The service's one-at-a-time bound on CPU builds (`AppState::cpu`).
     cpu: Arc<Semaphore>,
     /// The notebook (`Creative.corpus`), built on first use: one per generation, the same in both views.
-    corpus: OnceCell<Arc<Corpus>>,
+    corpus: OnceCell<Arc<GenCorpus>>,
 }
 
 /// One view of a generation and its index, each built at most once, on first use, in `spawn_blocking`.
@@ -267,7 +267,7 @@ impl Data {
     /// The notebook over this generation (`Creative.corpus`: the API's files and every decision line), built once
     /// per generation like [`Data::view`]: the files it lacks are read by key first, then the build runs under the
     /// CPU permit. The Python rebuilds it on every decision too (its cache key holds the decision count).
-    pub async fn corpus(self: &Arc<Self>, st: &crate::state::AppState) -> Result<Arc<Corpus>, ApiError> {
+    pub async fn corpus(self: &Arc<Self>, st: &crate::state::AppState) -> Result<Arc<GenCorpus>, ApiError> {
         if let Some(c) = self.corpus.get() {
             return Ok(Arc::clone(c));
         }
@@ -301,7 +301,9 @@ impl Data {
                     // `cpu_build` hands back the only reference
                     let built = Arc::try_unwrap(built)
                         .map_err(|_| ApiError::internal("CorpusError", "the build result is shared"))?;
-                    built.map(Arc::new).map_err(|e| ApiError::internal("CorpusError", e))
+                    built
+                        .map(|c| Arc::new(GenCorpus::new(c)))
+                        .map_err(|e| ApiError::internal("CorpusError", e))
                 })
                 .await
                 .cloned()

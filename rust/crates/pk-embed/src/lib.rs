@@ -54,9 +54,6 @@ pub enum EmbedError {
     /// The model answered with something other than `[batch, tokens, 384]`.
     #[error("the model's output is not [batch, tokens, {DIM}]: {0}")]
     Shape(String),
-    /// An earlier call panicked while holding the session.
-    #[error("the embedder is unusable: an earlier call panicked")]
-    Poisoned,
 }
 
 /// Texts in, unit vectors out. `query` prepends [`QUERY_PREFIX`] (the `db/embedder.py` contract); the hash

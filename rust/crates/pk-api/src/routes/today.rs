@@ -14,17 +14,13 @@ use crate::state::AppState;
 /// The working set touched last, replayed from the `workingsets` store's lines (read per request: creative writes
 /// do not move the generation). `Err` is the text the Python puts in `creative_error`.
 async fn latest_ws(st: &AppState) -> Result<Option<Map<String, Value>>, String> {
-    let store = st
-        .store_handle()
-        .ok_or("ConnectionError: the database is not connected")?;
-    let lines = store
-        .creative_lines("workingsets")
-        .await
-        .map_err(|e| format!("HttpError: {e}"))?;
-    let reducer =
-        pk_creative::reducers::for_store("workingsets", &st.config().owner_id).ok_or("KeyError: 'workingsets'")?;
-    let ws = pk_creative::store::Store::replay(reducer, &lines).map_err(|e| format!("ValueError: {e}"))?;
-    Ok(pk_creative::today::latest_ws(ws.items()).cloned())
+    let store = st.store_handle();
+    let items = st
+        .stores()
+        .workingsets
+        .items(store.as_deref(), &st.config().owner_id)
+        .await?;
+    Ok(pk_creative::today::latest_ws(&items).cloned())
 }
 
 /// `GET /api/today`.

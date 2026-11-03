@@ -107,6 +107,18 @@ impl Bge {
         Ok((ok, got))
     }
 
+    /// The session, for one call. A call that panicked while holding it (a bug in the code around the run: the
+    /// runtime's own errors are `Err`, and a panic cannot unwind out of its C++) leaves the mutex poisoned but the
+    /// session as it was: an ONNX Runtime session keeps no state from one run to the next. So the poison is cleared
+    /// and the next call runs, as the Python's per-call `onnxruntime` recovers; without this, one panic made the
+    /// shared model unusable until the process restarted.
+    fn session(&self) -> std::sync::MutexGuard<'_, Session> {
+        self.session.lock().unwrap_or_else(|poisoned| {
+            self.session.clear_poison();
+            poisoned.into_inner()
+        })
+    }
+
     /// One batch (already sorted, at most [`BATCH`] texts) through the tokenizer and the model; the CLS rows, unit
     /// length.
     fn run_batch(&self, session: &mut Session, texts: Vec<&str>) -> Result<Vec<Vec<f32>>, EmbedError> {
@@ -148,7 +160,7 @@ impl Embedder for Bge {
         let mut order: Vec<usize> = (0..prepared.len()).collect();
         order.sort_by_key(|&i| prepared[i].chars().count());
         let mut out = vec![Vec::new(); prepared.len()];
-        let mut session = self.session.lock().map_err(|_| EmbedError::Poisoned)?;
+        let mut session = self.session();
         for chunk in order.chunks(BATCH) {
             let rows = self.run_batch(&mut session, chunk.iter().map(|&i| prepared[i].as_str()).collect())?;
             for (&i, row) in chunk.iter().zip(rows) {
@@ -160,5 +172,50 @@ impl Embedder for Bge {
 
     fn name(&self) -> &'static str {
         MODEL_NAME
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The model from `PK_BGE_DIR`, or `None` (saying so) when it is not there; with `PK_REQUIRE_EXTERNAL` set a
+    /// missing model is a failure, as in `tests/goldens.rs`.
+    fn model() -> Option<Bge> {
+        let dir = std::env::var_os("PK_BGE_DIR")
+            .map(PathBuf::from)
+            .filter(|d| d.join("onnx/model.onnx").is_file());
+        let Some(dir) = dir else {
+            assert!(
+                std::env::var_os("PK_REQUIRE_EXTERNAL").is_none_or(|v| v.is_empty()),
+                "PK_REQUIRE_EXTERNAL is set and PK_BGE_DIR holds no model"
+            );
+            eprintln!("pk-embed: PK_BGE_DIR unset or without the model; skipping");
+            return None;
+        };
+        Some(Bge::load(&dir).expect("the model loads"))
+    }
+
+    #[test]
+    fn a_call_that_panicked_holding_the_session_does_not_take_the_model_down() {
+        let Some(bge) = model() else { return };
+        let before = bge.embed(&["the parking meter talks back"], true).expect("embeds");
+        // a call panics while it holds the session (what a bug around the run would do)
+        std::thread::scope(|s| {
+            let r = s
+                .spawn(|| {
+                    let _held = bge.session.lock();
+                    panic!("a bug while the session is held");
+                })
+                .join();
+            assert!(r.is_err());
+        });
+        assert!(bge.session.is_poisoned());
+        // the next call runs, gives the same vector, and the poison is gone
+        let after = bge
+            .embed(&["the parking meter talks back"], true)
+            .expect("embeds after the panic");
+        assert_eq!(before, after);
+        assert!(!bge.session.is_poisoned());
     }
 }

@@ -72,10 +72,10 @@ spec:
             # T9 only: everything pk-api does not answer goes to the Python Service unchanged
             - { name: PK_PYTHON_URL, value: "http://punchable-api.punchable.svc.cluster.local" }
             - { name: RUST_LOG, value: info }
-            # search's query and passage vectors (round 6), loaded on the first search, not at start. There is no
-            # pk-api Dockerfile yet: when it is written it must copy the model to this path the way
-            # rust/Dockerfile.worker does (tools/kb/fetch_bge.py). An empty folder = words-only search and a warning
-            # in the log ("PK_BGE_DIR holds no model")
+            # search's query and passage vectors (round 6), loaded on the first search, not at start. rust/Dockerfile.api
+            # (round 7) puts the model at this path (tools/kb/fetch_bge.py, as rust/Dockerfile.worker does). An empty
+            # folder (built with PK_WITH_BGE=0) = words-only search and a warning in the log ("PK_BGE_DIR holds no
+            # model")
             - { name: PK_BGE_DIR, value: /opt/punchable/models/bge-small-en-v1.5 }
           envFrom:
             # SURREAL_API_USER / SURREAL_API_PASS (database EDITOR, never root) and SENTRY_DSN: the same Secrets
@@ -138,6 +138,15 @@ spec:
           # round 5 (GET-only on the Python too): the Today feed (its `inbox` count is the Python pod's upload folder until
           # T10; the app does not read it)
           - { path: /api/today, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 7: the creative lists. /api/settings (PATCH), /api/boards (POST) and /api/mysets (POST) carry writes
+          # on the Python: an exact path moves every method, and pk-api forwards each write unchanged (`read_route`'s
+          # fallback), so nothing is swallowed. /api/tonight/screen asks the Python for the worker's status
+          # (GET /api/ai/worker, added in the same commit): DEPLOY THE PYTHON API WITH THAT ROUTE FIRST, or the
+          # Tonight screen answers 502 until it is there.
+          - { path: /api/settings, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/boards, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/mysets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/tonight/screen, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each

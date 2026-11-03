@@ -295,3 +295,7 @@ def test_connections_status(api):
     assert st in (200, 204)
     w = a.get("/api/connections")[1]["ai"]["worker"]
     assert w["online"] is True and w["name"] == "HOME-PC" and w["last_seen"]
+    # the same status alone (what the Rust API asks for while it builds the Tonight screen)
+    st, alone = a.get("/api/ai/worker")
+    assert st == 200 and alone == w
+    assert a.get("/api/tonight/screen")[1]["worker"] == alone

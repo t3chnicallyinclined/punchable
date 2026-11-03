@@ -59,6 +59,7 @@ struct Inner {
     transcripts: crate::tape::TranscriptCache,
     src_texts: crate::creative::SrcTexts,
     attached: crate::creative::Attached,
+    stores: crate::creative::Stores,
     model: crate::embed::Model,
 }
 
@@ -118,6 +119,7 @@ impl AppState {
             transcripts: crate::tape::TranscriptCache::default(),
             src_texts: crate::creative::SrcTexts::default(),
             attached: crate::creative::Attached::default(),
+            stores: crate::creative::Stores::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
         }))
     }
@@ -193,6 +195,11 @@ impl AppState {
         &self.0.attached
     }
 
+    /// The creative stores the reads replay, each with its last replay.
+    pub fn stores(&self) -> &crate::creative::Stores {
+        &self.0.stores
+    }
+
     /// The cloud cache; held across a build, so two misses build once.
     pub fn cloud_cache(&self) -> &tokio::sync::Mutex<Option<CloudCache>> {
         &self.0.cloud
@@ -231,6 +238,16 @@ impl AppState {
     /// Whether data has been served (the routes answer; before that, the boot status does).
     pub fn loaded(&self) -> bool {
         self.boot(|b| b.loaded)
+    }
+
+    /// The Python's booting answer (`if not self.kbs: return self.booting(path)`) for a route that reads no
+    /// generation (the creative stores only): the 503 before the first load, else nothing to wait for.
+    pub fn require_loaded(&self) -> Result<(), ApiError> {
+        if self.cached().is_some() {
+            Ok(())
+        } else {
+            Err(self.booting_error())
+        }
     }
 
     fn booting_error(&self) -> ApiError {
