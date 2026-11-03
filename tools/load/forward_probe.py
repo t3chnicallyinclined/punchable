@@ -14,8 +14,12 @@ the hop through pk-api:
 
 Since T10 a route may be a write, `POST /api/ideas` (a fresh jot per call), `POST /api/sets/transcript` (a fresh
 transcript per call, 202), `POST /api/jokes/{joke}/versions` (a fresh version), `POST /api/decision:{joke}` (a title
-edit with a counter: never "nothing changed"); a write is asked of both servers at the same rate like a read, each
-with its own fresh body, so the gate is the same: at or below the Python at the same request rate.
+edit with a counter: never "nothing changed"); since T10 round 2 also `POST /api/review/rate:{perf}` (a rating that
+alternates per call on a moment of the thread's own), `POST /api/tonight:{joke}` (a list that alternates per call),
+`PATCH /api/settings` (a switch flipped per call), `POST /api/boards` (a fresh list), `PATCH /api/boards/{board}` (a
+title with a counter), `POST /api/workingsets/{set}/try` (a fresh note), `POST /api/profile/voice/learn` (a fresh dismissed draft); a write is asked of both servers at the same
+rate like a read, each with its own fresh body, so the gate is the same: at or below the Python at the same request
+rate.
 
 Only loopback bases are accepted (the writes are for a scratch database). Prints p50 / p95 / max ms per route and
 column, and the via-minus-direct difference of the medians.
@@ -87,8 +91,9 @@ def split_route(route: str) -> tuple[str, str]:
     return "GET", route
 
 
-def body_for(path: str, col: str, w: int, i: int) -> bytes | None:
-    """A fresh body per call for the write routes (T10), so no two calls collide and no edit is "nothing changed"."""
+def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None:
+    """A fresh body per call for the write routes (T10), so no two calls collide and no edit is "nothing changed".
+    `turn` is the call's place in its thread's order on that route (the columns alternate per round)."""
     tag = f"{col} {w}-{i}"
     if path == "/api/ideas":
         return json.dumps({"text": f"probe jot {tag}: the parking meter that talks back at number {w * 1000 + i}."}).encode()
@@ -99,7 +104,27 @@ def body_for(path: str, col: str, w: int, i: int) -> bytes | None:
     if path.startswith("/api/decision:"):
         return json.dumps({"target": "node", "id": path.split(":", 1)[1], "action": "edit",
                            "after": {"title": f"Probe title {tag}"}}).encode()
+    # T10 round 2: a call's rating and list alternate with the call, so no two calls in a row on the same moment or
+    # list say the same thing
+    if path.startswith("/api/review/rate:"):
+        return json.dumps({"perf": path.split(":", 1)[1], "rating": ["killed", "worked", "meh", "died"][turn % 4]}).encode()
+    if path.startswith("/api/tonight:"):
+        return json.dumps({"items": [{"joke": path.split(":", 1)[1], "done": turn % 2 == 1}]}).encode()
+    if path == "/api/settings":
+        return json.dumps({"training": turn % 2 == 1}).encode()
+    if path == "/api/boards":
+        return json.dumps({"title": f"Probe list {tag}", "joke_ids": []}).encode()
+    if path.startswith("/api/boards/"):
+        return json.dumps({"title": f"Probe list {tag}"}).encode()
+    if path.endswith("/try"):
+        return json.dumps({"text": f"probe try note {tag}"}).encode()
+    if path == "/api/profile/voice/learn":
+        return json.dumps({"dropped": [f"probe draft passed over {tag}"]}).encode()
     return None
+
+
+PERFS: list[str] = []
+JOKES: list[str] = []
 
 
 def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> dict:
@@ -115,19 +140,24 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
         for i in range(n):
             for k, route in enumerate(ROUTES):
                 method, path = split_route(route)
+                if "{perfs}" in path:
+                    path = path.replace("{perfs}", PERFS[w % len(PERFS)])
+                if "{jokes}" in path:
+                    path = path.replace("{jokes}", JOKES[w % len(JOKES)])
                 order = [("direct", d), ("via", v)]
                 if (i + k + w) % 2:
                     order.reverse()
-                for col, c in order:
+                for turn_in_round, (col, c) in enumerate(order):
                     try:
-                        body = body_for(path, col, w, i) if method != "GET" else None
-                        took, status = c.call(method, path.split(":", 1)[0] if path.startswith("/api/decision:") else path, body)
+                        body = body_for(path, col, w, i, 2 * i + turn_in_round) if method != "GET" else None
+                        colon = any(path.startswith(x) for x in ("/api/decision:", "/api/review/rate:", "/api/tonight:"))
+                        took, status = c.call(method, path.split(":", 1)[0] if colon else path, body)
                     except Exception as e:  # noqa: BLE001
                         with lock:
                             errors.append(f"{col} {route}: {e}")
                         continue
                     with lock:
-                        if status not in (200, 202):
+                        if status not in (200, 201, 202):
                             errors.append(f"{col} {route}: HTTP {status}")
                         else:
                             out.setdefault((route, col), []).append(took)
@@ -201,14 +231,28 @@ def main() -> int:
         global ROUTES
         ROUTES = a.routes.split(",")
         sources = {"{joke}": ("/api/jokes?limit=40", "items"), "{board}": ("/api/boards", "boards"),
-                   "{set}": ("/api/mysets", "sets")}
-        for ph, (path, key) in sources.items():
-            if not any(ph in r for r in ROUTES):
-                continue
+                   "{set}": ("/api/mysets", "sets"), "{perf}": ("/api/sets", "sets")}
+
+        def fetch(path: str):
             c = Conn(pair["python"])
             c.c = http.client.HTTPConnection(c.host, c.port, timeout=120)
             c.c.request("GET", path)
-            ids = [x["id"] for x in json.loads(c.c.getresponse().read())[key]]
+            return json.loads(c.c.getresponse().read())
+
+        for ph, (path, key) in sources.items():
+            if not any(ph in r for r in ROUTES):
+                continue
+            if ph == "{perf}":
+                # the moments of the first sets with an analysis: `perf:<set key>@<start_ms>`, one per thread
+                ids = []
+                for s_ in fetch(path)[key]:
+                    rows = fetch(f"/api/sets/{urllib.parse.quote(s_['id'], safe=':')}/analysis")
+                    # a row names its moment (`perf`) and the bit it is matched to (`joke`, an object)
+                    ids += [r_["perf"] for r_ in rows.get("rows") or [] if r_.get("perf") and r_.get("joke")]
+                    if len(ids) >= 64:
+                        break
+            else:
+                ids = [x["id"] for x in fetch(path)[key]]
             if not ids:
                 raise SystemExit(f"{path} has nothing to put in {ph}")
             k = 0
@@ -217,11 +261,20 @@ def main() -> int:
                 if ph in r:
                     # a write names its bit in the path (`/api/jokes/{joke}/versions`) or after the colon
                     # (`/api/decision:{joke}`): the colon form keeps the id out of the URL
-                    quoted = urllib.parse.quote(ids[k % len(ids)], safe=":") if "/api/decision:" not in r else ids[k % len(ids)]
+                    # a moment or a tonight list is the thread's own (`{perf}` / a colon `{joke}` are replaced per worker
+                    # in `run_phase`), never shared
+                    pick = "{perfs}" if ph == "{perf}" else ("{jokes}" if "/api/tonight:" in r else ids[k % len(ids)])
+                    quoted = urllib.parse.quote(pick, safe=":{}") if not any(x in r for x in ("/api/decision:", "/api/review/rate:", "/api/tonight:")) else pick
                     r = r.replace(ph, quoted)
                     k += 1
                 out.append(r)
             ROUTES = out
+            if ph == "{perf}":
+                global PERFS
+                PERFS = ids
+            if ph == "{joke}":
+                global JOKES
+                JOKES = ids
     res = {}
     for ph in a.phases.split(","):
         name, _, n = ph.partition(":")  # conc:4 / writes:1 = that many threads instead of --conc

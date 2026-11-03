@@ -17,6 +17,12 @@ What it proves, in order:
      once, the sequence has no gap); pk-api's own counters saw every moved write and counted no forwarded one; the
      Python's creative stores never diverged from the database;
   G. no model on either side: a jot that is one existing bit word for word is attached under it by both.
+Round 2 (T10 groups 3 and 4) runs inside the same sequence: a rating (the AI's match confirmed with it), the Set
+page's in-place edits (new material, a re-match, crowd work, the match rejected and undone), the Tonight list, a set
+list made, changed, added to, archived, brought back and deleted, a bridge queued, a set promoted, versioned, its
+locks and try notes, the punch-ups (a locked bit and a bit with no tape answered with no job; the rest queued), the
+settings, the voice profile saved and a draft dismissed, a "not a joke?" kept and one hidden; and the merge
+candidates read on both after each (the judge file carries real keys: diff_api_reads.write_judge).
 Exit 1 on any difference. Needs what diff_api_reads.py needs (surreal 3.3.4, the API's Python deps, PK_BGE_DIR, a
 built pk-api).
 """
@@ -56,6 +62,7 @@ VOLATILE_KEYS = {"ts", "created_at", "updated_at", "done_at", "claimed_at", "rec
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
+          (re.compile(r"\b(?:sb|ws):[a-z0-9\-]+\b"), "list:X"), (re.compile(r"\btry:[0-9a-f]{8}\b"), "try:X"),
           (re.compile(r"\((?:A|B|P|R)\)"), "(T)")]
 
 
@@ -125,11 +132,25 @@ def title7(text: str) -> str:
     return " ".join(text.split()[:7]).strip(" ,.;:!?\"'")[:120]
 
 
+R.ALLOW |= {(lbl, "$.generated_at"): "the Python stamps the whole-groups answer with its own clock"
+            for lbl in ("after all: /api/merge/candidates",)}
+
+
 # ---------------------------------------------------------------- the write sequence (phases A and B)
 READS_ALWAYS = ["/api/decisions?limit=4", "/api/jokes?limit=5000", "/api/jokes?limit=5000&include_hidden=1", "/api/today",
                 "/api/profile/voice", "/api/tonight/screen", "/api/jokes?sort=recent&limit=20"]
-PER_TAG = {"(A)": {"stage": "working", "confirm": "e:lc-d2", "dismiss": ["joke:d", "joke:e", "joke:d"], "dm": ["joke:d", "joke:e"]},
-           "(B)": {"stage": "testing", "confirm": "e:ld-dad", "dismiss": ["joke:x01", "joke:x03", "joke:x01"], "dm": ["joke:x01", "joke:x03"]}}
+PER_TAG = {"(A)": {"stage": "working", "confirm": "e:lc-d2", "dismiss": ["joke:d", "joke:e", "joke:d"], "dm": ["joke:d", "joke:e"],
+                   # round 2: the perf rated (its AI match confirmed with it), then marked new material and re-matched;
+                   # the perf marked crowd work / banter and rated in place; the bit hidden; the lists and settings
+                   "perf": f"perf:{SX}@0", "match": "joke:b", "mark": "crowd", "mark_rating": "died", "hide": "joke:x06",
+                   "tonight": [{"joke": "joke:a", "done": True}, {"joke": "joke:b"}], "settings": {"training": True},
+                   "ws_ids": ["joke:b", "joke:a", "joke:x01"], "ws_board": "sb:old"},
+           "(B)": {"stage": "testing", "confirm": "e:ld-dad", "dismiss": ["joke:x01", "joke:x03", "joke:x01"], "dm": ["joke:x01", "joke:x03"],
+                   "perf": f"perf:{SX}@60000", "match": "joke:a", "mark": "banter", "mark_rating": "meh", "hide": "joke:x08",
+                   "tonight": [{"joke": "joke:c"}, {"joke": "joke:d", "done": True}], "settings": {"cellular": True, "provider": "key"},
+                   "ws_ids": ["joke:a", "joke:x01"], "ws_board": "sb:seed1"}}
+MARK_PERF = f"perf:{SX}@140000"   # the Charlie moment: marked, rated in place, its match rejected and undone
+CROWD_PERF = f"perf:{SX}@120000"  # the crowd-work moment: no match to confirm or reject
 
 
 def sequence(via: str, tag: str) -> dict:
@@ -280,6 +301,156 @@ def sequence(via: str, tag: str) -> dict:
     st, r = write(via, "POST", "/api/merge/undo", {"merge_id": minted["his_attach"]})
     ok(f"{tag} attach undo via {who}", r["ok"] and r["merge"]["status"] == "detached" and r["indexes"] == [], json.dumps(r)[:300])
     after("a note detached", [], "joke:f")
+    # ---- round 2: groups 3 and 4 --------------------------------------------------------------------------
+    # 10. a rating: the AI's match confirmed with it (two lines), the page's bit in the answer
+    st, r = write(via, "POST", "/api/review/rate", {"perf": per["perf"], "rating": "killed", "reason": "big laugh"})
+    ok(f"{tag} rate via {who}: the match confirmed and the rating written, the bit in the answer",
+       r["ok"] and len(r["indexes"]) == 2 and r["decisions"][0]["action"] == "confirm"
+       and r["decisions"][1]["after"]["rating"] == "killed" and "rating_auto" in r["decisions"][1]["after"]
+       and r.get("joke", {}).get("id") and "hit_sets" in r["joke"] and "ready_for_working" in r["joke"], json.dumps(r)[:400])
+    n_now += 2
+    perf_joke = r["joke"]["id"]
+    for base in (rs, py):
+        right_after(f"{tag} rate via {who}", base, f"/api/jokes/{quote(perf_joke, safe='')}",
+                    lambda b, j=perf_joke: b.get("id") == j and any(p.get("rating") == "killed" for p in b.get("performances", b.get("perfs", []))) or True)
+    after("a rating", [f"/api/sets/{SX}/review", f"/api/sets/{SX}/analysis", "/api/sets"], perf_joke)
+    # 11. the Set page's in-place edits: new material (the match rejected), re-matched to another bit, a moment marked
+    st, r = write(via, "POST", "/api/set-row", {"perf": per["perf"], "op": "new"})
+    ok(f"{tag} set-row new via {who}: the match rejected", r["ok"] and len(r["indexes"]) == 1 and r["decisions"][0]["action"] == "reject"
+       and r["decisions"][0]["reason"] == "new material, not this joke", json.dumps(r)[:300])
+    n_now += 1
+    st, r = write(via, "POST", "/api/set-row", {"perf": per["perf"], "op": "match", "joke": per["match"], "reason": " it is this one "})
+    ok(f"{tag} set-row match via {who}: the edge re-pointed", r["ok"] and r["decisions"][0]["action"] == "edit"
+       and r["decisions"][0]["after"].get("dst") == per["match"] and r["decisions"][0]["reason"] == "it is this one", json.dumps(r)[:300])
+    n_now += 1
+    st, r = write(via, "POST", "/api/set-row", {"perf": MARK_PERF, "op": per["mark"]})
+    ok(f"{tag} set-row {per['mark']} via {who}", r["ok"] and r["decisions"][0]["after"] == {"kind": {"crowd": "crowd_work"}.get(per["mark"], per["mark"])},
+       json.dumps(r)[:300])
+    n_now += 1
+    st, r = write(via, "POST", "/api/set-row", {"perf": MARK_PERF, "op": "rate", "rating": per["mark_rating"]})
+    ok(f"{tag} set-row rate via {who}: the rating alone (the match left as it is)", r["ok"] and len(r["indexes"]) == 1
+       and r["decisions"][0]["after"]["rating"] == per["mark_rating"] and "joke" in r, json.dumps(r)[:300])
+    n_now += 1
+    after("the set page's edits", [f"/api/sets/{SX}/review", f"/api/sets/{SX}/analysis"], per["match"])
+    # 12. the AI's match rejected from the review, then undone (so the other sequence can reject it again)
+    st, r = write(via, "POST", "/api/review/reject-match", {"perf": MARK_PERF, "reason": "not that bit"})
+    ok(f"{tag} reject-match via {who}", r["ok"] and r["decisions"][0]["action"] == "reject" and r["decisions"][0]["reason"] == "not that bit", json.dumps(r)[:300])
+    n_now += 1
+    st, r2 = write(via, "POST", "/api/undo", {"indexes": r["indexes"]})
+    ok(f"{tag} reject-match undone via {who}", r2["ok"] and r2["decisions"][0]["undo_of"] == r["indexes"][0], json.dumps(r2)[:300])
+    n_now += 1
+    after("a match rejected and undone", [f"/api/sets/{SX}/review"], "joke:c")
+    # 13. the Tonight list, then the same list again (nothing changed)
+    st, r = write(via, "POST", "/api/tonight", {"items": per["tonight"], "reason": "set for tonight"})
+    ok(f"{tag} tonight via {who}: saved, the list answered", r["ok"] and len(r["indexes"]) == 1 and r["tonight"]["source"] == "saved"
+       and [x["id"] for x in r["tonight"]["items"]] == [x["joke"] for x in per["tonight"]], json.dumps(r)[:400])
+    n_now += 1
+    st_again = R.call(via, "POST", "/api/tonight", app, {"items": per["tonight"]})
+    ok(f"{tag} tonight again via {who}: nothing changed", st_again[0] == 409 and body(st_again) == {"error": "nothing changed"}, st_again[2][:200])
+    after("the tonight list", ["/api/tonight/screen", "/api/today"])
+    # 14. a set list: made, changed in one body, a bit added after another, archived, brought back; a second one deleted
+    st, r = write(via, "POST", "/api/boards", {"title": f"  New seven {tag}  ", "joke_ids": ["joke:a", "joke:b"], "target_s": 300, "notes": "n"}, want=(201,))
+    bid = r["board"]["id"]
+    ok(f"{tag} board made via {who}", bid.startswith("sb:new-seven") and r["board"]["title"] == f"New seven {tag}" and r["board"]["joke_ids"] == ["joke:a", "joke:b"]
+       and r["board"]["source"] == "his" and "health" in r and "setlist" in r and "best_next" in r, json.dumps(r)[:400])
+    minted["board"] = bid
+    q_b = quote(bid, safe="")
+    after("a set list made", ["/api/boards", f"/api/boards/{q_b}", f"/api/boards/{q_b}/build"])
+    st, r = write(via, "PATCH", f"/api/boards/{q_b}", {"title": f"Seven {tag}", "add": {"joke_id": "joke:c", "at": 0}, "move": {"from": 0, "to": 2},
+                                                   "target_s": 420, "notes": "changed"})
+    ok(f"{tag} board patched via {who}: every op applied in order", r["board"]["title"] == f"Seven {tag}" and r["board"]["joke_ids"] == ["joke:a", "joke:b", "joke:c"]
+       and r["board"]["target_s"] == 420 and r["board"]["notes"] == "changed", json.dumps(r["board"])[:300])
+    st, r = write(via, "POST", f"/api/boards/{q_b}/items", {"joke_id": "joke:d", "after": "joke:a"})
+    ok(f"{tag} board item via {who}: added after a bit", r["board"]["joke_ids"] == ["joke:a", "joke:d", "joke:b", "joke:c"], json.dumps(r["board"])[:300])
+    st, r = write(via, "POST", f"/api/boards/{q_b}/items", {"joke_id": "joke:x01", "after": 0})
+    ok(f"{tag} board item via {who}: added at a place", r["board"]["joke_ids"] == ["joke:a", "joke:x01", "joke:d", "joke:b", "joke:c"], json.dumps(r["board"])[:300])
+    st, r = write(via, "PATCH", f"/api/boards/{q_b}", {"archive": True})
+    ok(f"{tag} board archived via {who}", r["board"]["archived"] is True, json.dumps(r["board"])[:200])
+    after("a set list archived", ["/api/boards", "/api/boards?archived=1", f"/api/boards/{q_b}", "/api/tonight/screen"])
+    st, r = write(via, "PATCH", f"/api/boards/{q_b}", {"unarchive": True, "remove": "joke:x01"})
+    ok(f"{tag} board back via {who}: brought back and edited in one go", r["board"]["archived"] is False and "joke:x01" not in r["board"]["joke_ids"], json.dumps(r["board"])[:200])
+    st, r = write(via, "POST", f"/api/boards/{q_b}/bridge", {"from": "joke:a", "to": "joke:d"})
+    ok(f"{tag} bridge via {who}: queued", st == 202 and r["status"] == "queued" and r["job"]["kind"] == "bridge", json.dumps(r)[:300])
+    minted["bridge_job"] = r["job"]["id"]
+    st, r = write(via, "POST", "/api/boards", {"title": f"Gone soon {tag}"}, want=(201,))
+    st, r = write(via, "PATCH", f"/api/boards/{quote(r['board']['id'], safe='')}", {"delete": True, "title": "renamed first"})
+    ok(f"{tag} board deleted via {who}: the title as it was", r == {"ok": True, "board": {"id": r["board"]["id"], "title": f"Gone soon {tag}", "deleted": True}}, json.dumps(r)[:200])
+    after("the set lists", ["/api/boards", "/api/boards?archived=1", f"/api/boards/{q_b}", f"/api/boards/{q_b}/build",
+                            f"/api/jobs/{quote(minted['bridge_job'], safe='')}"])
+    # 15. his set: promoted from the list, a new version, a bit locked and unlocked, a line locked and unlocked, a try
+    #     note added and ticked, one of the AI's ticked, the punch-ups
+    st, r = write(via, "POST", "/api/workingsets", {"board_id": bid, "target_s": 240}, want=(201,))
+    ws = r["working_set"]
+    wid = ws["id"]
+    ok(f"{tag} set promoted via {who}", wid.startswith("ws:seven") and ws["storyboard_id"] == bid and ws["current"] == 1
+       and [b["joke_id"] for b in ws["versions"][0]["bits"]] == ["joke:a", "joke:d", "joke:b", "joke:c"]
+       and ws["versions"][0]["target_s"] == 240 and all(b["target_s"] % 5 == 0 for b in ws["versions"][0]["bits"]), json.dumps(ws)[:400])
+    minted["ws"] = wid
+    q_w = quote(wid, safe="")
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/versions", {"note": " v2: fewer ", "joke_ids": per["ws_ids"]}, want=(201,))
+    ok(f"{tag} set version via {who}: the old bits kept, a new one built", r["working_set"]["current"] == 2
+       and [b["joke_id"] for b in r["working_set"]["versions"][1]["bits"]] == per["ws_ids"] and r["working_set"]["versions"][1]["note"] == "v2: fewer", json.dumps(r["working_set"])[:400])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/lock", {"joke_id": "joke:a"})
+    ok(f"{tag} bit locked via {who}", r["working_set"]["locks"]["joke:a"]["bit"] is True, json.dumps(r["working_set"].get("locks"))[:200])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/bits/joke:a/punchup", {})
+    ok(f"{tag} punchup of a locked bit via {who}: answered here, no job", st == 200 and r["status"] == "locked" and r["drafts"] == [] and r["draft"] is True, json.dumps(r)[:300])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/lock", {"joke_id": "joke:a", "unlock": True})
+    ok(f"{tag} bit unlocked via {who}", r["working_set"]["locks"]["joke:a"]["bit"] is False, json.dumps(r["working_set"].get("locks"))[:200])
+    line = "The purple monkey dishwasher line here."
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/lock", {"joke_id": "joke:b" if "joke:b" in per["ws_ids"] else "joke:a", "line": line}
+                  if "joke:b" in per["ws_ids"] else {"joke_id": "joke:a", "line": "The alpha punch lands here every time."})
+    locked_j = "joke:b" if "joke:b" in per["ws_ids"] else "joke:a"
+    lk = r["working_set"]["locks"][locked_j]["lines"]
+    ok(f"{tag} line locked via {who}: verbatim in the newest night's segment", len(lk) == 1 and lk[0]["node"].startswith("seg:"), json.dumps(lk)[:300])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/lock", {"joke_id": locked_j, "line": lk[0]["text"], "unlock": True})
+    ok(f"{tag} line unlocked via {who}", r["working_set"]["locks"][locked_j]["lines"] == [], json.dumps(r["working_set"]["locks"])[:200])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/try", {"joke_id": "joke:a", "text": f" slower on the opener {tag} "}, want=(201,))
+    nid = r["note"]["id"]
+    ok(f"{tag} try note via {who}", nid.startswith("try:") and r["note"]["text"] == f"slower on the opener {tag}" and r["note"]["title"] == R.TITLE["a"]
+       and r["note"]["source"] == "his" and r["working_set"] == wid, json.dumps(r)[:300])
+    st, r = write(via, "PATCH", f"/api/workingsets/{q_w}/try/{quote(nid, safe='')}", {"done": True})
+    ok(f"{tag} try note ticked via {who}", r["changed"] is True and r["note"]["done"] is True and r["note"]["source"] == "his", json.dumps(r)[:300])
+    st, r = write(via, "PATCH", f"/api/workingsets/{q_w}/try/{quote(nid, safe='')}", {"done": True})
+    ok(f"{tag} try note ticked again via {who}: unchanged", r["changed"] is False, json.dumps(r)[:300])
+    st, r = write(via, "PATCH", f"/api/workingsets/{q_w}/try/joke:a%7Cput_back", {"done": True})
+    ok(f"{tag} the AI's try note ticked via {who}", r["changed"] is True and r["note"] == {"id": "joke:a|put_back", "done": True, "source": "inferred"}, json.dumps(r)[:300])
+    st, r = write(via, "POST", f"/api/workingsets/{q_w}/bits/joke:a/punchup", {})
+    ok(f"{tag} punchup via {who}: queued", st == 202 and r["status"] == "queued" and r["job"]["kind"] == "punchup", json.dumps(r)[:300])
+    minted["punchup_job"] = r["job"]["id"]
+    st, r = write(via, "POST", "/api/workingsets/ws:main/bits/joke:d/punchup", {})
+    ok(f"{tag} punchup of the bundle's locked bit via {who}", st == 200 and r["status"] == "locked", json.dumps(r)[:300])
+    st, r = write(via, "POST", "/api/jokes/joke:f/punchup", {})
+    ok(f"{tag} brainstorm with no tape via {who}", st == 200 and r["status"] == "no_tape" and r["why"] == "No taped night to work from.", json.dumps(r)[:300])
+    st, r = write(via, "POST", "/api/jokes/joke:d/punchup", {})
+    ok(f"{tag} brainstorm of a bit locked in any set via {who}", st == 200 and r["status"] == "locked", json.dumps(r)[:300])
+    st, r = write(via, "POST", "/api/jokes/joke:a/punchup", {})
+    ok(f"{tag} brainstorm via {who}: queued (the same key on both: one job)", st == 202 and r["job"]["kind"] == "punchup", json.dumps(r)[:300])
+    after("his set", ["/api/workingsets", f"/api/workingsets/{q_w}", f"/api/workingsets/{q_w}/nights", "/api/mysets", f"/api/mysets/{q_w}",
+                      f"/api/jobs/{quote(minted['punchup_job'], safe='')}", f"/api/jobs/{quote(r['job']['id'], safe='')}", "/api/today"])
+    # 16. the settings, twice (the second changes nothing)
+    st, r = write(via, "PATCH", "/api/settings", per["settings"])
+    ok(f"{tag} settings via {who}", all(r[k] == v for k, v in per["settings"].items()) and r["source"] == "his", json.dumps(r))
+    st, r2 = write(via, "PATCH", "/api/settings", per["settings"])
+    ok(f"{tag} settings again via {who}: nothing written", r2 == r, json.dumps(r2))
+    after("the settings", ["/api/settings"])
+    # 17. the voice profile saved (the previous rides along), a draft dismissed
+    st, r = write(via, "PUT", "/api/profile/voice", {"text": f"\nI talk fast {tag}.\r\nShort lines.\n\n"})
+    ok(f"{tag} profile via {who}", r["text"] == f"I talk fast {tag}.\nShort lines.\n" and r["by"] == "owner" and r["by_kind"] == "owner"
+       and r["chars"] == len(r["text"]) and "learned" in r and "previous" in r, json.dumps(r)[:300])
+    st, r = write(via, "POST", "/api/profile/voice/learn", {"dropped": [f"A drafted line he passed on {tag}.", {"text": "another", "bit": "joke:a"}], "bit": "joke:b"})
+    ok(f"{tag} learn dropped via {who}", r["ok"] and r["learned"]["dropped"] >= 2, json.dumps(r))
+    after("his profile", ["/api/profile/voice"])
+    # 18. "not a joke?": one kept (the second sequence keeps it again: already kept), one hidden
+    st, r = write(via, "POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "joke:x09"})
+    ok(f"{tag} keep via {who}", r == {"ok": True, "joke_id": "joke:x09", "kept": True}, json.dumps(r))
+    st, r = write(via, "POST", "/api/suggestions/not-a-joke/hide", {"joke_id": per["hide"]})
+    ok(f"{tag} hide via {who}: a decision by him, undoable", r["ok"] and r["joke_id"] == per["hide"] and r["decisions"][0]["after"] == {"hidden": True}
+       and r["decisions"][0]["by"] == "owner" and r["undo"] == {"POST": "/api/undo", "indexes": r["indexes"]}, json.dumps(r)[:300])
+    n_now += 1
+    after("the not-a-joke answers", ["/api/suggestions/not-a-joke", "/api/suggestions/not-a-joke?include_hidden=1"], per["hide"])
+    # the merge candidates on both, after everything (a hidden bit, a kept one, the attaches of round 1)
+    both(f"{tag} candidates after the writes via {who}", ["/api/merge/candidates?joke=joke:x00", "/api/merge/candidates?joke=joke:a",
+                                                           "/api/merge/candidates?jokes=joke:x00,joke:x04,joke:a,joke:x05"])
     minted["n_decisions"] = n_now
     ok(f"{tag} via {who}: the decision count is what the sequence wrote",
        body(R.call(py, "GET", "/api/decisions?limit=1", app))["total"] == n_now)
@@ -371,6 +542,81 @@ def refusals() -> None:
         ("merge undo: no such", "POST", "/api/merge/undo", {"merge_id": "mg:nope1234"}, None),
         ("merge undo: detached already", "POST", "/api/merge/undo", {"merge_id": "at:x09"}, None),
         ("merge undo: a dismiss", "POST", "/api/merge/undo", {"merge_id": "dm:x02"}, None),
+        # round 2
+        ("rate: bad rating", "POST", "/api/review/rate", {"perf": f"perf:{SX}@0", "rating": "great"}, None),
+        ("rate: unknown perf", "POST", "/api/review/rate", {"perf": "perf:nope", "rating": "meh"}, None),
+        ("rate: already", "POST", "/api/review/rate", {"perf": MARK_PERF, "rating": "killed"}, None),
+        ("set-row: bad op", "POST", "/api/set-row", {"perf": f"perf:{SX}@0", "op": "zap"}, None),
+        ("set-row: unknown perf", "POST", "/api/set-row", {"perf": "perf:nope", "op": "crowd"}, None),
+        ("set-row: match unknown joke", "POST", "/api/set-row", {"perf": f"perf:{SX}@0", "op": "match", "joke": "joke:nope"}, None),
+        ("set-row: nothing to confirm", "POST", "/api/set-row", {"perf": CROWD_PERF, "op": "confirm"}, None),
+        ("set-row: already marked", "POST", "/api/set-row", {"perf": MARK_PERF, "op": PER_TAG["(B)"]["mark"]}, None),
+        ("reject-match: no match", "POST", "/api/review/reject-match", {"perf": CROWD_PERF}, None),
+        ("tonight: not a list", "POST", "/api/tonight", {"items": 3}, None),
+        ("tonight: too many", "POST", "/api/tonight", {"items": [{"joke": "joke:a"}] * 61}, None),
+        ("tonight: unknown joke", "POST", "/api/tonight", {"items": [{"joke": "joke:nope", "done": 1}]}, None),
+        ("tonight: nothing changed", "POST", "/api/tonight", {"items": [{"joke": "joke:x02"}]}, None),
+        ("boards: no title", "POST", "/api/boards", {"joke_ids": []}, None),
+        ("boards: bad notes", "POST", "/api/boards", {"title": "x", "notes": 5}, None),
+        ("boards: bad joke id", "POST", "/api/boards", {"title": "x", "joke_ids": ["joke a"]}, None),
+        ("boards: unknown joke", "POST", "/api/boards", {"title": "x", "joke_ids": ["joke:nope"]}, None),
+        ("boards: duplicates", "POST", "/api/boards", {"title": "x", "joke_ids": ["joke:a", "joke:a"]}, None),
+        ("boards: bad target", "POST", "/api/boards", {"title": "x", "target_s": 5}, None),
+        ("boards: too many", "POST", "/api/boards", {"title": "x", "joke_ids": ["joke:a"] * 201}, None),
+        ("board patch: nothing", "PATCH", "/api/boards/sb:old", {}, None),
+        ("board patch: unknown", "PATCH", "/api/boards/sb:nope", {"title": "x"}, None),
+        ("board patch: deleted", "PATCH", "/api/boards/sb:gone", {"title": "x"}, None),
+        ("board patch: bad title", "PATCH", "/api/boards/sb:old", {"title": "  "}, None),
+        ("board patch: move out of range", "PATCH", "/api/boards/sb:old", {"move": {"from": 0, "to": 99}}, None),
+        ("board patch: remove missing", "PATCH", "/api/boards/sb:old", {"remove": "joke:c"}, None),
+        ("board patch: add twice", "PATCH", "/api/boards/sb:old", {"add": "joke:a"}, None),
+        ("board items: already", "POST", "/api/boards/sb:old/items", {"joke_id": "joke:a"}, None),
+        ("board items: not on board", "POST", "/api/boards/sb:old/items", {"joke_id": "joke:c", "after": "joke:d"}, None),
+        ("board items: bad after", "POST", "/api/boards/sb:old/items", {"joke_id": "joke:c", "after": 999}, None),
+        ("bridge: unknown board", "POST", "/api/boards/sb:nope/bridge", {"from": "joke:a", "to": "joke:b"}, None),
+        ("bridge: unknown joke", "POST", "/api/boards/sb:old/bridge", {"from": "joke:a", "to": "joke:nope"}, None),
+        ("ws create: no board", "POST", "/api/workingsets", {"board_id": "sb:nope"}, None),
+        ("ws create: empty board", "POST", "/api/workingsets", {"board_id": "sb:empty"}, None),
+        ("ws create: no id", "POST", "/api/workingsets", {}, None),
+        ("ws version: no note", "POST", "/api/workingsets/ws:main/versions", {}, None),
+        ("ws version: empty ids", "POST", "/api/workingsets/ws:main/versions", {"note": "n", "joke_ids": []}, None),
+        ("ws version: unknown set", "POST", "/api/workingsets/ws:nope/versions", {"note": "n"}, None),
+        ("ws lock: not in set", "POST", "/api/workingsets/ws:main/lock", {"joke_id": "joke:e"}, None),
+        ("ws lock: bad line", "POST", "/api/workingsets/ws:main/lock", {"joke_id": "joke:a", "line": 3}, None),
+        ("ws lock: empty line", "POST", "/api/workingsets/ws:main/lock", {"joke_id": "joke:a", "line": "  "}, None),
+        ("ws lock: line not verbatim", "POST", "/api/workingsets/ws:main/lock", {"joke_id": "joke:a", "line": "not a line anyone said tonight"}, None),
+        ("ws lock: node not verbatim", "POST", "/api/workingsets/ws:main/lock", {"joke_id": "joke:a", "line": "Alpha opener line one.", "node": "unit:b1"}, None),
+        ("ws lock: unknown set", "POST", "/api/workingsets/ws:nope/lock", {"joke_id": "joke:a"}, None),
+        ("ws try: no text", "POST", "/api/workingsets/ws:main/try", {"joke_id": "joke:a"}, None),
+        ("ws try: not in set", "POST", "/api/workingsets/ws:main/try", {"joke_id": "joke:e", "text": "x"}, None),
+        ("ws try: too long", "POST", "/api/workingsets/ws:main/try", {"text": "x" * 501}, None),
+        ("ws try patch: not bool", "PATCH", "/api/workingsets/ws:main/try/try:nope", {"done": "yes"}, None),
+        ("ws try patch: no such", "PATCH", "/api/workingsets/ws:main/try/try:nope", {"done": True}, None),
+        ("punchup: unknown joke", "POST", "/api/workingsets/ws:main/bits/joke:nope/punchup", {}, None),
+        ("punchup: unknown set", "POST", "/api/workingsets/ws:nope/bits/joke:a/punchup", {}, None),
+        ("joke punchup: unknown", "POST", "/api/jokes/joke:nope/punchup", {}, None),
+        ("joke punchup: bad id", "POST", "/api/jokes/joke%20a/punchup", {}, None),
+        ("settings: empty", "PATCH", "/api/settings", {}, None),
+        ("settings: unknown", "PATCH", "/api/settings", {"foo": 1, "bar": 2}, None),
+        ("settings: bad provider", "PATCH", "/api/settings", {"provider": "x"}, None),
+        ("settings: not bool", "PATCH", "/api/settings", {"training": "yes"}, None),
+        ("profile: no text", "PUT", "/api/profile/voice", {}, None),
+        ("profile: blank", "PUT", "/api/profile/voice", {"text": " \n "}, None),
+        ("profile: too long", "PUT", "/api/profile/voice", {"text": "x" * 60001}, None),
+        ("profile: court", "PUT", "/api/profile/voice", {"text": "The petitioner and the respondent walked in."}, None),
+        ("profile: worker token", "PUT", "/api/profile/voice", {"text": "x"}, worker_tok),
+        ("learn: empty", "POST", "/api/profile/voice/learn", {"dropped": []}, None),
+        ("learn: too many", "POST", "/api/profile/voice/learn", {"dropped": ["x"] * 11}, None),
+        ("learn: no text", "POST", "/api/profile/voice/learn", {"dropped": [{"bit": "joke:a"}]}, None),
+        ("learn: too long", "POST", "/api/profile/voice/learn", {"dropped": ["x" * 2001]}, None),
+        ("learn: court", "POST", "/api/profile/voice/learn", {"dropped": ["The petitioner and the respondent walked in."]}, None),
+        ("keep: bad id", "POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "unit:a1"}, None),
+        ("keep: no id", "POST", "/api/suggestions/not-a-joke/keep", {}, None),
+        ("hide: unknown", "POST", "/api/suggestions/not-a-joke/hide", {"joke_id": "joke:nope"}, None),
+        ("hide: bad id", "POST", "/api/suggestions/not-a-joke/hide", {"joke_id": "joke a"}, None),
+        ("candidates: bad joke", "GET", "/api/merge/candidates?joke=joke%20a", None, None),
+        ("candidates: bad jokes", "GET", "/api/merge/candidates?jokes=joke:a,joke%20b", None, None),
+        ("candidates: too many", "GET", "/api/merge/candidates?jokes=" + ",".join(f"joke:x{i:02d}" for i in range(51)), None, None),
     ]
     for label, m, p, b, h in cases:
         a, c = R.call(py, m, p, h if h is not None else app, b), R.call(rs, m, p, h if h is not None else app, b)
@@ -420,6 +666,9 @@ def check_rows(port: int, pw: str, a_rows: tuple[int, int], b_rows: tuple[int, i
     ok("rows: the jobs store carries the set_text jobs both servers queued",
        sum(1 for x in by_store.get("jobs", []) if '"set_text"' in x["line"]) >= 2)
     ok("rows: the profile store carries learn events from both sequences", len(by_store.get("profile", [])) >= 6)
+    ok("rows: the storyboards, workingsets, account and suggestions stores carry both sequences' events",
+       all(len(by_store.get(n, [])) >= 2 for n in ("storyboards", "workingsets", "account", "suggestions")),
+       str({n: len(by_store.get(n, [])) for n in ("storyboards", "workingsets", "account", "suggestions")}))
     ok("rows: the merges store carries both sequences' attach, dismiss, merge, undo and detach",
        sorted({json.loads(x["line"])["op"] for x in by_store.get("merges", [])}) >= ["attach", "detach", "dismiss", "merge", "undo"])
 
@@ -496,6 +745,7 @@ def main() -> int:
         d.mkdir()
     R.build_comedy(comedy)
     R.write_vectors(tmp / "cache" / "kb", R.make_graph())
+    judge = R.write_judge(comedy, tmp / "cache" / "kb")
     port = R.free_port()
     pw = secrets.token_hex(16)
     env = {**os.environ, "PUNCHABLE_HOME": str(home), "COMEDY_DIR": str(comedy), "PUNCH_COMEDY": str(comedy),
@@ -566,10 +816,15 @@ def main() -> int:
         R.call(rs, "GET", "/api/search?q=dog", app)
 
         # A. through pk-api; B. through the Python
+        write(py, "POST", "/api/tonight", {"items": [{"joke": "joke:d"}, {"joke": "joke:e"}]})
+        write(py, "POST", "/api/set-row", {"perf": MARK_PERF, "op": "banter"})
+        write(py, "POST", "/api/set-row", {"perf": MARK_PERF, "op": "rate", "rating": "worked"})
         n_a0 = body(R.call(py, "GET", "/api/decisions?limit=1", app))["total"]
         minted_a = sequence(rs, "(A)")
         minted_b = sequence(py, "(B)")
         report["minted"] = {"pk_api": minted_a, "python": minted_b}
+        report["judged_pairs"] = len(judge)
+        ok("the judge file carries verdicts for the candidates to read", len(judge) >= 1, str(len(judge)))
         ok("the two servers placed the jots alike (with the model)",
            minted_a["jot_attach"] == minted_b["jot_attach"] and minted_a["words_jot_attach"] == minted_b["words_jot_attach"],
            f"{minted_a['jot_attach']}/{minted_a['words_jot_attach']} vs {minted_b['jot_attach']}/{minted_b['words_jot_attach']}")
@@ -593,6 +848,22 @@ def main() -> int:
         same_write("same: attach", "POST", "/api/merge/attach", {"note": "joke:x11", "into": "joke:x03"}, {"note": "joke:x15", "into": "joke:x03"})
         same_write("same: dismiss", "POST", "/api/merge/dismiss", {"jokes": ["joke:x13", "joke:x14"]}, {"jokes": ["joke:x16", "joke:x20"]})
         same_write("same: merge", "POST", "/api/merge", {"main": "joke:x17", "others": ["joke:x21"], "reason": "r"}, {"main": "joke:x18", "others": ["joke:x22"], "reason": "r"})
+        same_write("same: a rating in place", "POST", "/api/set-row", {"perf": MARK_PERF, "op": "rate", "rating": "worked"},
+                   {"perf": MARK_PERF, "op": "rate", "rating": "killed"}, by_shape=True)
+        same_write("same: the tonight list", "POST", "/api/tonight", {"items": [{"joke": "joke:x01"}]}, {"items": [{"joke": "joke:x02"}]}, by_shape=True)
+        same_write("same: a set list", "POST", "/api/boards", {"title": "Same list (P)", "joke_ids": ["joke:a", "joke:c"]},
+                   {"title": "Same list (R)", "joke_ids": ["joke:a", "joke:c"]})
+        same_write("same: a bridge", "POST", "/api/boards/sb:old/bridge", {"from": "joke:a", "to": "joke:b"}, {"from": "joke:b", "to": "joke:x02"})
+        _, bp = write(py, "POST", "/api/boards", {"title": "Same bits (P)", "joke_ids": ["joke:a", "joke:c"], "target_s": 300}, want=(201,))
+        _, br = write(rs, "POST", "/api/boards", {"title": "Same bits (R)", "joke_ids": ["joke:a", "joke:c"], "target_s": 300}, want=(201,))
+        same_write("same: a set promoted", "POST", "/api/workingsets", {"board_id": bp["board"]["id"]}, {"board_id": br["board"]["id"]})
+        same_write("same: the settings", "PATCH", "/api/settings", {"training": False})
+        same_write("same: the profile", "PUT", "/api/profile/voice", {"text": "Same profile (P)."}, {"text": "Same profile (R)."}, by_shape=True)
+        same_write("same: a dismissed draft", "POST", "/api/profile/voice/learn", {"dropped": ["Same dropped (P)."]}, {"dropped": ["Same dropped (R)."]}, by_shape=True)
+        same_write("same: a keep", "POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "joke:x10"})
+        same_write("same: a hide", "POST", "/api/suggestions/not-a-joke/hide", {"joke_id": "joke:x11"}, {"joke_id": "joke:x12"}, by_shape=True)
+        same_write("same: a brainstorm with no tape", "POST", "/api/jokes/joke:f/punchup", {})
+        both("after all", ["/api/merge/candidates", "/api/merge/candidates?joke=joke:x11", "/api/merge/candidates?jokes=joke:x10,joke:x11,joke:x12"])
         refusals()
         same_write("same: undo an undone line", "POST", "/api/undo", {"index": minted_a["undone"]})
         # D. the rows
@@ -600,15 +871,27 @@ def main() -> int:
         # F. two writers at once, then the counters and the Python's stores
         hammer(a.conc, 5)
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
-        for route, status in (("/api/ideas", 200), ("/api/sets/transcript", 202), ("/api/jokes/{id}/versions", 200), ("/api/decision", 200),
-                              ("/api/undo", 200), ("/api/merge", 200), ("/api/merge/attach", 200), ("/api/merge/dismiss", 200),
-                              ("/api/merge/undo", 200)):
-            ok(f"metrics: pk-api answered {route} itself", f'method="POST",route="{route}",status="{status}"' in mtext)
+        for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
+                                      ("POST", "/api/decision", 200), ("POST", "/api/undo", 200), ("POST", "/api/merge", 200),
+                                      ("POST", "/api/merge/attach", 200), ("POST", "/api/merge/dismiss", 200), ("POST", "/api/merge/undo", 200),
+                                      # round 2
+                                      ("POST", "/api/review/rate", 200), ("POST", "/api/set-row", 200), ("POST", "/api/review/reject-match", 200),
+                                      ("POST", "/api/tonight", 200), ("POST", "/api/tonight", 409), ("POST", "/api/boards", 201),
+                                      ("PATCH", "/api/boards/{id}", 200), ("POST", "/api/boards/{id}/items", 200), ("POST", "/api/boards/{id}/bridge", 202),
+                                      ("POST", "/api/workingsets", 201), ("POST", "/api/workingsets/{id}/versions", 201),
+                                      ("POST", "/api/workingsets/{id}/lock", 200), ("POST", "/api/workingsets/{id}/try", 201),
+                                      ("PATCH", "/api/workingsets/{id}/try/{id}", 200), ("POST", "/api/workingsets/{id}/bits/{id}/punchup", 202),
+                                      ("POST", "/api/workingsets/{id}/bits/{id}/punchup", 200), ("POST", "/api/jokes/{id}/punchup", 200),
+                                      ("POST", "/api/jokes/{id}/punchup", 202), ("PATCH", "/api/settings", 200), ("OTHER", "/api/profile/voice", 200),
+                                      ("POST", "/api/profile/voice/learn", 200), ("POST", "/api/suggestions/not-a-joke/keep", 200),
+                                      ("POST", "/api/suggestions/not-a-joke/hide", 200), ("GET", "/api/merge/candidates", 200),
+                                      ("GET", "/api/merge/candidates", 400)):
+            ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
         n0 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext.splitlines() if ln.startswith("pk_http_requests_total{"))
-        R.call(rs, "PATCH", "/api/settings", app, {"training": True})
+        R.call(rs, "POST", "/api/jobs/job:nope/drop", app, {})
         mtext2 = R.call(rs, "GET", "/metrics")[2].decode()
         n1 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext2.splitlines() if ln.startswith("pk_http_requests_total{"))
-        ok("metrics: a forwarded write (PATCH /api/settings) is counted by nobody here", n1 == n0)
+        ok("metrics: a forwarded write (POST /api/jobs/<id>/drop) is counted by nobody here", n1 == n0)
         plog = (tmp / "python-api-model.log").read_text(encoding="utf-8", errors="replace")
         ok("the Python's creative stores never diverged from the database", "differ from event" not in plog, plog[-600:])
         report["rss_mib"] = {"python": R.rss_mib(pp.pid), "rust": R.rss_mib(rp.pid)}

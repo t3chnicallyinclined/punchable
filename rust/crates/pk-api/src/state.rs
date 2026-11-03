@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use pk_obs::ApiMetrics;
 use pk_store::Store;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::auth::Verifier;
 use crate::config::ApiConfig;
@@ -71,7 +71,14 @@ struct Inner {
     creative_lock: tokio::sync::Mutex<()>,
     /// The merge index last built, for placing a jot (see [`AppState::last_merge_index`]).
     last_merge_index: Mutex<Option<(Option<i64>, Arc<pk_creative::merge::Index>)>>,
+    /// The judge's pairs (`kb/creative/merge_judge.json`) as last parsed, with the sha of the row they came from:
+    /// the service's one parsed copy (the row's text is in `SrcTexts` like every file's), shared by every
+    /// generation's groups memo ([`crate::snapshot::Data::merge_groups`]).
+    judge: Mutex<Option<Judge>>,
 }
+
+/// The judge's pairs as parsed, with the sha of the row they came from.
+type Judge = (String, Arc<Map<String, Value>>);
 
 /// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
 pub type CloudCache = (String, i64, bool, std::time::Instant, axum::body::Bytes);
@@ -135,6 +142,7 @@ impl AppState {
             kb_lock: tokio::sync::Mutex::new(()),
             creative_lock: tokio::sync::Mutex::new(()),
             last_merge_index: Mutex::new(None),
+            judge: Mutex::new(None),
         }))
     }
 
@@ -370,6 +378,28 @@ impl AppState {
             _ => false,
         };
         fresh_enough.then(|| Arc::clone(ix))
+    }
+
+    /// `merge_api.judgements(cr)`: the judge's pairs for the row with this `sha`, parsed once per sha (`text` is
+    /// read only on a miss; a row that is not JSON, or has no pairs, is an empty judge, the Python's
+    /// `except ValueError: {}`). No row: empty.
+    pub fn judge(&self, sha: Option<&str>, text: Option<&str>) -> Arc<Map<String, Value>> {
+        let Some(sha) = sha else {
+            return Arc::new(Map::new());
+        };
+        let mut slot = self.0.judge.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((have, pairs)) = slot.as_ref().filter(|(have, _)| have == sha) {
+            let _ = have;
+            return Arc::clone(pairs);
+        }
+        let pairs: Map<String, Value> = text
+            .and_then(|t| serde_json::from_str::<Value>(t).ok())
+            .and_then(|v| v.get("pairs").filter(|p| pk_core::py::truthy(Some(p))).cloned())
+            .and_then(|p| p.as_object().cloned())
+            .unwrap_or_default();
+        let pairs = Arc::new(pairs);
+        *slot = Some((sha.to_string(), Arc::clone(&pairs)));
+        pairs
     }
 
     /// Keep an index as the last built, with the generation it was built for.

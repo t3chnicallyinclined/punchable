@@ -344,6 +344,28 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    prerequisites unchanged plus one: **the Python image with this round's `api-dev` changes goes out before any
    write path moves.** Numbers, the review, the documented differences and the next groups: the RUST_WORKSTREAM T10
    row.
+   **T10 round 2 (branch `rust/t10-round2`, not merged, not deployed): groups 3 and 4, and the merge candidates.**
+   pk-api answers the Set page's and the Tonight list's writes (**`POST /api/review/rate`, `/api/set-row`,
+   `/api/review/reject-match`, `/api/tonight`**), the set lists' and his sets' (**`POST /api/boards`, `PATCH
+   /api/boards/<id>`, `POST /api/boards/<id>/items`, `/bridge`, `POST /api/workingsets`, `/api/workingsets/<id>/versions`,
+   `/lock`, `/try`, `PATCH .../try/<note>`, the punch-ups `POST /api/workingsets/<id>/bits/<joke>/punchup` and
+   `/api/jokes/<id>/punchup`**), the settings and the profile (**`PATCH /api/settings`, `PUT /api/profile/voice`, `POST
+   /api/profile/voice/learn`, `/api/suggestions/not-a-joke/keep` and `/hide`**) and **`GET /api/merge/candidates`** in
+   its three forms. The Python's raw lines (`AppKB.append_lines`) are `Kb::append_lines`: built from data proven
+   current, the first line rebuilt from a fresh view on a lost race, a later add / edit / confirm / reject sent again as
+   the Python's `_append` does; a rating's or tonight's answer comes from the generation that holds the lines just
+   written. The judge cache is as the row designed it: the judge stays the `srcfile` row read by key, parsed at most
+   once per sha (`AppState::judge`), and the groups are memoised per (judge sha, triage sha, merges events) on the
+   generation, built in their own task under the CPU permit. Proof: `rust/tools/diff_api_writes.py` **1,393 checks, 0
+   differences** (72 refusals to the letter, the rows, 8 writers), `diff_api_reads.py` 443 equal with 13 candidates
+   reads over a judge file with real keys, `tests/writes.rs` (the round-2 writes read back at once; eight writers on
+   one list and one moment). Same rate: pk-api at or below the Python on every write route in every phase, and
+   candidates 2-6 ms warm against 28-80, about 265 ms cold at production scale against 450-660. Review
+   (rust-application-architect): three must-fixes fixed (a write's answer could come from the generation before the
+   write; the creative writes validated on `data()`; the re-send branch lacked the Python's guard), the should-fixes
+   fixed, two recorded. The manifest carries the round's paths. Deploy prerequisites unchanged. Numbers, the review,
+   the documented differences and the next groups (`/api/live`, `/api/worker/*`, the embedder; then uploads, memos,
+   venues, Ask): the RUST_WORKSTREAM T10 row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):

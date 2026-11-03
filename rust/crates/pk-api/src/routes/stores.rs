@@ -27,7 +27,7 @@ pub fn by_kind(by: Option<&Value>, owner: &str) -> Value {
 }
 
 /// `profile_api.view(doc, worker=False)`.
-fn voice_view(doc: Option<&Map<String, Value>>, owner: &str) -> Value {
+pub(crate) fn voice_view(doc: Option<&Map<String, Value>>, owner: &str) -> Value {
     let text = doc.and_then(|d| d.get("text")).filter(|t| !t.is_null());
     let mut out = match (doc, text) {
         (Some(d), Some(t)) => {

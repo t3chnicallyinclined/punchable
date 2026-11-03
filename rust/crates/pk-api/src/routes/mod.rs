@@ -8,6 +8,7 @@ pub mod health;
 pub mod jokes;
 pub mod kb;
 pub mod learned;
+pub mod merge;
 pub mod metrics;
 pub mod search;
 pub mod sets;

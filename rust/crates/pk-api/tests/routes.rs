@@ -209,9 +209,11 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
         .filter_map(|l| l.split("path: ").nth(1)?.split(',').next())
         .collect();
     exact.sort_unstable();
+    // a path read and written here (`/api/boards`, `/api/settings`, ...) is one Ingress path
     let mut own = pk_api::OWN_PATHS.to_vec();
     own.extend(pk_api::OWN_WRITE_PATHS);
     own.sort_unstable();
+    own.dedup();
     assert_eq!(exact, own);
     assert!(
         !text.contains("pathType: Prefix"),
@@ -229,7 +231,23 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
         .map(|p| pk_api::ingress_regex(p))
         .collect();
     own.sort_unstable();
+    own.dedup();
     assert_eq!(regex, own);
+}
+
+/// The write methods a moved write path answers here (the Python's own on that path); every other write method
+/// on it is forwarded.
+fn write_methods(path: &str) -> &'static [&'static str] {
+    match path {
+        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" => &["PATCH"],
+        "/api/profile/voice" => &["PUT"],
+        _ => &["POST"],
+    }
+}
+
+/// Whether a moved write path is read here too (it is in [`pk_api::OWN_PATHS`] or [`pk_api::OWN_PATTERNS`] as well).
+fn read_here(path: &str) -> bool {
+    pk_api::OWN_PATHS.contains(&path) || pk_api::OWN_PATTERNS.contains(&path)
 }
 
 #[tokio::test]
@@ -244,22 +262,37 @@ async fn every_moved_path_is_answered_here() {
     }
 }
 
-/// T10: a POST on a moved write path is answered here (the auth check's 401, never the fallback's 404), a GET on
-/// it is not (the Python has no such GET: forwarded), and the paths beside them stay forwarded.
+/// T10: the write method the Python has on a moved write path is answered here (the auth check's 401, never the
+/// fallback's 404), every other write method on it is forwarded, a GET on it is answered only where the path is a
+/// read route too (else forwarded: the Python has no such GET), and the paths beside them stay forwarded.
 #[tokio::test]
-async fn every_moved_write_path_is_answered_here_for_post_only() {
+async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
     let st = state(true);
-    let ids = pk_api::OWN_WRITE_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb"));
-    for p in pk_api::OWN_WRITE_PATHS
+    let patterns: Vec<(&str, String)> = pk_api::OWN_WRITE_PATTERNS
         .iter()
-        .copied()
-        .chain(ids.iter().map(String::as_str))
+        .map(|p| (*p, p.replace("{id}", "joke:a%2Fb").replace("{id2}", "try:x")))
+        .collect();
+    for (pattern, p) in pk_api::OWN_WRITE_PATHS
+        .iter()
+        .map(|p| (*p, (*p).to_string()))
+        .chain(patterns)
     {
-        let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
-        let (s, _, b) = send(&st, post).await;
-        assert_eq!(s, StatusCode::UNAUTHORIZED, "{p}: {}", String::from_utf8_lossy(&b));
+        let p = p.as_str();
+        for m in ["POST", "PATCH", "PUT"] {
+            let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
+            let (s, _, b) = send(&st, r).await;
+            if write_methods(pattern).contains(&m) {
+                assert_eq!(s, StatusCode::UNAUTHORIZED, "{m} {p}: {}", String::from_utf8_lossy(&b));
+            } else {
+                assert_eq!(s, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
+            }
+        }
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
-        assert_eq!(s, StatusCode::NOT_FOUND, "GET {p} is forwarded");
+        if read_here(pattern) {
+            assert_eq!(s, StatusCode::UNAUTHORIZED, "GET {p} is answered here too");
+        } else {
+            assert_eq!(s, StatusCode::NOT_FOUND, "GET {p} is forwarded");
+        }
         let options = Request::builder()
             .method("OPTIONS")
             .uri(p)
@@ -308,14 +341,21 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         StatusCode::NOT_FOUND,
         "a POST under a moved id path is forwarded"
     );
-    for (m, p) in [
-        ("PATCH", "/api/boards/b"),
-        ("PATCH", "/api/mysets/s"),
-        ("POST", "/api/mysets/match"),
-    ] {
+    for (m, p) in [("PATCH", "/api/mysets/s"), ("POST", "/api/mysets/match")] {
         let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, r).await.0, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
     }
+    // round 2: a set list's PATCH is answered here (the auth check's 401), beside its GET
+    let r = Request::builder()
+        .method("PATCH")
+        .uri("/api/boards/b")
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        send(&st, r).await.0,
+        StatusCode::UNAUTHORIZED,
+        "PATCH /api/boards/b is answered here"
+    );
 }
 
 #[tokio::test]

@@ -420,6 +420,16 @@ STORE_READS = ["/api/workingsets", "/api/workingsets?backend=files", "/api/worki
                "/api/notebook/related?q=the%20car%0Aparking%20engine%20traffic",
                "/api/notebook/related?q=alpha%20punch&include_hidden=1", "/api/notebook/related?q=zzqqxx",
                "/api/notebook/related?q=niece&backend=files"]
+# T10 round 2: the merge candidates (the judge file is written by write_judge with real keys): every group, one
+# joke's group and closest others with its history, the inbox's batch, the refusals
+MERGE_READS = ["/api/merge/candidates", "/api/merge/candidates?joke=joke:x00", "/api/merge/candidates?joke=joke:x01",
+               "/api/merge/candidates?joke=joke:x05", "/api/merge/candidates?joke=joke:a", "/api/merge/candidates?joke=joke:nope",
+               "/api/merge/candidates?joke=joke%20a", "/api/merge/candidates?jokes=joke:x00,joke:x04,joke:a,joke:x00",
+               "/api/merge/candidates?jokes=joke:x01&jokes=joke:x05,", "/api/merge/candidates?jokes=joke:a,bad%20id",
+               "/api/merge/candidates?jokes=" + ",".join(f"joke:x{i:02d}" for i in range(51)),
+               "/api/merge/candidates?backend=files", "/api/merge/candidates?include_hidden=1"]
+ALLOW |= {("/api/merge/candidates", "$.generated_at"): "the Python stamps the whole-groups answer with its own clock",
+          ("/api/merge/candidates?include_hidden=1", "$.generated_at"): "the Python stamps the whole-groups answer with its own clock"}
 CREATIVE_LISTS = ["/api/settings", "/api/settings?backend=files", "/api/boards", "/api/boards?archived=1",
                   "/api/boards?archived=true", "/api/boards?archived=yes", "/api/boards?include_hidden=1",
                   "/api/boards?backend=files", "/api/mysets", "/api/mysets?include_hidden=1", "/api/mysets?backend=x",
@@ -465,6 +475,37 @@ def write_merges(port: int, pw: str) -> None:
         row = {"store": "merges", "seq": seq, "line": line, "h": hashlib.sha256(line.encode()).hexdigest(),
                "op": ev["op"], "item": ev["id"], "at": ev["ts"]}
         surreal_sql(port, pw, "CREATE creative_event CONTENT $row RETURN NONE;", {"row": row})
+
+
+def write_judge(comedy: Path, cache_kb: Path) -> dict:
+    """T10: `kb/creative/merge_judge.json` with REAL keys (`merge.judge_key` over the synthetic notebook and its
+    vectors, as `python -m creative merge judge` would write them) and a spread of verdicts from a fake judge
+    (same and sure, same but borderline, different), so `/api/merge/candidates` has groups and verdicts to answer
+    on both servers. Returns the pairs written."""
+    for d in (ROOT, ROOT / "api-dev", ROOT / "tools" / "explorer"):
+        if str(d) not in sys.path:
+            sys.path.insert(0, str(d))
+    import creative_api as CR  # noqa: PLC0415
+    from creative import data as D  # noqa: PLC0415
+    from creative import merge as MG  # noqa: PLC0415
+    v0 = comedy / "kb" / "v0"
+    c = CR.build_corpus({"graph": v0 / "graph.json", "id_map": None, "kbdir": v0, "corpus": comedy / "corpus"}, [],
+                        D.Vectors(cache_kb))
+    jc = MG.judge_candidates(c)
+
+    class Said:
+        def __init__(self, data):
+            self.data, self.model = data, "fake-judge"
+
+    def judge(task, msgs, schema):
+        n = msgs[-1]["content"].count("PAIR p")
+        return Said({"pairs": [{"id": f"p{k + 1}", "same": k % 3 != 2, "confidence": [0.95, 0.7, 0.9][k % 3],
+                                "why": f"verdict {k}"} for k in range(n)]})
+
+    cache: dict = {}
+    MG.judge(c, jc, cache, judge)
+    write_json(comedy / "kb" / "creative" / "merge_judge.json", {"version": 1, "task": "merge_judge", "pairs": cache})
+    return cache
 
 
 def write_vectors(cache_kb: Path, graph: dict) -> None:
@@ -781,6 +822,7 @@ def main() -> int:
         d.mkdir()
     build_comedy(comedy)
     write_vectors(tmp / "cache" / "kb", make_graph())
+    report_judge = write_judge(comedy, tmp / "cache" / "kb")
     port = free_port()
     pw = secrets.token_hex(16)
     env = {**os.environ, "PUNCHABLE_HOME": str(home), "COMEDY_DIR": str(comedy), "PUNCH_COMEDY": str(comedy),
@@ -949,6 +991,7 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in CREATIVE_LISTS]
         reqs += [(p, "GET", p, app) for p in CREATIVE_IDS]
         reqs += [(p, "GET", p, app) for p in STORE_READS]
+        reqs += [(p, "GET", p, app) for p in MERGE_READS]
         reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
                  ("workingsets signed out", "GET", "/api/workingsets", {})]
         reqs += [("board signed out", "GET", "/api/boards/sb:old", {}),
@@ -1157,7 +1200,7 @@ def main() -> int:
                       "/api/mysets/{id}", "/api/mysets/{id}/trim", "/api/jokes/{id}/connections", "/api/jokes/{id}/map",
                       "/api/profile/voice", "/api/suggestions/not-a-joke", "/api/jobs/{id}", "/api/workingsets",
                       "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
-                      "/api/notebook/related", "/api/sets/{id}/clips"):
+                      "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)
@@ -1165,9 +1208,9 @@ def main() -> int:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
                        if ln.startswith("pk_http_requests_total{"))
         n0 = counted()
-        call(rs, "GET", "/api/merge/candidates", app)
+        call(rs, "GET", "/api/merge/history?joke=joke:a", app)
         if counted() != n0:
-            problems.append("pk-api counted a forwarded request (/api/merge/candidates): the fallback must count nothing")
+            problems.append("pk-api counted a forwarded request (/api/merge/history): the fallback must count nothing")
         # and the model was used here: pk-api's own search answered with vectors, not words only
         if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
             problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")

@@ -572,8 +572,8 @@ impl Index {
         }
     }
 
-    /// `_dates(c, ix, j)`.
-    fn dates(&self, j: &str) -> Vec<String> {
+    /// `_dates(c, ix, j)`: every date of a joke (its units', its nights'), `YYYY-MM-DD`, sorted.
+    pub fn dates(&self, j: &str) -> Vec<String> {
         let c = &*self.c;
         let mut ds: BTreeSet<String> = self.units[j]
             .iter()
@@ -1313,4 +1313,281 @@ pub fn match_text(
         out["reasons"] = json!([r]);
     }
     out
+}
+
+/// `RULE`: what a same-idea group means, as the candidates answer says it.
+pub const RULE: &str = "Same idea = Claude judged the pair the same bit at >= 0.8 confidence (only pairs that are \
+                        already close: unit text, shared phrases, rare words, title words or a same_premise edge), or \
+                        you linked them. Every member is judged against the main itself, so ideas never chain together.";
+
+/// `counts(c, groups)`: the jokes and docs, in groups and after a merge of every group.
+pub fn counts(ix: &Index, groups: &[Value]) -> Value {
+    let c = &*ix.c;
+    let docs_all: HashSet<&str> = ix
+        .jokes
+        .iter()
+        .flat_map(|j| ix.units.get(j).into_iter().flatten())
+        .filter_map(|u| c.nodes.get(u))
+        .filter_map(|n| s(n, "doc_id").filter(|d| !d.is_empty()))
+        .collect();
+    let members = || {
+        groups
+            .iter()
+            .flat_map(|g| g.get("members").and_then(Value::as_array).into_iter().flatten())
+    };
+    let in_g: HashSet<&str> = members()
+        .filter_map(|m| m.get("joke_id").and_then(Value::as_str))
+        .collect();
+    let docs_g: HashSet<&str> = members()
+        .flat_map(|m| m.get("docs").and_then(Value::as_array).into_iter().flatten())
+        .filter_map(|d| d.get("doc_id").and_then(Value::as_str))
+        .collect();
+    json!({"jokes": ix.jokes.len(), "docs": docs_all.len(), "groups": groups.len(), "jokes_in_groups": in_g.len(),
+           "docs_in_groups": docs_g.len(), "jokes_after_merge": ix.jokes.len() - in_g.len() + groups.len(),
+           "docs_after_merge": docs_all.len() - docs_g.len() + groups.len()})
+}
+
+/// `find_groups(c, judgements, dismissed, exclude)`: the groups with their counts, the rule and how many pairs the
+/// judge has answered.
+pub fn find_groups(ix: &Index, judgements: &Map<String, Value>, st: &MergeState, exclude: &HashSet<String>) -> Value {
+    let gs = build_groups(ix, judgements, st, exclude);
+    json!({"counts": counts(ix, &gs), "groups": gs, "rule": RULE, "judged_pairs": judgements.len()})
+}
+
+/// The judge's answer for a pair as the candidates rows carry it: the verdict that counts, else the raw entry.
+fn judge_row(judgements: &Map<String, Value>, key: &str) -> Value {
+    let v0 = judgements.get(key).filter(|v| py::truthy(Some(v)));
+    match verdict(v0).or_else(|| v0.cloned()) {
+        Some(v) => json!({"same": v.get("same"), "confidence": v.get("confidence"), "why": v.get("why")}),
+        None => Value::Null,
+    }
+}
+
+/// The `others` rows sorted as the Python sorts them: the judge's "same" first, then the score, then the id.
+fn sort_others(rows: &mut [Value]) {
+    rows.sort_by(|x, y| {
+        let same = |r: &Value| !py::truthy(r.get("judge").and_then(|j| j.get("same")));
+        let score = |r: &Value| num(r.get("score")).unwrap_or(0.0);
+        same(x)
+            .cmp(&same(y))
+            .then_with(|| score(y).total_cmp(&score(x)))
+            .then_with(|| x["joke_id"].as_str().cmp(&y["joke_id"].as_str()))
+    });
+}
+
+fn group_has(g: &Value, j: &str) -> bool {
+    g.get("members")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .any(|m| m.get("joke_id").and_then(Value::as_str) == Some(j))
+}
+
+/// `candidates_for(c, jid, judgements, dismissed, cap, groups)`: the group this joke is in (if any) plus its closest
+/// other jokes, each with the judge's verdict when there is one.
+pub fn candidates_for(
+    ix: &Index,
+    jid: &str,
+    judgements: &Map<String, Value>,
+    st: &MergeState,
+    cap: usize,
+    groups: &[Value],
+) -> Value {
+    let c = &*ix.c;
+    if !c.is_joke(jid) {
+        return json!({"joke_id": jid, "group": null, "others": []});
+    }
+    let g = groups.iter().find(|g| group_has(g, jid));
+    let in_g: HashSet<&str> = match g {
+        Some(g) => g["members"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|m| m.get("joke_id").and_then(Value::as_str))
+            .collect(),
+        None => HashSet::from([jid]),
+    };
+    let mut rows = Vec::new();
+    for (a, b) in ix.candidates() {
+        if a != jid && b != jid {
+            continue;
+        }
+        let o = if a == jid { &b } else { &a };
+        if in_g.contains(o.as_str()) || st.dismissed.contains(&pair(&a, &b)) {
+            continue;
+        }
+        let f = ix.features(&a, &b);
+        let sc = pair_score(&f);
+        if sc < 0.2 {
+            continue;
+        }
+        let phr: Vec<Value> = f["phrases"].as_array().into_iter().flatten().take(3).cloned().collect();
+        rows.push(
+            json!({"joke_id": o, "title": c.title(o), "stage": c.stage(o).0, "score": sc,
+                         "judge": judge_row(judgements, &ix.judge_key(&f)), "phrases": phr,
+                         "last_date": ix.dates(o).last()}),
+        );
+    }
+    sort_others(&mut rows);
+    rows.truncate(cap);
+    json!({"joke_id": jid, "group": g, "others": rows})
+}
+
+/// `candidates_batch(c, jids, judge, st, gs)`: `{joke_id: {group, others (the closest one), attached_to}}` for
+/// several jokes in one pass over the candidate pairs (the inbox's one call).
+pub fn candidates_batch(
+    ix: &Index,
+    jids: &[String],
+    judgements: &Map<String, Value>,
+    st: &MergeState,
+    groups: &[Value],
+) -> Value {
+    let c = &*ix.c;
+    // `list(dict.fromkeys(jids))`: each once, first position kept
+    let mut want: Vec<&str> = Vec::new();
+    for j in jids {
+        if !want.contains(&j.as_str()) {
+            want.push(j);
+        }
+    }
+    let ws: HashSet<&str> = want.iter().copied().collect();
+    let mut in_group: HashMap<&str, &Value> = HashMap::new();
+    for g in groups {
+        for m in g.get("members").and_then(Value::as_array).into_iter().flatten() {
+            if let Some(j) = m.get("joke_id").and_then(Value::as_str).filter(|j| ws.contains(j)) {
+                in_group.insert(j, g);
+            }
+        }
+    }
+    let mut best: HashMap<&str, Vec<Value>> = want.iter().map(|j| (*j, Vec::new())).collect();
+    for (a, b) in ix.candidates() {
+        for (jid, o) in [(a.as_str(), b.as_str()), (b.as_str(), a.as_str())] {
+            if !ws.contains(jid) || !c.is_joke(o) {
+                continue;
+            }
+            let g = in_group.get(jid);
+            if g.is_some_and(|g| group_has(g, o)) || st.dismissed.contains(&pair(&a, &b)) {
+                continue;
+            }
+            let f = ix.features(&a, &b);
+            let sc = pair_score(&f);
+            if sc < 0.2 {
+                continue;
+            }
+            let phr: Vec<Value> = f["phrases"].as_array().into_iter().flatten().take(3).cloned().collect();
+            if let Some(rows) = best.get_mut(jid) {
+                rows.push(
+                    json!({"joke_id": o, "title": c.title(o), "stage": c.stage(o).0, "score": sc,
+                                 "judge": judge_row(judgements, &ix.judge_key(&f)), "phrases": phr}),
+                );
+            }
+        }
+    }
+    let mut out = Map::new();
+    for jid in want {
+        let mut rows = best.remove(jid).unwrap_or_default();
+        sort_others(&mut rows);
+        rows.truncate(1);
+        out.insert(
+            jid.to_string(),
+            json!({"joke_id": jid, "group": in_group.get(jid).copied(), "others": rows,
+                   "attached_to": st.attached.get(jid)}),
+        );
+    }
+    Value::Object(out)
+}
+
+/// `history(items, jid)`: everything folded into a joke: his merges into it (verbatim, dated, from the snapshot
+/// taken at merge time) and the notes auto-attached to it; and the merge that folded this joke away, if one did.
+pub fn history(items: &Map<String, Value>, jid: &str) -> Value {
+    fn kind(m: &Value) -> Option<&str> {
+        m.get("kind").and_then(Value::as_str)
+    }
+    fn status(m: &Value) -> Option<&str> {
+        m.get("status").and_then(Value::as_str)
+    }
+    let text = |m: &Value, k: &str| m.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+    let mut merges: Vec<&Value> = items
+        .values()
+        .filter(|m| kind(m) == Some("merge") && m.get("main").and_then(Value::as_str) == Some(jid))
+        .collect();
+    merges.sort_by_key(|m| text(m, "created_at"));
+    let mut notes: Vec<Value> = items
+        .values()
+        .filter(|m| {
+            kind(m) == Some("attach")
+                && m.get("into").and_then(Value::as_str) == Some(jid)
+                && status(m) == Some("attached")
+        })
+        .map(|m| {
+            json!({"id": m.get("id"), "joke_id": m.get("joke"), "text": m.get("text"), "date": m.get("date"),
+                   "reasons": m.get("reasons"), "score": m.get("score"), "source": "inferred",
+                   "attached_at": m.get("created_at")})
+        })
+        .collect();
+    notes.sort_by_key(|n| (text(n, "date"), text(n, "id")));
+    let merged_into = items.values().find(|m| {
+        kind(m) == Some("merge")
+            && status(m) == Some("merged")
+            && m.get("others")
+                .and_then(Value::as_array)
+                .is_some_and(|o| o.iter().any(|x| x.as_str() == Some(jid)))
+    });
+    json!({"joke_id": jid, "merges": merges, "notes": notes,
+           "merged_into": merged_into.map(|m| json!({"merge_id": m.get("id"), "main": m.get("main")}))})
+}
+
+#[cfg(test)]
+mod candidates_tests {
+    use super::*;
+
+    #[test]
+    fn history_is_merges_into_notes_under_and_the_merge_that_took_it() {
+        let items: Map<String, Value> = json!({
+            "mg:1": {"id": "mg:1", "kind": "merge", "status": "merged", "main": "joke:a", "others": ["joke:b"], "created_at": "2"},
+            "mg:0": {"id": "mg:0", "kind": "merge", "status": "undone", "main": "joke:a", "others": ["joke:c"], "created_at": "1"},
+            "at:1": {"id": "at:1", "kind": "attach", "status": "attached", "joke": "joke:n", "into": "joke:a", "text": "t",
+                     "date": "2024-01-02", "reasons": ["r"], "score": 0.5, "created_at": "3"},
+            "at:0": {"id": "at:0", "kind": "attach", "status": "detached", "joke": "joke:m", "into": "joke:a", "created_at": "0"},
+        })
+        .as_object()
+        .cloned()
+        .unwrap();
+        let h = history(&items, "joke:a");
+        assert_eq!(
+            h["merges"].as_array().unwrap().len(),
+            2,
+            "undone merges are history too"
+        );
+        assert_eq!(h["merges"][0]["id"], "mg:0", "oldest first");
+        assert_eq!(h["notes"].as_array().unwrap().len(), 1);
+        assert_eq!(h["notes"][0]["attached_at"], "3");
+        assert_eq!(h["merged_into"], Value::Null);
+        let b = history(&items, "joke:b");
+        assert_eq!(b["merged_into"], json!({"merge_id": "mg:1", "main": "joke:a"}));
+        let c = history(&items, "joke:c");
+        assert_eq!(c["merged_into"], Value::Null, "an undone merge took nothing");
+    }
+
+    #[test]
+    fn others_sort_same_first_then_score_then_id() {
+        let mut rows = vec![
+            json!({"joke_id": "joke:b", "score": 0.9, "judge": null}),
+            json!({"joke_id": "joke:c", "score": 0.3, "judge": {"same": true}}),
+            json!({"joke_id": "joke:a", "score": 0.9, "judge": {"same": false}}),
+        ];
+        sort_others(&mut rows);
+        let ids: Vec<&str> = rows.iter().map(|r| r["joke_id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["joke:c", "joke:a", "joke:b"]);
+        assert_eq!(judge_row(&Map::new(), "x"), Value::Null);
+        let j: Map<String, Value> = json!({"k": {"same": true, "confidence": 0.5, "why": "w"}})
+            .as_object()
+            .cloned()
+            .unwrap();
+        assert_eq!(
+            judge_row(&j, "k"),
+            json!({"same": true, "confidence": 0.5, "why": "w"}),
+            "below the bar the raw entry is still shown"
+        );
+    }
 }
