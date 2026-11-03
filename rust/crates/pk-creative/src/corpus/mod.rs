@@ -910,8 +910,8 @@ fn pk_creative_words(text: &str) -> usize {
     crate::ask::words::py_word_count(text)
 }
 
-/// `median(xs)` over a non-empty list.
-fn median(mut xs: Vec<f64>) -> f64 {
+/// `util.median(xs)` over a non-empty list.
+pub fn median(mut xs: Vec<f64>) -> f64 {
     xs.sort_by(f64::total_cmp);
     let m = xs.len() / 2;
     if xs.len() % 2 == 1 {

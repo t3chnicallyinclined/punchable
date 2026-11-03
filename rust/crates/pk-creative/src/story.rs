@@ -62,24 +62,82 @@ fn link_rank(k: &str) -> i64 {
 /// Per joke, its content words; per word shared by enough jokes, its idf (`_subject_index`).
 type SubjectIndex = (HashMap<String, HashSet<String>>, HashMap<String, f64>);
 
-/// The story layer over one corpus: the caches the Python keeps on the corpus object (`_subject_idx`, `_cos_band`,
-/// `_joke_vec`), built on first use.
-#[derive(Debug)]
-pub struct Story<'c> {
-    c: &'c Corpus,
+/// The caches the Python keeps on the corpus object (`_subject_idx`, `_cos_band`, `_joke_vec`), built on first use.
+/// Each is a function of the corpus alone, so one cache may serve many [`Story`] values over the same corpus; it can
+/// only be reached through a [`Story::new`] (its own) or a [`StoryCorpus`] (kept with its corpus), never paired with
+/// another corpus.
+#[derive(Debug, Default)]
+struct StoryCache {
     subject: OnceLock<SubjectIndex>,
     vecs: OnceLock<HashMap<String, Option<Vec<f32>>>>,
     bands: Mutex<HashMap<String, (f64, f64)>>,
 }
 
+/// A corpus that owns its story caches: built and dropped together, so a [`Story`] over it keeps what the earlier
+/// ones computed (the API keeps one per generation; the Python keeps the caches on its corpus object).
+#[derive(Debug)]
+pub struct StoryCorpus {
+    corpus: Corpus,
+    cache: StoryCache,
+}
+
+impl StoryCorpus {
+    /// Over a freshly built corpus, with empty caches.
+    pub fn new(corpus: Corpus) -> Self {
+        Self {
+            corpus,
+            cache: StoryCache::default(),
+        }
+    }
+
+    /// The story layer over this corpus, with its caches.
+    pub fn story(&self) -> Story<'_> {
+        Story {
+            c: &self.corpus,
+            cache: Cache::Shared(&self.cache),
+        }
+    }
+}
+
+impl std::ops::Deref for StoryCorpus {
+    type Target = Corpus;
+
+    fn deref(&self) -> &Corpus {
+        &self.corpus
+    }
+}
+
+/// The cache a [`Story`] reads: its own, or one kept beside the corpus.
+#[derive(Debug)]
+enum Cache<'c> {
+    Own(Box<StoryCache>),
+    Shared(&'c StoryCache),
+}
+
+impl std::ops::Deref for Cache<'_> {
+    type Target = StoryCache;
+
+    fn deref(&self) -> &StoryCache {
+        match self {
+            Cache::Own(c) => c,
+            Cache::Shared(c) => c,
+        }
+    }
+}
+
+/// The story layer over one corpus, with the caches the Python keeps on the corpus object ([`StoryCache`]).
+#[derive(Debug)]
+pub struct Story<'c> {
+    c: &'c Corpus,
+    cache: Cache<'c>,
+}
+
 impl<'c> Story<'c> {
-    /// Over a corpus.
+    /// Over a corpus, with caches of its own (dropped with it).
     pub fn new(c: &'c Corpus) -> Self {
         Self {
             c,
-            subject: OnceLock::new(),
-            vecs: OnceLock::new(),
-            bands: Mutex::new(HashMap::new()),
+            cache: Cache::Own(Box::default()),
         }
     }
 
@@ -134,7 +192,7 @@ impl<'c> Story<'c> {
     }
 
     fn subject_index(&self) -> &SubjectIndex {
-        self.subject.get_or_init(|| {
+        self.cache.subject.get_or_init(|| {
             let c = self.c;
             let mut words: HashMap<String, HashSet<String>> = HashMap::new();
             for j in &c.jokes {
@@ -175,7 +233,7 @@ impl<'c> Story<'c> {
 
     /// `joke_vec(jid)`: the mean of its unit vectors, normalised (float32); `None` without vectors.
     pub fn joke_vec(&self, jid: &str) -> Option<&[f32]> {
-        let all = self.vecs.get_or_init(|| {
+        let all = self.cache.vecs.get_or_init(|| {
             let c = self.c;
             c.jokes
                 .iter()
@@ -200,7 +258,7 @@ impl<'c> Story<'c> {
 
     /// `_cos_band(j)`: the 97th and 99.7th percentile of the joke's cosines to every other (1, 1 under 50).
     pub fn cos_band(&self, j: &str) -> (f64, f64) {
-        if let Some(b) = self.bands.lock().unwrap_or_else(PoisonError::into_inner).get(j) {
+        if let Some(b) = self.cache.bands.lock().unwrap_or_else(PoisonError::into_inner).get(j) {
             return *b;
         }
         // n dot products for the one bit asked about (the Python caches per bit, too)
@@ -218,7 +276,8 @@ impl<'c> Story<'c> {
             let at = |q: f64| cs[(q * (cs.len() - 1) as f64) as usize];
             (at(0.97), at(0.997))
         };
-        self.bands
+        self.cache
+            .bands
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(j.to_string(), band);

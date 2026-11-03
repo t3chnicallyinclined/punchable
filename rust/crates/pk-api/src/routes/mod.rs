@@ -3,6 +3,7 @@
 //! `?include_hidden=`, then the route.
 
 pub mod cloud;
+pub mod creative;
 pub mod health;
 pub mod jokes;
 pub mod kb;

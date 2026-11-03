@@ -1,0 +1,58 @@
+# Punchable's API, the Rust one (pk-api, T9: the reads, every other request forwarded to the Python API until T10).
+# Build context = the repo root:
+#   docker build -f rust/Dockerfile.api --build-arg PK_BUILD_SHA=$(git rev-parse HEAD) -t punchable-api-rs .
+# Built OFF the production node (docs/ARCHITECTURE.md section 6: a release cargo build is the heavy run the owner
+# forbids on a box doing real work): in CI or on the PC, then `docker save` | ssh | `docker load` and pushed to the
+# cluster registry. Not wired into infra/deploy.sh: the manifest is infra/k8s/prepared/t9-api-rs.yaml (not applied),
+# and moving any path to it is the owner's call (docs/RUST_WORKSTREAM.md T9).
+#
+# What is in it: one binary (rustls, no OpenSSL; ONNX Runtime linked in by `ort` for search's query and passage
+# vectors) on distroless cc (glibc, libgcc, libstdc++), non-root uid 10001, read-only root filesystem; the bge-small
+# model, fetched and checked against the hub's hashes and the fingerprint by tools/kb/fetch_bge.py (the Python image's
+# own step, as rust/Dockerfile.worker does), at the path the manifest's PK_BGE_DIR names. pk-api writes nothing to
+# disk (PK_DATA only names the paths /api/health reports, as the Python pod names them); no `diagnostics` feature
+# (that route is the differential's, never in a shipped image).
+# PK_WITH_BGE=0 builds without the model: search, /similar and the hybrid list then answer on words only, with a
+# warning at the first search (the manifest's PK_BGE_DIR names an empty folder).
+#
+# Bases pinned by digest (the same three digests as rust/Dockerfile.worker, resolved 2026-11-02 with
+# `docker buildx imagetools inspect`):
+#   rust:1.93.1-slim-bookworm               = rust-toolchain.toml's 1.93.1
+#   python:3.13-slim-bookworm               the digest infra/worker/Dockerfile pins (2026-10-22): the model stage
+#                                           fetches the model exactly as the Python image does
+#   gcr.io/distroless/cc-debian12:nonroot   the runtime
+# Move a pin only on purpose, with the build log's digest in the deploy log.
+FROM rust:1.93.1-slim-bookworm@sha256:5b9332190bb3b9ece73b810cd1f1e9f06343b294ce184bcb067f0747d7d333ea AS build
+WORKDIR /src
+# pk-store compiles the schema in (include_str!)
+COPY db/schema.surql db/schema_extra.surql db/
+COPY rust/ rust/
+WORKDIR /src/rust
+RUN cargo build --release --locked -p pk-api \
+ && cp target/release/pk-api /pk-api
+
+FROM python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530 AS model
+ARG PK_WITH_BGE=1
+COPY engine/*.py /src/engine/
+COPY tools/kb/fetch_bge.py /src/tools/kb/fetch_bge.py
+RUN mkdir -p /opt/punchable/models/bge-small-en-v1.5 \
+ && if [ "$PK_WITH_BGE" = 1 ]; then \
+      python -m pip install --no-cache-dir --only-binary=:all: onnxruntime==1.27.0 tokenizers==0.22.1 numpy==2.2.6 \
+      && python /src/tools/kb/fetch_bge.py --dest /opt/punchable/models/bge-small-en-v1.5; \
+    fi
+
+FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
+COPY --from=build /pk-api /pk-api
+COPY --from=model /opt/punchable/models /opt/punchable/models
+ARG PK_BUILD_SHA=dev
+ENV PK_BUILD_SHA=$PK_BUILD_SHA \
+    HOME=/tmp \
+    PORT=8080 \
+    PK_DATA=/tmp/punchable \
+    PK_BGE_DIR=/opt/punchable/models/bge-small-en-v1.5 \
+    PUNCH_SECRETS=/nonexistent \
+    RUST_LOG=info
+USER 10001:10001
+# the API and its /metrics on one port (the manifest's containerPort)
+EXPOSE 8080
+ENTRYPOINT ["/pk-api"]

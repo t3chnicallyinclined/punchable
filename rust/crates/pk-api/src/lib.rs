@@ -22,6 +22,7 @@ pub mod proxy;
 pub mod query;
 pub mod routes;
 pub mod search;
+pub mod setlists;
 pub mod snapshot;
 pub mod state;
 pub mod tape;
@@ -43,7 +44,7 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 11] = [
+pub const OWN_PATHS: [&str; 15] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -55,6 +56,10 @@ pub const OWN_PATHS: [&str; 11] = [
     "/api/meta",
     "/api/pipeline",
     "/api/learned",
+    "/api/settings",
+    "/api/boards",
+    "/api/mysets",
+    "/api/tonight/screen",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -110,6 +115,10 @@ pub fn app(st: AppState) -> Router {
         .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
         .route("/api/sets/{id}/review", read_route(&st, routes::sets::review))
         .route("/api/jokes/{id}", read_route(&st, routes::sets::joke))
+        .route("/api/settings", read_route(&st, routes::creative::settings))
+        .route("/api/boards", read_route(&st, routes::creative::boards))
+        .route("/api/mysets", read_route(&st, routes::creative::mysets))
+        .route("/api/tonight/screen", read_route(&st, routes::creative::tonight_screen))
         .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));

@@ -261,9 +261,18 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    Python vs pk-api: search 114 / 553 vs 49 / 137 ms, hybrid 209 / 303 vs 148 / 229 ms; **`/similar` 71 / 129 vs
    110 / 142 ms: not at or below the Python in that run** (pk-api's run made twice the calls per second); asked at
    the same rate with writes, pk-api is several times faster (`/similar` p50 45-56 vs 294-410 ms). Memory peak with
-   the model: 332 MiB vs the Python's 530. The pk-api
-   image still has no Dockerfile; it must ship the model. Next: the creative GETs (`/api/settings`, `/api/boards`,
-   `/api/mysets`, `/api/tonight/screen`); details in the RUST_WORKSTREAM T9 row.
+   the model: 332 MiB vs the Python's 530.
+   **Round 7 (branch `rust/t9-round7`, not merged, not deployed):** pk-api also answers **`/api/settings`,
+   `/api/boards`, `/api/mysets` and `/api/tonight/screen`** (286/286 equal against the Python, allow-list unchanged;
+   equal at production scale too). The gate is now "at or below the Python at the same request rate"
+   (`tools/load/forward_probe.py`): p50 one at a time 0.6-2.5 ms vs the Python's 3-42 ms, and at 8 at once with writes
+   0.6-2.8 ms vs 93-215 ms. In pk-load (context only) `/similar` is now below the Python too (46 / 72 vs 95 / 197 ms).
+   The Tonight screen's worker status lives in the Python process's memory until T10, so pk-api asks a new tiny Python
+   route, `GET /api/ai/worker`: **deploy the Python with that route before pk-api moves `/api/tonight/screen`**.
+   Also: `rust/Dockerfile.api` (model included, pinned bases; not built here: Docker's engine was not running), and
+   pk-embed no longer goes unusable after a panic. A text-keyed vector cache was tried and dropped (no measurable gain).
+   Slowest still-forwarded route: `/api/boards/{id}` (next). Details and the deploy prerequisites: the RUST_WORKSTREAM
+   T9 row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):

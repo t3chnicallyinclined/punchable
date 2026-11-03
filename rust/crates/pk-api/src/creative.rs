@@ -8,6 +8,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
+use pk_creative::Items;
 use pk_creative::corpus::{Corpus, CorpusError, Parts, Vectors};
 use pk_store::{Store, StoreError, from_db, vars};
 use serde_json::{Value, json};
@@ -152,14 +153,88 @@ pub fn build_corpus(
     Ok(Corpus::new(parts))
 }
 
+/// One generation's notebook with the story layer's caches (`_subject_idx`, `_cos_band`, `_joke_vec`, which the
+/// Python keeps on its corpus object), built and dropped together.
+pub type GenCorpus = pk_creative::story::StoryCorpus;
+
+/// One creative store's items as last replayed from its `creative_event` lines. Creative writes do not move the
+/// generation, so the lines are read on every request (as the Python's `Creative.stores` does) and replayed again
+/// only when they differ from the last replay's: the items handed out are always those of the lines just read.
+#[derive(Debug)]
+pub struct Replayed {
+    name: &'static str,
+    last: Mutex<Option<(Vec<String>, Arc<Items>)>>,
+}
+
+impl Replayed {
+    /// For the store `name` (a key of `pk_creative::reducers::for_store`).
+    pub const fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            last: Mutex::new(None),
+        }
+    }
+
+    /// The store's items now. `Err` is a text in the Python's `creative_error` style: no database, a read that
+    /// failed, or lines its reducer refuses.
+    pub async fn items(&self, store: Option<&Store>, owner: &str) -> Result<Arc<Items>, String> {
+        let store = store.ok_or("ConnectionError: the database is not connected")?;
+        let lines = store
+            .creative_lines(self.name)
+            .await
+            .map_err(|e| format!("HttpError: {e}"))?;
+        self.replay(lines, owner)
+    }
+
+    /// The items of `lines`: the last replay's when they are the same lines, else a new replay (kept for the next
+    /// reader). The replay runs on the caller's thread: the stores are small, append-only logs.
+    pub fn replay(&self, lines: Vec<String>, owner: &str) -> Result<Arc<Items>, String> {
+        if let Some((l, items)) = &*self.last.lock().unwrap_or_else(PoisonError::into_inner)
+            && *l == lines
+        {
+            return Ok(Arc::clone(items));
+        }
+        let reducer =
+            pk_creative::reducers::for_store(self.name, owner).ok_or_else(|| format!("KeyError: '{}'", self.name))?;
+        let st = pk_creative::store::Store::replay(reducer, &lines).map_err(|e| format!("ValueError: {e}"))?;
+        let items = Arc::new(st.items().clone());
+        *self.last.lock().unwrap_or_else(PoisonError::into_inner) = Some((lines, Arc::clone(&items)));
+        Ok(items)
+    }
+}
+
+/// The creative stores the reads here replay, each with its last replay.
+#[derive(Debug)]
+pub struct Stores {
+    /// His account (`settings`).
+    pub account: Replayed,
+    /// The set lists (boards).
+    pub storyboards: Replayed,
+    /// His sets (working sets).
+    pub workingsets: Replayed,
+    /// His answers to "not a joke?".
+    pub suggestions: Replayed,
+}
+
+impl Default for Stores {
+    fn default() -> Self {
+        Self {
+            account: Replayed::new("account"),
+            storyboards: Replayed::new("storyboards"),
+            workingsets: Replayed::new("workingsets"),
+            suggestions: Replayed::new("suggestions"),
+        }
+    }
+}
+
 /// The merges store's lines and the notes attached in them, as last replayed. Creative writes do not move the
 /// generation, so the lines are read on every request, as the Python reads them; the replay is redone only when
 /// they changed.
 #[derive(Debug, Default)]
-pub struct Attached(Mutex<Option<Replayed>>);
+pub struct Attached(Mutex<Option<AttachedLines>>);
 
 /// The lines replayed and the attached notes they give.
-type Replayed = (Vec<String>, Arc<HashSet<String>>);
+type AttachedLines = (Vec<String>, Arc<HashSet<String>>);
 
 impl Attached {
     /// `merge.attached(store.items)` keys: the notes auto-attached under a bit, which the Desk does not list on their

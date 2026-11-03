@@ -835,6 +835,9 @@ GET_ROUTES = [
     (re.compile(r"^/api/jobs/([^/]+)$"), "job"),
     (re.compile(r"^/api/settings$"), "settings"),
     (re.compile(r"^/api/connections$"), "connections_status"),
+    # the worker's status alone (worker_status): what the Rust API asks for while it builds /api/tonight/screen,
+    # because the last claim lives in this process's memory until the worker routes move (docs/RUST_WORKSTREAM.md T9)
+    (re.compile(r"^/api/ai/worker$"), "ai_worker"),
     # Simple Punchable (docs/SIMPLE.md): Write, the joke map, the set builder
     (re.compile(r"^/api/notebook/related$"), "notebook_related"),
     (re.compile(r"^/api/jokes/(.+)/map$"), "joke_map"),
@@ -1399,6 +1402,10 @@ class Routes:
         it = (st or self.st())["account"].get("settings") or {}
         return 200, {**SETTINGS_DEFAULTS, **{k: it[k] for k in SETTINGS_DEFAULTS if k in it},
                      "updated_at": it.get("updated_at"), "source": "his" if it else "default"}
+
+    def ai_worker(self):
+        """GET /api/ai/worker: worker_status(cr) and nothing else (no store, no corpus, no lock)."""
+        return 200, worker_status(self.cr)
 
     def connections_status(self):
         """Settings > Connections: one plain status per outside source. Read-only."""

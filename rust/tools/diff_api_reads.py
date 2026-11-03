@@ -288,6 +288,11 @@ def build_comedy(comedy: Path) -> None:
     write_json(v0 / "insights.json", INSIGHTS)
     (comedy / "kb" / "creative" / "workingsets.jsonl").write_text(
         "".join(json.dumps(e) + "\n" for e in WORKINGSETS), encoding="utf-8", newline="\n")
+    # round 7: set lists (a seeded draft, one of his with a bit that is not in the notebook, an empty one of his, a
+    # deleted one) and the triage judge's "not a joke?" verdicts
+    (comedy / "kb" / "creative" / "storyboards.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in STORYBOARDS), encoding="utf-8", newline="\n")
+    write_json(comedy / "kb" / "creative" / "suggest_judge.json", SUGGEST_JUDGE)
 
 
 INSIGHTS = {"gems": {"gems": [
@@ -311,6 +316,33 @@ WORKINGSETS = [
      "data": {"note": "v2: Charlie before Bravo", "bits": [WS_BITS[0], WS_BITS[3], WS_BITS[1], WS_BITS[2], WS_BITS[4]]}},
     {"ts": "2024-03-01T10:00:00+00:00", "op": "promote", "id": "ws:old", "by": "owner",
      "data": {"title": "Old set", "target_s": 60, "bits": WS_BITS[:1]}}]
+
+STORYBOARDS = [
+    {"ts": "2024-06-01T10:00:00+00:00", "op": "create", "id": "sb:seed1", "by": "ai:seed",
+     "data": {"title": "Draft from your Insights", "joke_ids": ["joke:c", "joke:d"], "target_s": 300,
+              "seed": {"from": "insights.chunks", "chunk": 1, "minutes_est": 5}}},
+    {"ts": "2024-06-02T10:00:00+00:00", "op": "create", "id": "sb:old", "by": "owner",
+     "data": {"title": "Old seven", "joke_ids": ["joke:a", "joke:nope", "joke:b", "joke:x02"], "target_s": 420}},
+    {"ts": "2024-06-10T10:00:00+00:00", "op": "create", "id": "sb:empty", "by": "owner",
+     "data": {"title": "Nothing yet", "joke_ids": [], "target_s": 600}},
+    {"ts": "2024-06-11T10:00:00+00:00", "op": "create", "id": "sb:gone", "by": "owner",
+     "data": {"title": "Gone", "joke_ids": ["joke:a"], "target_s": 300}},
+    {"ts": "2024-06-11T11:00:00+00:00", "op": "delete", "id": "sb:gone", "by": "owner", "data": {}}]
+# memo key -> the triage verdict: flagged (a conversation, a note, an empty unclear one, each confident), not flagged
+# (unsure, or a joke), on a hidden bit (counted only in the hidden view), on a bit that does not exist, one he keeps
+SUGGEST_JUDGE = {"version": 1, "items": {
+    "memo:1": {"kind": "conversation", "confidence": 0.9, "joke_id": "joke:x06"},
+    "memo:2": {"kind": "note", "confidence": 0.5, "joke_id": "joke:x07"},
+    "memo:3": {"kind": "unclear", "confidence": 0.8, "chars": 20, "joke_id": "joke:x08"},
+    "memo:4": {"kind": "note", "confidence": 0.95, "joke_id": "joke:g"},
+    "memo:5": {"kind": "note", "confidence": 0.9, "joke_id": "joke:nope"},
+    "memo:6": {"kind": "conversation", "confidence": 0.8, "joke_id": "joke:x09"},
+    "memo:7": {"kind": "joke", "confidence": 0.99, "joke_id": "joke:x10"},
+    "memo:8": {"kind": "unclear", "confidence": 0.9, "chars": 400, "joke_id": "joke:x11"}}}
+CREATIVE_LISTS = ["/api/settings", "/api/settings?backend=files", "/api/boards", "/api/boards?archived=1",
+                  "/api/boards?archived=true", "/api/boards?archived=yes", "/api/boards?include_hidden=1",
+                  "/api/boards?backend=files", "/api/mysets", "/api/mysets?include_hidden=1", "/api/mysets?backend=x",
+                  "/api/tonight/screen", "/api/tonight/screen?include_hidden=1", "/api/tonight/screen?backend=files"]
 
 
 # the merges store (creative_event rows; the bundle carries no merges log, the API writes them): a note auto-attached
@@ -589,6 +621,18 @@ def coverage(py: str, app: dict) -> list[str]:
         sm["vectors"] and sm["performed"] and sm["like"]["bits"] and sm["like"]["bits"][0]["distance"] is not None
         and sm["like"]["moments"] and sm["text"])
     checks["hybrid: a ranked list"] = len(get("/api/jokes?q=niece&mode=hybrid")["items"]) >= 2
+    # round 7 (the bundle's creative stores, before any write of his)
+    tn = get("/api/tonight/screen")
+    bds = {b["id"]: b for b in get("/api/boards")["boards"]}
+    checks["tonight: his newest list with bits, a bit not in the notebook left out, a gap named"] = bool(
+        (tn["board"] or {}).get("id") == "sb:old" and "joke:nope" not in [s["joke_id"] for s in tn["board"]["segments"]]
+        and tn["board"]["first_gap"] and tn["latest_set"] and len(tn["questions"]) == 3)
+    checks["tonight: flagged memos counted, the hidden bit only in the hidden view"] = (
+        tn["to_sort"] >= 2 and get("/api/tonight/screen?include_hidden=1")["to_sort"] == tn["to_sort"] + 1)
+    checks["boards: a seeded draft, his own, the deleted one gone, a bit not in the notebook named nowhere"] = (
+        set(bds) == {"sb:seed1", "sb:old", "sb:empty"} and bds["sb:seed1"]["seed"] and bds["sb:seed1"]["source"] == "inferred"
+        and bds["sb:old"]["n"] == 4 and len(bds["sb:old"]["names"]) == 3)
+    checks["settings: the defaults before he changes one"] = get("/api/settings")["source"] == "default"
     for what, ok_ in checks.items():
         if not ok_:
             out.append(f"coverage: the synthetic data no longer reaches '{what}'")
@@ -773,6 +817,9 @@ def main() -> int:
                   "/api/jokes?q=dog&mode=hybrid&limit=99999999999999999999", "/api/jokes?offset=99999999999999999999",
                   "/api/decisions?limit=99999999999999999999"]
         reqs += [(p, "GET", p, app) for p in search + similar + hybrid]
+        # round 7: the creative lists over the bundle's stores (no write of his yet), and their refusals
+        reqs += [(p, "GET", p, app) for p in CREATIVE_LISTS]
+        reqs += [("tonight signed out", "GET", "/api/tonight/screen", {}), ("settings signed out", "GET", "/api/settings", {})]
         reqs += [("proxied connections", "GET", "/api/jokes/joke:a/connections", app),
                  ("proxied clips", "GET", f"/api/sets/set:{SX}/clips", app)]
         reqs += [("HEAD meta", "HEAD", "/api/meta", app),
@@ -818,9 +865,15 @@ def main() -> int:
                     # the database's tie order: ask the Python again; if it disagrees with itself, compare up to the ties
                     seen = [pyr] + [call(py, m, p, h) for _ in range(11)]
                     if len({x[2] for x in seen}) > 1:
+                        heads = [g for g in got if g.startswith(f"{label}: header ")]
+                        ranked_bad = compare_ranked(label, [json.loads(x[2]) for x in seen], json.loads(rsr[2]))
+                        if ranked_bad:
+                            # round 7: twelve answers do not always show every place a tied row can take (one run in
+                            # eight put a tied row first where the Python's twelve never did): ask 36 more, same rule
+                            seen += [call(py, m, p, h) for _ in range(36)]
+                            ranked_bad = compare_ranked(label, [json.loads(x[2]) for x in seen], json.loads(rsr[2]))
                         unstable[label] = len({x[2] for x in seen})
-                        got = [g for g in got if g.startswith(f"{label}: header ")] + compare_ranked(
-                            label, [json.loads(x[2]) for x in seen], json.loads(rsr[2]))
+                        got = heads + ranked_bad
                 bad += got
                 n += not got
             return bad, n
@@ -875,6 +928,52 @@ def main() -> int:
             reqs.append((label, "GET", p, app))
         if "joke:x10" not in seen.decode() or "joke:x10" in call(rs, "GET", "/api/jokes?q=x10", app)[2].decode():
             problems.append("after a late attach: pk-api did not take the newly attached note out of the list")
+        # round 7: the creative lists again after writes through pk-api (each forwarded to the Python), every list
+        # read by both servers right after the write it must show: set lists made (tonight's list moves to the newest
+        # of his), one archived, his settings, a set made and one deleted, a "not a joke?" he keeps, the worker's claim
+        def cwrite(m: str, p: str, b: dict, h: dict | None = None) -> dict:
+            st_, _, body_ = call(rs, m, p, h or app, b)
+            if st_ not in (200, 201, 204):
+                raise SystemExit(f"{m} {p} through pk-api: HTTP {st_} {body_[:300]!r}")
+            return json.loads(body_) if body_ else {}
+
+        def again(label: str, paths: list[str]) -> None:
+            nonlocal n_ok
+            for p in paths:
+                lab = f"{label}: {p}"
+                got = compare(lab, call(py, "GET", p, app), call(rs, "GET", p, app))
+                problems.extend(got)
+                n_ok += not got
+                reqs.append((lab, "GET", p, app))
+
+        from urllib.parse import quote as q_
+        b1 = cwrite("POST", "/api/boards", {"title": "Friday ten", "target_s": 600,
+                                            "joke_ids": ["joke:b", "joke:c", "joke:x01", "joke:d", "joke:e"]})["board"]["id"]
+        again("after a set list", ["/api/boards", "/api/tonight/screen"])
+        b2 = cwrite("POST", "/api/boards", {"title": "Put away", "joke_ids": ["joke:a"], "target_s": 300})["board"]["id"]
+        cwrite("PATCH", f"/api/boards/{q_(b2, safe='')}", {"archive": True})
+        cwrite("PATCH", f"/api/boards/{q_(b1, safe='')}", {"move": {"from": 4, "to": 1}})
+        again("after archive and move", ["/api/boards", "/api/boards?archived=1", "/api/tonight/screen"])
+        cwrite("PATCH", "/api/settings", {"provider": "key", "training": True})
+        again("after his settings", ["/api/settings"])
+        cwrite("POST", "/api/mysets", {"title": "A tight five", "target_s": 300, "joke_ids": ["joke:a", "joke:c", "joke:e"]})
+        cwrite("POST", "/api/mysets", {"title": "Too long", "target_s": 60, "joke_ids": ["joke:b", "joke:c", "joke:x01"]})
+        cwrite("POST", "/api/mysets", {"title": "Nothing in it", "target_s": 300, "joke_ids": []})
+        cwrite("POST", "/api/mysets", {"title": "One minute", "target_s": 60, "joke_ids": ["joke:a"]})
+        cwrite("PATCH", "/api/mysets/ws:old", {"delete": True})
+        again("after his sets", ["/api/mysets"])
+        cwrite("POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "joke:x09"})
+        again("after a keep", ["/api/tonight/screen", "/api/tonight/screen?include_hidden=1"])
+        cwrite("POST", "/api/worker/claim", {"kinds": ["riff"], "worker": "t9-worker", "hosted": True},
+               tok(realm_access={"roles": ["worker"]}))
+        again("after a claim", ["/api/tonight/screen"])
+        tn = json.loads(call(rs, "GET", "/api/tonight/screen", app)[2])
+        if not tn["worker"]["online"] or (tn["board"] or {}).get("id") != b1 or not tn["to_sort"]:
+            problems.append(f"coverage: tonight after the writes: worker {tn['worker']}, board "
+                            f"{(tn['board'] or {}).get('id')}, to_sort {tn['to_sort']}")
+        ms = json.loads(call(py, "GET", "/api/mysets", app)[2])["sets"]
+        if len({s["health"].split(" ")[-1] for s in ms}) < 3 or len({s["status"] for s in ms}) < 3:
+            problems.append(f"coverage: his sets show one health and one status only: {[(s['health'], s['status']) for s in ms]}")
         # the whole Bits-list row (AppIndex.summaries) before /api/jokes moves: the Python's page without the creative
         # layer's duration, against pk-api's diagnostics route (a build with --features diagnostics)
         for hid in ("", "&include_hidden=1"):
@@ -901,7 +1000,8 @@ def main() -> int:
         mtext = call(rs, "GET", "/metrics")[2].decode()
         for route in ("/api/health", "/api/labels", "/api/decisions", "/api/meta", "/api/pipeline", "/api/learned",
                       "/api/map/cloud", "/api/sets", "/api/sets/{id}/analysis", "/api/sets/{id}/review", "/api/jokes/{id}",
-                      "/api/jokes", "/api/today", "/api/search", "/api/jokes/{id}/similar"):
+                      "/api/jokes", "/api/today", "/api/search", "/api/jokes/{id}/similar", "/api/settings",
+                      "/api/boards", "/api/mysets", "/api/tonight/screen"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)

@@ -106,6 +106,23 @@ def test_paused_claim_reports_the_budget_and_the_worker_line_says_the_server():
     assert CR.worker_status(SimpleNamespace(jobs_mode="inproc"))["online"] is True
 
 
+def test_ai_worker_route_is_the_worker_status_alone(monkeypatch):
+    """GET /api/ai/worker (what pk-api asks while it builds /api/tonight/screen): worker_status and nothing else; no
+    store is replayed (Routes.st is never called) and no corpus is built."""
+    assert CR.match("GET", "/api/ai/worker") == ("ai_worker", [])
+    assert CR.match("POST", "/api/ai/worker") is None
+    _, seen = CR.check_claim({"kinds": ["riff"], "worker": "server-1", "hosted": True})
+    cr = SimpleNamespace(jobs_mode="worker", worker_seen=seen)
+    r = CR.Routes(cr, None, None, {}, None)
+    monkeypatch.setattr(CR.Routes, "st", lambda self: pytest.fail("the worker status read a store"))
+    assert r.ai_worker() == (200, CR.worker_status(cr))
+    # never heard from: the shape pk-api answers itself when no Python is behind it (routes/creative.rs)
+    monkeypatch.delenv("PK_AUTH", raising=False)
+    assert CR.Routes(SimpleNamespace(jobs_mode="worker", worker_seen=None), None, None, {}, None).ai_worker()[1] == {
+        "online": False, "last_seen": None, "name": None, "where": "a development PC", "hosted": False, "model": None,
+        "paused": None, "online_window_s": 120}
+
+
 def test_set_text_is_a_job_kind_the_worker_may_run():
     assert "set_text" in CR.JOB_KINDS and "set_text" not in CR.TRANSCRIBER_KINDS and "set_text" not in CR.WORKER_ONLY
     assert CR.TRANSCRIBER_KINDS == {"process_set", "import_youtube"}

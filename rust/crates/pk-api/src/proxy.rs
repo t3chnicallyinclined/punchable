@@ -45,6 +45,39 @@ fn copy_headers(from: &HeaderMap, to: &mut HeaderMap) {
     }
 }
 
+/// How long a sub-request to the Python ([`python_json`]) may take, end to end.
+const SUB_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `GET <PK_PYTHON_URL><path>` with the caller's `Authorization` (already verified here; the Python checks it again),
+/// for a value only the Python process holds (T9 only: the worker's last claim is in its memory until T10 moves the
+/// worker routes). Bounded by the fallback's slots. `Ok(None)` when no Python is configured; a non-200 answer, a
+/// body that is not JSON, or no answer at all is the 502 a failed forward is.
+pub async fn python_json(
+    st: &AppState,
+    path: &str,
+    auth: Option<&axum::http::HeaderValue>,
+) -> Result<Option<serde_json::Value>, ApiError> {
+    let Some(base) = st.config().python_url.as_deref() else {
+        return Ok(None);
+    };
+    let bad = |what: &dyn std::fmt::Display| {
+        tracing::warn!(%path, "the Python API sub-request failed: {what}");
+        ApiError::new(StatusCode::BAD_GATEWAY, "the API is restarting; try again in a moment")
+    };
+    let Ok(Ok(_permit)) = tokio::time::timeout(PERMIT_WAIT, st.proxy_permits().acquire_owned()).await else {
+        return Err(ApiError::unavailable("the API is busy; try again in a moment"));
+    };
+    let mut req = st.http().get(format!("{base}{path}")).timeout(SUB_TIMEOUT);
+    if let Some(a) = auth {
+        req = req.header(header::AUTHORIZATION, a.clone());
+    }
+    let r = req.send().await.map_err(|e| bad(&e))?;
+    if r.status() != StatusCode::OK {
+        return Err(bad(&r.status()));
+    }
+    r.json().await.map(Some).map_err(|e| bad(&e))
+}
+
 /// The fallback: forward to `PK_PYTHON_URL`, or answer 404 the Python's way when none is configured.
 pub async fn forward(State(st): State<AppState>, req: Request) -> Response {
     let Some(base) = st.config().python_url.clone() else {

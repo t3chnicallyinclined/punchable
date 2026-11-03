@@ -1,0 +1,9 @@
+# BuildKit reads <Dockerfile>.dockerignore: send only what rust/Dockerfile.api copies (never rust/target, never
+# app/node_modules, never data, never a .env).
+*
+!db/schema.surql
+!db/schema_extra.surql
+!rust/
+!engine/*.py
+!tools/kb/fetch_bge.py
+rust/target/
