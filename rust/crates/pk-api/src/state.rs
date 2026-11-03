@@ -59,6 +59,7 @@ struct Inner {
     transcripts: crate::tape::TranscriptCache,
     src_texts: crate::creative::SrcTexts,
     attached: crate::creative::Attached,
+    model: crate::embed::Model,
 }
 
 /// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
@@ -93,7 +94,9 @@ pub const BUILD_RETRY: Duration = Duration::from_secs(5);
 impl AppState {
     /// A state with no database yet (`connect` or the supervisor supplies it).
     pub fn new(config: ApiConfig, verifier: Option<Verifier>, metrics: ApiMetrics, http: reqwest::Client) -> Self {
+        let model = crate::embed::Model::new(config.embedder.clone());
         Self(Arc::new(Inner {
+            model,
             config,
             verifier,
             metrics,
@@ -147,6 +150,11 @@ impl AppState {
     /// The outbound HTTP client (JWKS, the Python fallback).
     pub fn http(&self) -> &reqwest::Client {
         &self.0.http
+    }
+
+    /// Search's embedder, loaded on first use.
+    pub fn model(&self) -> &crate::embed::Model {
+        &self.0.model
     }
 
     /// The bound on concurrent fallback requests (a permit lives as long as the forwarded response body).
@@ -262,10 +270,41 @@ impl AppState {
     /// rebuild itself is cheap: a patch or a read of the rows; the views and the index are built by the routes that
     /// need them ([`Data::view`], [`Data::index`]).
     pub async fn data(&self) -> Result<Arc<Data>, ApiError> {
+        self.data_after(|| ()).await
+    }
+
+    /// [`AppState::data`], with `work` started (in its own task) right after this request's `meta:state` read, so
+    /// whatever `work` reads from the database is at least as new as that state, and it runs while the data is made
+    /// ready. An error here returns at once; the task is not waited for (it finishes on its own and is dropped).
+    pub async fn data_and<T: Send + 'static>(
+        &self,
+        work: impl Future<Output = T> + Send + 'static,
+    ) -> Result<(Arc<Data>, tokio::task::JoinHandle<T>), ApiError> {
+        let mut work = Some(work);
+        let mut handle = None;
+        let d = self.data_after(|| handle = work.take().map(tokio::spawn)).await?;
+        let handle = match (handle, work) {
+            (Some(h), _) => h,
+            (None, Some(w)) => tokio::spawn(w),
+            (None, None) => {
+                return Err(ApiError::internal(
+                    "StateError",
+                    "the work was neither started nor kept",
+                ));
+            }
+        };
+        Ok((d, handle))
+    }
+
+    /// [`AppState::data`], calling `on_state` once, right after the `meta:state` read (or where it would have been).
+    async fn data_after(&self, on_state: impl FnOnce()) -> Result<Arc<Data>, ApiError> {
         let Some(store) = self.store() else {
+            on_state();
             return self.cached().ok_or_else(|| self.booting_error());
         };
-        let Some(st) = self.read_state(&store).await else {
+        let st = self.read_state(&store).await;
+        on_state();
+        let Some(st) = st else {
             return self.cached().ok_or_else(|| self.booting_error());
         };
         // every rebuild state read that starts from here on sees at least what this one saw

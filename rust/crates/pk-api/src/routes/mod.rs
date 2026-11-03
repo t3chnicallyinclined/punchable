@@ -8,6 +8,7 @@ pub mod jokes;
 pub mod kb;
 pub mod learned;
 pub mod metrics;
+pub mod search;
 pub mod sets;
 pub mod today;
 
@@ -41,6 +42,28 @@ pub async fn prepare(st: &AppState, q: &Query) -> Result<(Arc<Data>, Arc<AppInde
     pick(q)?;
     let idx = d.index(q.include_hidden()).await?;
     Ok((d, idx))
+}
+
+/// [`prepare`] with `work` (a read of the database, not of the generation: the fused search) started right after
+/// this request's `meta:state` read and running while the data and the index are made ready. The refusals keep the
+/// Python's order: the data (503) first, then `?backend=`, and no work is started for a request that is refused.
+pub async fn prepare_and<T: Send + 'static>(
+    st: &AppState,
+    q: &Query,
+    work: impl Future<Output = T> + Send + 'static,
+) -> Result<(Arc<Data>, Arc<AppIndex>, tokio::task::JoinHandle<T>), ApiError> {
+    if let Err(e) = pick(q) {
+        st.data().await?;
+        return Err(e);
+    }
+    let (d, work) = st.data_and(work).await?;
+    let idx = d.index(q.include_hidden()).await?;
+    Ok((d, idx, work))
+}
+
+/// The work [`prepare_and`] started, awaited.
+pub async fn finish<T>(work: tokio::task::JoinHandle<T>) -> Result<T, ApiError> {
+    work.await.map_err(|e| ApiError::internal("JoinError", e))
 }
 
 /// The data and the view only, for a route that reads no Bits list row.

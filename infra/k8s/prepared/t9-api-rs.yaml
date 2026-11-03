@@ -72,6 +72,11 @@ spec:
             # T9 only: everything pk-api does not answer goes to the Python Service unchanged
             - { name: PK_PYTHON_URL, value: "http://punchable-api.punchable.svc.cluster.local" }
             - { name: RUST_LOG, value: info }
+            # search's query and passage vectors (round 6), loaded on the first search, not at start. There is no
+            # pk-api Dockerfile yet: when it is written it must copy the model to this path the way
+            # rust/Dockerfile.worker does (tools/kb/fetch_bge.py). An empty folder = words-only search and a warning
+            # in the log ("PK_BGE_DIR holds no model")
+            - { name: PK_BGE_DIR, value: /opt/punchable/models/bge-small-en-v1.5 }
           envFrom:
             # SURREAL_API_USER / SURREAL_API_PASS (database EDITOR, never root) and SENTRY_DSN: the same Secrets
             - secretRef: { name: punchable-api }
@@ -81,10 +86,11 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
-          # no model in this image (search is not ported yet): the T15 measurement sets the request once it is
+          # the model once loaded adds its weights and runtime (measured in the T9 round-6 row of
+          # docs/RUST_WORKSTREAM.md); the T15 measurement sets the request
           resources:
             requests: { cpu: 50m, memory: 64Mi }
-            limits: { cpu: "1", memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
           readinessProbe:
             httpGet: { path: "/api/health?ready=1", port: 8080 }
             periodSeconds: 3
@@ -125,17 +131,19 @@ spec:
           - { path: /api/map/cloud, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # step 3 (GET-only on the Python too): the Sets list
           - { path: /api/sets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
-          # round 5 (GET-only on the Python too): the Bits list (its `?mode=hybrid` search is forwarded by pk-api to
-          # the Python until the model runs in pk-api)
+          # round 5 (GET-only on the Python too): the Bits list; since round 6 its `?mode=hybrid` search too
           - { path: /api/jokes, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 6 (GET-only on the Python too): search over bits and taped moments, with the model
+          - { path: /api/search, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # round 5 (GET-only on the Python too): the Today feed (its `inbox` count is the Python pod's upload folder until
           # T10; the app does not read it)
           - { path: /api/today, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
-# anchored to exactly one id segment; /api/jokes/<id>/versions (POST), /connections, /map, /similar and
-# /api/sets/<id>/clips have more segments and stay on the Python's Ingress. Its own object, so it can be deleted alone.
+# anchored to exactly one id segment; /api/jokes/<id>/versions (POST), /connections, /map and /api/sets/<id>/clips
+# have more segments and stay on the Python's Ingress; /api/jokes/<id>/similar (GET-only on the Python too) moved in
+# round 6. Its own object, so it can be deleted alone.
 # Check before applying (UNKNOWN on this cluster): ingress-nginx applies use-regex to every path of the host, across
 # Ingresses; render both Ingresses and read the generated nginx.conf locations for /api/health and /api/jokes first.
 apiVersion: networking.k8s.io/v1
@@ -158,6 +166,7 @@ spec:
       http:
         paths:
           - { path: "/api/jokes/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jokes/[^/]+/similar$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/sets/[^/]+/analysis$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/sets/[^/]+/review$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---

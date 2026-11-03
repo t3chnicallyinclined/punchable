@@ -3,7 +3,7 @@
 //! index rows; the route adds the creative layer (the attached notes it hides, each row's duration).
 
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use pk_wire::api::JokeSummary;
 
@@ -16,11 +16,17 @@ pub const MAX_JOKES_PAGE: i64 = 5000;
 /// `JOKE_SORTS`.
 pub const JOKE_SORTS: [&str; 5] = ["recent", "performed", "strongest", "written", "untouched"];
 
-/// The rows the filters keep, in the Desk's order (`items` before `desk_filter`).
-pub fn filtered<'a>(idx: &'a AppIndex, q: &Query) -> Vec<&'a Row> {
+/// The rows the filters keep, in the Desk's order (`items` before `desk_filter`). `ranked` is the fused search's
+/// answer for `?q=&mode=hybrid` (joke ids, best first): only those rows, in that order; otherwise `q` is the
+/// view's word search, in the Desk's order.
+pub fn filtered<'a>(idx: &'a AppIndex, q: &Query, ranked: Option<&[String]>) -> Vec<&'a Row> {
     let mut items: Vec<&Row> = idx.summaries.iter().collect();
     let qs = pk_core::py::strip(q.get("q").unwrap_or(""));
-    if !qs.is_empty() {
+    if let Some(ranked) = ranked {
+        let rank: HashMap<&str, usize> = ranked.iter().enumerate().map(|(i, j)| (j.as_str(), i)).collect();
+        items.retain(|x| rank.contains_key(x.summary.id.as_str()));
+        items.sort_by_key(|x| rank[x.summary.id.as_str()]);
+    } else if !qs.is_empty() {
         let hits: HashSet<String> = idx.view.search(qs).into_iter().collect();
         items.retain(|x| hits.contains(&x.summary.id));
     }

@@ -308,7 +308,9 @@ pub fn int(v: Option<&Value>) -> Result<i64, PyError> {
     }
 }
 
-fn parse_int(s: &str) -> Option<i64> {
+/// The sign and the ASCII digits of an `int()` literal (a sign, single underscores between digits), or `None` for
+/// Python's `ValueError`.
+fn int_literal(s: &str) -> Option<(bool, String)> {
     let (neg, digits) = match s.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, s.strip_prefix('+').unwrap_or(s)),
@@ -317,11 +319,30 @@ fn parse_int(s: &str) -> Option<i64> {
         return None;
     }
     let clean: String = digits.chars().filter(|c| *c != '_').collect();
-    if !clean.chars().all(|c| c.is_ascii_digit()) {
-        return None;
-    }
+    clean.chars().all(|c| c.is_ascii_digit()).then_some((neg, clean))
+}
+
+fn parse_int(s: &str) -> Option<i64> {
+    let (neg, clean) = int_literal(s)?;
     let n: i64 = clean.parse().ok()?;
     Some(if neg { -n } else { n })
+}
+
+/// `int(s)` of a string, saturated at the `i64` bounds where Python's unbounded `int` goes past them (for a value
+/// every caller clamps or slices with, as the Python's `min` / `max` / slices do with the big number). The error is
+/// `int()`'s `ValueError`.
+pub fn int_saturating(s: &str) -> Result<i64, PyError> {
+    let bad = || PyError::Value(format!("invalid literal for int() with base 10: {}", quote(s)));
+    let (neg, clean) = int_literal(s.trim()).ok_or_else(bad)?;
+    let digits = clean.trim_start_matches('0');
+    // i128 holds every 38-digit number; past that the value is past i64 anyway
+    let n: i128 = if digits.len() > 38 {
+        i128::MAX
+    } else {
+        digits.parse().unwrap_or(0)
+    };
+    let n = if neg { -n } else { n };
+    Ok(i64::try_from(n).unwrap_or(if neg { i64::MIN } else { i64::MAX }))
 }
 
 /// `list(v)`: an array as is, a string as its characters, an object as its keys; the rest is not iterable.
@@ -447,6 +468,22 @@ mod tests {
                 "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'".into()
             )
         );
+    }
+
+    #[test]
+    fn saturating_ints_keep_the_grammar() {
+        assert_eq!(int_saturating(" 12 ").unwrap(), 12);
+        assert_eq!(int_saturating("-0_0_7").unwrap(), -7);
+        assert_eq!(int_saturating("99999999999999999999").unwrap(), i64::MAX);
+        assert_eq!(int_saturating("-1_000_000_000_000_000_000_000").unwrap(), i64::MIN);
+        assert_eq!(int_saturating("-9223372036854775808").unwrap(), i64::MIN);
+        assert_eq!(int_saturating(&"9".repeat(60)).unwrap(), i64::MAX);
+        assert_eq!(int_saturating("000").unwrap(), 0);
+        assert_eq!(
+            int_saturating("9x9").unwrap_err(),
+            PyError::Value("invalid literal for int() with base 10: '9x9'".into())
+        );
+        assert!(int_saturating("1__0").is_err() && int_saturating("_1").is_err() && int_saturating("").is_err());
     }
 
     #[test]

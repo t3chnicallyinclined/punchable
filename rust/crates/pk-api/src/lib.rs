@@ -12,6 +12,7 @@ pub mod config;
 pub mod cors;
 pub mod creative;
 pub mod display;
+pub mod embed;
 pub mod error;
 pub mod index;
 pub mod instrument;
@@ -20,6 +21,7 @@ pub mod pages;
 pub mod proxy;
 pub mod query;
 pub mod routes;
+pub mod search;
 pub mod snapshot;
 pub mod state;
 pub mod tape;
@@ -41,8 +43,9 @@ pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 10] = [
+pub const OWN_PATHS: [&str; 11] = [
     "/api/jokes",
+    "/api/search",
     "/api/today",
     "/api/map/cloud",
     "/api/sets",
@@ -56,9 +59,14 @@ pub const OWN_PATHS: [&str; 10] = [
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
 /// ([`ingress_regex`] gives each one's path), never with a prefix: `/api/jokes/<id>/versions` (POST),
-/// `/connections`, `/map`, `/similar` and `/api/sets/<id>/clips` stay the Python's, and an id path with more
-/// segments than these patterns falls through to the fallback and is forwarded.
-pub const OWN_PATTERNS: [&str; 3] = ["/api/jokes/{id}", "/api/sets/{id}/analysis", "/api/sets/{id}/review"];
+/// `/connections`, `/map` and `/api/sets/<id>/clips` stay the Python's, and an id path with more segments than these
+/// patterns falls through to the fallback and is forwarded.
+pub const OWN_PATTERNS: [&str; 4] = [
+    "/api/jokes/{id}",
+    "/api/jokes/{id}/similar",
+    "/api/sets/{id}/analysis",
+    "/api/sets/{id}/review",
+];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
 pub fn ingress_regex(pattern: &str) -> String {
@@ -94,11 +102,9 @@ pub fn app(st: AppState) -> Router {
         .route("/api/pipeline", read_route(&st, routes::kb::pipeline))
         .route("/api/learned", read_route(&st, routes::learned::learned))
         .route("/api/map/cloud", read_route(&st, routes::cloud::map_cloud))
-        .route(
-            "/api/jokes",
-            read_route(&st, routes::jokes::jokes)
-                .layer(from_fn_with_state(st.clone(), routes::jokes::hybrid_to_python)),
-        )
+        .route("/api/jokes", read_route(&st, routes::jokes::jokes))
+        .route("/api/search", read_route(&st, routes::search::search))
+        .route("/api/jokes/{id}/similar", read_route(&st, routes::search::similar))
         .route("/api/today", read_route(&st, routes::today::today))
         .route("/api/sets", read_route(&st, routes::sets::sets))
         .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
@@ -135,7 +141,7 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
     let addr = format!("{}:{}", config.host, config.port);
     let st = state(config)?;
     tokio::spawn(st.clone().supervise());
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");
     let drain = st.clone();
     axum::serve(listener, app(st))
@@ -147,6 +153,27 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
         })
         .await?;
     Ok(())
+}
+
+/// The listener: every accepted connection has Nagle's algorithm off (`TCP_NODELAY`). axum 0.8's `serve` leaves it
+/// on, and a forwarded answer is streamed in more than one write when the Python's answer arrives in pieces (the
+/// head, then each chunk): with Nagle on, a small write waits for the client's ACK of the one before, which the
+/// client may delay (up to 200 ms on Windows, 40 ms on Linux). Hardening, not the round-5 slowdown: on the owner's
+/// PC the forward measured within 2 ms of the Python direct with Nagle on (`docs/RUST_WORKSTREAM.md` T9 round 6).
+pub async fn bind(addr: &str) -> std::io::Result<Listener> {
+    use axum::serve::ListenerExt as _;
+    Ok(tokio::net::TcpListener::bind(addr)
+        .await?
+        .tap_io(nodelay as fn(&mut tokio::net::TcpStream)))
+}
+
+/// What [`bind`] returns.
+pub type Listener = axum::serve::TapIo<tokio::net::TcpListener, fn(&mut tokio::net::TcpStream)>;
+
+fn nodelay(tcp: &mut tokio::net::TcpStream) {
+    if let Err(e) = tcp.set_nodelay(true) {
+        tracing::warn!(error = %e, "TCP_NODELAY could not be set on a connection");
+    }
 }
 
 async fn shutdown_signal() {

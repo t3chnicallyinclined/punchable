@@ -25,6 +25,7 @@ jsonwebtoken = { workspace = true }
 nalgebra = { workspace = true }
 pk-core = { workspace = true }
 pk-creative = { path = "../pk-creative" }
+pk-embed = { path = "../pk-embed" }
 pk-kb = { path = "../pk-kb" }
 pk-obs = { path = "../pk-obs" }
 pk-store = { path = "../pk-store" }
@@ -43,6 +44,7 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 aws-lc-rs = { workspace = true }
+tempfile = { workspace = true }
 wiremock = { workspace = true }
 
 [lints]

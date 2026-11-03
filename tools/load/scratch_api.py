@@ -171,11 +171,23 @@ def get(url: str, timeout: float = 5):
         return json.loads(r.read())
 
 
+def hold(path: Path, info: dict) -> int:
+    """`--hold`: publish where the servers are, then wait until the caller deletes the file."""
+    path.write_text(json.dumps(info), encoding="utf-8")
+    print(f"holding: {info} (delete {path} to stop)", flush=True)
+    while path.exists():
+        time.sleep(1)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--keep", action="store_true", help="leave the temp folder (logs) behind")
     ap.add_argument("--rust", type=Path, default=None,
                     help="a pk-api binary: after the Python run, run pk-load against it over the same database (T9)")
+    ap.add_argument("--hold", type=Path, default=None,
+                    help="run no load: start the Python (and pk-api with --rust), write their bases and pids to this "
+                         "JSON file, and keep both up until the file is deleted (for probes: tools/load/forward_probe.py)")
     ap.add_argument("rest", nargs=argparse.REMAINDER, help="-- then arguments for pk-load")
     a = ap.parse_args()
     bge = os.environ.get("PK_BGE_DIR")
@@ -246,14 +258,18 @@ def main() -> int:
         print(f"API pid {api.pid} on {base}: loaded and embedded ({time.time() - t:.0f}s, sweep {vec.get('last')})", flush=True)
         time.sleep(10)  # settle before the idle sample
         rest = [x for x in a.rest if x != "--"]
-        rc = subprocess.run([str(PK_LOAD), "--base", base, "--pid", str(api.pid), "--writes", *rest]).returncode
+        rc = 0 if a.hold else subprocess.run([str(PK_LOAD), "--base", base, "--pid", str(api.pid), "--writes", *rest]).returncode
+        if not a.rust and a.hold:
+            return hold(a.hold, {"python": base, "python_pid": api.pid})
         if not a.rust:
             return rc
         # T9: pk-api over the same database, everything it does not answer forwarded to this Python; the same
         # pk-load run (its routes not ported yet measure the forward plus the Python, so read only the ported ones)
         rport = free_port()
         rs_env = {**db_env, "PORT": str(rport), "HOST": "127.0.0.1", "PK_AUTH": "0", "PK_ALLOW_NO_AUTH": "1",
-                  "PK_DATA": str(root / "data"), "PK_PYTHON_URL": base, "RUST_LOG": "info"}
+                  "PK_DATA": str(root / "data"), "PK_PYTHON_URL": base, "RUST_LOG": "info",
+                  # round 6: pk-api searches with the same model (loaded on its first search)
+                  "PK_BGE_DIR": bge}
         rlog = open(root / "pk-api.log", "w", encoding="utf-8")
         rs = subprocess.Popen([str(a.rust)], env=rs_env, stdout=rlog, stderr=subprocess.STDOUT)
         procs.append(rs)
@@ -272,6 +288,9 @@ def main() -> int:
                 pass
             time.sleep(1)
         print(f"pk-api pid {rs.pid} on {rbase}: ready ({time.time() - t:.0f}s)", flush=True)
+        if a.hold:
+            return hold(a.hold, {"python": base, "python_pid": api.pid, "rust": rbase, "rust_pid": rs.pid,
+                                 "rust_log": str(root / "pk-api.log")})
         time.sleep(10)
         rc2 = subprocess.run([str(PK_LOAD), "--base", rbase, "--pid", str(rs.pid), "--writes", *rest]).returncode
         rlog.close()

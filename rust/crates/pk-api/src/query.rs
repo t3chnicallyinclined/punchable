@@ -2,8 +2,6 @@
 //! every route uses: `arg(k, default)` (the first value) and Python's `int()` over it, whose `ValueError` text the
 //! route answers with a 400.
 
-use serde_json::Value;
-
 use crate::error::ApiError;
 
 /// The decoded `key=value` pairs, in order, without the ones whose value is blank (`parse_qs` default).
@@ -41,10 +39,12 @@ impl Query {
             .collect()
     }
 
-    /// `int(arg(key, default))`: Python's `int()` of the first value, or of `default` when there is none.
+    /// `int(arg(key, default))`: Python's `int()` of the first value, or of `default` when there is none. A literal
+    /// past `i64` (Python's `int` has no bound) saturates (`pk_core::py::int_saturating`): every caller clamps it or
+    /// slices with it, as the Python's `min` / `max` / slices do with the big value; only the Bits list's `offset`
+    /// echo can differ (the differential's ALLOW says so).
     pub fn int(&self, key: &str, default: &str) -> Result<i64, ApiError> {
-        let s = self.get(key).unwrap_or(default);
-        Ok(pk_core::py::int(Some(&Value::String(s.to_string())))?)
+        Ok(pk_core::py::int_saturating(self.get(key).unwrap_or(default))?)
     }
 
     /// `?include_hidden=1|true|yes`.
@@ -91,6 +91,19 @@ mod tests {
         assert_eq!(q.int("n", "0").unwrap(), 12);
         assert_eq!(q.int("u", "0").unwrap(), 10);
         assert_eq!(q.int("missing", "30").unwrap(), 30);
+        let big = Query::parse(Some(
+            "a=99999999999999999999&b=-1_000_000_000_000_000_000_000&c=9x99999999999999999999",
+        ));
+        assert_eq!(
+            big.int("a", "0").unwrap(),
+            i64::MAX,
+            "Python's int() has no bound: saturate"
+        );
+        assert_eq!(big.int("b", "0").unwrap(), i64::MIN);
+        assert_eq!(
+            big.int("c", "0").unwrap_err().msg,
+            "invalid literal for int() with base 10: '9x99999999999999999999'"
+        );
     }
 
     #[test]
