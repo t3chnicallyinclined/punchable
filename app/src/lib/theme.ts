@@ -164,6 +164,9 @@ export function resolveScheme(pref: SchemePref, system: string | null | undefine
   return system === 'light' ? 'light' : 'dark';
 }
 
+/** The accent as TEXT: amber on dark, the ink step on light (DESIGN.md §3.2: amber never carries text on light). Marks keep C.amber. */
+export const linkColor = () => (C.scheme === 'light' ? C.amberDeep : C.amber);
+
 export const F = {
   body: 'Inter_400Regular',
   medium: 'Inter_500Medium',

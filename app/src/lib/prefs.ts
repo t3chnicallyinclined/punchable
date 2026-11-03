@@ -11,8 +11,10 @@ export type Prefs = {
   /** the Bits list's order (2026-10-29: Recent by default, like a Docs list) */ bitsSort: BitsSort;
   /** Bits › Map: the cloud (bits placed by meaning) or the links map */ mapMode: MapMode;
   /** Sets: the drafts row (the lists the app made) open; closed by default (HIG/disclosure-controls) */ draftsOpen: boolean;
+  /** One-time tips he has seen (SPEC 2026-11-03 D2): `pile` = the one sentence under a bit's pile the first time it holds something */ tips: { pile: boolean };
+  /** Desktop (web ≥ 1280): the bit page's side panes collapsed to edge handles; his last choice is kept (SPEC 2026-11-03 §3.12) */ focus: boolean;
 };
-export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud', draftsOpen: false };
+export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud', draftsOpen: false, tips: { pile: false }, focus: false };
 
 const KEY = 'pk.prefs.v1';
 let cache: Prefs = { ...DEFAULT_PREFS };
@@ -28,6 +30,8 @@ function clean(raw: any): Prefs {
     if (raw.bitsSort === 'recent' || raw.bitsSort === 'performed' || raw.bitsSort === 'strongest') p.bitsSort = raw.bitsSort;
     if (raw.mapMode === 'cloud' || raw.mapMode === 'links') p.mapMode = raw.mapMode;
     if (typeof raw.draftsOpen === 'boolean') p.draftsOpen = raw.draftsOpen;
+    if (raw.tips && typeof raw.tips === 'object' && typeof raw.tips.pile === 'boolean') p.tips = { pile: raw.tips.pile };
+    if (typeof raw.focus === 'boolean') p.focus = raw.focus;
   }
   return p;
 }

@@ -159,6 +159,8 @@ function RootLayout() {
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
                 <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
+                {/* the focus-mode mock for device checks 2 and 3 (SPEC 2026-11-03 §4.1): Slice 1 only, removed in Slice 2 */}
+                <Stack.Screen name="spike-write" options={{ ...fullScreen, title: t('Focus mock') }} />
                 {/* Short tasks as form sheets: Add a joke at the large detent ("+" itself is no sheet: it acts, SPEC 2026-10-30) */}
                 <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
                 {/* A bit's notes over the stage or a set list (HIG/sheets: medium detent first, large on drag; nonmodal at

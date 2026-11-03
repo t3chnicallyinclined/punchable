@@ -14,6 +14,9 @@ export default function BitsStack() {
     <Stack screenOptions={{ headerShown: false, headerTintColor: C.amber, contentStyle: { backgroundColor: C.bg } }}>
       <Stack.Screen name="bits" options={{ title: t('Bits') }} />
       <Stack.Screen name="joke/[id]" options={{ title: t('Joke') }} />
+      <Stack.Screen name="joke/[id]/tape" options={{ title: t('On tape') }} />
+      {/* the three device checks for the bit page (SPEC 2026-11-03 §4.1); Slice 1 only, removed in Slice 2 */}
+      <Stack.Screen name="spike" options={{ title: t('Device checks') }} />
       <Stack.Screen name="merge" options={{ title: t('Merge') }} />
       <Stack.Screen name="map/index" options={{ title: t('Map') }} />
       <Stack.Screen name="map/[id]" options={{ title: t('Joke map') }} />

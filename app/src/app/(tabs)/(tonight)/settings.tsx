@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, Switch, TextInput, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { ApiError, del as apiDelete, get, patch, useApi } from '@/lib/api';
 import { AUTH_ENABLED, authRequestConfig, getDiscovery, rememberWay } from '@/lib/auth';
@@ -18,6 +19,8 @@ import { Btn, Card, Dot, List, ListRow, Seg, Sheet, SheetHead, T, s, useUI } fro
 import { Screen } from '@/lib/Screen';
 
 const SITE = 'https://punchable.io';
+/** "0.1.0 (22)": the version from app.json and the build number EAS stamped (expo-constants); the web shows the version alone. */
+const APP_VERSION = [Constants.expoConfig?.version ?? (Constants as any).nativeAppVersion ?? '', (Constants as any).nativeBuildVersion ? `(${(Constants as any).nativeBuildVersion})` : ''].filter(Boolean).join(' ') || 'local';
 /** "Reconnect Google" is the web's (owner decision, docs/ARCHITECTURE.md: Google sign-in on the web only; the phone
  *  signs in with email). The row still shows the Google Docs status on the phone; the action lives on punchable.io. */
 const RECONNECT_ON_WEB = Platform.OS === 'web';
@@ -278,6 +281,14 @@ export default function SettingsPage() {
           <ListRow testID="audit" title="Show what the AI decided" sub="Your notebook, filtered to things the AI set and you haven’t touched" onPress={() => router.push('/notebook?who=ai' as any)} />
           <ListRow testID="open-privacy" title="Privacy policy" sub="What Punchable stores, where, and your choices" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
           <ListRow testID="open-terms" title="Terms" sub="The short version: it’s yours" onPress={() => Linking.openURL(`${SITE}/terms`)} />
+        </List>
+      </Card>
+      <Card testID="about" style={{ gap: 4 }}>
+        <T v="eb">About</T>
+        <List>
+          <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
+          {/* the three device checks for the bit page (SPEC 2026-11-03 §4.1); phone only; Slice 1 only, removed in Slice 2 */}
+          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Three checks for the next bit page" onPress={() => router.push('/spike' as any)} />}
         </List>
       </Card>
       <Card style={{ gap: 10 }}>

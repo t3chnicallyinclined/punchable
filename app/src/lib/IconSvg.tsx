@@ -41,6 +41,7 @@ export const P = {
   chat: 'M4 5h16v11H9l-5 4V5z',
   chevron: 'M9 6l6 6-6 6',
   chevronDown: 'M6 9l6 6 6-6',
+  chevronUp: 'M6 15l6-6 6 6',
   // a bit's notes (the stage sheet): left-aligned lines of text
   lines: 'M4 6h16M4 12h11M4 18h14',
 } as const;

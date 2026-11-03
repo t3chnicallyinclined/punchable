@@ -12,7 +12,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { bottomClearance } from '@/rules/layoutRules';
 import { C } from './theme';
 import type { NativeHeaderOptions, ScreenProps } from './screenTypes';
-import { OfflineStrip, TopBar } from './TopBar';
+import { OfflineStrip, TopBar, useBottomNote } from './TopBar';
 import { useUI, useWide } from './ui';
 
 export type { ScreenProps } from './screenTypes';
@@ -25,7 +25,7 @@ export function Screen(p: ScreenProps) {
   );
 }
 
-function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, search, nativeHeader }: ScreenProps) {
+function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, search, nativeHeader, offlineAt = 'top', footnote }: ScreenProps) {
   const wide = useWide();
   const ui = useUI();
   const ins = useSafeAreaInsets();
@@ -35,8 +35,13 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
   }, [scrollKey]);
   const barH = bar ? 120 : 0;
   const dockH = dock ? 96 : 0;
+  // the bottom note (the offline line or the one reason under the bottom button, SPEC 2026-11-03 §3.1): one footnote
+  // line pinned above the system's bottom inset, which counts the tab bar (and, INFERRED, the native bottom toolbar)
+  const noteOn = useBottomNote(footnote) && offlineAt === 'bottom';
+  const [noteMeasured, setNoteMeasured] = useState(0);
+  const noteH = noteOn ? noteMeasured : 0;
   // the snackbar sits above whatever floats at the bottom (the input bar, a task's dock, the system tab bar)
-  const pinned = barH + dockH + ins.bottom;
+  const pinned = barH + dockH + noteH + ins.bottom;
   useEffect(() => {
     ui.setPinnedHeight(pinned);
   }, [pinned]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -86,19 +91,24 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
             {header || <TopBar title={title} back={back} onBack={onBack} right={right} task={task} backLabel={backLabel} />}
           </View>
         )}
-        <OfflineStrip />
+        {offlineAt === 'top' && <OfflineStrip />}
         {scroll ? (
           // the automatic inset lets the large title collapse and the content scroll under the Liquid Glass bars
           <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic"
             keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
-            contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 24 + barH + dockH }}
+            contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 24 + barH + dockH + noteH }}
             refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
             <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>
               {children}
             </View>
           </ScrollView>
         ) : (
-          <View style={{ flex: 1, paddingBottom: barH + dockH }}>{children}</View>
+          <View style={{ flex: 1, paddingBottom: barH + dockH + noteH }}>{children}</View>
+        )}
+        {offlineAt === 'bottom' && noteOn && (
+          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom + barH + dockH, zIndex: 5 }}>
+            <OfflineStrip placement="bottom" note={footnote} />
+          </View>
         )}
         {bar && (
           <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom, zIndex: 6, paddingBottom: 4, backgroundColor: ground }}>
