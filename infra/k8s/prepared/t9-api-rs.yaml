@@ -147,12 +147,19 @@ spec:
           - { path: /api/boards, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/mysets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/tonight/screen, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 8: his voice profile (PUT on the Python: forwarded) and the "not a joke?" list (GET only)
+          - { path: /api/profile/voice, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/suggestions/not-a-joke, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 8: the working sets (POST on the Python: forwarded)
+          - { path: /api/workingsets, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 8: "From your notebook" (GET only; the fused search with the model, as /api/search)
+          - { path: /api/notebook/related, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
-# anchored to exactly one id segment; /api/jokes/<id>/versions (POST), /connections, /map and /api/sets/<id>/clips
-# have more segments and stay on the Python's Ingress; /api/jokes/<id>/similar (GET-only on the Python too) moved in
-# round 6. Its own object, so it can be deleted alone.
+# anchored to exactly one id segment; /api/jokes/<id>/versions (POST) and the other paths under an id stay on the
+# Python's Ingress; /api/jokes/<id>/similar (GET-only on the Python too) moved in round 6, /connections, /map and the
+# board / set pages in round 8. Its own object, so it can be deleted alone.
 # Check before applying (UNKNOWN on this cluster): ingress-nginx applies use-regex to every path of the host, across
 # Ingresses; render both Ingresses and read the generated nginx.conf locations for /api/health and /api/jokes first.
 apiVersion: networking.k8s.io/v1
@@ -178,6 +185,20 @@ spec:
           - { path: "/api/jokes/[^/]+/similar$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/sets/[^/]+/analysis$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/sets/[^/]+/review$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # round 8: one set list, one of his sets, one bit's connections. PATCH /api/boards/<id> and
+          # PATCH /api/mysets/<id> are writes on the Python: pk-api forwards every method it does not answer, and
+          # /api/mysets/match (the Python's route, not a set id) whatever the method.
+          - { path: "/api/boards/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/boards/[^/]+/build$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/mysets/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/mysets/[^/]+/trim$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jokes/[^/]+/connections$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jokes/[^/]+/map$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jobs/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/nights$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/bits/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/sets/[^/]+/clips$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

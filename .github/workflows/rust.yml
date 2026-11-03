@@ -266,3 +266,26 @@ jobs:
           export PUNCH_SURREAL="$HOME/.punchable/bin/surreal"
           export PK_BGE_DIR="$HOME/.punchable/models/bge-small-en-v1.5"
           python rust/tools/diff_api_reads.py --pk-api rust/target/debug/pk-api
+
+  # T9 round 8: the pk-api image is BUILT here, never on the production node and never pushed from CI (no registry
+  # credentials in this repo). Docker Desktop is not run on the owner's PC either, so this job is the one place the
+  # image is proven to build. The worker image (rust/Dockerfile.worker) is not built in CI yet; it is built off the
+  # node by hand. BuildKit reads rust/Dockerfile.api.dockerignore (a Dockerfile-specific ignore file). The digest the
+  # deploy uses is the one from the build off the node, recorded in the private deploy log; this job prints its own
+  # image id and size so a drift in the bases or the model shows in the log.
+  api-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build rust/Dockerfile.api (build only, no push)
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: |
+          docker build -f rust/Dockerfile.api --build-arg PK_BUILD_SHA="$GITHUB_SHA" -t punchable-api-rs:ci .
+
+      - name: The image runs as uid 10001, not root
+        run: |
+          docker image inspect punchable-api-rs:ci --format 'id={{.Id}} size={{.Size}} user={{.Config.User}}'
+          test "$(docker image inspect punchable-api-rs:ci --format '{{.Config.User}}')" = "10001:10001"

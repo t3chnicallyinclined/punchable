@@ -1,7 +1,8 @@
-//! The Today feed (`creative/today.py` `build`) and the parts of `creative/workingset.py` it reads: one night
-//! aligned against the working set (`align`), each bit's nights and the wording said on some of them and not others
-//! (`bit_history`, `wording_effects` without the night-to-night `changes`, which Today never reads), the notes to
-//! try tonight, the perfected score and the status line. Pure functions over a [`Corpus`] and a working set item.
+//! The Today feed (`creative/today.py` `build`) and the working-set reads of `creative/workingset.py`: one night
+//! aligned against the working set (`align`, `align_all`), each bit's nights and the wording said on some of them and
+//! not others (`bit_history`, `wording_effects`; the night-to-night `changes` only for the pages that show them, not
+//! for Today), the notes to try tonight, the perfected score, the status line, and the working-set page
+//! (`creative_api.ws_detail`). Pure functions over a [`Corpus`] and a working set item.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
@@ -143,7 +144,7 @@ fn is_locked_line(ws: &Obj, j: &str, line: &str) -> bool {
 }
 
 /// `_lcs(a, b)`.
-fn lcs(xs: &[String], ys: &[String]) -> Vec<String> {
+pub fn lcs(xs: &[String], ys: &[String]) -> Vec<String> {
     let (alen, blen) = (xs.len(), ys.len());
     let mut memo = vec![vec![0usize; blen + 1]; alen + 1];
     for i in (0..alen).rev() {
@@ -276,6 +277,10 @@ pub fn align(c: &Corpus, ws: &Obj, set_key: &str) -> Value {
 /// One wording group's effect (`wording_effects`), the fields Today reads.
 #[derive(Debug, Clone)]
 struct Effect {
+    nights_with: Vec<String>,
+    nights_without: Vec<String>,
+    n_phrases: usize,
+    examples: Vec<Value>,
     delta_laugh_s: f64,
     delta_vs_room: Option<f64>,
     statement: String,
@@ -283,6 +288,16 @@ struct Effect {
     example: Value,
     said_in_last: bool,
     weight: f64,
+}
+
+impl Effect {
+    /// The effect as the payload carries it.
+    fn to_value(&self) -> Value {
+        json!({"nights_with": self.nights_with, "nights_without": self.nights_without,
+               "n_with": self.nights_with.len(), "n_without": self.nights_without.len(), "n_phrases": self.n_phrases,
+               "delta_laugh_s": self.delta_laugh_s, "delta_vs_room": self.delta_vs_room, "statement": self.statement,
+               "low_n": self.low_n, "examples": self.examples, "said_in_last": self.said_in_last, "weight": self.weight})
+    }
 }
 
 fn night_texts(c: &Corpus, p: &Perf) -> Vec<(String, String)> {
@@ -372,8 +387,17 @@ fn wording_effects(c: &Corpus, jid: &str, cap: usize) -> Vec<Effect> {
         let weight = round_to(d_vr.unwrap_or(0.0).abs().min(1.0) * root, 3);
         let rank0 = d_vr.unwrap_or(0.0).abs() * (lo as f64).sqrt() + if first.0 { 0.05 } else { 0.0 };
         let quote = first.1.to_string();
+        let examples: Vec<Value> = reps
+            .iter()
+            .map(|(pn, ph, sid)| json!({"node": sid, "quote": ph, "punchline": pn}))
+            .collect();
+        let rooms = |xs: &[&Perf]| -> Vec<String> { xs.iter().map(|p| venue_of(&p.venue, &p.date)).collect() };
         effects.push((
             Effect {
+                nights_with: rooms(&w),
+                nights_without: rooms(&wo),
+                n_phrases: phs.len(),
+                examples,
                 delta_laugh_s: round_to(d_ls, 1),
                 delta_vs_room: d_vr.map(|d| round_to(d, 2)),
                 statement,
@@ -408,23 +432,111 @@ fn wording_effects(c: &Corpus, jid: &str, cap: usize) -> Vec<Effect> {
     kept
 }
 
-/// `bit_history(c, jid)`: the fields Today reads.
+/// `bit_history(c, jid)`: the fields Today reads, and (`full`) the whole payload.
 struct History {
+    value: Option<Value>,
     joke_id: String,
     title: String,
     stability: Option<f64>,
     effects: Vec<Effect>,
 }
 
-fn bit_history(c: &Corpus, jid: &str) -> History {
+fn bit_history(c: &Corpus, jid: &str, full: bool) -> History {
     let ps = c.perfs.get(jid).map_or(&[][..], Vec::as_slice);
     let k = cv(ps.iter().map(|p| p.laugh_s_per_min));
+    let stability = k.map(|k| round_to((1.0 - k).max(0.0), 2));
+    let effects = wording_effects(c, jid, 5);
+    let value = full.then(|| {
+        let (t, trel) = crate::connections::trend(
+            &ps.iter()
+                .map(|p| (p.date.as_str(), p.laugh_s_per_min))
+                .collect::<Vec<_>>(),
+        );
+        let (tv, _) = crate::connections::trend(&ps.iter().map(|p| (p.date.as_str(), p.vs_room)).collect::<Vec<_>>());
+        let best = ps.first().map_or(Value::Null, |first| {
+            let b = ps.iter().fold(first, |b, p| {
+                if (p.laugh_s_per_min.unwrap_or(0.0), p.date.as_str())
+                    > (b.laugh_s_per_min.unwrap_or(0.0), b.date.as_str())
+                {
+                    p
+                } else {
+                    b
+                }
+            });
+            json!({"date": b.date, "venue": venue_of(&b.venue, &b.date), "laugh_s_per_min": b.laugh_s_per_min,
+                   "vs_room": b.vs_room})
+        });
+        let nights: Vec<Value> = ps
+            .iter()
+            .map(|p| {
+                json!({"date": p.date, "set": p.set, "venue": venue_of(&p.venue, &p.date), "time_s": p.duration_s,
+                       "laugh_s": p.laugh_s, "laugh_s_per_min": p.laugh_s_per_min, "vs_room": p.vs_room,
+                       "ai_rating": p.ai_rating})
+            })
+            .collect();
+        let wording = if ps.len() < 2 {
+            json!({"effects": [], "changes": [], "note": "needs 2+ nights"})
+        } else {
+            json!({"effects": effects.iter().map(Effect::to_value).collect::<Vec<_>>(), "changes": changes(c, ps),
+                   "note": "Wording vs laughs across nights is correlation inside different rooms; a line said only on \
+                            one night carries that whole night's room with it."})
+        };
+        json!({"joke_id": jid, "title": c.title(jid), "n_nights": ps.len(), "nights": nights, "best_night": best,
+               "trend": t, "trend_rel_change": trel, "vs_room_trend": tv,
+               "cv_laugh_s_per_min": k.map(|k| round_to(k, 2)), "stability": stability, "low_n": ps.len() < LOW_N,
+               "wording": wording})
+    });
     History {
+        value,
         joke_id: jid.to_string(),
         title: c.title(jid),
-        stability: k.map(|k| round_to((1.0 - k).max(0.0), 2)),
-        effects: wording_effects(c, jid, 5),
+        stability,
+        effects,
     }
+}
+
+/// `wording_effects(...)["changes"]`: what changed between consecutive nights.
+fn changes(c: &Corpus, ps: &[Perf]) -> Vec<Value> {
+    let texts: Vec<String> = ps
+        .iter()
+        .map(|p| {
+            night_texts(c, p)
+                .into_iter()
+                .map(|(_, t)| t)
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect();
+    let diff = |p: &Perf, other: &str| -> Vec<(String, String)> {
+        night_texts(c, p)
+            .into_iter()
+            .flat_map(|(sid, t)| phrases(&t).into_iter().map(move |ph| (ph, sid.clone())))
+            .filter(|(ph, _)| !present(ph, other, 0.6))
+            .collect()
+    };
+    (1..ps.len())
+        .map(|k| {
+            let (a, b) = (&ps[k - 1], &ps[k]);
+            let new = diff(b, &texts[k - 1]);
+            let gone = diff(a, &texts[k]);
+            let ev = |xs: &[(String, String)]| -> Vec<Value> {
+                xs.iter()
+                    .take(3)
+                    .map(|(ph, sid)| json!({"node": sid, "quote": ph}))
+                    .collect()
+            };
+            json!({"from": venue_of(&a.venue, &a.date), "to": venue_of(&b.venue, &b.date), "from_date": a.date,
+                   "to_date": b.date, "added": ev(&new), "dropped": ev(&gone), "n_added": new.len(),
+                   "n_dropped": gone.len(), "delta_laugh_s": round_to(b.laugh_s - a.laugh_s, 1),
+                   "delta_vs_room": round_to(b.vs_room.unwrap_or(0.0) - a.vs_room.unwrap_or(0.0), 2)})
+        })
+        .collect()
+}
+
+/// `bit_history(c, jid)`: one bit's nights, its trend, its stability and the wording said on some nights and not
+/// others, with what changed night to night (`GET /api/workingsets/<id>/bits/<joke>`).
+pub fn bit_history_value(c: &Corpus, jid: &str) -> Value {
+    bit_history(c, jid, true).value.unwrap_or(Value::Null)
 }
 
 fn note(j: &str, title: &str, kind: &str, score: f64, text: &str, evidence: &Value, low_n: bool) -> Value {
@@ -555,11 +667,17 @@ fn try_tonight(c: &Corpus, ws: &Obj, hist: &[History], cap: usize) -> Vec<Value>
 
 /// `perfected(c, ws, hist)["perfected"]`: half the locked share (by target time), half the stability.
 fn perfected(c: &Corpus, ws: &Obj, hist: &[History]) -> f64 {
+    num(perfected_value(c, ws, hist).get("perfected")).unwrap_or(0.0)
+}
+
+/// `perfected(c, ws, hist)`: the score, its parts and each bit's row.
+fn perfected_value(c: &Corpus, ws: &Obj, hist: &[History]) -> Value {
     let hist: HashMap<&str, &History> = hist.iter().map(|h| (h.joke_id.as_str(), h)).collect();
     let vbits = bits(current(ws));
     let total = py::sum(vbits.iter().map(|b| target(b)));
     let tot = if total == 0.0 { 1.0 } else { total };
     let (mut locked_s, mut stab_w, mut stab_sum) = (0.0, 0.0, 0.0);
+    let mut rows: Vec<Value> = Vec::new();
     for b in &vbits {
         let j = bit_id(b);
         let lines = lock_lines(ws, &j);
@@ -582,25 +700,43 @@ fn perfected(c: &Corpus, ws: &Obj, hist: &[History]) -> f64 {
             0.0
         };
         locked_s += share * target(b);
-        if let Some(st) = hist.get(j.as_str()).and_then(|h| h.stability) {
+        let h = hist.get(j.as_str());
+        let st = h.and_then(|h| h.stability);
+        if let Some(st) = st {
             stab_w += target(b);
             stab_sum += st * target(b);
         }
+        let hv = h.and_then(|h| h.value.as_ref());
+        let hf = |k: &str| hv.and_then(|v| v.get(k)).cloned();
+        rows.push(
+            json!({"joke_id": j, "title": get(b, "title"), "locked_share": round_to(share, 2),
+                         "cv_laugh_s_per_min": hf("cv_laugh_s_per_min").unwrap_or(Value::Null), "stability": st,
+                         "nights": hf("n_nights").unwrap_or(json!(0)), "low_n": hf("low_n").unwrap_or(json!(true))}),
+        );
     }
-    let stability = if stab_w == 0.0 { 0.0 } else { stab_sum / stab_w };
-    round_to(0.5 * (locked_s / tot) + 0.5 * stability, 2)
+    let locked = locked_s / tot;
+    let stability = (stab_w != 0.0).then(|| stab_sum / stab_w);
+    let score = 0.5 * locked + 0.5 * stability.unwrap_or(0.0);
+    json!({"locked_share": round_to(locked, 2), "stability": stability.map(|x| round_to(x, 2)),
+           "perfected": round_to(score, 2),
+           "formula": "0.5 x locked share (by target time) + 0.5 x stability; stability = 1 - CV of laugh-s/min \
+                       across nights (sample sd / mean, floor 0), target-time weighted over bits with 2+ nights",
+           "bits": rows})
 }
 
 /// `status(c, ws, notes)`: the working set's line on Today.
 fn status(c: &Corpus, ws: &Obj, n_notes: usize) -> Value {
-    let al: Vec<Value> = c
-        .set_keys()
+    status_over(ws, &align_all(c, ws), n_notes)
+}
+
+/// [`status`] over the nights already aligned (`align_all`).
+fn status_over(ws: &Obj, all: &[Value], n_notes: usize) -> Value {
+    let al: Vec<&Value> = all
         .iter()
-        .map(|k| align(c, ws, k))
         .filter(|a| num(a.pointer("/totals/bits_performed")).unwrap_or(0.0) != 0.0)
         .collect();
-    let last = al.last();
-    let prev = (al.len() > 1).then(|| &al[al.len() - 2]);
+    let last = al.last().copied();
+    let prev = (al.len() > 1).then(|| al[al.len() - 2]);
     let rate = |a: Option<&Value>| a.and_then(|a| num(a.pointer("/totals/ws_laugh_s_per_min")));
     let (lr, pr) = (rate(last), rate(prev));
     let arrow = match (lr, pr) {
@@ -805,7 +941,10 @@ pub fn build(c: &Corpus, ws: Option<&Obj>, day: &str) -> Map<String, Value> {
     out.insert("new_material".into(), json!(new_material(c)));
     out.insert("minutes".into(), minutes(c));
     if let Some(ws) = ws.filter(|w| !w.is_empty()) {
-        let hist: Vec<History> = bits(current(ws)).iter().map(|b| bit_history(c, &bit_id(b))).collect();
+        let hist: Vec<History> = bits(current(ws))
+            .iter()
+            .map(|b| bit_history(c, &bit_id(b), false))
+            .collect();
         let notes = try_tonight(c, ws, &hist, 6);
         let mut st = status(c, ws, notes.len());
         if let Value::Object(m) = &mut st {
@@ -831,6 +970,117 @@ pub fn build(c: &Corpus, ws: Option<&Obj>, day: &str) -> Map<String, Value> {
         out.insert("his_tonight_list".into(), json!(items));
     }
     out
+}
+
+/// `align_all(c, ws)`: every recorded night against the working set, oldest first.
+pub fn align_all(c: &Corpus, ws: &Obj) -> Vec<Value> {
+    c.set_keys().iter().map(|k| align(c, ws, k)).collect()
+}
+
+/// `with_his_notes(ws, notes)`: his own notes first, then the computed ones with their ids and his ticks.
+fn with_his_notes(c: &Corpus, ws: &Obj, notes: &[Value]) -> Vec<Value> {
+    let empty = Obj::new();
+    let ticks = ws.get("try_done").and_then(Value::as_object).unwrap_or(&empty);
+    let mut out: Vec<Value> = ws
+        .get("try_notes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|n| {
+            let jid = n.get("joke_id").cloned().unwrap_or(Value::Null);
+            // `creative_api.ws_detail`: his note on a bit carries the bit's title
+            let title = match jid.as_str().filter(|j| !j.is_empty()) {
+                Some(j) => json!(c.title(j)),
+                None => Value::Null,
+            };
+            json!({"joke_id": jid, "title": title, "kind": "his", "score": 1.0, "text": n.get("text"),
+                   "evidence": [], "source": "his", "low_n": false, "id": n.get("id"),
+                   "done": py::truthy(n.get("done")), "created_at": n.get("created_at")})
+        })
+        .collect();
+    for n in notes {
+        let mut n = n.clone();
+        let id = format!(
+            "{}|{}",
+            n.get("joke_id").map(py::str).unwrap_or_default(),
+            n.get("kind").map(py::str).unwrap_or_default()
+        );
+        n["done"] = json!(py::truthy(ticks.get(&id)));
+        n["id"] = json!(id);
+        out.push(n);
+    }
+    out
+}
+
+/// `creative_api.ws_detail(c, ws)`: the working-set page: the item, its version, the status line, the perfected
+/// score, what to try tonight (his notes first) and each bit with its history and last night.
+pub fn ws_detail(c: &Corpus, ws: &Obj) -> Value {
+    let ver = current(ws);
+    let hist: Vec<History> = bits(ver).iter().map(|b| bit_history(c, &bit_id(b), true)).collect();
+    let notes = try_tonight(c, ws, &hist, 6);
+    let perf = perfected_value(c, ws, &hist);
+    let hb: HashMap<&str, &History> = hist.iter().map(|h| (h.joke_id.as_str(), h)).collect();
+    let all = align_all(c, ws);
+    let nights: Vec<&Value> = all
+        .iter()
+        .filter(|a| py::truthy(a.pointer("/totals/bits_performed")))
+        .collect();
+    let mut last: HashMap<String, &Obj> = HashMap::new();
+    if let Some(n) = nights.last() {
+        for b in n
+            .get("bits")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_object)
+        {
+            last.insert(bit_id(b), b);
+        }
+    }
+    let rows: Vec<Value> = bits(ver)
+        .into_iter()
+        .map(|b| {
+            let j = bit_id(b);
+            let lk = lock(ws, &j);
+            let hv = hb.get(j.as_str()).and_then(|h| h.value.as_ref());
+            let hf = |k: &str| hv.and_then(|v| v.get(k)).cloned();
+            let last_night = last.get(&j).filter(|lb| !lb.is_empty()).map_or(Value::Null, |lb| {
+                let m: Obj = [
+                    "performed",
+                    "time_s",
+                    "delta_s",
+                    "laugh_s_per_min",
+                    "vs_room",
+                    "ai_rating",
+                ]
+                .iter()
+                .map(|k| ((*k).to_string(), get(lb, k)))
+                .collect();
+                Value::Object(m)
+            });
+            let mine: Vec<Value> = notes
+                .iter()
+                .filter(|n| n.get("joke_id").and_then(Value::as_str) == Some(j.as_str()))
+                .cloned()
+                .collect();
+            let mut out = b.clone();
+            out.insert("locked".into(), json!(lk.is_some_and(|l| py::truthy(l.get("bit")))));
+            out.insert(
+                "locked_lines".into(),
+                lk.and_then(|l| l.get("lines")).cloned().unwrap_or_else(|| json!([])),
+            );
+            out.insert("nights".into(), hf("n_nights").unwrap_or(json!(0)));
+            out.insert("best_night".into(), hf("best_night").unwrap_or(Value::Null));
+            out.insert("trend".into(), hf("trend").unwrap_or(Value::Null));
+            out.insert("stability".into(), hf("stability").unwrap_or(Value::Null));
+            out.insert("low_n".into(), hf("low_n").unwrap_or(json!(true)));
+            out.insert("last_night".into(), last_night);
+            out.insert("notes".into(), Value::Array(mine));
+            Value::Object(out)
+        })
+        .collect();
+    json!({"working_set": ws, "version": ver, "status": status_over(ws, &all, notes.len()), "perfected": perf,
+           "try_tonight": with_his_notes(c, ws, &notes), "bits": rows})
 }
 
 /// `creative_api.latest_ws(stores)`: the working set touched last (not deleted).

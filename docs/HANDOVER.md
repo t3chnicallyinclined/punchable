@@ -273,6 +273,16 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    pk-embed no longer goes unusable after a panic. A text-keyed vector cache was tried and dropped (no measurable gain).
    Slowest still-forwarded route: `/api/boards/{id}` (next). Details and the deploy prerequisites: the RUST_WORKSTREAM
    T9 row.
+   **Round 8 (branch `rust/t9-round8`, not merged, not deployed):** pk-api also answers the rest of the app's
+   forwarded GETs: one set list (`/api/boards/{id}`, `/build`), one of his sets (`/api/mysets/{id}`, `/trim`), one bit's
+   connections and map, `/api/notebook/related`, a set's clips, his voice profile, the "not a joke?" list, one job,
+   and the working sets (list, page, nights, one bit). 432/432 equal against the Python, allow-list unchanged; three
+   red arms fail it (28, 41 and 5 requests). The notebook now carries the vectors (parsed once per change). The
+   set-list rules moved into pk-creative (`setlist.rs`, `mysets.rs`, `connections.rs`), the round-7 follow-up.
+   CI builds `rust/Dockerfile.api` (build only, no push; Docker is never started on the PC or the node). Still
+   forwarded: `/api/ask/chats` (a GET that writes), `/api/merge/candidates`, `/api/memos`, `/api/inbox`,
+   `/api/venues`, `/api/live`: T10 with the writes. **Deploy order stands: the Python with `GET /api/ai/worker`
+   first, then pk-api's Ingress.** Numbers, the review and the prerequisites: the RUST_WORKSTREAM T9 row.
    **`pk-worker` (2026-11-02; all nine kinds merged into main locally, `ask` from `rust/t8-ask`; not deployed)**: the loop and **all nine hosted kinds** over
    a `pk-creative` port of the notebook `Corpus`, creative/merge.py and engine/ask.py (`pk-fts`: SQLite FTS5 + bm25,
    the only C we compile), proven equal to the Python worker over 41 recorded scenarios. On the PC (mock model):

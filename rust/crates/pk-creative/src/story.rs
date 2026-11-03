@@ -79,6 +79,7 @@ struct StoryCache {
 pub struct StoryCorpus {
     corpus: Corpus,
     cache: StoryCache,
+    notebook: OnceLock<crate::notebook::Index>,
 }
 
 impl StoryCorpus {
@@ -87,7 +88,13 @@ impl StoryCorpus {
         Self {
             corpus,
             cache: StoryCache::default(),
+            notebook: OnceLock::new(),
         }
+    }
+
+    /// The his-words index over this corpus (`notebook._index`, kept on the corpus object), built on first use.
+    pub fn notebook_index(&self) -> &crate::notebook::Index {
+        self.notebook.get_or_init(|| crate::notebook::Index::new(&self.corpus))
     }
 
     /// The story layer over this corpus, with its caches.

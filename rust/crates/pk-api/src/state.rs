@@ -58,6 +58,7 @@ struct Inner {
     cloud: tokio::sync::Mutex<Option<CloudCache>>,
     transcripts: crate::tape::TranscriptCache,
     src_texts: crate::creative::SrcTexts,
+    vectors: crate::creative::VectorCache,
     attached: crate::creative::Attached,
     stores: crate::creative::Stores,
     model: crate::embed::Model,
@@ -118,6 +119,7 @@ impl AppState {
             cloud: tokio::sync::Mutex::new(None),
             transcripts: crate::tape::TranscriptCache::default(),
             src_texts: crate::creative::SrcTexts::default(),
+            vectors: crate::creative::VectorCache::default(),
             attached: crate::creative::Attached::default(),
             stores: crate::creative::Stores::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
@@ -188,6 +190,11 @@ impl AppState {
     /// The `srcfile` texts the creative layer read so far (by path and hash), shared by every generation.
     pub fn src_texts(&self) -> &crate::creative::SrcTexts {
         &self.0.src_texts
+    }
+
+    /// The notebook's vectors, as last parsed from the `vectors/` rows.
+    pub fn vectors(&self) -> &crate::creative::VectorCache {
+        &self.0.vectors
     }
 
     /// The merges store's attached notes, as last replayed (`desk_filter`).
