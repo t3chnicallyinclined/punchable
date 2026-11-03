@@ -62,6 +62,15 @@ struct Inner {
     attached: crate::creative::Attached,
     stores: crate::creative::Stores,
     model: crate::embed::Model,
+    /// The knowledge-base writes of this process run one at a time (`kb.lock` in the Python): a write validates
+    /// against the current view, then appends; two of them interleaved could both pass validation against the same
+    /// view. Across processes the database's unique `seq` index arbitrates (`writes`).
+    kb_lock: tokio::sync::Mutex<()>,
+    /// The creative-store writes of this process, one at a time (`cr.lock`); taken after `kb_lock` when both are
+    /// needed, never before it.
+    creative_lock: tokio::sync::Mutex<()>,
+    /// The merge index last built, for placing a jot (see [`AppState::last_merge_index`]).
+    last_merge_index: Mutex<Option<(Option<i64>, Arc<pk_creative::merge::Index>)>>,
 }
 
 /// The last cloud answered: `(rev, cap, include_hidden, when, body)` (`cloud_api._cache`, one entry, five minutes).
@@ -123,6 +132,9 @@ impl AppState {
             attached: crate::creative::Attached::default(),
             stores: crate::creative::Stores::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
+            kb_lock: tokio::sync::Mutex::new(()),
+            creative_lock: tokio::sync::Mutex::new(()),
+            last_merge_index: Mutex::new(None),
         }))
     }
 
@@ -205,6 +217,22 @@ impl AppState {
     /// The creative stores the reads replay, each with its last replay.
     pub fn stores(&self) -> &crate::creative::Stores {
         &self.0.stores
+    }
+
+    /// The one-at-a-time lock of this process's knowledge-base writes (`kb.lock`).
+    pub fn kb_lock(&self) -> &tokio::sync::Mutex<()> {
+        &self.0.kb_lock
+    }
+
+    /// The one-at-a-time lock of this process's creative-store writes (`cr.lock`); after [`AppState::kb_lock`] when
+    /// both are held.
+    pub fn creative_lock(&self) -> &tokio::sync::Mutex<()> {
+        &self.0.creative_lock
+    }
+
+    /// The court-material rule (`refuse_legal`).
+    pub fn legal(&self) -> &pk_core::legal::Legal {
+        &self.0.config.legal
     }
 
     /// The cloud cache; held across a build, so two misses build once.
@@ -295,6 +323,58 @@ impl AppState {
     /// need them ([`Data::view`], [`Data::index`]).
     pub async fn data(&self) -> Result<Arc<Data>, ApiError> {
         self.data_after(|| ()).await
+    }
+
+    /// The data a write validates against: [`AppState::data`], then proven current against `meta:state` read again
+    /// (one more round trip): a write never validates against the last data served while the database is unreachable
+    /// or a rebuild failed (the Python's `full_view` raises there). A generation that moved in between (another
+    /// writer) is read again, a few times.
+    pub async fn data_for_write(&self) -> Result<Arc<Data>, ApiError> {
+        let store = self
+            .store()
+            .ok_or_else(|| ApiError::internal("ConnectionError", "the database is not connected"))?;
+        // the generation as of this write's start: the data must be at least that new (another writer may move it
+        // on while the data is made ready; that is fine, the builder validates against whatever is newest)
+        let Some(st) = self.read_state(&store).await else {
+            return Err(ApiError::unavailable(
+                "SurrealDB did not answer in time; try again in a moment",
+            ));
+        };
+        if st.loading {
+            return Err(ApiError::unavailable(
+                "the database is reloading; try again in a few seconds",
+            ));
+        }
+        let d = self.data().await?;
+        let fresh = match (d.state.generation, st.generation) {
+            (Some(have), Some(want)) => have >= want,
+            (None, None) => true,
+            _ => false,
+        };
+        if !fresh || d.state.loading {
+            return Err(ApiError::unavailable(
+                "the data could not be refreshed for this write; try again in a moment",
+            ));
+        }
+        Ok(d)
+    }
+
+    /// The merge index last built, when it is at most `within` generations behind `generation`
+    /// (`merge_api.after_idea` places a jot on the corpus "as it was a moment ago": the Python's last built corpus,
+    /// refreshed by its reads; a jot adds no units, so a notebook a few decisions old places it the same).
+    pub fn last_merge_index(&self, generation: Option<i64>, within: i64) -> Option<Arc<pk_creative::merge::Index>> {
+        let last = self.0.last_merge_index.lock().unwrap_or_else(PoisonError::into_inner);
+        let (built_at, ix) = last.as_ref()?;
+        let fresh_enough = match (built_at, generation) {
+            (Some(b), Some(g)) => g - b <= within,
+            _ => false,
+        };
+        fresh_enough.then(|| Arc::clone(ix))
+    }
+
+    /// Keep an index as the last built, with the generation it was built for.
+    pub fn set_last_merge_index(&self, generation: Option<i64>, ix: &Arc<pk_creative::merge::Index>) {
+        *self.0.last_merge_index.lock().unwrap_or_else(PoisonError::into_inner) = Some((generation, Arc::clone(ix)));
     }
 
     /// [`AppState::data`], with `work` started (in its own task) right after this request's `meta:state` read, so

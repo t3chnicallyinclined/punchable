@@ -1,7 +1,7 @@
 //! Punchable's API on axum (docs/ARCHITECTURE.md section 2). Lane T9: the read routes that answer from the database
-//! snapshot, behind the same Keycloak check, CORS, errors and metrics as `api-dev/server.py`; every other request
-//! (every write, `/api/worker/*`, `/api/live`, the routes not ported yet) is forwarded unchanged to the Python API
-//! until T10 (`proxy`).
+//! snapshot, behind the same Keycloak check, CORS, errors and metrics as `api-dev/server.py`; lane T10: the writes,
+//! group by group (`writes`). Every other request (`/api/worker/*`, `/api/live`, the routes not ported yet) is
+//! forwarded unchanged to the Python API until T10 is whole (`proxy`).
 //!
 //! [`app`] builds the router over an [`AppState`]; route tests drive it with `tower::ServiceExt::oneshot`, no
 //! socket. [`serve`] binds, supervises the database connection and shuts down the way the manifest expects.
@@ -27,13 +27,14 @@ pub mod snapshot;
 pub mod state;
 pub mod tape;
 pub mod today;
+pub mod writes;
 
 use std::time::Duration;
 
 use axum::Router;
 use axum::handler::Handler;
 use axum::middleware::from_fn_with_state;
-use axum::routing::{MethodRouter, get};
+use axum::routing::{MethodRouter, get, post};
 use tower::ServiceBuilder;
 
 pub use config::ApiConfig;
@@ -43,7 +44,7 @@ pub use state::AppState;
 pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
-/// them lists exactly these (`infra/k8s/prepared/t9-api-rs.yaml`, not applied).
+/// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied).
 pub const OWN_PATHS: [&str; 19] = [
     "/api/jokes",
     "/api/search",
@@ -90,6 +91,22 @@ pub const OWN_PATTERNS: [&str; 15] = [
     "/api/sets/{id}/clips",
 ];
 
+/// The paths whose POST this service answers itself (T10, groups 1 and 2). An exact Ingress path moves every
+/// method: a GET on one of these (none exists on the Python) is forwarded and answered by it.
+pub const OWN_WRITE_PATHS: [&str; 8] = [
+    "/api/ideas",
+    "/api/sets/transcript",
+    "/api/decision",
+    "/api/undo",
+    "/api/merge",
+    "/api/merge/attach",
+    "/api/merge/dismiss",
+    "/api/merge/undo",
+];
+
+/// The parametric paths whose POST this service answers itself (T10): his new version of a bit.
+pub const OWN_WRITE_PATTERNS: [&str; 1] = ["/api/jokes/{id}/versions"];
+
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
 pub fn ingress_regex(pattern: &str) -> String {
     format!("{}$", pattern.replace("{id}", "[^/]+").replace("{id2}", "[^/]+"))
@@ -110,6 +127,27 @@ where
         .layer(from_fn_with_state(st.clone(), cors::cors))
         .layer(from_fn_with_state(st.clone(), instrument::instrument));
     get(h.layer(layers))
+        .options((async || ()).layer(preflight))
+        .fallback(proxy::forward)
+}
+
+/// A write route: POST answered here behind CORS, metrics and auth; OPTIONS is the preflight; any other method goes
+/// to the Python.
+fn write_route<H, T>(st: &AppState, h: H) -> MethodRouter<AppState>
+where
+    H: Handler<T, AppState>,
+    T: 'static,
+{
+    let layers = ServiceBuilder::new()
+        .layer(from_fn_with_state(st.clone(), cors::cors))
+        .layer(from_fn_with_state(st.clone(), instrument::instrument))
+        .layer(from_fn_with_state(st.clone(), auth::authorize));
+    let preflight = ServiceBuilder::new()
+        .layer(from_fn_with_state(st.clone(), cors::cors))
+        .layer(from_fn_with_state(st.clone(), instrument::instrument));
+    // the Python reads `Content-Length` and refuses a body over its own limit before reading it (`body_json`): axum's
+    // default 2 MiB limit would answer a plain 413 first
+    post(h.layer(layers).layer(axum::extract::DefaultBodyLimit::disable()))
         .options((async || ()).layer(preflight))
         .fallback(proxy::forward)
 }
@@ -171,7 +209,18 @@ pub fn app(st: AppState) -> Router {
             "/api/workingsets/{id}/bits/{id2}",
             read_route(&st, routes::sets_detail::ws_bit),
         )
-        .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward));
+        .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward))
+        // T10 group 1: what the app does most
+        .route("/api/ideas", write_route(&st, writes::ideas::ideas))
+        .route("/api/sets/transcript", write_route(&st, writes::transcript::transcript))
+        // T10 group 2: one bit's writes
+        .route("/api/jokes/{id}/versions", write_route(&st, writes::bits::versions))
+        .route("/api/decision", write_route(&st, writes::bits::decision))
+        .route("/api/undo", write_route(&st, writes::bits::undo))
+        .route("/api/merge", write_route(&st, writes::merge::merge))
+        .route("/api/merge/attach", write_route(&st, writes::merge::attach))
+        .route("/api/merge/dismiss", write_route(&st, writes::merge::dismiss))
+        .route("/api/merge/undo", write_route(&st, writes::merge::undo));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     r.fallback(proxy::forward).with_state(st)
@@ -193,6 +242,13 @@ pub fn state(config: ApiConfig) -> anyhow::Result<AppState> {
         auth::Verifier::new(a.issuer.clone(), a.audience.clone(), jwks, clock)
     });
     let metrics = pk_obs::ApiMetrics::new(VERSION, &config.build_sha)?;
+    // the private legal rules, when this process has the file (the hosted pod does not): the generic markers plus his
+    let mut config = config;
+    config.legal = match std::fs::read_to_string(&config.legal_rules) {
+        Ok(text) => pk_core::legal::Legal::from_rules_json(&text),
+        Err(_) => pk_core::legal::Legal::default(),
+    };
+    tracing::info!(markers = config.legal.len(), "legal rules loaded");
     Ok(AppState::new(config, verifier, metrics, http))
 }
 

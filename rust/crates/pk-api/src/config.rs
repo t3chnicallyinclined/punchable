@@ -34,6 +34,12 @@ pub struct ApiConfig {
     /// Search's embedder: `PK_EMBEDDER=hash`, else the bge-small folder (`PK_BGE_DIR` /
     /// `PK_CACHE_DIR`), else none (loaded on first use: `embed`).
     pub embedder: crate::embed::Choice,
+    /// The private legal rules file (`PUNCHABLE_LEGAL_RULES`, else `~/.punchable/legal_rules.json`); the binary reads
+    /// it into [`ApiConfig::legal`]. The hosted pod has none: the generic markers alone, as the Python's.
+    pub legal_rules: PathBuf,
+    /// The court-material rule every stored text goes through (`refuse_legal`): the generic markers until the binary
+    /// adds the file's.
+    pub legal: pk_core::legal::Legal,
 }
 
 /// Keycloak.
@@ -109,6 +115,13 @@ impl ApiConfig {
             store: pk_store::Config::from_env(env, None, Some(&ns), Some(&db))?,
             build_sha: env.opt("PK_BUILD_SHA").unwrap_or("").to_string(),
             embedder: crate::embed::Choice::from_env(env)?,
+            legal_rules: env.path("PUNCHABLE_LEGAL_RULES").unwrap_or_else(|| {
+                env.path("PUNCHABLE_HOME")
+                    .or_else(|| env.home().map(|h| h.join(".punchable")))
+                    .unwrap_or_default()
+                    .join("legal_rules.json")
+            }),
+            legal: pk_core::legal::Legal::default(),
         })
     }
 }

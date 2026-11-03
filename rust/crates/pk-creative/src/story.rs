@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
-use std::sync::{LazyLock, Mutex, OnceLock, PoisonError};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock, PoisonError};
 
 use pk_core::py;
 use regex::Regex;
@@ -77,7 +77,7 @@ struct StoryCache {
 /// ones computed (the API keeps one per generation; the Python keeps the caches on its corpus object).
 #[derive(Debug)]
 pub struct StoryCorpus {
-    corpus: Corpus,
+    corpus: Arc<Corpus>,
     cache: StoryCache,
     notebook: OnceLock<crate::notebook::Index>,
 }
@@ -86,10 +86,15 @@ impl StoryCorpus {
     /// Over a freshly built corpus, with empty caches.
     pub fn new(corpus: Corpus) -> Self {
         Self {
-            corpus,
+            corpus: Arc::new(corpus),
             cache: StoryCache::default(),
             notebook: OnceLock::new(),
         }
+    }
+
+    /// The corpus itself, shared: what an index that outlives a borrow (`merge::Index`) is built over.
+    pub fn shared(&self) -> Arc<Corpus> {
+        Arc::clone(&self.corpus)
     }
 
     /// The his-words index over this corpus (`notebook._index`, kept on the corpus object), built on first use.

@@ -12,6 +12,11 @@ the hop through pk-api:
 
     python tools/load/forward_probe.py --pair <file> [--n 120] [--conc 8] [--write-every 0.5] [--json out.json]
 
+Since T10 a route may be a write, `POST /api/ideas` (a fresh jot per call), `POST /api/sets/transcript` (a fresh
+transcript per call, 202), `POST /api/jokes/{joke}/versions` (a fresh version), `POST /api/decision:{joke}` (a title
+edit with a counter: never "nothing changed"); a write is asked of both servers at the same rate like a read, each
+with its own fresh body, so the gate is the same: at or below the Python at the same request rate.
+
 Only loopback bases are accepted (the writes are for a scratch database). Prints p50 / p95 / max ms per route and
 column, and the via-minus-direct difference of the medians.
 """
@@ -74,6 +79,29 @@ def pct(xs: list[float], p: float) -> float:
     return xs[min(len(xs) - 1, int(round(p / 100 * (len(xs) - 1))))]
 
 
+def split_route(route: str) -> tuple[str, str]:
+    """`"POST /api/ideas"` -> `("POST", "/api/ideas")`; a bare path is a GET."""
+    if " " in route:
+        m, p = route.split(" ", 1)
+        return m.upper(), p
+    return "GET", route
+
+
+def body_for(path: str, col: str, w: int, i: int) -> bytes | None:
+    """A fresh body per call for the write routes (T10), so no two calls collide and no edit is "nothing changed"."""
+    tag = f"{col} {w}-{i}"
+    if path == "/api/ideas":
+        return json.dumps({"text": f"probe jot {tag}: the parking meter that talks back at number {w * 1000 + i}."}).encode()
+    if path == "/api/sets/transcript":
+        return json.dumps({"segments": [{"text": f"probe set {tag} about the bus and the gate.", "start": 0, "end": 5}]}).encode()
+    if path.endswith("/versions"):
+        return json.dumps({"text": f"probe version {tag}: a second draft of the line."}).encode()
+    if path.startswith("/api/decision:"):
+        return json.dumps({"target": "node", "id": path.split(":", 1)[1], "action": "edit",
+                           "after": {"title": f"Probe title {tag}"}}).encode()
+    return None
+
+
 def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> dict:
     """`threads` workers, each sending `n` rounds over every route, each round direct then via (alternating)."""
     out: dict[tuple[str, str], list[float]] = {}
@@ -86,18 +114,20 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
         d, v = Conn(pair["python"]), Conn(pair["rust"])
         for i in range(n):
             for k, route in enumerate(ROUTES):
+                method, path = split_route(route)
                 order = [("direct", d), ("via", v)]
                 if (i + k + w) % 2:
                     order.reverse()
                 for col, c in order:
                     try:
-                        took, status = c.call("GET", route)
+                        body = body_for(path, col, w, i) if method != "GET" else None
+                        took, status = c.call(method, path.split(":", 1)[0] if path.startswith("/api/decision:") else path, body)
                     except Exception as e:  # noqa: BLE001
                         with lock:
                             errors.append(f"{col} {route}: {e}")
                         continue
                     with lock:
-                        if status != 200:
+                        if status not in (200, 202):
                             errors.append(f"{col} {route}: HTTP {status}")
                         else:
                             out.setdefault((route, col), []).append(took)
@@ -185,7 +215,10 @@ def main() -> int:
             out = []
             for r in ROUTES:
                 if ph in r:
-                    r = r.replace(ph, urllib.parse.quote(ids[k % len(ids)], safe=":"))
+                    # a write names its bit in the path (`/api/jokes/{joke}/versions`) or after the colon
+                    # (`/api/decision:{joke}`): the colon form keeps the id out of the URL
+                    quoted = urllib.parse.quote(ids[k % len(ids)], safe=":") if "/api/decision:" not in r else ids[k % len(ids)]
+                    r = r.replace(ph, quoted)
                     k += 1
                 out.append(r)
             ROUTES = out

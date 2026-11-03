@@ -233,6 +233,11 @@ pub fn strip(s: &str) -> &str {
     s.trim_matches(isspace)
 }
 
+/// `s.strip(chars)`: both ends trimmed of any character in `chars`.
+pub fn strip_chars<'a>(s: &'a str, chars: &str) -> &'a str {
+    s.trim_matches(|c: char| chars.contains(c))
+}
+
 /// `s.split()` with no separator: runs of Python whitespace, no empty pieces.
 pub fn split(s: &str) -> impl Iterator<Item = &str> {
     s.split(isspace).filter(|w| !w.is_empty())

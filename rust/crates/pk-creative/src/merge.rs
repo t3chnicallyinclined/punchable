@@ -889,6 +889,14 @@ pub fn sha8(keep: &[String]) -> String {
     hex::encode(Sha1::digest(text.as_bytes()))[..8].to_string()
 }
 
+/// `creative.util.sha8(obj)` over any value: `json.dumps(obj, sort_keys=True, ensure_ascii=False,
+/// separators=(",", ":"))`, then the first 8 hex of its sha1. The ids the merge routes mint hash a list of strings and
+/// integers (`[note, into, now_iso(), n_events]`), which serde's compact form prints as Python does.
+pub fn sha8_value(v: &Value) -> String {
+    let text = serde_json::to_string(&py::sort_keys(v)).unwrap_or_default();
+    hex::encode(Sha1::digest(text.as_bytes()))[..8].to_string()
+}
+
 fn main_key(m: &Value) -> (i64, i64, bool, Vec<i64>, i64, String) {
     let n = |k: &str| m.get(k).and_then(Value::as_i64).unwrap_or(0);
     let recent: Vec<i64> = m

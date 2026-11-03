@@ -573,7 +573,7 @@ pub fn stamp(b: &Built, now: &str, reason: &str, by: &str) -> Map<String, Value>
     out.insert("action".into(), json!(b.action));
     out.insert("before".into(), b.before.clone().map_or(Value::Null, Value::Object));
     out.insert("after".into(), b.after.clone().map_or(Value::Null, Value::Object));
-    out.insert("reason".into(), json!(reason.trim()));
+    out.insert("reason".into(), json!(py::strip(reason)));
     out.insert("by".into(), json!(by));
     out
 }

@@ -263,10 +263,13 @@ class Rpc:
             bad = [(i, r) for i, r in enumerate(res) if r.get("status") != "OK"]
             if not bad:
                 return res
-            msg = str(bad[0][1].get("result"))
+            # in a transaction every statement but the one that failed says "not executed due to a failed
+            # transaction": report the cause (the first statement whose text is its own), not the echo
+            cause = next((b for b in bad if "not executed due to a failed transaction" not in str(b[1].get("result"))), bad[0])
+            msg = str(cause[1].get("result"))
             atomic = len(res) == 1 or sql.lstrip()[:5].upper() == "BEGIN"
             if wait is None or not atomic or "can be retried" not in msg:
-                raise SurrealError(f"statement {bad[0][0]} failed: {msg}\n--- {sql[:600]}")
+                raise SurrealError(f"statement {cause[0]} failed: {msg}\n--- {sql[:600]}")
             time.sleep(wait)
         raise AssertionError("unreachable")
 

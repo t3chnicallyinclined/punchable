@@ -270,6 +270,11 @@ impl Replayed {
         self.replay(lines, owner)
     }
 
+    /// Keep `items` as the replay of `lines` (a write just appended the last line and has the replay in hand).
+    pub fn store(&self, lines: Vec<String>, items: Arc<Items>) {
+        *self.last.lock().unwrap_or_else(PoisonError::into_inner) = Some((lines, items));
+    }
+
     /// The items of `lines`: the last replay's when they are the same lines, else a new replay (kept for the next
     /// reader). The replay runs on the caller's thread: the stores are small, append-only logs.
     pub fn replay(&self, lines: Vec<String>, owner: &str) -> Result<Arc<Items>, String> {
@@ -302,6 +307,8 @@ pub struct Stores {
     pub jobs: Replayed,
     /// His voice profile.
     pub profile: Replayed,
+    /// His merges, the AI's attaches, the pairs he dismissed.
+    pub merges: Replayed,
 }
 
 impl Default for Stores {
@@ -313,7 +320,24 @@ impl Default for Stores {
             suggestions: Replayed::new("suggestions"),
             jobs: Replayed::new("jobs"),
             profile: Replayed::new("profile"),
+            merges: Replayed::new("merges"),
         }
+    }
+}
+
+impl Stores {
+    /// The store by its `creative_event` name, for the writes (`None` for a store the reads here never replay).
+    pub fn by_name(&self, name: &str) -> Option<&Replayed> {
+        Some(match name {
+            "account" => &self.account,
+            "storyboards" => &self.storyboards,
+            "workingsets" => &self.workingsets,
+            "suggestions" => &self.suggestions,
+            "jobs" => &self.jobs,
+            "profile" => &self.profile,
+            "merges" => &self.merges,
+            _ => return None,
+        })
     }
 }
 

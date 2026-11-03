@@ -121,13 +121,7 @@ pub async fn not_a_joke(State(st): State<AppState>, RawQuery(raw): RawQuery) -> 
                                    nothing is hidden until you tap Hide")})))
 }
 
-/// `WAITING_NOTE`.
-fn waiting_note(w: &str) -> Value {
-    match w {
-        "transcriber" => json!("Transcription happens on your phone for now; this file is waiting."),
-        _ => Value::Null,
-    }
-}
+use crate::writes::jobs::waiting_note;
 
 /// `GET /api/jobs/<id>`: one job's brief and its result.
 pub async fn job(State(st): State<AppState>, Path(jid): Path<String>, RawQuery(raw): RawQuery) -> ApiResult<Response> {

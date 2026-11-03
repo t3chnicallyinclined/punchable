@@ -201,7 +201,7 @@ async fn health_before_any_data_is_the_boot_status() {
 
 #[test]
 fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
-    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../infra/k8s/prepared/t9-api-rs.yaml");
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../infra/k8s/prepared/t10-api-rs.yaml");
     let text = std::fs::read_to_string(p).expect("the prepared manifest");
     let mut exact: Vec<&str> = text
         .lines()
@@ -210,16 +210,24 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
         .collect();
     exact.sort_unstable();
     let mut own = pk_api::OWN_PATHS.to_vec();
+    own.extend(pk_api::OWN_WRITE_PATHS);
     own.sort_unstable();
     assert_eq!(exact, own);
-    assert!(!text.contains("pathType: Prefix"), "no prefix moves at T9");
+    assert!(
+        !text.contains("pathType: Prefix"),
+        "no prefix moves until the Python is retired"
+    );
     let mut regex: Vec<&str> = text
         .lines()
         .filter(|l| l.contains("pathType: ImplementationSpecific"))
         .filter_map(|l| l.split("path: \"").nth(1)?.split('"').next())
         .collect();
     regex.sort_unstable();
-    let mut own: Vec<String> = pk_api::OWN_PATTERNS.iter().map(|p| pk_api::ingress_regex(p)).collect();
+    let mut own: Vec<String> = pk_api::OWN_PATTERNS
+        .iter()
+        .chain(pk_api::OWN_WRITE_PATTERNS.iter())
+        .map(|p| pk_api::ingress_regex(p))
+        .collect();
     own.sort_unstable();
     assert_eq!(regex, own);
 }
@@ -233,6 +241,45 @@ async fn every_moved_path_is_answered_here() {
         let answered_here =
             s == StatusCode::UNAUTHORIZED || (p == "/api/health" && s == StatusCode::SERVICE_UNAVAILABLE);
         assert!(answered_here, "{p}: {s} {}", String::from_utf8_lossy(&b));
+    }
+}
+
+/// T10: a POST on a moved write path is answered here (the auth check's 401, never the fallback's 404), a GET on
+/// it is not (the Python has no such GET: forwarded), and the paths beside them stay forwarded.
+#[tokio::test]
+async fn every_moved_write_path_is_answered_here_for_post_only() {
+    let st = state(true);
+    let ids = pk_api::OWN_WRITE_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb"));
+    for p in pk_api::OWN_WRITE_PATHS
+        .iter()
+        .copied()
+        .chain(ids.iter().map(String::as_str))
+    {
+        let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
+        let (s, _, b) = send(&st, post).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED, "{p}: {}", String::from_utf8_lossy(&b));
+        let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "GET {p} is forwarded");
+        let options = Request::builder()
+            .method("OPTIONS")
+            .uri(p)
+            .header(header::ORIGIN, ORIGIN)
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(
+            send(&st, options).await.0,
+            StatusCode::NO_CONTENT,
+            "OPTIONS {p} is the preflight"
+        );
+    }
+    for p in [
+        "/api/merge/candidates",
+        "/api/merge/history",
+        "/api/jokes/a/b/versions",
+        "/api/jokes/x/versions/y",
+    ] {
+        let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
+        assert_eq!(send(&st, post).await.0, StatusCode::NOT_FOUND, "{p} is forwarded");
     }
 }
 
