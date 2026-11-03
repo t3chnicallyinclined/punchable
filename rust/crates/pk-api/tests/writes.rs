@@ -448,3 +448,398 @@ async fn two_writers_racing_for_one_place_never_both_land() {
         "eight rows, 0..8 with no gap (creative_lines checks the sequence)"
     );
 }
+
+async fn send(st: &AppState, method: &str, path: &str, body: Value) -> (StatusCode, Value) {
+    let bytes = serde_json::to_vec(&body).expect("json");
+    let req = Request::builder()
+        .method(method)
+        .uri(path)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::CONTENT_LENGTH, bytes.len())
+        .body(Body::from(bytes))
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    let (parts, body) = r.into_parts();
+    let b = axum::body::to_bytes(body, 1 << 20).await.expect("body");
+    let v: Value = serde_json::from_slice(&b).unwrap_or(Value::Null);
+    (parts.status, v)
+}
+
+/// T10 round 2: the Set page's, the Tonight list's, the set lists', his sets', the settings', the profile's and the
+/// "not a joke?" writes land through the router and are read back at once, with the Python's statuses and texts.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_round_two_writes_land_and_are_read_back() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let d0 = st.data().await.expect("data");
+    let n0 = d0.decisions().len();
+    let v0 = d0.view(false).await.expect("view");
+    let joke = v0.jokes.first().cloned().expect("a joke");
+    let other = v0.jokes.get(1).cloned().expect("another joke");
+    let perf = v0
+        .nodes
+        .values()
+        .find(|n| n.get("type").and_then(Value::as_str) == Some("performance"))
+        .and_then(|n| n.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .expect("a performance");
+
+    // a rating: the line lands, the answer carries the bit when the moment has one
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/review/rate",
+        json!({"perf": perf, "rating": "worked"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert!(!r["indexes"].as_array().unwrap().is_empty(), "{r}");
+    assert_eq!(
+        r["decisions"].as_array().unwrap().last().unwrap()["after"]["rating"],
+        "worked"
+    );
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/review/rate",
+        json!({"perf": perf, "rating": "worked"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::CONFLICT, "already rated that way")
+    );
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/review/rate",
+        json!({"perf": perf, "rating": "great"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (
+            StatusCode::BAD_REQUEST,
+            "rating must be one of ['killed', 'worked', 'meh', 'died']"
+        )
+    );
+    let (s, r) = send(&st, "POST", "/api/set-row", json!({"perf": perf, "op": "crowd"})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["decisions"][0]["after"], json!({"kind": "crowd_work"}));
+    let (s, r) = send(&st, "POST", "/api/set-row", json!({"perf": perf, "op": "zap"})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (
+            StatusCode::BAD_REQUEST,
+            "op must be rate|match|new|crowd|bit|banter|confirm"
+        )
+    );
+    let d = st.data().await.expect("data");
+    assert!(d.decisions().len() >= n0 + 2, "the very next read shows the lines");
+
+    // the tonight list, then the same list again
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/tonight",
+        json!({"items": [{"joke": joke, "done": 1}]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["tonight"]["source"], "saved");
+    assert_eq!(r["tonight"]["items"][0]["id"], joke);
+    assert_eq!(r["tonight"]["items"][0]["done"], true);
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/tonight",
+        json!({"items": [{"joke": joke, "done": true}]}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::CONFLICT, "nothing changed")
+    );
+    let (s, r) = send(&st, "POST", "/api/tonight", json!({"items": [{"joke": "joke:nope"}]})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{r}");
+    assert!(
+        r["error"]
+            .as_str()
+            .unwrap()
+            .starts_with("unknown joke in list: {'joke': 'joke:nope'}"),
+        "{r}"
+    );
+
+    // a set list made, changed, added to, archived and brought back; a set promoted from it, versioned, locked,
+    // a try note added and ticked
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/boards",
+        json!({"title": " Seven ", "joke_ids": [joke], "target_s": 300}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    let bid = r["board"]["id"].as_str().unwrap().to_string();
+    assert!(bid.starts_with("sb:seven-"), "{bid}");
+    assert_eq!(r["board"]["title"], "Seven");
+    let path = format!("/api/boards/{bid}");
+    let (s, r) = send(
+        &st,
+        "PATCH",
+        &path,
+        json!({"add": other, "move": {"from": 1, "to": 0}, "notes": "n"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["board"]["joke_ids"], json!([other, joke]));
+    let (s, r) = send(&st, "PATCH", &path, json!({})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{r}");
+    let (s, r) = send(&st, "POST", &format!("{path}/items"), json!({"joke_id": joke})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::CONFLICT, format!("{joke} already on the board").as_str())
+    );
+    let (s, r) = send(&st, "PATCH", &path, json!({"archive": true})).await;
+    assert_eq!((s, r["board"]["archived"].as_bool()), (StatusCode::OK, Some(true)));
+    let (s, r) = send(&st, "PATCH", &path, json!({"add": joke})).await;
+    assert_eq!(
+        s,
+        StatusCode::BAD_REQUEST,
+        "an archived list refuses every change but unarchive and delete: {r}"
+    );
+    let (s, r) = send(&st, "PATCH", &path, json!({"unarchive": true, "remove": other})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["board"]["joke_ids"], json!([joke]));
+    let cr = Creative::new(st.clone());
+    assert_eq!(cr.items("storyboards").await.unwrap()[&bid]["archived"], false);
+
+    let (s, r) = send(&st, "POST", "/api/workingsets", json!({"board_id": bid})).await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    let wid = r["working_set"]["id"].as_str().unwrap().to_string();
+    assert!(wid.starts_with("ws:seven-"), "{wid}");
+    assert_eq!(r["working_set"]["versions"][0]["bits"][0]["joke_id"], joke);
+    let wpath = format!("/api/workingsets/{wid}");
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("{wpath}/versions"),
+        json!({"note": "v2", "joke_ids": [other, joke]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    assert_eq!(r["working_set"]["current"], 2);
+    let (s, r) = send(&st, "POST", &format!("{wpath}/lock"), json!({"joke_id": joke})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["working_set"]["locks"][&joke]["bit"], true);
+    let (s, r) = send(&st, "POST", &format!("{wpath}/bits/{joke}/punchup"), json!({})).await;
+    assert_eq!((s, r["status"].as_str().unwrap()), (StatusCode::OK, "locked"));
+    let (s, r) = send(&st, "POST", &format!("/api/jokes/{other}/punchup"), json!({})).await;
+    assert_eq!((s, r["status"].as_str().unwrap()), (StatusCode::OK, "no_tape"), "{r}");
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("{wpath}/lock"),
+        json!({"joke_id": joke, "line": "nobody said this"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (
+            StatusCode::BAD_REQUEST,
+            "that line is not verbatim in any taped night or written version of the bit"
+        )
+    );
+    let (s, r) = send(&st, "POST", &format!("{wpath}/try"), json!({"text": " slower "})).await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    let nid = r["note"]["id"].as_str().unwrap().to_string();
+    assert!(nid.starts_with("try:"), "{nid}");
+    assert_eq!(r["note"]["text"], "slower");
+    let (s, r) = send(&st, "PATCH", &format!("{wpath}/try/{nid}"), json!({"done": true})).await;
+    assert_eq!((s, r["changed"].as_bool()), (StatusCode::OK, Some(true)), "{r}");
+    let (s, r) = send(&st, "PATCH", &format!("{wpath}/try/{nid}"), json!({"done": "yes"})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::BAD_REQUEST, "done must be true or false")
+    );
+    let ws = cr.items("workingsets").await.unwrap();
+    assert_eq!(
+        ws[&wid]["try_notes"][0]["done"], true,
+        "the tick is read back from the rows"
+    );
+
+    // the settings, the profile, a dismissed draft, a keep and a hide
+    let (s, r) = send(&st, "PATCH", "/api/settings", json!({"training": true})).await;
+    assert_eq!(
+        (s, r["training"].as_bool(), r["source"].as_str()),
+        (StatusCode::OK, Some(true), Some("his")),
+        "{r}"
+    );
+    let (s, r) = send(&st, "PATCH", "/api/settings", json!({"foo": 1})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::BAD_REQUEST, "unknown setting(s): foo")
+    );
+    let (s, r) = send(
+        &st,
+        "PUT",
+        "/api/profile/voice",
+        json!({"text": "\r\nI talk fast.\r\n\n"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["text"].as_str().unwrap()),
+        (StatusCode::OK, "I talk fast.\n"),
+        "{r}"
+    );
+    assert_eq!(r["chars"], 13);
+    let (s, r) = send(&st, "PUT", "/api/profile/voice", json!({"text": "Then I wait."})).await;
+    assert_eq!(
+        (s, r["previous"]["text"].as_str().unwrap()),
+        (StatusCode::OK, "I talk fast.\n")
+    );
+    let (s, r) = send(
+        &st,
+        "PUT",
+        "/api/profile/voice",
+        json!({"text": "The petitioner and the respondent, index no 5."}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY, "{r}");
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/profile/voice/learn",
+        json!({"dropped": ["a draft", {"text": "b", "bit": joke}]}),
+    )
+    .await;
+    assert_eq!((s, r["learned"]["dropped"].as_u64()), (StatusCode::OK, Some(2)), "{r}");
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/suggestions/not-a-joke/keep",
+        json!({"joke_id": joke}),
+    )
+    .await;
+    assert_eq!(r, json!({"ok": true, "joke_id": joke, "kept": true}), "{s}");
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/suggestions/not-a-joke/keep",
+        json!({"joke_id": joke}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["kept"].as_bool()),
+        (StatusCode::OK, Some(true)),
+        "kept again: no second row"
+    );
+    assert_eq!(cr.items("suggestions").await.unwrap().len(), 1);
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/suggestions/not-a-joke/hide",
+        json!({"joke_id": other}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["decisions"][0]["after"], json!({"hidden": true}));
+    assert_eq!(r["undo"]["indexes"], r["indexes"]);
+    let d = st.data().await.expect("data");
+    assert!(
+        !d.view(false).await.unwrap().nodes.contains_key(&other),
+        "the hidden bit left the visible view at once"
+    );
+    assert!(d.view(true).await.unwrap().nodes.contains_key(&other));
+}
+
+/// T10 round 2: eight writers changing one set list at once, each through the router's probe-then-append, and
+/// eight ratings of one moment at once (the first line rebuilt from a fresh view on a lost race): every write
+/// lands once, the store's rows have no gap, and no answer is a 500.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn eight_writers_on_one_list_and_one_moment_all_land() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.unwrap().view(false).await.unwrap();
+    let joke = v0.jokes.first().cloned().expect("a joke");
+    let perf = v0
+        .nodes
+        .values()
+        .find(|n| n.get("type").and_then(Value::as_str) == Some("performance"))
+        .and_then(|n| n.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .expect("a performance");
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/boards",
+        json!({"title": "Raced", "joke_ids": [joke]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    let bid = r["board"]["id"].as_str().unwrap().to_string();
+    let n0 = writer.creative_lines("storyboards").await.expect("rows").len();
+    let mut tasks = Vec::new();
+    for w in 0..8usize {
+        let st = st.clone();
+        let bid = bid.clone();
+        tasks.push(tokio::spawn(async move {
+            send(
+                &st,
+                "PATCH",
+                &format!("/api/boards/{bid}"),
+                json!({"title": format!("Raced {w}"), "notes": format!("note {w}")}),
+            )
+            .await
+        }));
+    }
+    for t in tasks {
+        let (s, r) = t.await.expect("task");
+        assert_eq!(s, StatusCode::OK, "{r}");
+    }
+    let rows = writer.creative_lines("storyboards").await.expect("rows");
+    assert_eq!(rows.len(), n0 + 8, "eight update rows, 0..n with no gap");
+    let cr = Creative::new(st.clone());
+    let title = cr.items("storyboards").await.unwrap()[&bid]["title"].clone();
+    assert!(title.as_str().unwrap().starts_with("Raced "), "{title}");
+
+    // the raw lines of a rating, eight at once on one moment: ratings alternate so none is "already rated"
+    let d0 = st.data().await.unwrap().decisions().len();
+    let mut tasks = Vec::new();
+    for w in 0..8usize {
+        let st = st.clone();
+        let perf = perf.clone();
+        tasks.push(tokio::spawn(async move {
+            let rating = ["killed", "worked", "meh", "died"][w % 4];
+            send(
+                &st,
+                "POST",
+                "/api/set-row",
+                json!({"perf": perf, "op": "rate", "rating": rating}),
+            )
+            .await
+        }));
+    }
+    let mut landed = 0;
+    for t in tasks {
+        let (s, r) = t.await.expect("task");
+        match s {
+            StatusCode::OK => landed += 1,
+            StatusCode::CONFLICT => assert_eq!(r["error"], "already rated that way"),
+            other => panic!("a rating answered {other}: {r}"),
+        }
+    }
+    let d = st.data().await.unwrap();
+    assert_eq!(
+        d.decisions().len(),
+        d0 + landed,
+        "every rating that was answered 200 is one line, none twice"
+    );
+    assert!(landed >= 4, "at least the four distinct ratings landed: {landed}");
+}

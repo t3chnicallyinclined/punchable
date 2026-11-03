@@ -21,12 +21,16 @@
 //! A write runs to its end once started ([`detached`]): a client that hangs up mid-way (the phone losing signal)
 //! cannot leave a unit without its edge or a merge half written, as the Python's request thread cannot.
 
+pub mod account;
 pub mod bits;
+pub mod boards;
 pub mod ideas;
 pub mod jobs;
 pub mod learned;
 pub mod merge;
+pub mod review;
 pub mod transcript;
+pub mod workingsets;
 
 use std::sync::{Arc, LazyLock};
 
@@ -36,7 +40,7 @@ use pk_creative::{Event, Items};
 use pk_kb::{Decision, KbError, View};
 use pk_store::{CreativeEvent, DecisionRow, StoreError};
 use regex::Regex;
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::auth::Caller;
 use crate::error::{ApiError, ApiResult};
@@ -104,6 +108,26 @@ pub async fn detached<T: Send + 'static>(f: impl Future<Output = ApiResult<T>> +
     tokio::spawn(f).await.map_err(|e| ApiError::internal("JoinError", e))?
 }
 
+/// What every creative write starts from (`do_POST` / `do_PATCH` / `do_PUT`): the 503 while booting, then
+/// `?backend=`, then the body read the Python's way.
+pub struct Req {
+    /// The service.
+    pub st: AppState,
+    /// The query string.
+    pub q: crate::query::Query,
+    /// The body.
+    pub b: Map<String, Value>,
+}
+
+/// [`Req`] for one request.
+pub async fn request(st: AppState, raw: Option<&str>, headers: &HeaderMap, body: Body) -> ApiResult<Req> {
+    let q = crate::query::Query::parse(raw);
+    st.require_loaded()?;
+    crate::routes::pick(&q)?;
+    let b = body_json(headers, body).await?;
+    Ok(Req { st, q, b })
+}
+
 /// `b.get(k)` as a string.
 pub fn str_of<'a>(b: &'a Map<String, Value>, k: &str) -> Option<&'a str> {
     b.get(k).and_then(Value::as_str)
@@ -132,6 +156,69 @@ pub fn refuse_legal<'a>(st: &AppState, texts: impl IntoIterator<Item = &'a str>)
 /// `kb.DecisionError(msg, status)` as the route answers it.
 pub fn kb_err(e: KbError) -> ApiError {
     ApiError::new(StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_REQUEST), e.msg)
+}
+
+/// `creative_api.HttpError(status, msg)`.
+pub fn http(status: u16, msg: impl Into<String>) -> ApiError {
+    ApiError::new(StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_REQUEST), msg)
+}
+
+/// A reducer's answer to a route's own probe (`S._apply(probe, ...)` under `except (ValueError, KeyError)`): a
+/// refusal or a missing key is the 400 with its text; anything else the 500 the Python's exception is.
+pub fn creative_err(e: &pk_creative::CreativeError) -> ApiError {
+    match e {
+        pk_creative::CreativeError::Refused(m) => ApiError::bad_request(m.clone()),
+        pk_creative::CreativeError::Faulted(m) if m.starts_with('\'') && m.ends_with('\'') => {
+            ApiError::bad_request(m.clone())
+        }
+        other => ApiError::internal("TypeError", other.msg()),
+    }
+}
+
+/// `creative_api._int(v, name, lo, hi)`: `None` stays none; a bool, a non-number or one out of range is the 400;
+/// a float is truncated (`int(v)`).
+pub fn int_arg(v: Option<&Value>, name: &str, lo: i64, hi: i64) -> ApiResult<Option<i64>> {
+    let Some(v) = v.filter(|v| !v.is_null()) else {
+        return Ok(None);
+    };
+    let x = v
+        .as_f64()
+        .filter(|x| *x >= lo as f64 && *x <= hi as f64)
+        .ok_or_else(|| ApiError::bad_request(format!("{name} must be a number between {lo} and {hi}")))?;
+    Ok(Some(x.trunc() as i64))
+}
+
+/// A line a route writes as it is (`AppKB.append_lines`): its own `before` and `after`, no builder.
+#[derive(Debug, Clone)]
+pub struct Raw {
+    /// `edge` | `node`.
+    pub target: &'static str,
+    /// The record.
+    pub id: String,
+    /// `add` | `edit` | `confirm` | `reject`.
+    pub action: &'static str,
+    /// The record as it was (public fields), or null.
+    pub before: Value,
+    /// What changes.
+    pub after: Value,
+    /// Why (stripped on the line).
+    pub reason: String,
+}
+
+impl Raw {
+    /// The line as `append_lines` writes it: `ts, target, id, action, before, after, reason, by`.
+    pub fn line(&self, now: &str, by: &str) -> Decision {
+        let mut m = Map::new();
+        m.insert("ts".into(), json!(now));
+        m.insert("target".into(), json!(self.target));
+        m.insert("id".into(), json!(self.id));
+        m.insert("action".into(), json!(self.action));
+        m.insert("before".into(), self.before.clone());
+        m.insert("after".into(), self.after.clone());
+        m.insert("reason".into(), json!(pk_core::py::strip(&self.reason)));
+        m.insert("by".into(), json!(by));
+        Decision(m)
+    }
 }
 
 /// A store error as the Python answers it: a refusal with its status, a gap in a store's rows as the `HttpError`
@@ -237,6 +324,57 @@ impl Kb {
         unreachable!("the loop returns on its last attempt")
     }
 
+    /// `kb.append_lines(lines, by)`: the lines a route builds from the view (`build`), appended in order, each
+    /// stamped as the Python stamps it. When the FIRST line lost its place to another writer, everything is built
+    /// again from a fresh view (nothing of this write has landed); a later line that lost its place is sent again
+    /// as it is, the Python's `_append` (the lines before it have landed and are not written twice).
+    pub async fn append_lines<F>(&self, by: &str, build: F) -> ApiResult<Vec<(usize, Decision)>>
+    where
+        F: Fn(&Data, &View) -> ApiResult<Vec<Raw>>,
+    {
+        for attempt in 0..RETRIES {
+            back_off(attempt).await;
+            let (d, v) = self.view().await?;
+            let lines = build(&d, &v)?;
+            let mut out = Vec::with_capacity(lines.len());
+            let mut restart = false;
+            for (k, raw) in lines.iter().enumerate() {
+                for again in 0..RETRIES {
+                    back_off(again).await;
+                    match self.append_once(&raw.line(&pk_core::time::now_iso(), by)).await {
+                        Ok(x) => {
+                            out.push(x);
+                            break;
+                        }
+                        Err(Retry(e)) if k == 0 && attempt + 1 < RETRIES => {
+                            tracing::info!(attempt, "lines: another writer took the place; building again: {e}");
+                            restart = true;
+                            break;
+                        }
+                        // only a line that still holds against whatever the other writer did (`surreal_kb._append`:
+                        // an add upserts, an edit merges, a confirm or reject sets a status); never an inverse
+                        Err(Retry(e))
+                            if k > 0
+                                && again + 1 < RETRIES
+                                && matches!(raw.action, "add" | "edit" | "confirm" | "reject") =>
+                        {
+                            tracing::info!(again, "lines: another writer took the place; sending again: {e}");
+                        }
+                        Err(Retry(e)) => return Err(store_err(e)),
+                        Err(Final(e)) => return Err(e),
+                    }
+                }
+                if restart {
+                    break;
+                }
+            }
+            if !restart {
+                return Ok(out);
+            }
+        }
+        unreachable!("the loop returns on its last attempt")
+    }
+
     async fn append_once(&self, line: &Decision) -> Result<(usize, Decision), Appended> {
         let store = self.st.store_handle().ok_or_else(|| Final(not_connected()))?;
         match store.append_decision(line, None).await {
@@ -279,6 +417,28 @@ impl Kb {
             }
         }
         unreachable!("the loop returns on its last attempt")
+    }
+}
+
+/// A creative store replayed from its rows, with the reducer [`pk_creative::for_store`] hands out.
+type ReplayedStore = pk_creative::Store<Box<dyn pk_creative::Reducer + Send + Sync>>;
+
+/// What [`Creative::probe`] came to when it did not pass.
+#[derive(Debug)]
+pub enum ProbeError {
+    /// The reducer refused an op (the Python's `ValueError`), with its text: the route picks the status.
+    Refused(String),
+    /// Anything else: the rows could not be read, a malformed op (the Python's 500).
+    Failed(ApiError),
+}
+
+impl From<ProbeError> for ApiError {
+    /// The Python's `except (ValueError, KeyError) as e: raise HttpError(400, str(e))`.
+    fn from(e: ProbeError) -> Self {
+        match e {
+            ProbeError::Refused(m) => Self::bad_request(m),
+            ProbeError::Failed(e) => e,
+        }
     }
 }
 
@@ -354,6 +514,39 @@ impl Creative {
         }
     }
 
+    /// A store's rows as they are now, replayed off the async threads (a few thousand `jobs` rows at production
+    /// scale), with its lines.
+    async fn replayed_now(&self, name: &str) -> ApiResult<(Vec<String>, ReplayedStore)> {
+        let store = self.st.store_handle().ok_or_else(not_connected)?;
+        let owner = self.st.config().owner_id.clone();
+        let lines = store.creative_lines(name).await.map_err(store_err)?;
+        let reducer =
+            pk_creative::for_store(name, &owner).ok_or_else(|| fault("KeyError", pk_core::py::quote(name)))?;
+        let (lines, s) = tokio::task::spawn_blocking(move || {
+            let s = pk_creative::Store::replay(reducer, &lines);
+            (lines, s)
+        })
+        .await
+        .map_err(|e| ApiError::internal("JoinError", e))?;
+        Ok((lines, s.map_err(|e| fault("ValueError", e.msg()))?))
+    }
+
+    /// The route's own probe before a sequence of events (`probe = copy(store.items); S._apply(probe, ...)` for
+    /// each): every op is checked on a copy of the items as they are now before any is written, all or nothing.
+    /// A reducer's refusal is handed back as such (the route decides its status); anything else is the error it is.
+    pub async fn probe(&self, name: &str, ops: &[(String, String, Value)], by: &str) -> Result<(), ProbeError> {
+        let (_, mut s) = self.replayed_now(name).await.map_err(ProbeError::Failed)?;
+        let now = pk_core::time::now_iso();
+        for (op, id, data) in ops {
+            match s.append_event(Event::new(op, id, data.clone(), by, &now)) {
+                Ok(_) => {}
+                Err(pk_creative::CreativeError::Refused(m)) => return Err(ProbeError::Refused(m)),
+                Err(e) => return Err(ProbeError::Failed(creative_err(&e))),
+            }
+        }
+        Ok(())
+    }
+
     /// `LineStore.append(op, id, data, by)` behind the route's own check: the rows as they are now are replayed,
     /// `pre` runs over the items (it refuses, says there is nothing to do, or says go), the event is validated on a
     /// copy, and the next row is created (`Mirror.create`); when another writer took that row meanwhile, everything
@@ -367,19 +560,36 @@ impl Creative {
         by: &str,
         pre: impl Fn(&Items) -> ApiResult<Pre>,
     ) -> ApiResult<Written> {
+        self.append_if_at(name, op, id, data, by, None, pre).await
+    }
+
+    /// [`Creative::append_if`] with the event's `ts` given (`store.append(..., ts=ts)`: a try note's id hashes the
+    /// same stamp the event carries).
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the Python's `append` with its `ts`, plus the route's check"
+    )]
+    pub async fn append_if_at(
+        &self,
+        name: &str,
+        op: &str,
+        id: &str,
+        data: Value,
+        by: &str,
+        ts: Option<&str>,
+        pre: impl Fn(&Items) -> ApiResult<Pre>,
+    ) -> ApiResult<Written> {
         let store = self.st.store_handle().ok_or_else(not_connected)?;
-        let owner = self.st.config().owner_id.clone();
         for attempt in 0..RETRIES {
             back_off(attempt).await;
-            let lines = store.creative_lines(name).await.map_err(store_err)?;
-            let reducer =
-                pk_creative::for_store(name, &owner).ok_or_else(|| fault("KeyError", pk_core::py::quote(name)))?;
-            let mut s = pk_creative::Store::replay(reducer, &lines).map_err(|e| fault("ValueError", e.msg()))?;
+            let (lines, mut s) = self.replayed_now(name).await?;
             if let Pre::Done(status, v) = pre(s.items())? {
                 return Ok(Written::Skipped(status, v));
             }
-            let ev = Event::new(op, id, data.clone(), by, &pk_core::time::now_iso());
-            // a bad op never reaches the log: the Python's `_apply(probe, ev)` raises a ValueError, a 500
+            let now = ts.map_or_else(pk_core::time::now_iso, str::to_string);
+            let ev = Event::new(op, id, data.clone(), by, &now);
+            // a refused event never reaches the log: the Python's `Store.append` raises the reducer's ValueError,
+            // which a route's probe turned into its 400 before, so here it is the 500 an unprobed one is
             s.append_event(ev.clone()).map_err(|e| fault("ValueError", e.msg()))?;
             let line = pk_core::py::dumps(&serde_json::to_value(&ev).map_err(|e| fault("TypeError", e))?);
             let seq = i64::try_from(lines.len()).map_err(|e| fault("OverflowError", e))?;

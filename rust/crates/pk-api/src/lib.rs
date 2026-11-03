@@ -34,7 +34,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::handler::Handler;
 use axum::middleware::from_fn_with_state;
-use axum::routing::{MethodRouter, get, post};
+use axum::routing::{MethodRouter, get, patch, post};
 use tower::ServiceBuilder;
 
 pub use config::ApiConfig;
@@ -44,8 +44,9 @@ pub use state::AppState;
 pub const VERSION: &str = "0.1.0";
 
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
-/// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied).
-pub const OWN_PATHS: [&str; 19] = [
+/// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
+/// answered here too is in [`OWN_WRITE_PATHS`] as well.
+pub const OWN_PATHS: [&str; 20] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -65,14 +66,15 @@ pub const OWN_PATHS: [&str; 19] = [
     "/api/suggestions/not-a-joke",
     "/api/workingsets",
     "/api/notebook/related",
+    "/api/merge/candidates",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
-/// ([`ingress_regex`] gives each one's path), never with a prefix: `/api/jokes/<id>/versions` (POST) and every
-/// other path under an id stays the Python's, and an id path with more segments than these patterns falls through to
-/// the fallback and is forwarded. A write on one of these paths (PATCH `/api/boards/<id>`, PATCH `/api/mysets/<id>`)
-/// is forwarded too (`read_route`), and `/api/mysets/match` (the Python's route, not a set id) is forwarded whatever
-/// the method.
+/// ([`ingress_regex`] gives each one's path), never with a prefix: every other path under an id stays the Python's,
+/// and an id path with more segments than these patterns falls through to the fallback and is forwarded. A write on
+/// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
+/// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
+/// set id) is forwarded whatever the method.
 pub const OWN_PATTERNS: [&str; 15] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
@@ -91,9 +93,10 @@ pub const OWN_PATTERNS: [&str; 15] = [
     "/api/sets/{id}/clips",
 ];
 
-/// The paths whose POST this service answers itself (T10, groups 1 and 2). An exact Ingress path moves every
-/// method: a GET on one of these (none exists on the Python) is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 8] = [
+/// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
+/// 1 to 4). An exact Ingress path moves every method: a method the Python has on the path and this service does
+/// not is forwarded and answered by it.
+pub const OWN_WRITE_PATHS: [&str; 19] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -102,54 +105,103 @@ pub const OWN_WRITE_PATHS: [&str; 8] = [
     "/api/merge/attach",
     "/api/merge/dismiss",
     "/api/merge/undo",
+    "/api/tonight",
+    "/api/review/rate",
+    "/api/set-row",
+    "/api/review/reject-match",
+    "/api/boards",
+    "/api/workingsets",
+    "/api/settings",
+    "/api/profile/voice",
+    "/api/profile/voice/learn",
+    "/api/suggestions/not-a-joke/keep",
+    "/api/suggestions/not-a-joke/hide",
 ];
 
-/// The parametric paths whose POST this service answers itself (T10): his new version of a bit.
-pub const OWN_WRITE_PATTERNS: [&str; 1] = ["/api/jokes/{id}/versions"];
+/// The parametric paths whose writes this service answers itself (T10): one bit's version and punch-up, a set
+/// list's changes, a set's versions, locks and try notes.
+pub const OWN_WRITE_PATTERNS: [&str; 10] = [
+    "/api/jokes/{id}/versions",
+    "/api/jokes/{id}/punchup",
+    "/api/boards/{id}",
+    "/api/boards/{id}/items",
+    "/api/boards/{id}/bridge",
+    "/api/workingsets/{id}/versions",
+    "/api/workingsets/{id}/lock",
+    "/api/workingsets/{id}/try",
+    "/api/workingsets/{id}/try/{id2}",
+    "/api/workingsets/{id}/bits/{id2}/punchup",
+];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
 pub fn ingress_regex(pattern: &str) -> String {
     format!("{}$", pattern.replace("{id}", "[^/]+").replace("{id2}", "[^/]+"))
 }
 
-/// A read route: GET (and HEAD) answered here behind CORS, metrics and auth; OPTIONS is the preflight; any other
-/// method goes to the Python (an Ingress path moved here must never swallow a write).
+/// The layers of an app route: CORS, metrics, auth, in that order.
+fn guarded<H, T>(st: &AppState, h: H) -> impl Handler<T, AppState>
+where
+    H: Handler<T, AppState>,
+    T: 'static,
+{
+    h.layer(
+        ServiceBuilder::new()
+            .layer(from_fn_with_state(st.clone(), cors::cors))
+            .layer(from_fn_with_state(st.clone(), instrument::instrument))
+            .layer(from_fn_with_state(st.clone(), auth::authorize)),
+    )
+}
+
+/// [`guarded`] for a route that reads a body: the Python reads `Content-Length` and refuses a body over its own
+/// limit before reading it (`body_json`); axum's default 2 MiB limit would answer a plain 413 first.
+fn guarded_write<H, T>(st: &AppState, h: H) -> impl Handler<T, AppState>
+where
+    H: Handler<T, AppState>,
+    T: 'static,
+{
+    guarded(st, h).layer(axum::extract::DefaultBodyLimit::disable())
+}
+
+/// The preflight: CORS and metrics, no auth.
+fn preflight(st: &AppState) -> impl Handler<((),), AppState> {
+    (async || ()).layer(
+        ServiceBuilder::new()
+            .layer(from_fn_with_state(st.clone(), cors::cors))
+            .layer(from_fn_with_state(st.clone(), instrument::instrument)),
+    )
+}
+
+/// The methods a path answers here, finished: OPTIONS is the preflight, and any other method goes to the Python
+/// (an Ingress path moved here must never swallow a write it does not answer).
+fn finish(st: &AppState, methods: MethodRouter<AppState>) -> MethodRouter<AppState> {
+    methods.options(preflight(st)).fallback(proxy::forward)
+}
+
+/// A read route: GET (and HEAD) answered here.
 fn read_route<H, T>(st: &AppState, h: H) -> MethodRouter<AppState>
 where
     H: Handler<T, AppState>,
     T: 'static,
 {
-    let layers = ServiceBuilder::new()
-        .layer(from_fn_with_state(st.clone(), cors::cors))
-        .layer(from_fn_with_state(st.clone(), instrument::instrument))
-        .layer(from_fn_with_state(st.clone(), auth::authorize));
-    let preflight = ServiceBuilder::new()
-        .layer(from_fn_with_state(st.clone(), cors::cors))
-        .layer(from_fn_with_state(st.clone(), instrument::instrument));
-    get(h.layer(layers))
-        .options((async || ()).layer(preflight))
-        .fallback(proxy::forward)
+    finish(st, get(guarded(st, h)))
 }
 
-/// A write route: POST answered here behind CORS, metrics and auth; OPTIONS is the preflight; any other method goes
-/// to the Python.
+/// A write route: POST answered here.
 fn write_route<H, T>(st: &AppState, h: H) -> MethodRouter<AppState>
 where
     H: Handler<T, AppState>,
     T: 'static,
 {
-    let layers = ServiceBuilder::new()
-        .layer(from_fn_with_state(st.clone(), cors::cors))
-        .layer(from_fn_with_state(st.clone(), instrument::instrument))
-        .layer(from_fn_with_state(st.clone(), auth::authorize));
-    let preflight = ServiceBuilder::new()
-        .layer(from_fn_with_state(st.clone(), cors::cors))
-        .layer(from_fn_with_state(st.clone(), instrument::instrument));
-    // the Python reads `Content-Length` and refuses a body over its own limit before reading it (`body_json`): axum's
-    // default 2 MiB limit would answer a plain 413 first
-    post(h.layer(layers).layer(axum::extract::DefaultBodyLimit::disable()))
-        .options((async || ()).layer(preflight))
-        .fallback(proxy::forward)
+    finish(st, post(guarded_write(st, h)))
+}
+
+/// A PATCH-only route (a try note's tick).
+fn patch_route<H, T>(st: &AppState, h: H) -> MethodRouter<AppState>
+where
+    H: Handler<T, AppState>,
+    T: 'static,
+{
+    finish(st, patch(guarded_write(st, h)))
 }
 
 /// The router.
@@ -170,11 +222,30 @@ pub fn app(st: AppState) -> Router {
         .route("/api/sets/{id}/analysis", read_route(&st, routes::sets::analysis))
         .route("/api/sets/{id}/review", read_route(&st, routes::sets::review))
         .route("/api/jokes/{id}", read_route(&st, routes::sets::joke))
-        .route("/api/settings", read_route(&st, routes::creative::settings))
-        .route("/api/boards", read_route(&st, routes::creative::boards))
+        .route(
+            "/api/settings",
+            finish(
+                &st,
+                get(guarded(&st, routes::creative::settings))
+                    .patch(guarded_write(&st, writes::account::settings_patch)),
+            ),
+        )
+        .route(
+            "/api/boards",
+            finish(
+                &st,
+                get(guarded(&st, routes::creative::boards)).post(guarded_write(&st, writes::boards::create)),
+            ),
+        )
         .route("/api/mysets", read_route(&st, routes::creative::mysets))
         .route("/api/tonight/screen", read_route(&st, routes::creative::tonight_screen))
-        .route("/api/boards/{id}", read_route(&st, routes::sets_detail::board))
+        .route(
+            "/api/boards/{id}",
+            finish(
+                &st,
+                get(guarded(&st, routes::sets_detail::board)).patch(guarded_write(&st, writes::boards::patch)),
+            ),
+        )
         .route(
             "/api/boards/{id}/build",
             read_route(&st, routes::sets_detail::board_build),
@@ -188,13 +259,26 @@ pub fn app(st: AppState) -> Router {
             read_route(&st, routes::sets_detail::connections),
         )
         .route("/api/jokes/{id}/map", read_route(&st, routes::sets_detail::joke_map))
-        .route("/api/profile/voice", read_route(&st, routes::stores::voice))
+        .route(
+            "/api/profile/voice",
+            finish(
+                &st,
+                get(guarded(&st, routes::stores::voice)).put(guarded_write(&st, writes::account::profile_put)),
+            ),
+        )
         .route(
             "/api/suggestions/not-a-joke",
             read_route(&st, routes::stores::not_a_joke),
         )
         .route("/api/jobs/{id}", read_route(&st, routes::stores::job))
-        .route("/api/workingsets", read_route(&st, routes::sets_detail::workingsets))
+        .route(
+            "/api/workingsets",
+            finish(
+                &st,
+                get(guarded(&st, routes::sets_detail::workingsets))
+                    .post(guarded_write(&st, writes::workingsets::create)),
+            ),
+        )
         .route("/api/notebook/related", read_route(&st, routes::sets_detail::related))
         .route("/api/sets/{id}/clips", read_route(&st, routes::sets_detail::clips))
         .route(
@@ -220,7 +304,57 @@ pub fn app(st: AppState) -> Router {
         .route("/api/merge", write_route(&st, writes::merge::merge))
         .route("/api/merge/attach", write_route(&st, writes::merge::attach))
         .route("/api/merge/dismiss", write_route(&st, writes::merge::dismiss))
-        .route("/api/merge/undo", write_route(&st, writes::merge::undo));
+        .route("/api/merge/undo", write_route(&st, writes::merge::undo))
+        // T10 group 3: the Set page, the Tonight list, the set lists and his sets
+        .route("/api/tonight", write_route(&st, writes::review::tonight))
+        .route("/api/review/rate", write_route(&st, writes::review::rate))
+        .route("/api/set-row", write_route(&st, writes::review::set_row))
+        .route(
+            "/api/review/reject-match",
+            write_route(&st, writes::review::reject_match),
+        )
+        .route("/api/boards/{id}/items", write_route(&st, writes::boards::item))
+        .route("/api/boards/{id}/bridge", write_route(&st, writes::boards::bridge))
+        .route(
+            "/api/workingsets/{id}/versions",
+            write_route(&st, writes::workingsets::version),
+        )
+        .route(
+            "/api/workingsets/{id}/lock",
+            write_route(&st, writes::workingsets::lock),
+        )
+        .route(
+            "/api/workingsets/{id}/try",
+            write_route(&st, writes::workingsets::try_add),
+        )
+        .route(
+            "/api/workingsets/{id}/try/{id2}",
+            patch_route(&st, writes::workingsets::try_patch),
+        )
+        .route(
+            "/api/workingsets/{id}/bits/{id2}/punchup",
+            write_route(&st, writes::workingsets::punchup),
+        )
+        .route(
+            "/api/jokes/{id}/punchup",
+            write_route(&st, writes::workingsets::joke_punchup),
+        )
+        // T10 group 4: the voice profile's learn, the "not a joke?" answers (the settings PATCH and the profile PUT
+        // are on their read routes above)
+        .route(
+            "/api/profile/voice/learn",
+            write_route(&st, writes::account::profile_learn),
+        )
+        .route(
+            "/api/suggestions/not-a-joke/keep",
+            write_route(&st, writes::account::keep),
+        )
+        .route(
+            "/api/suggestions/not-a-joke/hide",
+            write_route(&st, writes::account::hide),
+        )
+        // T10: the merge candidates, with the judge memoised on the generation
+        .route("/api/merge/candidates", read_route(&st, routes::merge::candidates));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     r.fallback(proxy::forward).with_state(st)

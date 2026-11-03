@@ -183,8 +183,16 @@ async fn place(st: &AppState, cr: &Creative, d: &Arc<Data>, jid: &str, text: &st
     };
     let exclude: HashSet<String> = HashSet::from([jid.to_string()]);
     let owned = text.to_string();
+    // pair scoring is CPU work: one build at a time across the service (the pod has one CPU)
+    let permit = st
+        .cpu()
+        .acquire_owned()
+        .await
+        .map_err(|e| ApiError::internal("AcquireError", e))?;
     let r = tokio::task::spawn_blocking(move || {
-        pk_creative::merge::match_text(&ix, &owned, vec.as_deref(), &exclude, &HashMap::new())
+        let r = pk_creative::merge::match_text(&ix, &owned, vec.as_deref(), &exclude, &HashMap::new());
+        drop(permit);
+        r
     })
     .await
     .map_err(|e| ApiError::internal("JoinError", e))?;

@@ -170,6 +170,19 @@ spec:
           - { path: /api/merge/attach, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/merge/dismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/merge/undo, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 group 3 (round 2): the Set page's writes, the Tonight list; /api/boards and /api/workingsets (already
+          # exact paths above for their GET) now take their POST here too, /api/settings its PATCH, /api/profile/voice
+          # its PUT
+          - { path: /api/review/rate, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/set-row, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/review/reject-match, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/tonight, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 group 4 (round 2): the voice profile's learn, the "not a joke?" answers
+          - { path: /api/profile/voice/learn, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/suggestions/not-a-joke/keep, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/suggestions/not-a-joke/hide, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 2: the merge candidates (GET only on the Python too)
+          - { path: /api/merge/candidates, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -217,6 +230,16 @@ spec:
           - { path: "/api/sets/[^/]+/clips$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 group 2: his new version of a bit (POST only on the Python too)
           - { path: "/api/jokes/[^/]+/versions$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 2 (group 3): one bit's punch-up, a set list's items and bridge, a set's versions, locks, try notes
+          # and punch-ups. "/api/boards/[^/]+$" above now carries its PATCH here too.
+          - { path: "/api/jokes/[^/]+/punchup$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/boards/[^/]+/items$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/boards/[^/]+/bridge$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/versions$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/lock$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/try$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/try/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/workingsets/[^/]+/bits/[^/]+/punchup$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

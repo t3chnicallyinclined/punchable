@@ -132,6 +132,36 @@ pub struct Data {
     /// The merge index over the notebook (`merge.index(c)`, kept on the Python's corpus object), built on the first
     /// jot that is placed.
     merge_index: OnceCell<Arc<pk_creative::merge::Index>>,
+    /// The same-idea groups over this generation (`merge_api.groups`: `find_groups` per corpus, judge file and
+    /// merges store), memoised with the key they were built for; held across a build so two misses build once.
+    merge_groups: tokio::sync::Mutex<Option<Arc<MergeGroups>>>,
+}
+
+/// `kb/creative/merge_judge.json`: the judge's answers, one `srcfile` row.
+pub const MERGE_JUDGE: &str = "kb/creative/merge_judge.json";
+/// `kb/creative/suggest_judge.json`: the triage's answers (which memo ideas are recordings of a set).
+pub const SUGGEST_JUDGE: &str = "kb/creative/suggest_judge.json";
+
+/// The groups `merge_api.groups` caches, with what they were built from: the judge pairs (the service's one parsed
+/// copy of the `srcfile` row, keyed by its sha: [`crate::state::AppState::judge`]) and the key (judge sha, triage
+/// sha, merges events).
+#[derive(Debug)]
+pub struct MergeGroups {
+    key: (Option<String>, Option<String>, usize),
+    /// `judgements(cr)`: pair key -> the judge's entry.
+    pub judge: Arc<Map<String, Value>>,
+    /// `find_groups(...)`: `{counts, groups, rule, judged_pairs}`.
+    pub groups: Arc<Value>,
+}
+
+impl MergeGroups {
+    /// The `groups` list alone.
+    pub fn list(&self) -> &[Value] {
+        self.groups
+            .get("groups")
+            .and_then(Value::as_array)
+            .map_or(&[], Vec::as_slice)
+    }
 }
 
 /// One view of a generation and its index, each built at most once, on first use, in `spawn_blocking`.
@@ -179,6 +209,7 @@ impl Data {
             cpu,
             corpus: OnceCell::new(),
             merge_index: OnceCell::new(),
+            merge_groups: tokio::sync::Mutex::new(None),
             snap,
         }
     }
@@ -349,6 +380,63 @@ impl Data {
                 .cloned()
         });
         task.await.map_err(|e| ApiError::internal("JoinError", e))?
+    }
+
+    /// `merge_api.groups(cr, c, st)`: the same-idea groups over this generation's notebook, the judge file and the
+    /// merges store as it is now (`lines` and its `items`: the attached notes and the dismissed pairs), built once
+    /// per (judge sha, triage sha, merges events) under the CPU permit and kept with the generation.
+    pub async fn merge_groups(
+        self: &Arc<Self>,
+        st: &crate::state::AppState,
+        merges_lines: usize,
+        merges_items: &pk_creative::Items,
+    ) -> Result<Arc<MergeGroups>, ApiError> {
+        let key = (
+            self.files.get(MERGE_JUDGE).cloned(),
+            self.files.get(SUGGEST_JUDGE).cloned(),
+            merges_lines,
+        );
+        let mut slot = self.merge_groups.lock().await;
+        if let Some(g) = slot.as_ref().filter(|g| g.key == key) {
+            return Ok(Arc::clone(g));
+        }
+        let want: Vec<(String, String)> = [MERGE_JUDGE, SUGGEST_JUDGE]
+            .iter()
+            .filter_map(|p| self.files.get(*p).map(|h| ((*p).to_string(), h.clone())))
+            .collect();
+        let texts = st
+            .src_texts()
+            .get(st.store_handle().as_deref(), &want)
+            .await
+            .map_err(|e| ApiError::internal("StoreError", e))?;
+        let judge = st.judge(key.0.as_deref(), texts.get(MERGE_JUDGE).map(|t| &**t));
+        let triage: Option<Value> = texts.get(SUGGEST_JUDGE).and_then(|t| serde_json::from_str(t).ok());
+        let rec = pk_creative::memolink::set_recordings(triage.as_ref());
+        let ix = self.merge_index(st).await?;
+        let state = pk_creative::merge::MergeState::from_items(merges_items);
+        // in a task of its own, like the notebook and the merge index: a caller that hangs up does not throw the
+        // build (and its CPU permit) away
+        let me = Arc::clone(self);
+        let j = Arc::clone(&judge);
+        let built = tokio::spawn(async move {
+            me.cpu_build(move |_| {
+                let t = std::time::Instant::now();
+                let exclude: HashSet<String> = state.attached.keys().cloned().chain(rec).collect();
+                let g = pk_creative::merge::find_groups(&ix, &j, &state, &exclude);
+                tracing::debug!(ms = t.elapsed().as_secs_f64() * 1000.0, "merge groups built");
+                g
+            })
+            .await
+        })
+        .await
+        .map_err(|e| ApiError::internal("JoinError", e))??;
+        let g = Arc::new(MergeGroups {
+            key,
+            judge,
+            groups: built,
+        });
+        *slot = Some(Arc::clone(&g));
+        Ok(g)
     }
 
     /// Run `f` over this generation in `spawn_blocking`, holding the service's CPU permit.
