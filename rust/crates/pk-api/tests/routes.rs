@@ -268,3 +268,19 @@ async fn metrics_are_open_and_count_by_route_pattern() {
     assert!(text.contains(r#"pk_http_requests_total{method="GET",route="/api/labels",status="401"} 1"#));
     assert!(!text.contains(r#"route="/metrics""#), "the scrape is not app traffic");
 }
+
+/// Every accepted connection has Nagle off: a forwarded answer is streamed in several writes, and with Nagle on a
+/// small write after the first waits for the client's delayed ACK (T9 round 6). Red arm: a bare
+/// `tokio::net::TcpListener::bind` (axum 0.8's default) fails this.
+#[tokio::test]
+async fn accepted_connections_have_nagle_off() {
+    use axum::serve::Listener as _;
+    let mut l = pk_api::bind("127.0.0.1:0").await.expect("bind");
+    let addr = l.local_addr().expect("addr");
+    let _client = tokio::net::TcpStream::connect(addr).await.expect("connect");
+    let (accepted, _) = l.accept().await;
+    assert!(
+        accepted.nodelay().expect("nodelay"),
+        "TCP_NODELAY is off on an accepted connection"
+    );
+}

@@ -135,7 +135,7 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
     let addr = format!("{}:{}", config.host, config.port);
     let st = state(config)?;
     tokio::spawn(st.clone().supervise());
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");
     let drain = st.clone();
     axum::serve(listener, app(st))
@@ -147,6 +147,27 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
         })
         .await?;
     Ok(())
+}
+
+/// The listener: every accepted connection has Nagle's algorithm off (`TCP_NODELAY`). axum 0.8's `serve` leaves it
+/// on, and a forwarded answer is streamed in more than one write when the Python's answer arrives in pieces (the
+/// head, then each chunk): with Nagle on, a small write waits for the client's ACK of the one before, which the
+/// client may delay (up to 200 ms on Windows, 40 ms on Linux). Hardening, not the round-5 slowdown: on the owner's
+/// PC the forward measured within 2 ms of the Python direct with Nagle on (`docs/RUST_WORKSTREAM.md` T9 round 6).
+pub async fn bind(addr: &str) -> std::io::Result<Listener> {
+    use axum::serve::ListenerExt as _;
+    Ok(tokio::net::TcpListener::bind(addr)
+        .await?
+        .tap_io(nodelay as fn(&mut tokio::net::TcpStream)))
+}
+
+/// What [`bind`] returns.
+pub type Listener = axum::serve::TapIo<tokio::net::TcpListener, fn(&mut tokio::net::TcpStream)>;
+
+fn nodelay(tcp: &mut tokio::net::TcpStream) {
+    if let Err(e) = tcp.set_nodelay(true) {
+        tracing::warn!(error = %e, "TCP_NODELAY could not be set on a connection");
+    }
 }
 
 async fn shutdown_signal() {
