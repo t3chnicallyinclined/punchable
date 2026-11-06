@@ -184,7 +184,9 @@
      "facts",
      "riff",
      "ask_chat",
-     "set_text"
+     "set_text",
+     "rant",
+     "hook"
     ],
     "worker": "golden-worker",
     "hosted": true,
@@ -197,7 +199,9 @@
      "facts",
      "riff",
      "ask_chat",
-     "set_text"
+     "set_text",
+     "rant",
+     "hook"
     ],
     "worker": "golden-worker",
     "hosted": true,

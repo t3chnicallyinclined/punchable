@@ -843,3 +843,114 @@ async fn eight_writers_on_one_list_and_one_moment_all_land() {
     );
     assert!(landed >= 4, "at least the four distinct ratings landed: {landed}");
 }
+
+/// Film it (build 24): `POST /api/jokes/<id>/rant` and `/hook` queue one job over the version the KB holds (its
+/// lines, its cut read from the source), a repeat answers the same queued job, and the refusals carry the Python's
+/// statuses and texts. A version of another bit must 404: a lenient membership check would queue it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_film_it_sessions_queue_over_the_version_the_kb_holds() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.expect("data").view(false).await.expect("view");
+    let joke = v0.jokes.first().cloned().expect("a joke");
+    let other = v0.jokes.get(1).cloned().expect("another joke");
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": "You scan forty things.\r\n\n  Nobody claps.  ", "source": "rant_session"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let unit = r["unit"].as_str().unwrap().to_string();
+    let (_, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{other}/versions"),
+        json!({"text": "Not this bit."}),
+    )
+    .await;
+    let other_unit = r["unit"].as_str().unwrap().to_string();
+
+    let rant = format!("/api/jokes/{joke}/rant");
+    let hook = format!("/api/jokes/{joke}/hook");
+    let (s, r) = send(&st, "POST", &rant, json!({"unit": unit, "text": "ignored"})).await;
+    assert_eq!((s, r["status"].as_str()), (StatusCode::ACCEPTED, Some("queued")), "{r}");
+    let jid = r["job"]["id"].as_str().unwrap().to_string();
+    let (s, r) = send(&st, "POST", &rant, json!({"unit": unit})).await;
+    assert_eq!(
+        (s, r["job"]["id"].as_str()),
+        (StatusCode::ACCEPTED, Some(jid.as_str())),
+        "a repeat is the same job"
+    );
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let j = &jobs[&jid];
+    assert_eq!(j["kind"], "rant");
+    assert_eq!(j["key"], json!(format!("rant|{joke}|{unit}|-")));
+    assert_eq!(j["input"]["cut"], "rant");
+    assert_eq!(
+        j["input"]["lines"],
+        json!(["You scan forty things.", "  Nobody claps."])
+    );
+    assert_eq!(j["input"]["punch"], Value::Null);
+
+    let body = json!({"unit": unit, "exclude": [" One. ", "Two."], "punch": 1});
+    let (s, r) = send(&st, "POST", &hook, body).await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    let hid = r["job"]["id"].as_str().unwrap().to_string();
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    assert_eq!(jobs[&hid]["input"]["exclude"], json!(["One.", "Two."]));
+    assert!(
+        jobs[&hid]["key"]
+            .as_str()
+            .unwrap()
+            .starts_with(&format!("hook|{joke}|{unit}|1|"))
+    );
+
+    let punch_msg = "punch must be the index of a line of that version";
+    let ex_msg = "exclude must be a list of openers (at most 6)";
+    let cases = [
+        (
+            rant.clone(),
+            json!({}),
+            400,
+            "unit is required (the version to work on)".to_string(),
+        ),
+        (
+            rant.clone(),
+            json!({"unit": other_unit}),
+            404,
+            "that version is not on this bit".into(),
+        ),
+        (
+            "/api/jokes/joke:nope/rant".into(),
+            json!({"unit": unit}),
+            404,
+            "no such joke joke:nope".into(),
+        ),
+        (rant.clone(), json!({"unit": unit, "punch": 2}), 400, punch_msg.into()),
+        (
+            rant.clone(),
+            json!({"unit": unit, "punch": true}),
+            400,
+            punch_msg.into(),
+        ),
+        (
+            hook.clone(),
+            json!({"unit": unit, "exclude": vec!["x"; 7]}),
+            400,
+            ex_msg.into(),
+        ),
+        (hook.clone(), json!({"unit": unit, "exclude": [""]}), 400, ex_msg.into()),
+    ];
+    for (path, body, status, msg) in cases {
+        let (s, r) = send(&st, "POST", &path, body.clone()).await;
+        assert_eq!(
+            (s.as_u16(), r["error"].as_str().unwrap_or("")),
+            (status, msg.as_str()),
+            "{path} {body}"
+        );
+    }
+}

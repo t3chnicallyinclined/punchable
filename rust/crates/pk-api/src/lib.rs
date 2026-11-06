@@ -132,11 +132,13 @@ pub const OWN_WRITE_PATHS: [&str; 25] = [
     "/api/import/youtube",
 ];
 
-/// The parametric paths whose writes this service answers itself (T10): one bit's version and punch-up, a set
+/// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 12] = [
+pub const OWN_WRITE_PATTERNS: [&str; 14] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
+    "/api/jokes/{id}/rant",
+    "/api/jokes/{id}/hook",
     "/api/boards/{id}",
     "/api/boards/{id}/items",
     "/api/boards/{id}/bridge",
@@ -366,6 +368,9 @@ pub fn app(st: AppState) -> Router {
             "/api/jokes/{id}/punchup",
             write_route(&st, writes::workingsets::joke_punchup),
         )
+        // Film it: "Make it a rant" and "Pick a hook" on one version of a bit
+        .route("/api/jokes/{id}/rant", write_route(&st, writes::film::rant))
+        .route("/api/jokes/{id}/hook", write_route(&st, writes::film::hook))
         // T10 group 4: the voice profile's learn, the "not a joke?" answers (the settings PATCH and the profile PUT
         // are on their read routes above)
         .route(

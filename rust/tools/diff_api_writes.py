@@ -30,6 +30,10 @@ the loader's profile write), the enqueue routes of group 6 (an ask, a riff, a fa
 both; the same question to both is one job; his drop of a queued job) and `/api/live` on both (hello with the same
 rev; a jot, a decision, a set list and a tonight list reported by both sockets with the same records and the same
 generation; a bad token and a worker token refused the same way; an origin not allowed).
+Film it (build 24), phase W too: rant-cut versions written through each server and read back on the bit's page on
+both; "Make it a rant" / "Pick a hook" queued through both over the version the KB holds (one job per version and
+key across both servers), their refusals to the letter (the legal 422 included), a claim of only those kinds through
+each server with the input the API built, a result through the other, the job reads on both.
 Exit 1 on any difference. Needs what diff_api_reads.py needs (surreal 3.3.4, the API's Python deps, PK_BGE_DIR, a
 built pk-api).
 """
@@ -760,7 +764,7 @@ def hammer(conc: int, each: int) -> None:
 
 
 # ---------------------------------------------------------------- phase W: the worker's routes and /api/live
-WORKER_KINDS = ["bridge", "punchup", "ask", "facts", "riff", "ask_chat", "embed", "memolink", "set_text"]
+WORKER_KINDS = ["bridge", "punchup", "ask", "facts", "riff", "ask_chat", "embed", "memolink", "set_text", "rant", "hook"]
 WORKER_STORES = ["storyboards", "workingsets", "venues", "merges", "suggestions"]
 
 
@@ -1081,6 +1085,102 @@ def enqueue_phase() -> None:
         n_equal += not got
 
 
+def film_phase() -> None:
+    """Film it (build 24): a rant-cut version written through each server and read back on the bit's page on both;
+    "Make it a rant" and "Pick a hook" queued through both over the version the KB holds (the same version to both
+    servers is one job; fresh while queued is that job; a hook with what he saw is another), their refusals to the
+    letter, a claim of only those kinds through each server with the input the API built, a result through the
+    other, and the job reads on both."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    page = ["/api/jokes/joke:c", "/api/jokes/joke:c?include_hidden=1"]
+    units = {}
+    for base, tag in ((rs, "R"), (py, "P")):
+        st, r = write(base, "POST", "/api/jokes/joke:c/versions",
+                      {"text": f"You sit in traffic ({tag}).\r\n\n  Nobody moves.  ", "source": "rant_session", "reason": "a rant cut"})
+        units[tag] = r["unit"]
+        both(f"film: after a rant cut via {tag}", page)
+        for b2, who in ((rs, "pk-api"), (py, "the Python")):
+            d = body(R.call(b2, "GET", "/api/jokes/joke:c", app))
+            us = [u for g in d["versions"] for u in g["units"] if u["id"] == r["unit"]]
+            ok(f"film: {who} reads the rant cut written via {tag} with its source", len(us) == 1 and us[0]["source"] == "rant_session",
+               json.dumps(us)[:200])
+    want_lines = {t: [f"You sit in traffic ({t}).", "  Nobody moves."] for t in units}
+    # the same request to both servers: the answers equal (the job id normalised)
+    same_write("same: a rant", "POST", "/api/jokes/joke:c/rant", {"unit": units["R"]}, {"unit": units["P"]})
+    same_write("same: a rant with a punch", "POST", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": 1}, {"unit": units["P"], "punch": 1})
+    same_write("same: a rant on the stage cut", "POST", "/api/jokes/joke:c/rant", {"unit": "unit:c1", "text": "ignored (P)"},
+               {"unit": "unit:c1", "text": "ignored (R)"})
+    same_write("same: a hook", "POST", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": [" One (P). ", "Two."]},
+               {"unit": units["P"], "exclude": [" One (R). ", "Two."]})
+    same_write("same: a hidden bit's version, asked for", "POST", "/api/jokes/joke:g/hook?include_hidden=1", {"unit": "unit:g1"})
+    # one version to both servers is one job; fresh while it is queued answers that job
+    jobs = {}
+    for kind, b in (("rant", {"unit": units["P"]}), ("hook", {"unit": units["P"], "exclude": ["Seen (P)."]})):
+        st1, r1 = write(py, "POST", f"/api/jokes/joke:c/{kind}", b)
+        st2, r2 = write(rs, "POST", f"/api/jokes/joke:c/{kind}", b)
+        st3, r3 = write(rs, "POST", f"/api/jokes/joke:c/{kind}", {**b, "fresh": True})
+        ok(f"film: a {kind} of one version through both servers is one job", st1 == st2 == st3 == 202
+           and r1["job"]["id"] == r2["job"]["id"] == r3["job"]["id"] and r1["job"]["kind"] == kind, f"{r1} / {r2} / {r3}"[:400])
+        jobs[kind] = r1["job"]["id"]
+    both("film: the queued jobs", [f"/api/jobs/{q(j)}" for j in jobs.values()] + ["/api/today"])
+    # a claim of only these kinds hands out the oldest one with the input the API built from the version
+    seen_jobs = []
+    for base, other, name in ((rs, py, "diff-film-r"), (py, rs, "diff-film-p")):
+        st, r = write(base, "POST", "/api/worker/claim", {"kinds": ["rant", "hook"], "worker": name, "hosted": True}, headers=worker_tok,
+                      want=(200,))
+        j = r["job"]
+        inp = j.get("input") or {}
+        tag = "R" if inp.get("unit") == units["R"] else "P"
+        ok(f"film: a claim via {name} hands out a rant or hook job with the version's lines", j["kind"] in ("rant", "hook")
+           and inp.get("joke_id") == "joke:c" and inp.get("cut") == "rant" and inp.get("lines") == want_lines[tag]
+           and inp.get("title") == R.TITLE["c"] and set(inp) >= {"punch", "unit"} and j["id"] not in seen_jobs, json.dumps(j)[:400])
+        seen_jobs.append(j["id"])
+        res = ({"status": "ok", "hunks": [{"op": "change", "line_no": 1, "was": inp["lines"][0], "now": "You sit. Nobody moves.", "why": "x"}]}
+               if j["kind"] == "rant" else {"status": "ok", "hooks": [{"text": "Traffic is a waiting room.", "why": "x"}]})
+        st, r = write(other, "POST", f"/api/worker/jobs/{q(j['id'])}/result", {"ok": True, "result": res}, headers=worker_tok, want=(200,))
+        ok(f"film: the result of {j['kind']} through the other server ends the job", r["job"]["status"] == "done", json.dumps(r)[:300])
+        both("film: after a result", [f"/api/jobs/{q(j['id'])}"])
+        for b2, who in ((rs, "pk-api"), (py, "the Python")):
+            got = body(R.call(b2, "GET", f"/api/jobs/{q(j['id'])}", app))
+            ok(f"film: {who} serves the result", got.get("result") == res, json.dumps(got)[:300])
+    # a version with words the legal rules refuse (put there through the decision route, which runs no rules)
+    st, r = write(py, "POST", "/api/decision", {"target": "node", "action": "add", "reason": "film legal",
+                                                 "after": {"type": "unit", "text": "The petitioner and the respondent walked in."}})
+    legal_unit = r["decisions"][0]["id"]
+    write(py, "POST", "/api/decision", {"target": "edge", "action": "add", "reason": "film legal",
+                                         "after": {"src": legal_unit, "dst": "joke:x05", "kind": "part_of"}})
+    for label, p_, b in [("rant: no unit", "/api/jokes/joke:c/rant", {}),
+                         ("rant: unit not a string", "/api/jokes/joke:c/rant", {"unit": 5}),
+                         ("rant: a bad unit id", "/api/jokes/joke:c/rant", {"unit": "unit a"}),
+                         ("rant: a version of another bit", "/api/jokes/joke:c/rant", {"unit": "unit:b1"}),
+                         ("rant: no such version", "/api/jokes/joke:c/rant", {"unit": "unit:nope"}),
+                         ("rant: unknown bit", "/api/jokes/joke:nope/rant", {"unit": "unit:c1"}),
+                         ("rant: a bad bit id", "/api/jokes/joke%20a/rant", {"unit": "unit:c1"}),
+                         ("rant: a hidden bit not asked for", "/api/jokes/joke:g/rant", {"unit": "unit:g1"}),
+                         ("rant: punch past the end", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": 2}),
+                         ("rant: punch negative", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": -1}),
+                         ("rant: punch a bool", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": True}),
+                         ("rant: punch a float", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": 1.0}),
+                         ("rant: punch a string", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": "1"}),
+                         ("rant: court", "/api/jokes/joke:x05/rant", {"unit": legal_unit}),
+                         ("hook: court before a bad exclude", "/api/jokes/joke:x05/hook", {"unit": legal_unit, "exclude": "x"}),
+                         ("hook: exclude not a list", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": "x"}),
+                         ("hook: seven openers", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": ["x"] * 7}),
+                         ("hook: a blank opener", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": [" "]}),
+                         ("hook: a long opener", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": ["y" * 301]}),
+                         ("hook: a number", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": [3]}),
+                         ("rant: worker token", "/api/jokes/joke:c/rant", {"unit": units["R"]}),
+                         ("rant: no token", "/api/jokes/joke:c/rant", {"unit": units["R"]})]:
+        h = worker_tok if label.endswith("worker token") else ({} if label.endswith("no token") else app)
+        a_, c_ = R.call(py, "POST", p_, h, b), R.call(rs, "POST", p_, h, b)
+        got = R.compare(label, a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"{label}: a refusal", a_[0] >= 400, f"the Python answered {a_[0]} {a_[2][:200]!r}")
+    both("film: after the refusals", page + ["/api/jokes/joke:x05"])
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -1225,6 +1325,7 @@ def main() -> int:
         # W. round 3: the worker's routes over the one queue, the enqueue routes, then /api/live on both
         worker_phase()
         enqueue_phase()
+        film_phase()
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
@@ -1248,7 +1349,11 @@ def main() -> int:
                                       ("GET", "/api/worker/decisions", 200), ("GET", "/api/worker/creative", 200), ("GET", "/api/worker/creative", 400),
                                       ("GET", "/api/worker/profile/voice", 200), ("OTHER", "/api/worker/profile/voice", 200),
                                       ("POST", "/api/ask", 202), ("POST", "/api/riff", 202), ("POST", "/api/facts", 202),
-                                      ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409)):
+                                      ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409),
+                                      # Film it (build 24)
+                                      ("POST", "/api/jokes/{id}/rant", 202), ("POST", "/api/jokes/{id}/hook", 202),
+                                      ("POST", "/api/jokes/{id}/rant", 400), ("POST", "/api/jokes/{id}/rant", 404),
+                                      ("POST", "/api/jokes/{id}/rant", 422), ("POST", "/api/jokes/{id}/hook", 400)):
             ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
         ok("metrics: /api/live is not a counted request (its sockets are pk_live_clients)",
            'route="/api/live"' not in mtext and "pk_live_clients 0" in mtext, mtext[:0])

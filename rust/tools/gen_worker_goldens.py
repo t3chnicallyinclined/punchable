@@ -22,7 +22,8 @@ the Rust worker makes the same ones for the kinds that read the notebook, and no
 Two smaller goldens come from the same modules in-process: `voice.json` (creative/voice.py's blocks and messages
 per task, named and unnamed) and `pages.json` (creative/write.py's page text and `supported`).
 
-    python rust/tools/gen_worker_goldens.py        (from the repo root; needs the worker's SDK pins, as gen_llm_goldens)
+    python rust/tools/gen_worker_goldens.py [name ...]   (from the repo root; needs the worker's SDK pins, as gen_llm_goldens;
+                                                       names = only those scenarios)
 """
 from __future__ import annotations
 
@@ -208,6 +209,34 @@ def ask_job(question: str) -> dict:
 
 ASK = {"env": {}, "notebook": True, "ask": True, "bge": True}
 
+# Film it (build 24): one version of a bit, as the API sends it (creative_api._cut_input); invented lines only
+CUT_LINES = ["Self-checkout is the store hiring you for free.", "I scanned forty things and nobody clapped.",
+             "At my job I at least get a chair.", "Unexpected item in the bagging area: my dignity."]
+CUT = {"joke_id": "joke:self-checkout", "title": "Self-checkout", "unit": "unit:abc123", "cut": "stage",
+       "lines": CUT_LINES, "punch": 3}
+RANT = json.dumps({"hunks": [
+    {"op": "change", "line_no": 1, "was": "Self-checkout is the store hiring you for free.",
+     "now": " You know what self-checkout is? It's the store hiring you. For free. ", "why": "  direct address  "},
+    {"op": "change", "line_no": 2, "was": "I scanned 40 things and no one clapped.", "now": "You scan forty things.",
+     "why": "a paraphrase of his line"},
+    {"op": "cut", "line_no": 4, "was": CUT_LINES[3], "now": "", "why": "never the punch"},
+    {"op": "change", "line_no": 4, "was": CUT_LINES[3], "now": "Bagging area: my pride.", "why": "lost the reveal"},
+    {"op": "change", "line_no": 4, "was": "  Unexpected item in the  bagging area: my dignity.",
+     "now": "\"Unexpected item in the bagging area.\" Yeah. It's my dignity.", "why": "the beat"},
+    {"op": "cut", "line_no": 3, "was": CUT_LINES[2], "now": "ignored", "why": ""},
+    {"op": "add", "line_no": 4, "was": "", "now": "And it beeps at you. You.", "why": "a tag"},
+    {"op": "add", "line_no": 5, "was": "", "now": "past the end", "why": "out of range"},
+    {"op": "change", "line_no": 2, "was": CUT_LINES[1], "now": "i scanned forty things, and nobody clapped",
+     "why": "the same words"}]})
+HOOK = json.dumps({"hooks": [
+    {"text": " Stop scanning your own groceries. ", "why": "a claim"},
+    {"text": "I want to talk to whoever invented self-checkout!", "why": "seen already"},
+    {"text": "self-checkout is the store hiring you for free", "why": "a line of the bit"},
+    {"text": "I got fired today. From a store I don't work at.", "why": "a confession"},
+    {"text": "Two lines\nare not one", "why": "x"},
+    {"text": "The machine and I have a history.", "why": ""},
+    {"text": "One too many.", "why": "past three"}]})
+
 SCENARIOS = [
     {"name": "ask_chat_named", "env": NAMED, "job": job("ask_chat", {"messages": ASK_MESSAGES}),
      "voice": voice_doc(learned=LEARNED, laughs=LAUGHS), "model": [answer(ANSWER, SONNET, cache_write=900)]},
@@ -268,6 +297,17 @@ SCENARIOS = [
      "job": job("punchup", {"working_set": {"locks": {"joke:gym-mirror": {"lines": [
          {"text": "At the gym I stare at the mirror the way my parrot does."}]}}}, "joke_id": "joke:gym-mirror"}),
      "voice": voice_doc(), "model": []},
+    {"name": "rant_named_learned", "env": NAMED, "job": job("rant", CUT), "voice": voice_doc(learned=LEARNED),
+     "model": [answer(RANT, OPUS, cache_write=900)]},
+    {"name": "rant_refused", "env": {}, "job": job("rant", {**CUT, "punch": None, "title": None}),
+     "voice": voice_doc(), "model": [answer("", OPUS, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal")]},
+    {"name": "rant_empty", "env": {}, "job": job("rant", {**CUT, "lines": ["  ", 3]}), "voice": voice_doc(), "model": []},
+    {"name": "hook_exclude", "env": {}, "job": job("hook", {**CUT, "cut": "rant", "punch": None,
+                                                            "exclude": ["I want to talk to whoever invented self-checkout."]}),
+     "voice": voice_doc(learned=LEARNED), "model": [answer(HOOK, OPUS)]},
+    {"name": "hook_none", "env": NAMED, "job": job("hook", CUT), "voice": voice_doc(text=None),
+     "model": [answer(json.dumps({"hooks": [{"text": "self-checkout is the store hiring you for free", "why": "x"}]}),
+                      OPUS)]},
     {"name": "punchup_refused", "env": {}, "notebook": True,
      "job": job("punchup", {"working_set": {"locks": {}}, "joke_id": "joke:laundromat"}), "voice": voice_doc(learned=LEARNED),
      "model": [answer("", OPUS, stop_reason="refusal"), answer("", SONNET, stop_reason="refusal")]},
@@ -696,7 +736,10 @@ def main():
     # A desk copy of that cache would feed the Python his own vectors instead, so the goldens refuse to be made over one
     if (ROOT / "tools" / "kb" / "cache" / "vectors_ids.json").exists():
         raise SystemExit("tools/kb/cache/vectors_ids.json exists here: the Ask goldens must be made without it")
+    only = [a for a in sys.argv[1:] if not a.startswith("-")]   # names to regenerate; none = all
     for sc in SCENARIOS:
+        if only and sc["name"] not in only:
+            continue
         if sc.get("bge") and not BGE:
             print(f"{sc['name']}: kept as committed (no PK_BGE_DIR: the bge model is not here)")
             continue

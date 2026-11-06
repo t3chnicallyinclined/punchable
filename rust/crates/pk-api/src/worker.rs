@@ -284,7 +284,7 @@ mod tests {
         let e = check_claim(&obj(&json!({"kinds": ["riff", "zap"]}))).unwrap_err();
         assert_eq!(
             e.msg,
-            "kinds must be a subset of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text')"
+            "kinds must be a subset of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook')"
         );
         assert!(check_claim(&obj(&json!({"kinds": "riff"}))).is_err());
         let e = check_claim(&obj(&json!({"hosted": true}))).unwrap_err();
