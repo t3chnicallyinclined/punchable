@@ -187,8 +187,7 @@ spec:
           # with this round's api-dev changes FIRST (its claim route writes `worker:seen` and its Tonight/Connections
           # read it; its sweeper takes `lease:embedder`), then pk-api (which applies db/schema_extra.surql's two new
           # tables at start as the Python does). /api/live is a WebSocket: ingress-nginx passes the Upgrade; the
-          # proxy-read-timeout of 60 s above is longer than the server's 20 s keep-alive ping. /api/worker/jobs/<id>/file
-          # stays the Python's (the upload is on its disk until uploads move).
+          # proxy-read-timeout of 60 s above is longer than the server's 20 s keep-alive ping.
           - { path: /api/live, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/worker/claim, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/worker/decisions, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
@@ -200,6 +199,16 @@ spec:
           - { path: /api/riff, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/facts, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/import/youtube, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 4 (group 6a): the inbox and the voice memos (GET only on the Python too). /api/memos is an exact
+          # path; the memo pages are regex paths below. POST /api/upload is in its own Ingress at the end of this file
+          # (a recording streams through: 1 GB, no request buffering, a long timeout, none of which this one has).
+          # DEPLOY ORDER: the Python image first (an upload is `upload` / `upload_part` rows for both servers, the
+          # `upload` tables come from db/schema_extra.surql which the Python applies at its start and pk-api does not
+          # re-apply once a schema sha is stored), then pk-api. Uploads made by the old Python pod are in its inbox
+          # folder and are not listed by the new code: drain the inbox (the transcriber, or drop the jobs) before the
+          # Python image changes.
+          - { path: /api/inbox, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/memos, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -261,6 +270,38 @@ spec:
           - { path: "/api/worker/jobs/[^/]+/result$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 3 (group 6): his drop of a queued job (POST only on the Python too)
           - { path: "/api/jobs/[^/]+/drop$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 4 (group 6a): a memo, its audio (always the 404 the Python gives: no audio is in the database),
+          # and the transcriber's fetch of an upload (GET only on the Python too)
+          - { path: "/api/memos/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/memos/[^/]+/audio$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/worker/jobs/[^/]+/file$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+---
+# T10 round 4 (group 6a): POST /api/upload, the phone's recording (up to 1 GB, api-dev MAX_UPLOAD). The Python's own
+# Ingress (50-ingress.yaml) carries these annotations for it; the others here do not, so the upload is its own object:
+# no body-size cap beyond 1 GB, the body streams through (pk-api writes it to the database a megabyte at a time), and a
+# slow phone link gets an hour.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-api-rs-upload
+  namespace: punchable
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - { path: /api/upload, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

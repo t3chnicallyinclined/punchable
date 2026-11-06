@@ -540,6 +540,72 @@ async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
     );
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_upload_is_rows_both_servers_read_and_a_taken_name_gets_the_next_suffix() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, _st) = setup(&env, port, "t_upload").await;
+    let meta = json!({"kind": "set", "title": "Late show", "marks_ms": [1, 2]});
+    let a: Vec<u8> = (0..2_500_000_u32).map(|i| (i % 251) as u8).collect();
+    for (seq, part) in a.chunks(pk_store::upload::PART).enumerate() {
+        writer
+            .upload_put_part("tok-a", i64::try_from(seq).unwrap(), part.to_vec())
+            .await
+            .unwrap();
+    }
+    let name = "2026-11-06_punchable-set_101010_take.m4a";
+    assert_eq!(
+        writer
+            .upload_commit(name, "tok-a", &meta, i64::try_from(a.len()).unwrap(), 3)
+            .await
+            .unwrap(),
+        name
+    );
+    writer.upload_put_part("tok-b", 0, vec![7; 5]).await.unwrap();
+    let second = writer.upload_commit(name, "tok-b", &meta, 5, 1).await.unwrap();
+    assert_eq!(
+        second, "2026-11-06_punchable-set_101010_take-2.m4a",
+        "the name is reserved by the unique record id"
+    );
+    let rows = writer.upload_rows().await.unwrap();
+    assert_eq!(
+        rows.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+        [second.as_str(), name],
+        "newest first"
+    );
+    assert_eq!(writer.upload_count().await.unwrap(), 2);
+    let row = writer.upload_get(name).await.unwrap().unwrap();
+    assert_eq!(
+        (row.bytes, row.parts, row.meta["title"].clone()),
+        (2_500_000, 3, json!("Late show"))
+    );
+    let mut back = Vec::new();
+    for seq in 0..row.parts {
+        back.extend(writer.upload_part(&row.token, seq).await.unwrap().unwrap());
+    }
+    assert_eq!(back, a, "the bytes come back whole, in order");
+    assert!(writer.upload_part(&row.token, 9).await.unwrap().is_none());
+    // a part with no upload row, an hour old, is an orphan; a young one is not
+    writer.upload_put_part("tok-orphan", 0, vec![1]).await.unwrap();
+    writer.upload_sweep_orphans().await.unwrap();
+    assert!(
+        writer.upload_part("tok-orphan", 0).await.unwrap().is_some(),
+        "a young part stays"
+    );
+    writer.upload_delete(name).await.unwrap();
+    assert!(writer.upload_get(name).await.unwrap().is_none());
+    assert!(
+        writer.upload_part(&row.token, 0).await.unwrap().is_none(),
+        "its parts went with it"
+    );
+    assert!(
+        writer.upload_part("tok-b", 0).await.unwrap().is_some(),
+        "another upload's parts stay"
+    );
+    writer.upload_delete("never-there.m4a").await.unwrap();
+}
+
 /// The next text message within `secs`, parsed.
 async fn next_json<S>(ws: &mut S, secs: u64) -> Value
 where

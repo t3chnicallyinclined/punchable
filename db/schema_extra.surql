@@ -79,3 +79,21 @@ DEFINE TABLE IF NOT EXISTS lease SCHEMAFULL;
 DEFINE FIELD OVERWRITE kind  ON lease TYPE string;
 DEFINE FIELD OVERWRITE owner ON lease TYPE option<string>;
 DEFINE FIELD OVERWRITE until ON lease TYPE option<datetime>;
+
+-- Uploads staged for a transcriber (2026-11-06, T10 group 6a): what POST /api/upload put on the Python pod's disk
+-- (the inbox), now rows both servers see. `upload:<file name>` is the commit (made last, so a half-sent file is
+-- never listed); its bytes are `upload_part` rows (<= 1 MiB each) keyed by `token`, which the row names. Deleted
+-- when the transcriber's result lands (no media library). Local development keeps the inbox folder.
+DEFINE TABLE IF NOT EXISTS upload SCHEMAFULL;
+DEFINE FIELD OVERWRITE name  ON upload TYPE string;
+DEFINE FIELD OVERWRITE token ON upload TYPE string;
+DEFINE FIELD OVERWRITE meta  ON upload TYPE object FLEXIBLE;
+DEFINE FIELD OVERWRITE bytes ON upload TYPE int;
+DEFINE FIELD OVERWRITE parts ON upload TYPE int;
+DEFINE FIELD OVERWRITE t     ON upload TYPE float;                       -- time.time() at commit: the inbox's newest-first order
+DEFINE TABLE IF NOT EXISTS upload_part SCHEMAFULL;
+DEFINE FIELD OVERWRITE token ON upload_part TYPE string;
+DEFINE FIELD OVERWRITE seq   ON upload_part TYPE int;
+DEFINE FIELD OVERWRITE t     ON upload_part TYPE float;                  -- when written: a part with no upload row after an hour is an orphan
+DEFINE FIELD OVERWRITE data  ON upload_part TYPE bytes;
+DEFINE INDEX OVERWRITE upload_part_seq ON upload_part FIELDS token, seq UNIQUE;

@@ -50,7 +50,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 24] = [
+pub const OWN_PATHS: [&str; 26] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -75,6 +75,8 @@ pub const OWN_PATHS: [&str; 24] = [
     "/api/worker/decisions",
     "/api/worker/creative",
     "/api/worker/profile/voice",
+    "/api/inbox",
+    "/api/memos",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -83,7 +85,7 @@ pub const OWN_PATHS: [&str; 24] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 15] = [
+pub const OWN_PATTERNS: [&str; 18] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -99,12 +101,15 @@ pub const OWN_PATTERNS: [&str; 15] = [
     "/api/workingsets/{id}/nights",
     "/api/workingsets/{id}/bits/{id2}",
     "/api/sets/{id}/clips",
+    "/api/memos/{id}",
+    "/api/memos/{id}/audio",
+    "/api/worker/jobs/{id}/file",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 25] = [
+pub const OWN_WRITE_PATHS: [&str; 26] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -130,6 +135,7 @@ pub const OWN_WRITE_PATHS: [&str; 25] = [
     "/api/riff",
     "/api/facts",
     "/api/import/youtube",
+    "/api/upload",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version and punch-up, a set
@@ -382,11 +388,17 @@ pub fn app(st: AppState) -> Router {
         )
         // T10: the merge candidates, with the judge memoised on the generation
         .route("/api/merge/candidates", read_route(&st, routes::merge::candidates))
-        // T10 group 5: the live socket and the hosted worker's routes (`/api/worker/jobs/<id>/file` stays the
-        // Python's: the upload is on its disk until uploads move)
+        // T10 group 5: the live socket and the hosted worker's routes
         .route("/api/live", live_route(&st))
         .route("/api/worker/claim", write_route(&st, writes::worker::claim))
         .route("/api/worker/jobs/{id}/result", write_route(&st, writes::worker::result))
+        // T10 group 6a: the uploads (their bytes are rows in the database now), the inbox, the voice memos
+        .route("/api/worker/jobs/{id}/file", read_route(&st, writes::uploads::file))
+        .route("/api/upload", write_route(&st, writes::uploads::upload))
+        .route("/api/inbox", read_route(&st, writes::uploads::inbox))
+        .route("/api/memos", read_route(&st, routes::memos::memos))
+        .route("/api/memos/{id}", read_route(&st, routes::memos::memo))
+        .route("/api/memos/{id}/audio", read_route(&st, routes::memos::audio))
         .route("/api/worker/decisions", read_route(&st, writes::worker::decisions))
         .route("/api/worker/creative", read_route(&st, writes::worker::creative))
         .route(

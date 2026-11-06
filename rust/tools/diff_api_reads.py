@@ -47,12 +47,9 @@ FLAGS = '{"glass_accessory": false}'
 # Keys are (request label, JSON path or "status" / "header:<name>"). Empty on purpose: add one only with a reason the
 # owner would accept (the board's rule: the allow-list is for things that cannot hold, not a licence).
 ALLOW: dict[tuple[str, str], str] = {}
-# /api/today's `inbox` is the length of the Python pod's own upload folder (kb.inbox, written by POST /api/upload), which
-# pk-api cannot see until T10 moves uploads; pk-api says 0. The app does not read the field (grep app/src: today.tsx
-# reads next_show and pipeline, bit/[id].tsx reads tonight.items). Owner's decision, 2026-11-02.
+# (T10 group 6a: /api/today's `inbox` was allow-listed here while the uploads were the Python pod's folder; they are rows
+# in the database now and both servers count them, so the entry is gone.)
 TODAY = ["/api/today", "/api/today?include_hidden=1", "/api/today?backend=files", "after his tonight list: /api/today"]
-ALLOW |= {(p, "$.inbox"): "the Python pod's upload folder, not in the database until T10; the app does not read it"
-          for p in TODAY}
 # Round 6: Python's int() has no bound and the Bits list echoes `offset` back; pk-api reads integers as i64 and saturates
 # one past it (every other use clamps it, so only this echo can differ). The app sends offsets in the hundreds.
 BIG_OFFSET = "/api/jokes?offset=99999999999999999999"
@@ -321,6 +318,10 @@ def build_comedy(comedy: Path) -> None:
             write_json(d / "clips.json", {"set": f"set:{SX}", "source": "clipper-1",
                                           "clips": [{"start_ms": 0, "end_ms": 20000, "title": "Alpha", "score": 0.8}]})
     (comedy / "kb" / "creative").mkdir(parents=True)
+    # T10 group 6a: gsync's voice-memo state and the transcripts it names (srcfile rows on both servers)
+    write_json(comedy / "kb" / "gsync" / "memos.json", MEMOS)
+    for d_, segs_ in MEMO_TRANSCRIPTS.items():
+        write_json(comedy / "corpus" / "memos" / d_ / "transcript.json", {"segments": segs_})
     # the Today feed's inputs: gems and orphans (serendipity), and a working set with a locked bit and a locked line
     write_json(v0 / "insights.json", INSIGHTS)
     (comedy / "kb" / "creative" / "workingsets.jsonl").write_text(
@@ -401,6 +402,30 @@ CREATIVE_IDS = ([f"/api/boards/{b}" for b in ("sb:seed1", "sb:old", "sb:empty", 
                    "/api/jokes/joke:nope/connections?cap=0", "/api/jokes/joke:a/map?cap=1", "/api/jokes/joke:b/map?cap=20",
                    "/api/jokes/joke:a/map?cap=0", "/api/jokes/joke:a/map?cap=x", "/api/jokes/joke:nope/map",
                    "/api/jokes/joke:g/map", "/api/jokes/joke%3Ab/map", "/api/jokes/joke:a/map?backend=files"])
+# T10 group 6a: gsync's memo state: a done memo with a Drive reference, an attach and short words, one past the list's
+# 600 characters, one waiting, one failed, a duplicate and a court one (counted, never listed), one transcribing with a
+# date-only time, a done one with no words whose transcript path leaves the folder
+MEMO_TRANSCRIPTS = {"2026-10-01_aaaa1111": [{"start": 0, "end": 2.5, "text": " Cab rides are "}, {"start": 2.5, "end": 5, "text": "just  hostage\nnegotiations."}],
+                    "2026-10-03_bbbb2222": [{"start": i, "end": i + 1, "text": f"sentence number {i} about the long drive"} for i in range(40)]}
+MEMOS = {"items": {
+    "m1": {"id": "m1", "status": "done", "title": "Cab ride", "name": "Cab ride.m4a", "recorded_at": "2026-10-01T12:00:00Z",
+           "date": "2026-10-01", "date_source": "file", "duration_s": 42.5, "joke_id": "joke:a", "drive_id": "abc123",
+           "transcript": "corpus/memos/2026-10-01_aaaa1111/transcript.json",
+           "attach": {"decision": "attach", "into": "joke:a", "title": "Bit A"}},
+    "m2": {"id": "m2", "status": "done", "name": "Long one.v2.m4a", "recorded_at": "2026-10-03T08:00:00+00:00", "long": True,
+           "transcript": "corpus/./memos/2026-10-03_bbbb2222/transcript.json"},
+    "m3": {"id": "m3", "status": "listed", "name": "waiting.m4a", "recorded_at": "2026-10-05T08:00:00Z"},
+    "m4": {"id": "m4", "status": "failed", "name": "bad.m4a", "error": "no speech model", "attach": {"decision": "reject"}},
+    "m5": {"id": "m5", "status": "duplicate", "name": "dup.m4a"},
+    "m6": {"id": "m6", "status": "skipped_legal"},
+    "m7": {"id": "m7", "status": "transcribing", "recorded_at": "2026-10-04"},
+    "m8": {"id": "m8", "status": "done", "no_speech": True, "recorded_at": "2026-09-30T08:00:00Z", "transcript": "../escape.json"},
+    "m9": {"id": "m9", "status": "done", "name": "nowords.m4a", "transcript": "corpus/memos/gone/transcript.json"}},
+    "processor": {"ts": 0}, "paused": None}
+MEMO_READS = ["/api/memos", "/api/memos?backend=files", "/api/memos?include_hidden=1", "/api/memos/m1", "/api/memos/m2", "/api/memos/m3",
+              "/api/memos/m4", "/api/memos/m5", "/api/memos/m6", "/api/memos/m7", "/api/memos/m8", "/api/memos/m9", "/api/memos/nope",
+              "/api/memos/m1?backend=x", "/api/memos/m1/audio", "/api/memos/m3/audio", "/api/memos/m5/audio", "/api/memos/nope/audio",
+              "/api/memos/m1/audio/extra", "/api/memosx", "/api/memos/", "/api/memos/m%31", "/api/inbox", "/api/inbox?backend=files"]
 # round 8: the working sets, his voice profile, the "not a joke?" list, one job, "From your notebook"
 LONG_Q = "dog " * 1001
 STORE_READS = ["/api/workingsets", "/api/workingsets?backend=files", "/api/workingsets/ws:main", "/api/workingsets/ws:old",
@@ -738,6 +763,13 @@ def coverage(py: str, app: dict) -> list[str]:
                "today: gems and orphans": {p["kind"] for p in td.get("serendipity") or []} == {"gem", "orphan"},
                "today: glance hints": bool(td["glance"]["hints"]),
                "today: minutes in testing": bool(td["minutes"]["n_testing"])}
+    mm = get("/api/memos")
+    cards_ = {c["id"]: c for c in mm["items"]}
+    checks["memos: counted and hidden, sorted, a Drive reference, an attach, a cut text"] = bool(
+        mm["available"] and mm["progress"]["total"] == 7 and mm["progress"]["duplicates"] == 1 and "m5" not in cards_
+        and [c["id"] for c in mm["items"]][:2] == ["m7", "m4"] and cards_["m1"]["reference"]["kind"] == "drive"
+        and cards_["m1"]["attached_to"]["joke_id"] == "joke:a" and cards_["m1"]["text"] == "Cab rides are just hostage negotiations."
+        and cards_["m2"]["text_cut"] and len(get("/api/memos/m2")["memo"]["segments"]) == 40)
     checks["jokes: the hidden view keeps the attached note"] = any(
         x["id"] == "joke:x05" for x in get("/api/jokes?limit=5000&include_hidden=1")["items"])
     # round 8: one bit's connections and map, one set list, one of his sets
@@ -992,6 +1024,7 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in CREATIVE_IDS]
         reqs += [(p, "GET", p, app) for p in STORE_READS]
         reqs += [(p, "GET", p, app) for p in MERGE_READS]
+        reqs += [(p, "GET", p, app) for p in MEMO_READS]
         reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
                  ("workingsets signed out", "GET", "/api/workingsets", {})]
         reqs += [("board signed out", "GET", "/api/boards/sb:old", {}),

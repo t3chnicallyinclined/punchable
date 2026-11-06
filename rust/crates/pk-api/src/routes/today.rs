@@ -34,11 +34,17 @@ pub async fn today(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiRe
     let dirs = idx.sets.last().map(|s| set_dirs_of(s)).unwrap_or_default();
     let tx = super::sets::transcripts(&st, &d, dirs).await?;
     let ws = latest_ws(&st).await;
+    // the uploads waiting (`len(inbox_list(kb))`): rows in the database since group 6a
+    let inbox = match st.store_handle() {
+        Some(store) => store.upload_count().await.map_err(crate::writes::store_err)?,
+        None => 0,
+    };
     // `date.today()` on the Python pod: its local day
     let day = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
     let c = corpus.await.map_err(|e| ApiError::internal("JoinError", e))?;
     let body = compute(idx, d, tx, move |ctx| {
-        let old = crate::today::old_today(ctx);
+        let mut old = crate::today::old_today(ctx);
+        old.insert("inbox".into(), serde_json::json!(inbox));
         // the creative half never takes the old feed down (`creative_error`)
         match (c, ws) {
             (Ok(c), Ok(ws)) => {

@@ -3631,6 +3631,7 @@ dependencies = [
  "indexmap",
  "jsonwebtoken",
  "nalgebra",
+ "percent-encoding",
  "pk-core",
  "pk-creative",
  "pk-embed",
@@ -3652,6 +3653,7 @@ dependencies = [
  "tokio-tungstenite 0.29.0",
  "tower",
  "tracing",
+ "uuid",
  "wiremock",
 ]
 

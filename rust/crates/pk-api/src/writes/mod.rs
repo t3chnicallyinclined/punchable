@@ -31,6 +31,7 @@ pub mod learned;
 pub mod merge;
 pub mod review;
 pub mod transcript;
+pub mod uploads;
 pub mod worker;
 pub mod workingsets;
 

@@ -1,8 +1,7 @@
 //! `GET /api/today` (`server.py` `do_GET`): the older feed (the latest set's card and how long its review takes,
 //! the latest analysis, the glance, tonight's list, the pipeline counts) with `today.build` merged in
-//! (`creative_api.merged_today`). `inbox` is the hosted Python pod's own upload folder (`kb.inbox`), which this
-//! service cannot see until T10 moves uploads: it is always 0 here (the app does not read it; the differential's
-//! allow-list says so).
+//! (`creative_api.merged_today`). `inbox` is how many uploads wait (`len(inbox_list(kb))`); they are rows in the
+//! database since T10 group 6a, so the route sets it after `old_today` (which has no database and says 0).
 
 use indexmap::IndexMap;
 use serde_json::{Map, Value, json};

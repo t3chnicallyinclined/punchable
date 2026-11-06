@@ -149,16 +149,29 @@ def lease_acquire(r: sdb.Rpc, me: str, kind: str = "embedder", ttl_s: int = LEAS
     so two askers cannot both hold it."""
     if not re.match(r"^[a-z_]+$", kind):
         raise ValueError(f"lease kind {kind!r} is not a plain identifier")
-    try:
-        rows = r.last(f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
-                      f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
-                      "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;", {"k": kind, "me": me})
-    except Exception as e:  # noqa: BLE001
-        # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
-        if "already exists" in str(e).lower():
-            return False
-        raise
-    return bool(rows)
+    sql = (f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
+           f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
+           "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;")
+    jitter = sum(me.encode()) % 23
+    for wait in (0.015, 0.040, None):
+        try:
+            return bool(r.last(sql, {"k": kind, "me": me}))
+        except Exception as e:  # noqa: BLE001
+            msg = str(e).lower()
+            # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
+            if "already exists" in msg:
+                return False
+            # the create and the update are two statements, not one transaction: a write conflict beside the other asker's
+            # update used to leave nobody holding the lease. Asked again over the rows as they are now (ours: renewed;
+            # someone else's and live: no rows; absent: created again); only a conflict that outlasts the retries is a
+            # refusal for this pass.
+            if "conflict" in msg or "can be retried" in msg:
+                if wait is None:
+                    return False
+                time.sleep(wait + jitter / 1000)
+                continue
+            raise
+    return False
 
 
 def sweep(r: sdb.Rpc, emb, v, renew=None) -> dict[str, int]:

@@ -9,6 +9,7 @@ pub mod jokes;
 pub mod kb;
 pub mod learned;
 pub mod live;
+pub mod memos;
 pub mod merge;
 pub mod metrics;
 pub mod search;

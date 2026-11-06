@@ -3,8 +3,8 @@
 //! claimable job marked `claim`), `POST /api/worker/jobs/<id>/result` (`done` or `fail`), `GET
 //! /api/worker/decisions` (every decision line with its hash, paged), `GET /api/worker/creative` (a store's lines,
 //! with the replayed items on `?snapshot=`), `GET` and `PUT /api/worker/profile/voice` (the worker's copy of his
-//! voice profile; the loader's write). `GET /api/worker/jobs/<id>/file` stays the Python's: the upload is on its
-//! disk until uploads move.
+//! voice profile; the loader's write). `GET /api/worker/jobs/<id>/file` (the upload's bytes) is in `uploads`; a
+//! `process_set` job that ends `ok` deletes its upload there too (`w_result`: no media library).
 //!
 //! The queue is the `jobs` store's rows on both servers, so a job this service hands out is the one the Python
 //! would have handed out, and one marked done here is done there on its next read; two claims racing for the
@@ -144,7 +144,18 @@ pub async fn result(
             })
         };
         match cr.append_planned("jobs", "worker", None, plan).await? {
-            Written::Landed(job) => Ok(json!({"ok": true, "job": brief(&obj(&job))})),
+            Written::Landed(job) => {
+                let job = obj(&job);
+                // `w_result`: the transcriber is done with the recording, so it goes (no media library)
+                if py::truthy(b.get("ok"))
+                    && job.get("kind").and_then(Value::as_str) == Some("process_set")
+                    && let Some(name) = super::uploads::upload_name(&job)
+                {
+                    let store = st.store_handle().ok_or_else(super::not_connected)?;
+                    store.upload_delete(&name).await.map_err(store_err)?;
+                }
+                Ok(json!({"ok": true, "job": brief(&job)}))
+            }
             Written::Skipped(..) => Err(ApiError::internal("StateError", "a result's plan never skips")),
         }
     })

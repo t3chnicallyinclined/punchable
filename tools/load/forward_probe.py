@@ -58,13 +58,13 @@ class Conn:
         self.host, self.port = u.hostname, u.port
         self.c: http.client.HTTPConnection | None = None
 
-    def call(self, method: str, path: str, body: bytes | None = None) -> tuple[float, int]:
+    def call(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[float, int]:
         for attempt in (0, 1):
             if self.c is None:
                 self.c = http.client.HTTPConnection(self.host, self.port, timeout=120)
             t = time.perf_counter()
             try:
-                hdrs = {"Content-Type": "application/json"} if body is not None else {}
+                hdrs = headers or ({"Content-Type": "application/json"} if body is not None else {})
                 self.c.request(method, path, body=body, headers=hdrs)
                 r = self.c.getresponse()
                 r.read()
@@ -128,6 +128,9 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
     if path == "/api/worker/claim":
         return json.dumps({"kinds": ["bridge", "punchup", "ask", "facts", "riff", "ask_chat", "embed", "memolink", "set_text"],
                            "worker": f"probe-{col}", "hosted": True}).encode()
+    # T10 round 4 (group 6a): a recording (UPLOAD_HEADERS), a size of its own per call so no two are the same upload
+    if path == "/api/upload":
+        return bytes((i * 31 + w) % 251 for i in range(40_000 + 977 * w + 7 * i + (3 if col == "via" else 0)))
     if path.endswith("/bridge"):
         return json.dumps({"from": "{from}", "to": "{to}"}).encode()
     if path.endswith("/punchup"):
@@ -135,6 +138,7 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
     return None
 
 
+UPLOAD_HEADERS = {"Content-Type": "audio/mp4", "X-Kind": "note", "X-Filename": "probe.m4a", "X-Duration-S": "12.5"}
 PERFS: list[str] = []
 JOKES: list[str] = []
 BRIDGE: tuple[str, str] = ("", "")
@@ -166,7 +170,8 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
                         if body and b"{from}" in body:
                             body = body.replace(b"{from}", BRIDGE[0].encode()).replace(b"{to}", BRIDGE[1].encode())
                         colon = any(path.startswith(x) for x in ("/api/decision:", "/api/review/rate:", "/api/tonight:"))
-                        took, status = c.call(method, path.split(":", 1)[0] if colon else path, body)
+                        took, status = c.call(method, path.split(":", 1)[0] if colon else path, body,
+                                              UPLOAD_HEADERS if path == "/api/upload" else None)
                     except Exception as e:  # noqa: BLE001
                         with lock:
                             errors.append(f"{col} {route}: {e}")

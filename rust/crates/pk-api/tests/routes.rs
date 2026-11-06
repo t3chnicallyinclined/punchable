@@ -148,7 +148,7 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
         let (s, _, b) = send(&st, req).await;
         assert_eq!((s, error_of(&b).as_str()), (StatusCode::NOT_FOUND, "not found"), "{m}");
     }
-    let (s, _, _) = send(&st, get("/api/inbox").body(Body::empty()).unwrap()).await;
+    let (s, _, _) = send(&st, get("/api/notes").body(Body::empty()).unwrap()).await;
     assert_eq!(s, StatusCode::NOT_FOUND);
 }
 

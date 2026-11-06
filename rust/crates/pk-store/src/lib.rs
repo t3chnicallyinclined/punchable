@@ -4,11 +4,11 @@
 //! one `LIVE` subscription over the tables the app watches, the vector sweeper's rows (`vectors`) and the lease one
 //! background task takes over the database (`lease`).
 //!
-//! **Crate version.** The server is `SurrealDB` 3.3.4. The crate is `surrealdb` 3.3.5 (workspace `Cargo.toml`): the
-//! 3.x line is stable (3.0.0 shipped in 2025; 3.3.5 is the latest stable on 2026-10-29), it speaks the 3.x RPC and
-//! checks the server against `>=3.0.0-alpha.1, <4.0.0` on connect, and its value model keeps `NONE` and `NULL` apart
-//! (`Value::None` vs `Value::Null`). The last 2.x (2.7.0) speaks the 2.x protocol and refuses a 3.x server; 4.0.0 is
-//! a beta. So "latest stable 2.x, else a 3.x prerelease" resolved to the stable 3.3.5. Only `protocol-ws` and `rustls`
+//! **Crate version.** The server is `SurrealDB` 3.3.4. The crate is `surrealdb` 3.2.6, pinned `=3.2.6` in the workspace
+//! `Cargo.toml` (every 3.3.x `surrealdb-common` needs a newer Rust than the pinned toolchain has). The 3.x line is
+//! stable, it speaks the 3.x RPC and checks the server against `>=3.0.0-alpha.1, <4.0.0` on connect, and its value
+//! model keeps `NONE` and `NULL` apart (`Value::None` vs `Value::Null`). The last 2.x (2.7.0) speaks the 2.x protocol
+//! and refuses a 3.x server; 4.0.0 is a beta. Only `protocol-ws` and `rustls`
 //! are enabled: the services never embed a database.
 //!
 //! **Rules carried over from `db/sdb.py`.** Every statement that is not OK is an error, never a swallowed row. A
@@ -32,6 +32,7 @@ pub mod lease;
 pub mod live;
 pub mod schema;
 pub mod store;
+pub mod upload;
 pub mod value;
 pub mod vectors;
 

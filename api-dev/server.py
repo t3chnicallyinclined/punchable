@@ -1001,8 +1001,28 @@ def ai_status(kb: AppKB) -> dict:
                          "by_set": {k: {"source": m["source"], "run_id": m.get("run_id")} for k, m in an.items()}}}
 
 
+def hosted_uploads(kb) -> bool:
+    """Hosted (jobs on upload) over a database: an upload is rows both API servers see (upload_store.py), not a file
+    in the pod's inbox folder."""
+    return bool(Handler.jobs_on_upload) and getattr(kb, "rpc", None) is not None
+
+
+def inbox_row(name: str, nbytes: int, meta: dict) -> dict:
+    row = {"file": name, "bytes": nbytes, "kind": meta.get("kind") or "upload",
+           "title": meta.get("title") or name, "received_at": meta.get("received_at"),
+           "duration_s": meta.get("duration_s"), "marks_ms": meta.get("marks_ms") or [], "status": "queued"}
+    if Handler.jobs_on_upload:  # hosted: nothing transcribes it here; the phone will (api-dev/creative_api.py)
+        import creative_api as CR
+        row["waiting_for"], row["note"] = "transcriber", CR.WAITING_NOTE["transcriber"]
+    return row
+
+
 def inbox_list(kb: AppKB) -> list[dict]:
     out = []
+    if hosted_uploads(kb):
+        import sdb
+        import upload_store as US
+        return [inbox_row(r["name"], r["bytes"], sdb.strip_none(r.get("meta") or {})) for r in US.rows(kb.rpc)]
     if not kb.inbox.is_dir():
         return out
     for p in sorted(kb.inbox.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
@@ -1015,13 +1035,7 @@ def inbox_list(kb: AppKB) -> list[dict]:
                 meta = json.loads(mp.read_text(encoding="utf-8"))
             except ValueError:
                 meta = {}
-        row = {"file": p.name, "bytes": p.stat().st_size, "kind": meta.get("kind") or "upload",
-               "title": meta.get("title") or p.name, "received_at": meta.get("received_at"),
-               "duration_s": meta.get("duration_s"), "marks_ms": meta.get("marks_ms") or [], "status": "queued"}
-        if Handler.jobs_on_upload:  # hosted: nothing transcribes it here; the phone will (api-dev/creative_api.py)
-            import creative_api as CR
-            row["waiting_for"], row["note"] = "transcriber", CR.WAITING_NOTE["transcriber"]
-        out.append(row)
+        out.append(inbox_row(p.name, p.stat().st_size, meta))
     return out
 
 
@@ -1223,6 +1237,17 @@ class Handler(BaseHTTPRequestHandler):
                 if not chunk:
                     break
                 self.wfile.write(chunk)
+
+    def send_upload(self, row: dict):
+        """send_file for an upload held in the database: the same headers, its parts one at a time."""
+        import upload_store as US
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(row["bytes"]))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        for seq in range(row["parts"]):
+            self.wfile.write(US.part(self.kb.rpc, row["token"], seq))
 
     def creative_route(self, method: str, path: str, q: dict) -> bool:
         if self.creative is None:
@@ -2091,6 +2116,8 @@ class Handler(BaseHTTPRequestHandler):
         now = datetime.now()
         stem = re.sub(r"[^a-z0-9]+", "-", Path(orig).stem.lower()).strip("-")[:40] or "recording"
         name = f"{now:%Y-%m-%d}_punchable-{kind}_{now:%H%M%S}_{stem}{ext}"
+        if hosted_uploads(kb):
+            return self.upload_hosted(kb, n, kind, orig, name)
         kb.inbox.mkdir(parents=True, exist_ok=True)
         # the name is reserved with an exclusive create, so two uploads in the same second (the phone posting one
         # recording twice, seen 2026-10-29) never share a destination; the body goes to a private temp first
@@ -2117,6 +2144,44 @@ class Handler(BaseHTTPRequestHandler):
             tmp.unlink(missing_ok=True)
             raise K.DecisionError("upload was cut short")
         os.replace(tmp, dest)
+        meta = self.upload_meta(kind, orig, n)
+        dest.with_name(dest.name + ".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+        out = {"status": "queued", "file": dest.name, "kind": kind, "bytes": n}
+        if self.jobs_on_upload and self.creative is not None:
+            return self.send_json(self.upload_job(kb, out, dest.name, meta, lambda: (
+                dest.unlink(missing_ok=True), dest.with_name(dest.name + ".meta.json").unlink(missing_ok=True))))
+        return self.send_json(out)
+
+    def upload_hosted(self, kb, n: int, kind: str, orig: str, name: str):
+        """The hosted upload: the body goes to `upload_part` rows (upload_store.py) one MiB at a time, then the
+        `upload` row names it (the commit); the same answer, the same duplicate rule and the same job as a file."""
+        import uuid
+        import upload_store as US
+        token = uuid.uuid4().hex
+        left, seq = n, 0
+        self._body_taken = True   # from here the body is read (or the connection is dead); a refusal above leaves it to the drain
+        try:
+            US.sweep_orphans(kb.rpc)
+            while left > 0:
+                chunk = self.rfile.read(min(US.PART, left))
+                if not chunk:
+                    break
+                US.put_part(kb.rpc, token, seq, chunk)
+                seq += 1
+                left -= len(chunk)
+            if left:
+                raise K.DecisionError("upload was cut short")
+            meta = self.upload_meta(kind, orig, n)
+            used = US.commit(kb.rpc, name, token, meta, n, seq)
+        except BaseException:
+            US.drop_parts(kb.rpc, token)
+            raise
+        out = {"status": "queued", "file": used, "kind": kind, "bytes": n}
+        if self.creative is None:
+            return self.send_json(out)
+        return self.send_json(self.upload_job(kb, out, used, meta, lambda: US.delete(kb.rpc, used)))
+
+    def upload_meta(self, kind: str, orig: str, n: int) -> dict:
         try:
             marks = json.loads(self.headers.get("X-Marks-Ms") or "[]")
             marks = [int(x) for x in marks][:500] if isinstance(marks, list) else []
@@ -2130,26 +2195,29 @@ class Handler(BaseHTTPRequestHandler):
                 "received_at": K.now_iso(), "bytes": n, "duration_s": dur, "marks_ms": marks, "status": "queued",
                 "by": "punchable-api-dev"}
         meta.update(upload_extras(self.headers))
-        dest.with_name(dest.name + ".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
-        out = {"status": "queued", "file": dest.name, "kind": kind, "bytes": n}
-        if self.jobs_on_upload and self.creative is not None:
-            # hosted: queued as process_set. No worker transcribes any more (the PC is retired; transcription
-            # happens on the phone), so the job says so: waiting_for "transcriber" and the note, never a silent drop.
-            st = self.creative.stores(kb)
-            import creative_api as CA
-            dup = CA.recent_duplicate(st["jobs"].items, meta, time.time())
-            if dup is not None:   # the same recording posted twice within two minutes: one job, the first file
-                dest.unlink(missing_ok=True)
-                dest.with_name(dest.name + ".meta.json").unlink(missing_ok=True)
-                out.update(file=(dup.get("input") or {}).get("file"), job=CA.job_brief(dup), duplicate=True)
-                if dup.get("waiting_for"):
-                    out["waiting_for"], out["note"] = dup["waiting_for"], CA.WAITING_NOTE.get(dup["waiting_for"])
-                return self.send_json(out)
-            _, q = self.creative.enqueue(st, "process_set", f"process|{dest.name}", {"file": dest.name, "meta": meta})
-            out["job"] = q["job"]
-            if q.get("waiting_for"):
-                out["waiting_for"], out["note"] = q["waiting_for"], q.get("note")
-        return self.send_json(out)
+        return meta
+
+    def upload_job(self, kb, out: dict, fname: str, meta: dict, discard) -> dict:
+        """Hosted: queued as process_set. No worker transcribes any more (the PC is retired; transcription
+        happens on the phone), so the job says so: waiting_for "transcriber" and the note, never a silent drop."""
+        import creative_api as CA
+        with self.creative.lock:   # one writer of the jobs store at a time, as every route (two uploads at once diverged the file)
+            return self.upload_job_locked(kb, out, fname, meta, discard, CA)
+
+    def upload_job_locked(self, kb, out: dict, fname: str, meta: dict, discard, CA) -> dict:
+        st = self.creative.stores(kb)
+        dup = CA.recent_duplicate(st["jobs"].items, meta, time.time())
+        if dup is not None:   # the same recording posted twice within two minutes: one job, the first file
+            discard()
+            out.update(file=(dup.get("input") or {}).get("file"), job=CA.job_brief(dup), duplicate=True)
+            if dup.get("waiting_for"):
+                out["waiting_for"], out["note"] = dup["waiting_for"], CA.WAITING_NOTE.get(dup["waiting_for"])
+            return out
+        _, q = self.creative.enqueue(st, "process_set", f"process|{fname}", {"file": fname, "meta": meta})
+        out["job"] = q["job"]
+        if q.get("waiting_for"):
+            out["waiting_for"], out["note"] = q["waiting_for"], q.get("note")
+        return out
 
 
 def upload_extras(h) -> dict:

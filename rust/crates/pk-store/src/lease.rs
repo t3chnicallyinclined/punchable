@@ -12,8 +12,13 @@ use crate::store::{Store, rows_of, vars};
 use crate::value::to_db;
 
 impl Store {
-    /// Take or renew `lease:<kind>` for `me`: `true` when this process holds it now. A write conflict with another
-    /// asker is a `false` (that asker holds it), never an error.
+    /// Take or renew `lease:<kind>` for `me`: `true` when this process holds it now. "Already exists" (the loser of two
+    /// first-ever creates) is an immediate refusal: that asker holds it. A write conflict is retried after a short
+    /// wait of this asker's own length ([`RETRY_WAITS_MS`]), the statement asked again over the rows as they are now:
+    /// ours -> renewed (`true`), someone else's and live -> no rows (`false`), still absent -> created again. The create
+    /// and the update are two statements, not one transaction, so a create that landed beside eight conflicting
+    /// updates used to leave nobody holding it (every asker answered `false`); only a conflict that outlasts the
+    /// retries is a `false` for this pass, which the next pass takes up.
     pub async fn lease_acquire(&self, kind: &str, me: &str, ttl_s: u32) -> Result<bool> {
         check_ident(kind, "lease kind")?;
         let sql = format!(
@@ -25,11 +30,22 @@ impl Store {
             ("k", Value::String(kind.to_string())),
             ("me", Value::String(me.to_string())),
         ]);
-        match self.last(&sql, bound).await {
-            Ok(rows) => Ok(!rows_of(rows).is_empty()),
-            Err(e) if is_conflict(&e) => Ok(false),
-            Err(e) => Err(e),
+        let jitter = me
+            .bytes()
+            .fold(7_u64, |h, b| h.wrapping_mul(31).wrapping_add(u64::from(b)))
+            % 23;
+        for wait in RETRY_WAITS_MS.iter().map(|w| Some(w + jitter)).chain([None]) {
+            match self.last(&sql, bound.clone()).await {
+                Ok(rows) => return Ok(!rows_of(rows).is_empty()),
+                Err(e) if is_exists(&e) => return Ok(false),
+                Err(e) if is_conflict(&e) => match wait {
+                    Some(ms) => tokio::time::sleep(std::time::Duration::from_millis(ms)).await,
+                    None => return Ok(false),
+                },
+                Err(e) => return Err(e),
+            }
         }
+        Ok(false)
     }
 
     /// Give `lease:<kind>` up when `me` holds it (a sweeper that cannot run): the next asker takes it at once.
@@ -60,9 +76,17 @@ impl Store {
     }
 }
 
-/// A transaction conflict between two writers of the row (the engine's words differ by backend), or the loser of two
-/// first-ever `CREATE lease:<kind>` ("already exists": the winner holds the lease).
+/// Waits before the retries of a conflicted acquire, in milliseconds (each plus the asker's own 0-22 ms, so eight
+/// askers do not collide again in the same step).
+const RETRY_WAITS_MS: [u64; 2] = [15, 40];
+
+/// A transaction conflict between two writers of the row (the engine's words differ by backend).
 fn is_conflict(e: &StoreError) -> bool {
     let text = e.to_string().to_lowercase();
-    text.contains("can be retried") || text.contains("conflict") || text.contains("already exists")
+    text.contains("can be retried") || text.contains("conflict")
+}
+
+/// The loser of two first-ever `CREATE lease:<kind>`: the winner holds the lease.
+fn is_exists(e: &StoreError) -> bool {
+    e.to_string().to_lowercase().contains("already exists")
 }
