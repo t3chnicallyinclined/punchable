@@ -320,6 +320,7 @@ def build_comedy(comedy: Path) -> None:
     (comedy / "kb" / "creative").mkdir(parents=True)
     # T10 group 6a: gsync's voice-memo state and the transcripts it names (srcfile rows on both servers)
     write_json(comedy / "kb" / "gsync" / "memos.json", MEMOS)
+    write_json(comedy / "kb" / "gsync" / "map.json", GSYNC_MAP)
     for d_, segs_ in MEMO_TRANSCRIPTS.items():
         write_json(comedy / "corpus" / "memos" / d_ / "transcript.json", {"segments": segs_})
     # the Today feed's inputs: gems and orphans (serendipity), and a working set with a locked bit and a locked line
@@ -422,6 +423,15 @@ MEMOS = {"items": {
     "m8": {"id": "m8", "status": "done", "no_speech": True, "recorded_at": "2026-09-30T08:00:00Z", "transcript": "../escape.json"},
     "m9": {"id": "m9", "status": "done", "name": "nowords.m4a", "transcript": "corpus/memos/gone/transcript.json"}},
     "processor": {"ts": 0}, "paused": None}
+# T10 group 6b: gsync's record of the Google Docs side of a merge (map.json `merges`): one applied, one empty
+GSYNC_MAP = {"merges": {"at:x05": {"state": "applied", "doc_id": "doc1", "doc_url": "https://docs.google.com/document/d/doc1",
+                                   "moved": 3, "left": 1, "applied_at": "2026-10-01T10:00:00Z", "extra": "not shown"},
+                        "dm:x02": {}}}
+MERGE_HIST_READS = ["/api/merge/history?joke=joke:x01", "/api/merge/history?joke=joke:x02", "/api/merge/history?joke=joke:a",
+                    "/api/merge/history?joke=joke:nope", "/api/merge/history?joke=bad%20id", "/api/merge/history", "/api/merge/history?joke=",
+                    "/api/merge/history?joke=joke:x01&backend=files", "/api/merge/at:x05", "/api/merge/at:x09", "/api/merge/dm:x02",
+                    "/api/merge/at:nope", "/api/merge/mg:nope", "/api/merge/zzz", "/api/merge/mg:", "/api/merge/at%3Ax05", "/api/merge/at:x05/extra",
+                    "/api/merge/at:x05?backend=x", "/api/merge/attach", "/api/merge/undo"]
 MEMO_READS = ["/api/memos", "/api/memos?backend=files", "/api/memos?include_hidden=1", "/api/memos/m1", "/api/memos/m2", "/api/memos/m3",
               "/api/memos/m4", "/api/memos/m5", "/api/memos/m6", "/api/memos/m7", "/api/memos/m8", "/api/memos/m9", "/api/memos/nope",
               "/api/memos/m1?backend=x", "/api/memos/m1/audio", "/api/memos/m3/audio", "/api/memos/m5/audio", "/api/memos/nope/audio",
@@ -763,6 +773,10 @@ def coverage(py: str, app: dict) -> list[str]:
                "today: gems and orphans": {p["kind"] for p in td.get("serendipity") or []} == {"gem", "orphan"},
                "today: glance hints": bool(td["glance"]["hints"]),
                "today: minutes in testing": bool(td["minutes"]["n_testing"])}
+    hx = get("/api/merge/history?joke=joke:x01")
+    checks["merge history: an attached note listed under its bit, a merge record with its Docs side"] = bool(
+        any(n["id"] == "at:x05" for n in hx["notes"]) and (get("/api/merge/at:x05")["drive"] or {}).get("state") == "applied"
+        and "extra" not in get("/api/merge/at:x05")["drive"] and get("/api/merge/dm:x02")["drive"] is None)
     mm = get("/api/memos")
     cards_ = {c["id"]: c for c in mm["items"]}
     checks["memos: counted and hidden, sorted, a Drive reference, an attach, a cut text"] = bool(
@@ -1025,6 +1039,7 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in STORE_READS]
         reqs += [(p, "GET", p, app) for p in MERGE_READS]
         reqs += [(p, "GET", p, app) for p in MEMO_READS]
+        reqs += [(p, "GET", p, app) for p in MERGE_HIST_READS]
         reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
                  ("workingsets signed out", "GET", "/api/workingsets", {})]
         reqs += [("board signed out", "GET", "/api/boards/sb:old", {}),
@@ -1233,7 +1248,8 @@ def main() -> int:
                       "/api/mysets/{id}", "/api/mysets/{id}/trim", "/api/jokes/{id}/connections", "/api/jokes/{id}/map",
                       "/api/profile/voice", "/api/suggestions/not-a-joke", "/api/jobs/{id}", "/api/workingsets",
                       "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
-                      "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates"):
+                      "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates",
+                      "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)
@@ -1241,9 +1257,9 @@ def main() -> int:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
                        if ln.startswith("pk_http_requests_total{"))
         n0 = counted()
-        call(rs, "GET", "/api/merge/history?joke=joke:a", app)
+        call(rs, "GET", "/api/notes", app)
         if counted() != n0:
-            problems.append("pk-api counted a forwarded request (/api/merge/history): the fallback must count nothing")
+            problems.append("pk-api counted a forwarded request (/api/notes): the fallback must count nothing")
         # and the model was used here: pk-api's own search answered with vectors, not words only
         if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
             problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")

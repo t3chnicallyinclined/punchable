@@ -51,7 +51,7 @@ fn inside(rel: Option<&Value>) -> Option<String> {
 }
 
 /// The texts of `paths` (`srcfile` rows), each from the cache when its hash is the row's.
-async fn texts(st: &AppState, paths: &[String]) -> ApiResult<BTreeMap<String, Arc<str>>> {
+pub(crate) async fn texts(st: &AppState, paths: &[String]) -> ApiResult<BTreeMap<String, Arc<str>>> {
     if paths.is_empty() {
         return Ok(BTreeMap::new());
     }

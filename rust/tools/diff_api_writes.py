@@ -1347,7 +1347,8 @@ def main() -> int:
         same_write("same: a keep", "POST", "/api/suggestions/not-a-joke/keep", {"joke_id": "joke:x10"})
         same_write("same: a hide", "POST", "/api/suggestions/not-a-joke/hide", {"joke_id": "joke:x11"}, {"joke_id": "joke:x12"}, by_shape=True)
         same_write("same: a brainstorm with no tape", "POST", "/api/jokes/joke:f/punchup", {})
-        both("after all", ["/api/merge/candidates", "/api/merge/candidates?joke=joke:x11", "/api/merge/candidates?jokes=joke:x10,joke:x11,joke:x12"])
+        both("after all", ["/api/merge/candidates", "/api/merge/candidates?joke=joke:x11", "/api/merge/candidates?jokes=joke:x10,joke:x11,joke:x12",
+                              "/api/merge/history?joke=joke:x00", "/api/merge/history?joke=joke:x03", "/api/merge/history?joke=joke:a", "/api/merge/history?joke=joke:f"])
         refusals()
         same_write("same: undo an undone line", "POST", "/api/undo", {"index": minted_a["undone"]})
         # D. the rows

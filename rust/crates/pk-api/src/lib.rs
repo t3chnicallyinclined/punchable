@@ -50,7 +50,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 26] = [
+pub const OWN_PATHS: [&str; 27] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -77,6 +77,7 @@ pub const OWN_PATHS: [&str; 26] = [
     "/api/worker/profile/voice",
     "/api/inbox",
     "/api/memos",
+    "/api/merge/history",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -85,7 +86,7 @@ pub const OWN_PATHS: [&str; 26] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 18] = [
+pub const OWN_PATTERNS: [&str; 19] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -104,6 +105,7 @@ pub const OWN_PATTERNS: [&str; 18] = [
     "/api/memos/{id}",
     "/api/memos/{id}/audio",
     "/api/worker/jobs/{id}/file",
+    "/api/merge/{id}",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
@@ -388,6 +390,10 @@ pub fn app(st: AppState) -> Router {
         )
         // T10: the merge candidates, with the judge memoised on the generation
         .route("/api/merge/candidates", read_route(&st, routes::merge::candidates))
+        // T10 group 6b: what was folded into a bit, and one merge record (`/api/merge/<id>` is a pattern: the static
+        // routes above win, and any other id is the Python's "not found" answered here)
+        .route("/api/merge/history", read_route(&st, routes::merge::history_route))
+        .route("/api/merge/{id}", read_route(&st, routes::merge::one))
         // T10 group 5: the live socket and the hosted worker's routes
         .route("/api/live", live_route(&st))
         .route("/api/worker/claim", write_route(&st, writes::worker::claim))
