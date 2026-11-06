@@ -9,9 +9,18 @@ export type Merged = { ok: boolean; merge_id: string; indexes?: number[] };
 
 const enc = encodeURIComponent;
 
-/** A new version of the bit (the old ones stay). `draft` = the words came from an AI answer or draft he kept. */
-export const addVersion = (jokeId: string, text: string, reason?: string, draft = false) =>
-  post<Added>(`/api/jokes/${enc(jokeId)}/versions`, { text, ...(reason ? { reason } : {}), ...(draft ? { draft: true, source: 'draft' } : {}) });
+/** A new version of the bit (the old ones stay). `draft` = the words came from an AI answer or draft he kept.
+ *  `source` = the version's cut and origin (rules/bitLines `sourceFor`: `rant`, `rant_session`, `hook`, `rant_hook`);
+ *  it wins over the draft's own `draft` source, so a kept rant is both learned from and a rant cut. */
+export const addVersion = (jokeId: string, text: string, reason?: string, draft = false, source?: string) =>
+  post<Added>(`/api/jokes/${enc(jokeId)}/versions`, {
+    text, ...(reason ? { reason } : {}), ...(draft ? { draft: true, source: 'draft' } : {}), ...(source ? { source } : {}),
+  });
+
+/** Film it's two sessions on one version (POST /api/jokes/<id>/rant | /hook): 202 with the job to poll, or 200 with a
+ *  cached result. `exclude` = the openers he already saw ("Show others"). */
+export const askSession = (jokeId: string, mode: 'rant' | 'hook', unit: string, exclude?: string[]) =>
+  post<any>(`/api/jokes/${enc(jokeId)}/${mode}`, { unit, ...(exclude?.length ? { exclude } : {}) });
 
 /** Fold other bits into this one: their versions and tapes move under it; a typed idea's words become a version. */
 export const mergeInto = (main: string, others: string[], reason?: string) =>
