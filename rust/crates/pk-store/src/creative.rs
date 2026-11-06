@@ -6,6 +6,8 @@
 //! Equality of two lines is equality of the parsed JSON (docs/RUST.md, wire-contract fact 3: the Rust side does not
 //! reproduce `json.dumps`); two lines that are not both JSON compare as bytes.
 
+use std::fmt::Write as _;
+
 use serde_json::Value as Json;
 use surrealdb::types::{RecordId, Value};
 
@@ -106,6 +108,24 @@ impl Store {
             },
             other => Err(StoreError::mapping(format!("creative_event write returned {other:?}"))),
         }
+    }
+
+    /// Create several rows in ONE transaction: all land or none (a `(store, seq)` taken by another writer fails the
+    /// whole batch, and nothing of it is left behind). A route that writes a sequence of events for one request
+    /// (a set list's `PATCH`) uses this, so no reader or other writer ever sees half of it.
+    pub async fn create_creative_events(&self, evs: &[CreativeEvent]) -> Result<()> {
+        if evs.is_empty() {
+            return Ok(());
+        }
+        let mut sql = String::from("BEGIN;");
+        let mut bound = surrealdb::types::Object::new();
+        for (i, ev) in evs.iter().enumerate() {
+            let _ = write!(sql, "CREATE creative_event CONTENT $r{i} RETURN id;");
+            bound.insert(format!("r{i}"), ev.content());
+        }
+        sql.push_str("COMMIT;");
+        self.query(&sql, bound).await?;
+        Ok(())
     }
 
     /// File vs database for one store (`Creative.reconcile`): the file's tail is copied into the database when the

@@ -19,9 +19,10 @@ use pk_store::{RecordId, Store};
 use crate::state::AppState;
 use crate::worker::Lease;
 
-/// Texts embedded per model run. The model has one slot, so a search's query vector waits for the batch in hand:
-/// 4 texts bound that wait to a quarter of the Python's `BATCH` of 16 (`PK_VEC_BATCH` overrides, for the measurement).
-pub const BATCH: usize = 4;
+/// Texts embedded per model run (`BATCH`). The model has one slot, so a search's query vector waits for the batch in
+/// hand; 4 against 16 measured no difference (`tools/load/sweep_probe.py`, `docs/RUST_WORKSTREAM.md` T10 round 4), so
+/// this is the Python's. `PK_VEC_BATCH` overrides it, for that measurement.
+pub const BATCH: usize = 16;
 /// The default `PK_VEC_SWEEP_S`.
 pub const DEFAULT_EVERY: Duration = Duration::from_secs(60);
 

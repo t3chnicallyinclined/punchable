@@ -864,6 +864,89 @@ async fn a_refused_token_on_the_socket_is_one_error_then_close_4401() {
     assert_eq!(err["error"], "unauthorized");
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_sequence_of_events_lands_whole_or_not_at_all() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, _st) = setup(&env, port, "t_worker_tx").await;
+    let ev = |seq: i64, op: &str| {
+        let line =
+            json!({"ts": "2026-11-06T00:00:00+00:00", "op": op, "id": "sb:x", "data": {}, "by": "owner"}).to_string();
+        pk_store::CreativeEvent::new("storyboards", seq, &line).unwrap()
+    };
+    writer
+        .create_creative_events(&[ev(0, "a"), ev(1, "b"), ev(2, "c")])
+        .await
+        .unwrap();
+    assert_eq!(writer.creative_lines("storyboards").await.unwrap().len(), 3);
+    // a batch whose second row takes a place already taken: the first row of it is not left behind
+    let err = writer
+        .create_creative_events(&[ev(3, "d"), ev(1, "dup"), ev(4, "e")])
+        .await
+        .unwrap_err();
+    assert!(pk_api::writes::is_place_taken(&err), "{err}");
+    let lines = writer.creative_lines("storyboards").await.unwrap();
+    assert_eq!(lines.len(), 3, "nothing of the failed batch landed: {lines:?}");
+    writer.create_creative_events(&[ev(3, "d"), ev(4, "e")]).await.unwrap();
+    assert_eq!(writer.creative_lines("storyboards").await.unwrap().len(), 5);
+    writer.create_creative_events(&[]).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn two_line_writes_from_two_processes_lose_no_line_and_write_none_twice() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_worker_lines").await;
+    let other = another(&env, port, "t_worker_lines").await;
+    let joke = a_joke(&st).await;
+    let before = writer.decision_count().await.unwrap();
+    // eight writers over two processes, each writing two lines per round: the second line of a pair that finds its
+    // place taken by the other process is sent again (`Kb::append_lines`), the first starts the pair over
+    let (rounds, writers) = (40_usize, 16_usize);
+    let mut tasks = Vec::new();
+    for w in 0..writers {
+        let state = if w % 2 == 0 { st.clone() } else { other.clone() };
+        let joke = joke.clone();
+        tasks.push(tokio::spawn(async move {
+            let kb = pk_api::writes::Kb::new(state.clone(), false);
+            let mut landed = 0;
+            for r in 0..rounds {
+                let _lock = state.kb_lock().lock().await;
+                let joke = joke.clone();
+                let out = kb
+                    .append_lines("owner", move |_, _| {
+                        let line = |stage: &str| pk_api::writes::Raw {
+                            target: "node",
+                            id: joke.clone(),
+                            action: "edit",
+                            before: Value::Null,
+                            after: json!({ "stage": stage }),
+                            reason: format!("round {r}"),
+                        };
+                        Ok(vec![line("testing"), line("idea")])
+                    })
+                    .await
+                    .unwrap_or_else(|e| panic!("writer {w} round {r}: {} {}", e.status, e.msg));
+                landed += out.len();
+            }
+            landed
+        }));
+    }
+    let mut total = 0;
+    for t in tasks {
+        total += t.await.unwrap();
+    }
+    assert_eq!(total, 2 * rounds * writers);
+    let after = writer.decision_count().await.unwrap();
+    assert_eq!(
+        after - before,
+        i64::try_from(total).unwrap(),
+        "every line landed once: none lost, none written twice"
+    );
+}
+
 /// A listener over `st` for the socket tests, with the hub running.
 async fn serve_live(st: &AppState) -> std::net::SocketAddr {
     tokio::spawn(st.live().clone().run(st.clone()));
