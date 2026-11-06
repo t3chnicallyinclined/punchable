@@ -53,10 +53,9 @@ tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"]
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
 eventsource-stream = "0.2"
 uuid = { version = "1", features = ["v4"] }
-# surrealdb: "=3.2.6" is the last 3.x whose family builds on the pinned 1.93.1 toolchain (rust-toolchain.toml): every
-# 3.3.x surrealdb-common uses std::hint::cold_path, stable only in a newer Rust. The client accepts servers
-# >=3.0.0-alpha.1, <4.0.0, so it talks to the 3.3.4 server. Moving the toolchain forward lets this become 3.3.x.
-surrealdb = { version = "=3.2.6", default-features = false, features = ["protocol-ws", "rustls"] }
+# surrealdb: "=3.3.4" matches the prod server and clears RUSTSEC-2026-0453 (fixed in 3.3.0). 3.3.x needs a Rust with
+# std::hint::cold_path, which is why rust-toolchain.toml is 1.99.1. The client accepts servers >=3.0.0-alpha.1, <4.0.0.
+surrealdb = { version = "=3.3.4", default-features = false, features = ["protocol-ws", "rustls"] }
 # jsonwebtoken: 10 with the aws-lc-rs backend, the build surrealdb-core already pulls in (one crypto stack in the
 # tree); pk-api uses it for the RS256 signature check only (docs/ARCHITECTURE.md section 2)
 jsonwebtoken = { version = "10", default-features = false, features = ["aws_lc_rs"] }
