@@ -52,7 +52,11 @@ async fn cut_input(st: &AppState, hidden: bool, jid: &str, body: &Map<String, Va
         Some(Value::String(u)) if is_id(u) => u.clone(),
         _ => return Err(http(400, "unit is required (the version to work on)")),
     };
-    let (_, view) = Kb::new(st.clone(), hidden).view().await?;
+    // under kb_lock as the Python reads its view under kb.lock (the `Kb` contract, writes/mod.rs) [review]
+    let (_, view) = {
+        let _kb = st.kb_lock().lock().await;
+        Kb::new(st.clone(), hidden).view().await?
+    };
     if view.ntype(Some(jid)) != Some("joke") {
         return Err(http(404, format!("no such joke {jid}")));
     }

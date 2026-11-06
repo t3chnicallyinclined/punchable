@@ -79,8 +79,11 @@ pub static HOOK_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
         "required": ["hooks"], "additionalProperties": false})
 });
 
+/// Python's `re.findall(r"\w+")` on a str: a word character is one `str.isalnum()` accepts (a letter or a number:
+/// `L*`, `Nd`, `Nl`, `No`) or `_`. The `regex` crate's own Unicode `\w` differs both ways (it adds combining marks,
+/// connector punctuation and U+200D; it leaves out `No` such as `½`), so the class is spelled out [review].
 static WORD_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\w+").unwrap_or_else(|e| unreachable!("constant regex: {e}")));
+    LazyLock::new(|| Regex::new(r"[\p{L}\p{N}_]+").unwrap_or_else(|e| unreachable!("constant regex: {e}")));
 
 /// `same(a, b)`: equal once runs of whitespace are one space (Python's `str.split()`).
 pub fn same(a: &str, b: &str) -> bool {
@@ -115,7 +118,10 @@ pub fn numbered(lines: &[String], punch: Option<usize>) -> String {
 }
 
 /// The job as the Python reads it (`inp.get(...)`, every field lenient; `pk_wire::worker::RantInput` /
-/// `HookInput` are the API's stricter shapes of the same thing).
+/// `HookInput` are the API's stricter shapes of the same thing). One documented difference [review]: a field that
+/// should be a list and is some other truthy value (`lines: "ab"`, `hunks: "abc"`, `hooks: {..}`) is iterated by
+/// the Python (characters, keys) and read as empty here; a model `data` that is a list crashes the Python and reads
+/// as nothing here. Neither can reach a worker: both servers send lists and the schema shapes the model's answer.
 #[derive(Debug, Default, Deserialize)]
 pub struct CutJob {
     /// Echoed back.
@@ -471,6 +477,20 @@ mod tests {
         ]
         .map(String::from)
         .to_vec()
+    }
+
+    #[test]
+    fn words_are_pythons_backslash_w() {
+        // the oracle: PYTHONIOENCODING=utf-8 python -c "import re; print(re.findall(r'\w+', s.lower()))"
+        assert_eq!(words("my \u{bd}"), ["my", "\u{bd}"], "a No number is a word character");
+        assert!(
+            words("\u{1F926}\u{200d}\u{2642}\u{fe0f}").is_empty(),
+            "a joined emoji has no word"
+        );
+        assert_eq!(words("cafe\u{301}"), ["cafe"], "a combining mark is not");
+        assert_eq!(words("a_b c2 \u{216b} \u{2460}"), ["a_b", "c2", "\u{217b}", "\u{2460}"]);
+        assert_eq!(words("x\u{203f}y"), ["x", "y"], "connector punctuation is not");
+        assert_eq!(reveal_word("Bagging area: my \u{bd}").as_deref(), Some("\u{bd}"));
     }
 
     #[test]

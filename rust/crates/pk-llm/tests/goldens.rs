@@ -19,7 +19,11 @@ fn request_bodies_equal_what_the_python_sdk_sent() {
     let b = backend(None, None);
     let router = Router::new(Config::hosted(), vec![backend(None, None)], None);
     let cases = g["cases"].as_array().expect("cases");
-    assert_eq!(cases.len(), 50);
+    assert_eq!(
+        cases.len(),
+        56,
+        "three cases per hosted task (creative_rant and creative_hook added for Film it)"
+    );
     for case in cases {
         let name = case["name"].as_str().unwrap();
         let task = case["task"].as_str().unwrap();
