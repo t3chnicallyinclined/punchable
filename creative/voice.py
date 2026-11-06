@@ -32,7 +32,7 @@ from . import learned as L
 MIN_CACHE_TOKENS = 512          # the minimum cacheable prefix on Claude Opus 5.5 / Sonnet 5.5 (prompt caching docs)
 MAX_CHARS = 60_000              # the longest profile the API accepts (api-dev/profile_api.py)
 UNNAMED = "the comic"
-WRITING_TASKS = ("creative_riff", "creative_punchup", "creative_bridge")
+WRITING_TASKS = ("creative_riff", "creative_punchup", "creative_bridge", "creative_rant", "creative_hook")
 READING_TASKS = ("ask_chat",)
 
 # The craft rules (public, generic). His named moves live in the profile itself, never here: the rules tell the

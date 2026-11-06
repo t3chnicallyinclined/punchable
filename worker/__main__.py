@@ -339,14 +339,14 @@ def run_one(cl: Client, kinds: list[str] | None, ws=None, hosted: bool = False, 
     return True
 
 
-BASE_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat")
+BASE_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "rant", "hook")
 ONLINE_KINDS = ("embed", "memolink")
 # Kinds that need audio (whisper, the laugh detector, yt-dlp): the GPU PC ran them. Transcription happens on the phone
 # now; a hosted worker never asks for them and the API keeps them queued as `waiting_for: "transcriber"`.
 TRANSCRIBER_KINDS = ("process_set", "import_youtube")
 # The hosted worker (the server, the Anthropic API, no audio): model kinds, the text-only set analysis, and the
 # embedding kinds when the bge model is in the image (engine.config.bge_dir_override / the config's bge_dir).
-HOSTED_KINDS = ("bridge", "punchup", "facts", "riff", "ask_chat", "set_text")
+HOSTED_KINDS = ("bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "rant", "hook")
 HOSTED_EMBED_KINDS = ("embed", "memolink", "ask")
 
 

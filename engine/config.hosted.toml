@@ -64,6 +64,20 @@ effort = "high"
 offline = true
 fallbacks = ["default"]
 
+[tasks.creative_rant]        # Film it's "Make it a rant": whole-line hunks over one version (creative/rant.py)
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+fallbacks = ["default"]
+
+[tasks.creative_hook]        # Film it's "Pick a hook": three openers for one version (creative/rant.py)
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+offline = true
+fallbacks = ["default"]
+
 # text-only set analysis (engine/inbox.py over a transcript; the audio parts stay on the phone)
 [tasks.split]
 providers = ["anthropic"]

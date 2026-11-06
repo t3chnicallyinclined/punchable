@@ -45,7 +45,7 @@ from creative.util import mmss, now_iso  # noqa: E402
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "embed", "memolink",
-             "set_text")
+             "set_text", "rant", "hook")
 # Kinds that need the recording (whisper, the laugh detector, yt-dlp). Since 2026-10-27 no worker runs them: the PC
 # is retired and transcription happens on the phone (a separate build). A queued job of these kinds is honest about
 # it: `waiting_for: "transcriber"`, persisted (derived from the kind on every replay), shown by the app.
@@ -731,6 +731,21 @@ def build_corpus(inp: dict, decisions: list, vectors: Vectors) -> Corpus:
 
 
 # ====================================================================== helpers
+CUT_RE = re.compile(r"^rant(_[a-z_]*)?$")
+
+
+def cut_of(source) -> str:
+    """A version's cut (Film it D10): `rant` when the versions route wrote it with a rant source (`rant`, `rant_…`),
+    else `stage`. The source is the one field on a version both servers already write and read back."""
+    return "rant" if isinstance(source, str) and CUT_RE.match(source) else "stage"
+
+
+def cut_lines(text) -> list[str]:
+    """A version's text as the app's lines (app/src/rules/bitLines.ts `linesOf`): split on newlines, trailing space
+    dropped, blank lines left out."""
+    return [ln.rstrip() for ln in re.split(r"\r?\n", text or "") if ln.strip()]
+
+
 def _joke(c: Corpus, jid) -> str:
     if not isinstance(jid, str) or not ID_RE.match(jid):
         raise HttpError(400, "bad joke id")
@@ -923,6 +938,8 @@ POST_ROUTES = [
     (re.compile(r"^/api/workingsets/([^/]+)/bits/([^/]+)/punchup$"), "punchup"),
     (re.compile(r"^/api/ask$"), "ask"),
     (re.compile(r"^/api/jokes/(.+)/punchup$"), "joke_punchup"),
+    (re.compile(r"^/api/jokes/(.+)/rant$"), "joke_rant"),
+    (re.compile(r"^/api/jokes/(.+)/hook$"), "joke_hook"),
     (re.compile(r"^/api/workingsets/([^/]+)/try$"), "try_add"),
     (re.compile(r"^/api/import/youtube$"), "youtube"),
     (re.compile(r"^/api/facts$"), "facts"),
@@ -1376,6 +1393,55 @@ class Routes:
         key = f"punchup|joke|{jid}|{hashlib.sha1(json.dumps(lk, sort_keys=True).encode()).hexdigest()[:10]}"
         return self.cr.enqueue(st, "punchup", key, {"working_set": ws, "joke_id": jid}, fresh=bool(self.b.get("fresh")),
                                kb=self.kb)
+
+    # ---------------------------------------------------------------- Film it: a rant cut, a hook (creative/rant.py)
+    def _cut_input(self, jid) -> dict:
+        """The job input for one version of a bit: {joke_id, title, unit, cut, lines, punch}. The version is the one
+        the API holds (`unit`, a version on this bit's page), never text the phone sends, so the lines Claude sees
+        and the lines a hunk quotes are his, word for word. The legal rules run on it first."""
+        if not isinstance(jid, str) or not ID_RE.match(jid):
+            raise HttpError(400, "bad joke id")
+        unit = self.b.get("unit")
+        if not isinstance(unit, str) or not ID_RE.match(unit):
+            raise HttpError(400, "unit is required (the version to work on)")
+        v = self.kb.view()
+        if v.ntype(jid) != "joke":
+            raise HttpError(404, f"no such joke {jid}")
+        if unit not in {u for u, _ in v.joke_units.get(jid, [])}:
+            raise HttpError(404, "that version is not on this bit")
+        n = v.nodes.get(unit) or {}
+        lines = cut_lines(n.get("text"))
+        if not lines:
+            raise HttpError(400, "that version has no lines")
+        p = self.b.get("punch")
+        if p is not None and (isinstance(p, bool) or not isinstance(p, int) or not 0 <= p < len(lines)):
+            raise HttpError(400, "punch must be the index of a line of that version")
+        refuse_legal(n.get("text") or "")
+        return {"joke_id": jid, "title": (v.nodes.get(jid) or {}).get("title"), "unit": unit,
+                "cut": cut_of(n.get("source")), "lines": lines, "punch": p}
+
+    def joke_rant(self, jid):
+        """POST /api/jokes/<id>/rant {unit, punch?, fresh?}: "Make it a rant" on one version (a `rant` job; the
+        hunks come back as drafts, he keeps or skips each one, and a kept set is saved by the versions route with a
+        rant source)."""
+        inp = self._cut_input(jid)
+        key = f"rant|{inp['joke_id']}|{inp['unit']}|{'-' if inp['punch'] is None else inp['punch']}"
+        return self.cr.enqueue(self.st(), "rant", key, inp, fresh=bool(self.b.get("fresh")), kb=self.kb)
+
+    def joke_hook(self, jid):
+        """POST /api/jokes/<id>/hook {unit, exclude?, punch?, fresh?}: "Pick a hook", three openers for one version
+        (a `hook` job). `exclude`: the openers he already saw ("Show others"), at most six."""
+        inp = self._cut_input(jid)
+        ex = self.b.get("exclude")
+        if ex is None:
+            ex = []
+        if (not isinstance(ex, list) or len(ex) > 6
+                or not all(isinstance(x, str) and 0 < len(x.strip()) <= 300 for x in ex)):
+            raise HttpError(400, "exclude must be a list of openers (at most 6)")
+        inp["exclude"] = [x.strip() for x in ex]
+        tail = hashlib.sha1("\n".join(inp["exclude"]).encode("utf-8")).hexdigest()[:10]
+        key = f"hook|{inp['joke_id']}|{inp['unit']}|{'-' if inp['punch'] is None else inp['punch']}|{tail}"
+        return self.cr.enqueue(self.st(), "hook", key, inp, fresh=bool(self.b.get("fresh")), kb=self.kb)
 
     def try_add(self, wid):
         """His own try-tonight note {joke_id, text}. joke_id may be null (a note for the whole set)."""

@@ -9,6 +9,8 @@ pulled from the phone first), and returns the JSON the API caches and serves:
   process_set  engine.inbox.Inbox().process(file)   (the file was downloaded into the local inbox first)
   facts        creative.write.check_facts(text)   (Write's "Check this": every fact's source is fetched and must say it)
   riff         creative.write.riff_ideas(corpus, idea, lines)   (Write's folded "Ideas from the AI": drafts only)
+  rant         creative.rant.rant(input)   (Film it's "Make it a rant": whole-line hunks over the version the API sent)
+  hook         creative.rant.hooks(input)  (Film it's "Pick a hook": three openers; `exclude` asks for others)
   ask_chat     creative.askchat.run_job(input)   (Ask: one model call over the messages the API built from his
                retrieved sources; the API gates the answer word for word when it reads the result back)
   import_youtube  POST /api/import/youtube: tools/ingest/fetch_youtube.py (yt-dlp: info.json, captions, audio into
@@ -82,6 +84,12 @@ def run(job: dict, inbox: Path | None = None, file: Path | None = None, complete
         return AC.run_job(inp, complete=complete)
     if kind == "set_text":
         return analyze_transcript(inp, complete=complete)
+    if kind == "rant":
+        from creative import rant as RT
+        return RT.rant(inp, complete=complete)
+    if kind == "hook":
+        from creative import rant as RT
+        return RT.hooks(inp, complete=complete)
     if kind in ("embed", "memolink"):
         raise ValueError(f"{kind} runs in online-first mode only (python -m worker --online)")
     raise ValueError(f"unknown job kind {kind}")
