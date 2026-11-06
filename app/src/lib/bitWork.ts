@@ -19,8 +19,8 @@ export const addVersion = (jokeId: string, text: string, reason?: string, draft 
 
 /** Film it's two sessions on one version (POST /api/jokes/<id>/rant | /hook): 202 with the job to poll, or 200 with a
  *  cached result. `exclude` = the openers he already saw ("Show others"). */
-export const askSession = (jokeId: string, mode: 'rant' | 'hook', unit: string, exclude?: string[]) =>
-  post<any>(`/api/jokes/${enc(jokeId)}/${mode}`, { unit, ...(exclude?.length ? { exclude } : {}) });
+export const askSession = (jokeId: string, mode: 'rant' | 'hook', unit: string, exclude?: string[], fresh = false) =>
+  post<any>(`/api/jokes/${enc(jokeId)}/${mode}`, { unit, ...(exclude?.length ? { exclude } : {}), ...(fresh ? { fresh: true } : {}) });
 
 /** Fold other bits into this one: their versions and tapes move under it; a typed idea's words become a version. */
 export const mergeInto = (main: string, others: string[], reason?: string) =>

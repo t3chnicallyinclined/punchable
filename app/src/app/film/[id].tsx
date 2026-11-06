@@ -199,8 +199,10 @@ export default function FilmScreen() {
     if (stateRef.current !== 'idle') return;
     const stage = choices.find((c) => c.cut === 'stage');
     actionSheet({ title: shortName, options: [
-      ...choices.map((c) => ({ label: c.label, onPress: () => { setCutKey(c.key); setPrompter(PR.prompterIdle()); } })),
-      ...(!choices.some((c) => c.cut === 'rant') && stage ? [{
+      // the cut on the band carries a ✓ (the sheet stands in for a pop-up button: the current choice is shown)
+      ...choices.map((c) => ({ label: `${c.key === v?.key ? '✓ ' : ''}${c.label}`, onPress: () => { setCutKey(c.key); setPrompter(PR.prompterIdle()); } })),
+      // the typed-idea stand-in is no version the server holds, so a bit with no version has nothing to rework
+      ...(!choices.some((c) => c.cut === 'rant') && stage && stage.key !== 'idea' ? [{
         label: 'Make a rant cut…',
         onPress: () => router.replace({ pathname: '/session/[bit]', params: { bit: id, unit: stage.key, cut: 'stage', n: String(versions.length), title: shortName, mode: 'rant' } } as any),
       }] : []),

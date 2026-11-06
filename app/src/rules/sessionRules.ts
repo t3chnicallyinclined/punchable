@@ -80,6 +80,6 @@ export function jobView<T>(r: any): JobView<T> {
 /** The one line a finished session shows when there is nothing to keep (the old spec's "nothing to suggest"). */
 export function emptyWord(mode: 'rant' | 'hook', status?: string | null, why?: string | null): string | null {
   if (status === 'ok') return null;
-  if (status === 'provider_error') return why ? `Claude didn't answer: ${why}` : "Claude didn't answer.";
+  if (status === 'provider_error') return why ? `Claude didn’t answer: ${why}` : 'Claude didn’t answer.';
   return mode === 'rant' ? 'Claude has nothing to change here.' : 'Claude has no openers for this one.';
 }

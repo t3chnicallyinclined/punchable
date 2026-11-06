@@ -22,6 +22,7 @@ import { addVersion, askSession } from '@/lib/bitWork';
 import { simple } from '@/lib/simple';
 import { haptics } from '@/lib/haptics';
 import { WorkerLine } from '@/lib/worker';
+import { actionSheet } from '@/lib/actionSheet';
 import { C, F } from '@/lib/theme';
 import { AIBadge, Btn, Sheet, SheetHead, T, useUI } from '@/lib/ui';
 import { ROW_CAP, cutOf, sourceFor, type Cut } from '@/rules/bitLines';
@@ -55,29 +56,35 @@ export default function SessionSheet() {
   const [phase, setPhase] = useState<Phase>({ k: 'root' });
   const [kept, setKept] = useState<S.Marks>([]);
   const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState<string | null>(null);   // shown in the sheet: the root's snack sits under it
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
-  const close = () => (router.canGoBack() ? router.back() : router.replace(`/joke/${encodeURIComponent(bit)}` as any));
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const last = useRef<{ mode: Mode; exclude?: string[]; rounds: number }>({ mode: 'rant', rounds: 1 });
+  const leave = () => (router.canGoBack() ? router.back() : router.replace(`/joke/${encodeURIComponent(bit)}` as any));
 
-  /** Ask, then poll the job until it finishes (the sheet stays usable; leaving it stops the polling, the job stays cached). */
-  const ask = async (mode: Mode, exclude?: string[], rounds = 1) => {
+  /** Ask, then poll the job until it finishes (the sheet stays usable; leaving it stops the polling, the job stays
+   *  cached). `fresh` asks again past a cached answer (Try again after Claude did not answer). */
+  const ask = async (mode: Mode, exclude?: string[], rounds = 1, fresh = false) => {
     if (!unit || !online) return;
+    last.current = { mode, exclude, rounds };
     setPhase({ k: 'asking', mode });
     setKept([]);
+    setSaveErr(null);
     try {
-      let view = S.jobView<Result>(await askSession(bit, mode, unit, exclude));
+      let view = S.jobView<Result>(await askSession(bit, mode, unit, exclude, fresh));
       const until = Date.now() + POLL_FOR_MS;
       while (view.state === 'waiting' && alive.current) {
         setPhase({ k: 'asking', mode, waitingFor: view.waitingFor });
-        if (!view.job || Date.now() > until) return;
+        if (!view.job || Date.now() > until) { setPhase({ k: 'failed', mode, error: 'still waiting' }); return; }
         await new Promise((r) => setTimeout(r, POLL_MS));
         if (!alive.current) return;
         view = S.jobView<Result>(await get(`/api/jobs/${encodeURIComponent(view.job)}`).catch(() => ({ status: 'queued', id: view.state === 'waiting' ? view.job : null })));
       }
       if (!alive.current) return;
       if (view.state === 'failed') { setPhase({ k: 'failed', mode, error: view.error }); return; }
-      if (view.state !== 'done') return;
+      if (view.state !== 'done') { setPhase({ k: 'failed', mode, error: 'still waiting' }); return; }
       const r = view.result;
+      if (r.status === 'provider_error') { setPhase({ k: 'failed', mode, error: r.why || 'no answer' }); return; }
       const base = r.lines || [];
       if (mode === 'rant') setPhase({ k: 'changes', mode, base, hunks: r.hunks || [], note: S.emptyWord('rant', r.status, r.why) });
       else setPhase({ k: 'openers', base, openers: r.hooks || [], rounds, note: S.emptyWord('hook', r.status, r.why) });
@@ -106,6 +113,15 @@ export default function SessionSheet() {
   const changes = phase.k === 'changes' ? phase : null;
   const saveable = !!changes && S.canSave(changes.base, changes.hunks, kept);
   const saveLabel = changes?.mode === 'rant' ? 'Save rant cut' : 'Save version';
+  // HIG/modality: kept changes are not thrown away by a swipe or Close without asking (the swipe is off meanwhile)
+  const close = () => {
+    if (!saveable) return leave();
+    actionSheet({ title: 'Leave without saving?', options: [
+      { label: 'Discard the changes', destructive: true, onPress: leave },
+      { label: 'Keep going', cancel: true },
+    ] });
+  };
+  const retry = () => void ask(last.current.mode, last.current.exclude, last.current.rounds, true);
   const save = async () => {
     if (!changes || !saveable || saving) return;
     const cut: Cut = changes.mode === 'rant' ? 'rant' : baseCut;
@@ -114,12 +130,12 @@ export default function SessionSheet() {
     try {
       const r = await addVersion(bit, lines.join('\n'), changes.mode === 'rant' ? 'kept from Make it a rant' : 'a hook from Pick a hook', true, sourceFor(cut, changes.mode));
       // the lines he passed over teach the voice profile too (the learning loop); never a line he kept
-      changes.hunks.forEach((h, i) => { if (!kept[i] && h.op !== 'cut' && h.now) simple.dismissDraft(h.now, bit); });
+      changes.hunks.forEach((h, i) => { if (kept[i] === false && h.op !== 'cut' && h.now) simple.dismissDraft(h.now, bit); });
       haptics.success();
       ui.snack(S.savedWord(count + 1, cut), async () => { await undo(r.indexes); });
-      close();
+      leave();
     } catch (e: any) {
-      ui.snack(`Couldn’t save: ${e.message}`);
+      setSaveErr(`Couldn’t save: ${e.message}`);
     } finally {
       if (alive.current) setSaving(false);
     }
@@ -133,7 +149,7 @@ export default function SessionSheet() {
             <Pressable key={r.mode} testID={`session-${r.mode}`} accessibilityRole="button" disabled={!online || !unit}
               accessibilityLabel={r.label} accessibilityHint={online ? r.sub : 'Offline'} accessibilityState={{ disabled: !online || !unit }}
               onPress={() => void ask(r.mode)}
-              style={({ pressed }) => ({ minHeight: 60, paddingVertical: 10, gap: 2, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: C.hairline, opacity: !online ? 0.45 : pressed ? 0.7 : 1 })}>
+              style={({ pressed }) => ({ minHeight: 60, paddingVertical: 10, gap: 2, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: C.hairline, opacity: !online || !unit ? 0.45 : pressed ? 0.7 : 1 })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text maxFontSizeMultiplier={ROW_CAP} style={{ flex: 1, fontFamily: F.semi, fontSize: 17, lineHeight: 22, color: C.text }}>{r.label}</Text>
                 {!online && <T v="small">offline</T>}
@@ -151,8 +167,8 @@ export default function SessionSheet() {
       )}
       {phase.k === 'failed' && (
         <View testID="session-failed" style={{ gap: 10 }}>
-          <T v="mut">{`Claude didn't answer: ${phase.error}`}</T>
-          <Btn small label="Try again" onPress={() => void ask(phase.mode)} />
+          <T v="mut">{`Claude didn’t answer: ${phase.error}`}</T>
+          <Btn small testID="session-retry" label="Try again" disabled={!online} onPress={retry} style={{ alignSelf: 'flex-start' }} />
         </View>
       )}
       {phase.k === 'openers' && (
@@ -173,6 +189,7 @@ export default function SessionSheet() {
           )}
         </View>
       )}
+      {!!saveErr && <T v="mut" testID="session-save-error" accessibilityRole={'alert' as any}>{saveErr}</T>}
       {changes && (
         <View testID="session-changes" style={{ gap: 2 }}>
           {!!changes.note && <T v="mut">{changes.note}</T>}
@@ -198,7 +215,7 @@ export default function SessionSheet() {
   }
   return (
     <View testID="session-sheet" style={{ flex: 1, backgroundColor: C.surface }}>
-      <Stack.Screen options={{ title }} />
+      <Stack.Screen options={{ title, gestureEnabled: !saveable }} />
       {/* HIG/sheets: Close leading (it keeps nothing open: a session lives until he leaves it); the save trailing,
           not rendered until a change is kept (3c §3.6: no greyed button with a sentence) */}
       <Stack.Toolbar placement="left">
@@ -225,7 +242,11 @@ function HunkRow({ h, i, n, kept, onMark }: { h: S.Hunk; i: number; n: number; k
     <View testID={`hunk-${i}`} style={{ paddingVertical: 10, gap: 8, borderBottomWidth: 1, borderBottomColor: C.hairline }}
       accessible accessibilityLabel={S.hunkLabel(h, i, n) + state}
       accessibilityActions={[{ name: 'keep', label: 'Keep' }, { name: 'skip', label: 'Skip' }]}
-      onAccessibilityAction={(e) => onMark(e.nativeEvent.actionName === 'keep')}>
+      onAccessibilityAction={(e) => {
+        const a = e.nativeEvent.actionName;
+        if (a === 'keep') onMark(true);
+        else if (a === 'skip') onMark(false);
+      }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <T v="small" style={{ flex: 1 }}>{h.op === 'add' ? (h.line_no === 0 ? 'New first line' : `New line after ${h.line_no}`) : h.op === 'cut' ? `Cut line ${h.line_no}` : `Line ${h.line_no}`}</T>
         <AIBadge />
@@ -244,8 +265,9 @@ function HunkRow({ h, i, n, kept, onMark }: { h: S.Hunk; i: number; n: number; k
       )}
       {!!h.why && <T v="small">{h.why}</T>}
       <View style={{ flexDirection: 'row', gap: 8 }} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Btn small testID={`hunk-keep-${i}`} label="Keep" v={kept === true ? 'primary' : 'plain'} onPress={() => onMark(true)} style={{ flex: 1 }} />
-        <Btn small testID={`hunk-skip-${i}`} label="Skip" v={kept === false ? 'primary' : 'plain'} onPress={() => onMark(false)} style={{ flex: 1 }} />
+        {/* the choice is a word as well as a fill (never colour alone): "Kept" / "Skipped" */}
+        <Btn small testID={`hunk-keep-${i}`} label={kept === true ? 'Kept' : 'Keep'} v={kept === true ? 'primary' : 'plain'} onPress={() => onMark(true)} style={{ flex: 1 }} />
+        <Btn small testID={`hunk-skip-${i}`} label={kept === false ? 'Skipped' : 'Skip'} v={kept === false ? 'primary' : 'plain'} onPress={() => onMark(false)} style={{ flex: 1 }} />
       </View>
     </View>
   );

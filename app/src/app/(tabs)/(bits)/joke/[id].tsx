@@ -259,7 +259,7 @@ export default function BitPage() {
       right={native ? undefined : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />
-          <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={C.amber} /></IconBtn>
+          <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={canAsk ? C.amber : C.dim} /></IconBtn>
           <IconBtn testID="bit-more" label="More" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>
         </View>
       )}>
@@ -340,7 +340,7 @@ export default function BitPage() {
         <>
         {vCut === 'rant' && (
           // a word, not a colour (Film it §2.6): the version shown is the rant cut, and Write writes that cut
-          <View testID="bit-rant-cut" accessibilityRole="header" accessibilityLabel={`Rant cut, ${v?.label}`} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View testID="bit-rant-cut" accessible accessibilityLabel={`Rant cut, ${v?.label}`} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ paddingHorizontal: 8, minHeight: 24, borderRadius: 6, borderWidth: 1, borderColor: C.border, justifyContent: 'center' }}>
               <Text maxFontSizeMultiplier={R.ROW_CAP} style={{ fontFamily: F.semi, fontSize: 13, color: C.text }}>Rant cut</Text>
             </View>
