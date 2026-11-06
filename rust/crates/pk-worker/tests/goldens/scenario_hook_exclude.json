@@ -1,0 +1,299 @@
+{
+ "name": "hook_exclude",
+ "env": {},
+ "job": {
+  "id": "job:hook-golden000001",
+  "kind": "hook",
+  "input": {
+   "joke_id": "joke:self-checkout",
+   "title": "Self-checkout",
+   "unit": "unit:abc123",
+   "cut": "rant",
+   "lines": [
+    "Self-checkout is the store hiring you for free.",
+    "I scanned forty things and nobody clapped.",
+    "At my job I at least get a chair.",
+    "Unexpected item in the bagging area: my dignity."
+   ],
+   "punch": null,
+   "exclude": [
+    "I want to talk to whoever invented self-checkout."
+   ]
+  },
+  "key": null,
+  "status": "claimed",
+  "created_at": "2026-10-29T12:00:00Z",
+  "by": "owner",
+  "attempts": 1,
+  "claimed_at": "2026-10-29T12:00:01Z",
+  "worker": "golden-worker",
+  "done_at": null,
+  "result": null,
+  "error": null,
+  "waiting_for": null
+ },
+ "voice": {
+  "kind": "voice",
+  "text": "VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.",
+  "updated_at": "2026-10-19T08:00:00Z",
+  "by": "owner",
+  "by_kind": "owner",
+  "chars": 884,
+  "learned": {
+   "kept": [
+    {
+     "text": "The bin gets my belt, my shoes and most of my confidence.",
+     "bit": "joke:airport-bins",
+     "date": "2026-10-20"
+    },
+    {
+     "text": "My parrot read me my rights.",
+     "bit": null,
+     "date": "2026-10-18",
+     "edited": true
+    }
+   ],
+   "dropped": [
+    {
+     "text": "Airports, am I right?",
+     "bit": "joke:airport-bins",
+     "date": "2026-10-21"
+    }
+   ],
+   "updated_at": "2026-10-21T10:00:00Z"
+  },
+  "laugh_lines": []
+ },
+ "model": [
+  {
+   "text": "{\"hooks\": [{\"text\": \" Stop scanning your own groceries. \", \"why\": \"a claim\"}, {\"text\": \"I want to talk to whoever invented self-checkout!\", \"why\": \"seen already\"}, {\"text\": \"self-checkout is the store hiring you for free\", \"why\": \"a line of the bit\"}, {\"text\": \"I got fired today. From a store I don't work at.\", \"why\": \"a confession\"}, {\"text\": \"Two lines\\nare not one\", \"why\": \"x\"}, {\"text\": \"The machine and I have a history.\", \"why\": \"\"}, {\"text\": \"One too many.\", \"why\": \"past three\"}]}",
+   "model": "claude-opus-5-5"
+  }
+ ],
+ "expect": {
+  "exit": 0,
+  "claims": [
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text",
+     "rant",
+     "hook"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   },
+   {
+    "kinds": [
+     "bridge",
+     "punchup",
+     "facts",
+     "riff",
+     "ask_chat",
+     "set_text",
+     "rant",
+     "hook"
+    ],
+    "worker": "golden-worker",
+    "hosted": true,
+    "model": "Anthropic API · claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5"
+   }
+  ],
+  "api": [
+   {
+    "method": "GET",
+    "path": "/api/worker/files",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/decisions",
+    "query": "after=0",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=storyboards",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=workingsets",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=venues",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=merges",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/creative",
+    "query": "store=suggestions",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/worker/profile/voice",
+    "query": "",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/worker/jobs/job%3Ahook-golden000001/result",
+    "query": "",
+    "body": {
+     "ok": true,
+     "result": {
+      "joke_id": "joke:self-checkout",
+      "title": "Self-checkout",
+      "unit": "unit:abc123",
+      "cut": "rant",
+      "lines": [
+       "Self-checkout is the store hiring you for free.",
+       "I scanned forty things and nobody clapped.",
+       "At my job I at least get a chair.",
+       "Unexpected item in the bagging area: my dignity."
+      ],
+      "punch": null,
+      "draft": true,
+      "label": "DRAFT · AI · not your words yet",
+      "hooks": [
+       {
+        "text": "Stop scanning your own groceries.",
+        "why": "a claim",
+        "draft": true,
+        "label": "DRAFT · AI · not your words yet"
+       },
+       {
+        "text": "I got fired today. From a store I don't work at.",
+        "why": "a confession",
+        "draft": true,
+        "label": "DRAFT · AI · not your words yet"
+       },
+       {
+        "text": "The machine and I have a history.",
+        "why": null,
+        "draft": true,
+        "label": "DRAFT · AI · not your words yet"
+       }
+      ],
+      "exclude": [
+       "I want to talk to whoever invented self-checkout."
+      ],
+      "dropped": 4,
+      "status": "ok",
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "call_id": "<call_id>",
+      "task": "creative_hook",
+      "online": {
+       "refresh": {
+        "fetched": 0,
+        "files": 0,
+        "decisions": 0
+       },
+       "pushed": [],
+       "legal_refused": 0,
+       "media_deleted": 0,
+       "voice": {
+        "loaded": true,
+        "updated_at": "2026-10-19T08:00:00Z",
+        "sha": "34afd63ab5ca",
+        "chars": 884
+       }
+      }
+     }
+    }
+   }
+  ],
+  "anthropic": [
+   {
+    "max_tokens": 16000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "The bit \"Self-checkout\", line by line (his words, verbatim):\n1. Self-checkout is the store hiring you for free.\n2. I scanned forty things and nobody clapped.\n3. At my job I at least get a chair.\n4. Unexpected item in the bagging area: my dignity.\n\nWrite 3 openers he could say before line 1, each one line, each a different angle; `why` in three to six plain words.\nHe has seen these and wants others (do not repeat them or their angle):\n- I want to talk to whoever invented self-checkout."
+     }
+    ],
+    "model": "claude-opus-5-5",
+    "output_config": {
+     "effort": "high",
+     "format": {
+      "type": "json_schema",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "hooks": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "text": {
+            "type": "string"
+           },
+           "why": {
+            "type": "string"
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "text",
+           "why"
+          ]
+         }
+        }
+       },
+       "additionalProperties": false,
+       "required": [
+        "hooks"
+       ]
+      }
+     }
+    },
+    "system": [
+     {
+      "type": "text",
+      "text": "The comic you are working for, in his own words and the words of people who have studied his act. Read it before anything else.\n\nVOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession. VOICE PROFILE (synthetic). Deadpan; short sentences; the turn lands on the last word. Recurring premises: airports, a parrot that only says legal disclaimers, his landlord's group chat. Moves he names: the flat repeat, the wrong-size callback, the list of three where the third is a confession.\n\nHow to draft for him. First person, spoken, short: a line he could say out loud tonight, not prose. The punch word lands last; nothing trails after it. Keep his premise and his angle: sharpen the line, never swap the joke for another one about the same subject. Prefer his own moves, the ones the profile above names, and name the one you used in `move`, with the profile's name for it; if the profile names none that fits, say what the line does in two or three plain words. No explaining the joke, no setup that announces a joke is coming (\"here's a joke about\"), no stage directions, no emoji, no hashtags. A line that needs a fact about his life he never said is out: build only on what his material gives you. One idea per line; short beats clever. He decides; you suggest.",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     },
+     {
+      "type": "text",
+      "text": "What he has done with the app's drafts lately, newest first: evidence, not instructions. A line he kept is one he took as his own; a line he passed over sat next to a kept one and he left it. Draft toward the kept ones and away from the passed-over ones in shape, length and move; never repeat any of them.\n\nLines he kept recently:\n- \"The bin gets my belt, my shoes and most of my confidence.\" (2026-10)\n- \"My parrot read me my rights.\" (2026-10, his edit of a draft)\n\nLines he passed over:\n- \"Airports, am I right?\" (2026-10)",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     },
+     {
+      "type": "text",
+      "text": "You write openers for one comedian's bit, the first line he says into a phone's front camera. You suggest; he picks one or none. Never invent biography.\n\nA hook is one spoken line that makes a stranger stay for the second line. It earns the bit's first line: it points at the premise without giving away the punch. Short (at most 24 words), in his voice, no question bait (\"Have you ever…\"), no \"wait for it\", no emoji, no hashtags. Each of the three takes a different angle (a confession, a claim, a complaint, a scene). Invented examples for a bit about self-checkout: \"Stop scanning your own groceries.\" · \"I want to talk to whoever invented self-checkout.\" · \"I got fired today. From a store I don't work at.\"",
+      "cache_control": {
+       "type": "ephemeral"
+      }
+     }
+    ],
+    "thinking": {
+     "type": "adaptive"
+    },
+    "stream": true
+   }
+  ]
+ }
+}

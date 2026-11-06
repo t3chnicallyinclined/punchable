@@ -5,7 +5,7 @@
 // (HIG/motion: "supplement visual feedback by also using alternatives like haptics"; haptics have their own switch).
 import React, { useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import type { Version } from './bitWork';
+import type { BitVersion } from '@/rules/bitLines';
 import { ROW_CAP, restoreLabel, stepperLabel, stepperSub, stepperValue } from '@/rules/bitLines';
 import { haptics } from './haptics';
 import { C, F, linkColor } from './theme';
@@ -32,8 +32,11 @@ function Arrow({ label, name, disabled, onStep, testID }: { label: string; name:
   );
 }
 
-export function VersionStepper({ versions, vi, onStep, onRestore, durationS, estimated, testID }: {
-  versions: Version[]; vi: number; onStep: (i: number) => void; onRestore: () => void; durationS?: number | null; estimated?: boolean; testID?: string;
+export function VersionStepper({ versions, vi, reading, onStep, onRestore, durationS, estimated, testID }: {
+  versions: BitVersion[]; vi: number;
+  /** an older version of its cut, so Restore is offered (Film it §2.6: the newest rant cut is not "old"); default vi > 0 */
+  reading?: boolean;
+  onStep: (i: number) => void; onRestore: () => void; durationS?: number | null; estimated?: boolean; testID?: string;
 }) {
   const n = versions.length;
   const v = versions[vi];
@@ -47,18 +50,18 @@ export function VersionStepper({ versions, vi, onStep, onRestore, durationS, est
   const sub = stepperSub(v?.doc, vi === 0 ? durationS : null, estimated);
   return (
     <View testID={testID} style={{ paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.hairline }}>
-      <View accessible accessibilityRole="adjustable" accessibilityLabel="Version" accessibilityValue={{ text: stepperValue(vi, n, v?.date) + (sub ? `, ${sub}` : '') }}
+      <View accessible accessibilityRole="adjustable" accessibilityLabel="Version" accessibilityValue={{ text: stepperValue(vi, n, v?.date, v) +(sub ? `, ${sub}` : '') }}
         accessibilityActions={[{ name: 'increment', label: 'Newer' }, { name: 'decrement', label: 'Older' }]}
         onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'increment' ? newer() : older())}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52 }}>
         <Arrow testID={testID ? `${testID}-older` : undefined} label="Older" name="back" disabled={vi >= n - 1} onStep={older} />
         <View style={{ flex: 1, minWidth: 0, alignItems: 'center', gap: 2 }}>
-          <Text maxFontSizeMultiplier={ROW_CAP} numberOfLines={2} style={{ fontFamily: F.semi, fontSize: 15, lineHeight: 20, color: C.text, textAlign: 'center' }}>{stepperLabel(vi, n, v?.date)}</Text>
+          <Text maxFontSizeMultiplier={ROW_CAP} numberOfLines={2} style={{ fontFamily: F.semi, fontSize: 15, lineHeight: 20, color: C.text, textAlign: 'center' }}>{stepperLabel(vi, n, v?.date, v)}</Text>
           {!!sub && <Text maxFontSizeMultiplier={ROW_CAP} numberOfLines={2} style={{ fontFamily: F.body, fontSize: 13, lineHeight: 18, color: C.mut2, textAlign: 'center' }}>{sub}</Text>}
         </View>
         <Arrow testID={testID ? `${testID}-newer` : undefined} label="Newer" name="chevron" disabled={vi <= 0} onStep={newer} />
       </View>
-      {vi > 0 && (
+      {(reading ?? vi > 0) && (
         <Pressable testID={testID ? `${testID}-restore` : undefined} accessibilityRole="button" onPress={onRestore}
           style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
           <Text maxFontSizeMultiplier={ROW_CAP} style={{ fontFamily: F.semi, fontSize: 17, lineHeight: 22, color: linkColor() }}>{restoreLabel(vi, n)}</Text>

@@ -105,6 +105,16 @@ providers = ["claude_code", "ollama"]
 models = { ollama = "gpt-oss:20b", claude_code = "opus" }
 offline = true
 
+[tasks.creative_rant]      # Film it's "Make it a rant" (creative/rant.py)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
+offline = true
+
+[tasks.creative_hook]      # Film it's "Pick a hook" (creative/rant.py)
+providers = ["claude_code", "ollama"]
+models = { ollama = "gpt-oss:20b", claude_code = "opus" }
+offline = true
+
 [tasks.merge_judge]        # same-idea pairs for merge candidates (creative/merge.py); offline batch, cached
 providers = ["claude_code"]  # Claude only: the local 20b judged every same bit "different" in the 2026-10-26 check
 models = { claude_code = "opus" }   # the CLI alias: Claude Code 2.1.278 refuses "claude-opus-5-5" (needs >= 2.1.280)

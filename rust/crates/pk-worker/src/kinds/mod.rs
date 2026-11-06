@@ -1,6 +1,6 @@
 //! The job kinds the hosted worker runs (`worker/__main__.py` `HOSTED_KINDS` + `HOSTED_EMBED_KINDS`), each a
 //! [`Runner`] with its typed input, dispatched by one exhaustive `match`: a kind added to [`Kind`] does not compile
-//! until it is handled. All nine are ported (`docs/RUST_WORKSTREAM.md` T8); the kinds that read his notebook mirror
+//! until it is handled. All eleven are ported (`docs/RUST_WORKSTREAM.md` T8); the kinds that read his notebook mirror
 //! it first, and all but `ask` build the `creative/data.py` `Corpus` from it (`ask` reads the v0 graph instead).
 
 pub mod ask;
@@ -10,6 +10,7 @@ pub mod embed;
 pub mod facts;
 pub mod memolink;
 pub mod punchup;
+pub mod rant;
 pub mod riff;
 pub mod set_text;
 
@@ -51,6 +52,10 @@ pub enum Kind {
     Memolink,
     /// The older one-shot Ask.
     Ask,
+    /// Film it's "Make it a rant" on one version.
+    Rant,
+    /// Film it's "Pick a hook" on one version.
+    Hook,
 }
 
 /// The kinds that need audio; a hosted worker never asks for them and hands one back if given it.
@@ -58,13 +63,15 @@ pub const TRANSCRIBER_KINDS: [&str; 2] = ["process_set", "import_youtube"];
 
 impl Kind {
     /// `HOSTED_KINDS`, in the Python's order.
-    pub const HOSTED: [Kind; 6] = [
+    pub const HOSTED: [Kind; 8] = [
         Kind::Bridge,
         Kind::Punchup,
         Kind::Facts,
         Kind::Riff,
         Kind::AskChat,
         Kind::SetText,
+        Kind::Rant,
+        Kind::Hook,
     ];
     /// `HOSTED_EMBED_KINDS`: only with the bge model in the image.
     pub const HOSTED_EMBED: [Kind; 3] = [Kind::Embed, Kind::Memolink, Kind::Ask];
@@ -81,6 +88,8 @@ impl Kind {
             Kind::Embed => "embed",
             Kind::Memolink => "memolink",
             Kind::Ask => "ask",
+            Kind::Rant => "rant",
+            Kind::Hook => "hook",
         }
     }
 
@@ -103,7 +112,9 @@ impl Kind {
             | Kind::Bridge
             | Kind::Embed
             | Kind::Memolink
-            | Kind::Ask => true,
+            | Kind::Ask
+            | Kind::Rant
+            | Kind::Hook => true,
         }
     }
 
@@ -118,7 +129,7 @@ impl Kind {
     pub fn reads_notebook(self) -> bool {
         match self {
             Kind::Riff | Kind::Punchup | Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => true,
-            Kind::AskChat | Kind::Facts | Kind::SetText => false,
+            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Rant | Kind::Hook => false,
         }
     }
 
@@ -134,6 +145,8 @@ impl Kind {
             Kind::Embed => "ai:embed",
             Kind::Memolink => "ai:memolink",
             Kind::Ask => "ai:ask",
+            Kind::Rant => "ai:rant",
+            Kind::Hook => "ai:hook",
         }
     }
 
@@ -328,6 +341,8 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Embed => run_typed::<embed::Embed>(ctx, input).await,
         Kind::Memolink => run_typed::<memolink::Memolink>(ctx, input).await,
         Kind::Ask => run_typed::<ask::Ask>(ctx, input).await,
+        Kind::Rant => run_typed::<rant::Rant>(ctx, input).await,
+        Kind::Hook => run_typed::<rant::Hook>(ctx, input).await,
     }
 }
 
@@ -354,14 +369,20 @@ mod tests {
     #[test]
     fn claimable_is_the_hosted_order_ported_only() {
         let names: Vec<&str> = Kind::claimable(false).into_iter().map(Kind::name).collect();
-        assert_eq!(names, ["bridge", "punchup", "facts", "riff", "ask_chat", "set_text"]);
+        assert_eq!(
+            names,
+            [
+                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "rant", "hook"
+            ]
+        );
         let all: Vec<&str> = Kind::claimable(true).into_iter().map(Kind::name).collect();
         assert_eq!(
             all,
             [
-                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "embed", "memolink", "ask"
+                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "rant", "hook", "embed", "memolink",
+                "ask"
             ],
-            "all nine, the Python's order"
+            "all eleven, the Python's order"
         );
         assert!(Kind::Ask.reads_notebook() && !Kind::Ask.builds_corpus() && Kind::Riff.builds_corpus());
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));

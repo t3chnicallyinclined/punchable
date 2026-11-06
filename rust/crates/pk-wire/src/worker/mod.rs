@@ -121,6 +121,10 @@ pub enum JobKind {
     Memolink(MemolinkInput),
     /// A set transcribed on the phone (`POST /api/sets/transcript`).
     SetText(SetTextInput),
+    /// Film it's "Make it a rant" on one version of a bit (`POST /api/jokes/<id>/rant`).
+    Rant(RantInput),
+    /// Film it's "Pick a hook" on one version of a bit (`POST /api/jokes/<id>/hook`).
+    Hook(HookInput),
 }
 
 /// Where a job is: `queued` → `claimed` → `done` | `failed` (a retried failure goes back to `queued`).
@@ -283,6 +287,45 @@ pub struct MemolinkInput {
     /// A subset of `embed`, `judge`, `triage`, `attach`; all four when absent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub steps: Option<Vec<String>>,
+}
+
+/// The `rant` input (`creative_api.py` `_cut_input`): one version of a bit as the API holds it, split into the app's
+/// lines; `cut` is the version's cut read from its source (`rant` / `stage`); `punch` a line index or `null`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct RantInput {
+    /// The bit.
+    pub joke_id: String,
+    /// The bit's title, when it has one.
+    pub title: Option<String>,
+    /// The version (`unit:…`).
+    pub unit: String,
+    /// `rant` or `stage`.
+    pub cut: String,
+    /// The version's lines (blank lines left out, trailing space dropped).
+    pub lines: Vec<String>,
+    /// The punch line's index, or `null`.
+    pub punch: Option<u32>,
+}
+
+/// The `hook` input: the `rant` input's fields and the openers he already saw (`exclude`, at most six).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct HookInput {
+    /// The bit.
+    pub joke_id: String,
+    /// The bit's title, when it has one.
+    pub title: Option<String>,
+    /// The version (`unit:…`).
+    pub unit: String,
+    /// `rant` or `stage`.
+    pub cut: String,
+    /// The version's lines.
+    pub lines: Vec<String>,
+    /// The punch line's index, or `null`.
+    pub punch: Option<u32>,
+    /// The openers he already saw, stripped.
+    pub exclude: Vec<String>,
 }
 
 /// The `set_text` input: a set transcribed on the phone (`creative_api.py` `set_transcript`).

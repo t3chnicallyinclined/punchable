@@ -5,15 +5,18 @@
 // Two reads kept from the workbench: the joke (/api/jokes/<id>) and what sounds like it (/similar); the pile reads the
 // notes attached to the bit (/api/merge/candidates?joke=) and this phone's memos. Every write is a new version
 // (POST /api/jokes/<id>/versions, the old ones stay) with Undo in the snack and, non-timed, in the Versions row.
-// Slice 1 has no outbox (D4): Write and To a set grey with the offline line until Slice 2. The sparkle waits for
-// Slice 4; the Punch action for Slice 3 (line_meta); Sessions and the Claude line are hidden until they exist.
+// Slice 1 has no outbox (D4): Write and To a set grey with the offline line until Slice 2. The Punch action waits for
+// Slice 3 (line_meta); Sessions and the Claude line are hidden until they exist.
+// Film it's rant half (SPEC 2026-11-03 D10, D11, §2.5, §2.6; build 24): a version is the stage cut or a rant cut (its
+// `source`, rules/bitLines cutOf). The body shows the newest STAGE version; the stepper walks every version and says
+// the cut; on a rant version a "Rant cut" row sits above the lines and Write / Restore write that cut. The sparkle
+// opens the sessions sheet (/session/[bit]) with its two rows, Make it a rant and Pick a hook, on the version shown.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
 import { addVersion } from '@/lib/bitWork';
-import type { Version } from '@/lib/bitWork';
 import { isFreshBit, nameFromFirstLine } from '@/rules/bitWorkRules';
 import type { SimilarResult } from '@/rules/searchRows';
 import * as R from '@/rules/bitLines';
@@ -31,7 +34,7 @@ import { BitLines, type LineAction } from '@/lib/BitLines';
 import { Pile } from '@/lib/Pile';
 import { DragList } from '@/lib/DragList';
 
-type V = Version & { punch?: number[] };
+type V = R.BitVersion;
 type Note = { id: string; text?: string | null; date?: string | null; reasons?: unknown[] | null; score?: number | null };
 
 /** The stages he can set from More › Stage (Retire is its own, destructive item). */
@@ -51,7 +54,9 @@ export default function BitPage() {
   const d = useApi<any>(`/api/jokes/${enc(id)}`, { poll: 30000 });
   const sim = useApi<SimilarResult>(`/api/jokes/${enc(id)}/similar?limit=5`);
   const cand = useApi<{ history?: { notes?: Note[] } }>(`/api/merge/candidates?joke=${enc(id)}`, { cache: false });
-  const [vi, setVi] = useState(0);
+  // which version is shown: null = the newest stage version (home), 'rant' = the newest rant cut (after a rant write),
+  // a number = the one he stepped to
+  const [pos, setPos] = useState<number | 'rant' | null>(null);
   const [selRaw, setSel] = useState<number | null>(null);
   const [rename, setRename] = useState(false);
   const [idea, setIdea] = useState(false);
@@ -83,23 +88,29 @@ export default function BitPage() {
   const fresh = isFreshBit(J?.title);
   const title = fresh ? 'New bit' : (J?.title || '').split(' (')[0] || J?.title || 'Bit';
   const shortName = fresh ? 'New bit' : shortNameOf(J?.title || '', J?.short_name);
-  const v = versions[Math.min(vi, Math.max(0, versions.length - 1))];
+  const home = R.homeIndex(versions);
+  const newestRant = R.newestOf(versions, 'rant');
+  const vi = Math.min(typeof pos === 'number' ? pos : pos === 'rant' && newestRant >= 0 ? newestRant : home, Math.max(0, versions.length - 1));
+  const v = versions[vi];
+  const vCut: R.Cut = v?.cut || 'stage';
+  const src = R.sourceFor(vCut, 'write');
   const lines = useMemo(() => R.linesOf(v?.text), [v?.text]);
   const punch = useMemo(() => R.cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
-  const reading = vi > 0;
+  // reading = an older version of its cut: Write and the line actions are off, Restore is on
+  const reading = versions.length > 0 && !R.isNewestOfCut(versions, vi);
   const scraps = useMemo(() => R.pileScraps((cand.data?.history?.notes || []).filter((n: Note) => !takeNotes.has(n.id)), memos), [cand.data, memos, takeNotes]);
   const barOn = R.barEnabled(lines, J?.summary) && !fresh;
   const canWrite = online && !reading && editing == null && order == null;
-  const footnote = R.writeReason({ vi, count: versions.length, online: true });
+  const footnote = R.writeReason({ vi, count: versions.length, online: true, newest: !reading });
   // a selection outlives nothing: stepping clears it (onStep), a write clears it (wrote), a shorter version drops it
   const sel = selRaw != null && selRaw < lines.length ? selRaw : null;
   // an empty bit opens its Pile row on its one real action (frame d); otherwise the rows start closed
   const pileIsOpen = pileOpen ?? (!!d.data && lines.length === 0);
 
   /** Every write lands as a new version: the snack's timed Undo and the row's non-timed one share the indexes. */
-  const wrote = (indexes: number[], msg: string) => {
+  const wrote = (indexes: number[], msg: string, cut: R.Cut = 'stage') => {
     haptics.success();
-    setVi(0);
+    setPos(cut === 'rant' ? 'rant' : null);
     setSel(null);
     setLastWrite({ indexes, n: versions.length + 1 });
     reloadAll();
@@ -116,7 +127,7 @@ export default function BitPage() {
     if (t === (v?.text || '').trim()) { setEditing(null); return; }
     setSaving(true);
     try {
-      const r = await addVersion(id, t, 'edited on the bit page');
+      const r = await addVersion(id, t, 'edited on the bit page', false, src);
       let indexes = r.indexes;
       if (fresh) {
         // a fresh document takes its name from its first line (the first seven words, like a typed jot): rules/bitWorkRules
@@ -125,7 +136,7 @@ export default function BitPage() {
       }
       setEditing(null);
       setEditSel(undefined);
-      wrote(indexes, openedFresh ? 'Saved' : `Saved as v${versions.length + 1}`);
+      wrote(indexes, openedFresh ? 'Saved' : `Saved as v${versions.length + 1}${vCut === 'rant' ? ' · rant' : ''}`, vCut);
     } catch (e: any) {
       ui.snack(`Couldn’t save: ${e.message}`);
     } finally {
@@ -141,8 +152,8 @@ export default function BitPage() {
   };
   const writeLines = async (next: string[], reason: string, msg: string) => {
     try {
-      const r = await addVersion(id, R.joinLines(next), reason);
-      wrote(r.indexes, msg);
+      const r = await addVersion(id, R.joinLines(next), reason, false, src);
+      wrote(r.indexes, msg, vCut);
     } catch (e: any) {
       ui.snack(`Couldn’t save: ${e.message}`);
     }
@@ -165,6 +176,12 @@ export default function BitPage() {
   const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
   // Film it (SPEC 2026-11-03 §2.1): the front camera with the newest version's lines on the band; phone only
   const filmIt = () => router.push(`/film/${enc(id)}` as any);
+  // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so the sparkle is off there)
+  const canAsk = online && lines.length > 0 && !!v && v.key !== 'idea' && editing == null && order == null;
+  const openSessions = () => {
+    if (!canAsk || !v) return;
+    router.push({ pathname: '/session/[bit]', params: { bit: id, unit: v.key, cut: v.cut, n: String(versions.length), title: shortName } } as any);
+  };
   const share = () => Share.share({ message: [title, v?.text || ''].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'));
   const retire = async () => {
     try {
@@ -216,7 +233,8 @@ export default function BitPage() {
   const killed = R.killedCount((sim.data?.performed || []) as { rating?: string | null }[]);
   const echoes = (sim.data?.like.moments.length || 0) + (sim.data?.like.bits.length || 0);
   const tape = R.tapeMeta(nights, killed, echoes, takes.length);
-  const vmeta = { count: versions.length, newestDate: versions[0]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
+  // collapsed, the row reads the newest stage version (Film it §2.6: "unchanged"); right after a write, "just now"
+  const vmeta = { count: versions.length - home, newestDate: versions[home]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
   // the line's actions (Slice 1: Move · Cut; Punch waits for its home in Slice 3, the Claude asks for Slice 4). Move is
   // not shown on a one-line bit (a greyed control that leads nowhere is not rendered, §14).
   const lineActions: LineAction[] | null = reading || !online || editing != null ? null : [
@@ -241,14 +259,15 @@ export default function BitPage() {
       right={native ? undefined : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />
+          <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={canAsk ? C.amber : C.dim} /></IconBtn>
           <IconBtn testID="bit-more" label="More" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>
         </View>
       )}>
       {native && (
         // HIG/toolbars: simple symbols (no circle borders), the important few in the bar, the rest under More
         <Stack.Toolbar placement="right">
-          {/* Ask Claude arrives with Slice 4; until then the sparkle is present and off (VoiceOver hears why) */}
-          <Stack.Toolbar.Button icon="sparkles" disabled accessibilityLabel="Ask Claude" accessibilityHint="Not in this build yet" onPress={() => {}} />
+          {/* Ask Claude: the sessions sheet (Film it's two rows until 3c Slice 4 adds the rest); off with its reason */}
+          <Stack.Toolbar.Button icon="sparkles" disabled={!canAsk} accessibilityLabel="Ask Claude" accessibilityHint={!online ? 'Offline' : !lines.length ? 'Nothing to read' : 'Make it a rant, or pick a hook'} onPress={openSessions} />
           <Stack.Toolbar.Button icon="text.badge.plus" disabled={!barOn || !online} accessibilityLabel="To a set" accessibilityHint={online ? `Adds it to ${boards.current?.title || 'a set list'}` : 'Offline'} onPress={() => void toSet()} />
           <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More">
             <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
@@ -318,7 +337,17 @@ export default function BitPage() {
             )} />
         </View>
       ) : lines.length ? (
+        <>
+        {vCut === 'rant' && (
+          // a word, not a colour (Film it §2.6): the version shown is the rant cut, and Write writes that cut
+          <View testID="bit-rant-cut" accessible accessibilityLabel={`Rant cut, ${v?.label}`} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ paddingHorizontal: 8, minHeight: 24, borderRadius: 6, borderWidth: 1, borderColor: C.border, justifyContent: 'center' }}>
+              <Text maxFontSizeMultiplier={R.ROW_CAP} style={{ fontFamily: F.semi, fontSize: 13, color: C.text }}>Rant cut</Text>
+            </View>
+          </View>
+        )}
         <BitLines testID="bit-lines" lines={lines} punch={punch} selected={sel} onSelect={setSel} onOpenAt={(i) => openWrite(i)} actions={lineActions} />
+        </>
       ) : (
         <Text testID="bit-empty" maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.mut2, paddingVertical: 8 }}>Nothing written yet.</Text>
       )}
@@ -328,12 +357,12 @@ export default function BitPage() {
           <Pile testID="pile" scraps={scraps} recs={memos} lines={lines} onAdd={addScrap} />
         </SectionRow>
         {versions.length > 1 && (
-          <SectionRow testID="row-versions" kind="inline" label="Versions" meta={reading ? `v${versions.length - vi} of ${versions.length}` : R.versionsMeta(vmeta)}
-            accessibilityLabel={reading ? `Versions, reading ${versions.length - vi} of ${versions.length}` : R.versionsLabel(vmeta)}
+          <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
+            accessibilityLabel={vi !== home ? `Versions, reading ${R.stepperValue(vi, versions.length, v?.date, v)}` : R.versionsLabel(vmeta)}
             open={versionsOpen} onPress={() => setVersionsOpen((o) => !o)}
             right={lastWrite && vmeta.justWrote && !reading ? <TextBtn testID="row-versions-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last write" onPress={() => void undoLast()} /> : undefined}
             extraActions={lastWrite && vmeta.justWrote && !reading ? [{ label: 'Undo the last write', onPress: () => void undoLast() }] : undefined}>
-            <VersionStepper testID="stepper" versions={versions} vi={vi} onStep={(i) => { setVi(i); setSel(null); }} onRestore={restore} durationS={J?.duration_s} estimated={!!J?.duration_estimated} />
+            <VersionStepper testID="stepper" versions={versions} vi={vi} reading={reading} onStep={(i) => { setPos(i); setSel(null); }} onRestore={restore} durationS={J?.duration_s} estimated={!!J?.duration_estimated} />
           </SectionRow>
         )}
         {!!tape && (

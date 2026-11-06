@@ -624,6 +624,37 @@ fn a_missing_voice_block_is_caught() {
     assert!(first_difference(&normalise(&body), &normalise(&original), "x").is_some());
 }
 
+/// The red arm for Film it's kinds: one word of the rant method block changed (the task line, the third system
+/// block) must fail the comparison, and so must a hunk the quote check would have let through.
+#[test]
+fn a_changed_rant_method_word_or_a_paraphrased_hunk_is_caught() {
+    let (_, sc) = goldens()
+        .into_iter()
+        .find(|(n, _)| n.contains("rant_named_learned"))
+        .unwrap();
+    let original = sc["expect"]["anthropic"][0].clone();
+    let mut body = original.clone();
+    let sys = body["system"].as_array_mut().unwrap();
+    let last = sys.last_mut().unwrap();
+    let text = last["text"].as_str().unwrap().replacen("Escalation", "Escalate", 1);
+    last["text"] = json!(text);
+    assert!(first_difference(&normalise(&body), &normalise(&original), "x").is_some());
+    // the Python dropped the paraphrase of line 2; a lenient check would keep it and the result would differ
+    let answer: Value = serde_json::from_str(sc["model"][0]["text"].as_str().unwrap()).unwrap();
+    let lines: Vec<String> = sc["job"]["input"]["lines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| l.as_str().unwrap().to_string())
+        .collect();
+    let (kept, dropped) = pk_worker::kinds::rant::rant_hunks(Some(&answer), &lines, Some(3));
+    assert_eq!((kept.len(), dropped), (4, 5));
+    assert!(
+        kept.iter().all(|h| h["line_no"] != json!(2)),
+        "the paraphrase never survives"
+    );
+}
+
 /// SIGTERM mid-job: the model call is still streaming when the stop comes; the job goes back to the queue with
 /// `{ok: false, retry: true}`, nothing else is claimed, and the loop ends cleanly. (New behaviour: the Python died
 /// and left the claim to the API's stale sweep.)

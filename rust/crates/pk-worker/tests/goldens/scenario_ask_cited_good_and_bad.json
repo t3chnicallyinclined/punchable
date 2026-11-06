@@ -212,6 +212,8 @@
      "riff",
      "ask_chat",
      "set_text",
+     "rant",
+     "hook",
      "embed",
      "memolink",
      "ask"
@@ -228,6 +230,8 @@
      "riff",
      "ask_chat",
      "set_text",
+     "rant",
+     "hook",
      "embed",
      "memolink",
      "ask"

@@ -274,6 +274,9 @@ spec:
           - { path: "/api/workingsets/[^/]+/try$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/workingsets/[^/]+/try/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/workingsets/[^/]+/bits/[^/]+/punchup$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # Film it (build 24): "Make it a rant" and "Pick a hook" on one version (POST only on the Python too)
+          - { path: "/api/jokes/[^/]+/rant$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jokes/[^/]+/hook$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 3 (group 5): a job's result (POST only on the Python too); ".../file$" stays the Python's
           - { path: "/api/worker/jobs/[^/]+/result$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 3 (group 6): his drop of a queued job (POST only on the Python too)

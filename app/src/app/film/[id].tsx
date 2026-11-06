@@ -25,7 +25,7 @@ import { C, DARK, F, linkColor } from '@/lib/theme';
 import { Btn, Card, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
-import { cleanPunch, linesOf, versionsOf } from '@/rules/bitLines';
+import { cleanPunch, cutChoices, cutWord, filmIndex, linesOf, versionsOf } from '@/rules/bitLines';
 import { clockMs } from '@/rules/format';
 import * as FR from '@/rules/filmRules';
 import type { FilmState } from '@/rules/filmRules';
@@ -38,13 +38,17 @@ const TICK_MS = 250;
 
 export default function FilmScreen() {
   useKeepAwake();
-  const p = useLocalSearchParams<{ id: string }>();
+  const p = useLocalSearchParams<{ id: string; cut?: string }>();
   const id = decodeURIComponent(String(p.id || ''));
   const ui = useUI();
   const d = useApi<any>(`/api/jokes/${enc(id)}`);          // cached: offline the page he came from already holds it
   const J = d.data?.joke;
   const shortName = shortNameOf(J?.title || '', J?.short_name);
-  const v = useMemo(() => versionsOf(d.data)[0], [d.data]);
+  // the cut being filmed (Film it D10): the one he picked, else the newest rant cut, else the stage cut
+  const versions = useMemo(() => versionsOf(d.data), [d.data]);
+  const [cutKey, setCutKey] = useState<string | null>(p.cut ? String(p.cut) : null);
+  const v = versions[filmIndex(versions, cutKey)];
+  const choices = useMemo(() => cutChoices(versions), [versions]);
   const lines = useMemo(() => linesOf(v?.text), [v?.text]);
   const punch = useMemo(() => cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
   const wpm = useMemo(() => PR.paceWpm(lines, J?.duration_s), [lines, J?.duration_s]);
@@ -189,6 +193,26 @@ export default function FilmScreen() {
   };
   // Close: nothing lost while idle; during the count it just stops; with a take recorded and not kept, the sheet
   // (HIG/modality: an action sheet with a save option)
+  // the cut picker (§2.2, §3): the newest version of each cut, and "Make a rant cut…" when there is none, which closes
+  // the camera and opens the sessions sheet on the bit page (one modal at a time). Only while idle: a take is of one cut.
+  const pickCut = () => {
+    if (stateRef.current !== 'idle') return;
+    const stage = choices.find((c) => c.cut === 'stage');
+    actionSheet({ title: shortName, options: [
+      // the cut on the band carries a ✓ (the sheet stands in for a pop-up button: the current choice is shown)
+      ...choices.map((c) => ({ label: `${c.key === v?.key ? '✓ ' : ''}${c.label}`, onPress: () => { setCutKey(c.key); setPrompter(PR.prompterIdle()); } })),
+      // the typed-idea stand-in is no version the server holds, so a bit with no version has nothing to rework
+      ...(!choices.some((c) => c.cut === 'rant') && stage && stage.key !== 'idea' ? [{
+        label: 'Make a rant cut…',
+        onPress: () => router.replace({ pathname: '/session/[bit]', params: { bit: id, unit: stage.key, cut: 'stage', n: String(versions.length), title: shortName, mode: 'rant' } } as any),
+      }] : []),
+      { label: 'Cancel', cancel: true },
+    ] });
+  };
+  const cutBtn = v && state === 'idle'
+    ? <TextBtn testID="film-cut" label={`${cutWord(v.cut)} ▾`} accessibilityLabel={`${v.cut === 'rant' ? 'Rant cut' : 'Stage cut'}, ${v.label}. Change`} color={linkColor()} onPress={pickCut} />
+    : <View style={{ width: 66 }} />;
+
   const close = () => {
     const s = stateRef.current;
     if (s === 'saving') return;
@@ -314,7 +338,7 @@ export default function FilmScreen() {
 
   return (
     <Screen title="Film it" task deep scroll={false} testID="film" offlineAt="none"
-      header={<TopBar task title="Film it" left={<TextBtn testID="film-close" label="Close" onPress={close} />} right={<View style={{ width: 66 }} />} />}
+      header={<TopBar task title="Film it" left={<TextBtn testID="film-close" label="Close" onPress={close} />} right={cutBtn} />}
       dock={
         reviewing ? (
           <RecordDock
