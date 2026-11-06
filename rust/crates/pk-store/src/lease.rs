@@ -60,8 +60,9 @@ impl Store {
     }
 }
 
-/// A transaction conflict between two writers of the row (the engine's words differ by backend).
+/// A transaction conflict between two writers of the row (the engine's words differ by backend), or the loser of two
+/// first-ever `CREATE lease:<kind>` ("already exists": the winner holds the lease).
 fn is_conflict(e: &StoreError) -> bool {
     let text = e.to_string().to_lowercase();
-    text.contains("can be retried") || text.contains("conflict")
+    text.contains("can be retried") || text.contains("conflict") || text.contains("already exists")
 }

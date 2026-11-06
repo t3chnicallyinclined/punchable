@@ -784,10 +784,14 @@ async fn the_lease_is_granted_to_exactly_one_of_eight_askers_at_once() {
     }
     let mut grants = Vec::new();
     for round in 0..30 {
-        writer
-            .query("UPDATE lease:embedder SET owner = NONE, until = NONE; IF !record::exists(lease:embedder) { CREATE lease:embedder CONTENT { kind: 'embedder' } };", vars([]))
-            .await
-            .unwrap();
+        // even rounds: a row that exists and is free; odd rounds: no row at all, so all eight run the first-ever CREATE
+        // (the loser's "already exists" is a refusal, not an error)
+        let reset = if round % 2 == 0 {
+            "UPDATE lease:embedder SET owner = NONE, until = NONE; IF !record::exists(lease:embedder) { CREATE lease:embedder CONTENT { kind: 'embedder' } };"
+        } else {
+            "DELETE lease:embedder;"
+        };
+        writer.query(reset, vars([])).await.unwrap();
         let mut tasks = Vec::new();
         for (i, s) in stores.iter().enumerate() {
             let s = std::sync::Arc::clone(s);

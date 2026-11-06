@@ -1056,11 +1056,14 @@ class Handler(BaseHTTPRequestHandler):
         connection (pk-api's pool) would otherwise parse it as the next request line and answer 400."""
         self._body_taken = False
         super().handle_one_request()
+        hs = getattr(self, "headers", None)
         try:
-            n = int(self.headers.get("Content-Length") or 0) if getattr(self, "headers", None) else 0
+            n = int(hs.get("Content-Length") or 0) if hs is not None else 0
         except ValueError:
             n = 0
-        if n > 0 and not self._body_taken and not self.close_connection:
+        if hs is not None and hs.get("Transfer-Encoding") and not self._body_taken:
+            self.close_connection = True   # a chunked body is not drained here: end the connection instead
+        elif n > 0 and not self._body_taken and not self.close_connection:
             if n <= MAX_BODY:
                 self.rfile.read(n)
             else:
@@ -2071,7 +2074,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def upload(self):
         kb = self.kb
-        self._body_taken = True
         n = int(self.headers.get("Content-Length") or 0)
         if n <= 0 or n > MAX_UPLOAD:
             raise K.DecisionError("upload missing or over 1 GB")
@@ -2103,6 +2105,7 @@ class Handler(BaseHTTPRequestHandler):
                 k += 1
         tmp = dest.with_name(f"{dest.name}.{os.getpid()}-{threading.get_ident()}.part")
         left = n
+        self._body_taken = True   # from here the body is read (or the connection is dead); a refusal above leaves it to the drain
         with open(tmp, "wb") as f:
             while left > 0:
                 chunk = self.rfile.read(min(1024 * 1024, left))

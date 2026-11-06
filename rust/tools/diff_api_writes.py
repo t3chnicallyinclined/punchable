@@ -943,6 +943,7 @@ def live_phase(app_token: str, worker_token: str) -> None:
     ok("live: both say hello with the rev served and the subscription up",
        isinstance(ha, dict) and isinstance(hb, dict) and ha.get("type") == hb.get("type") == "hello" and ha.get("live") is True and hb.get("live") is True
        and ha.get("rev") == hb.get("rev") and str(ha.get("rev")).startswith("db:"), f"python {ha} pk-api {hb}")
+    a.events(0.8), b.events(0.8)  # the tail of the earlier phases' writes reaches a fresh socket late: let it pass first
     live_write("a jot", a, b, py, "POST", "/api/ideas", {"text": "Live jot one: the gate agent who hums (L)."}, True)
     live_write("a decision", a, b, rs, "POST", "/api/decision", {"target": "node", "id": "joke:x40", "action": "edit", "after": {"stage": "testing"}}, True)
     live_write("a set list", a, b, rs, "POST", "/api/boards", {"title": "Live list (L)", "joke_ids": ["joke:a"]}, False)

@@ -149,9 +149,15 @@ def lease_acquire(r: sdb.Rpc, me: str, kind: str = "embedder", ttl_s: int = LEAS
     so two askers cannot both hold it."""
     if not re.match(r"^[a-z_]+$", kind):
         raise ValueError(f"lease kind {kind!r} is not a plain identifier")
-    rows = r.last(f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
-                  f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
-                  "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;", {"k": kind, "me": me})
+    try:
+        rows = r.last(f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
+                      f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
+                      "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;", {"k": kind, "me": me})
+    except Exception as e:  # noqa: BLE001
+        # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
+        if "already exists" in str(e).lower():
+            return False
+        raise
     return bool(rows)
 
 
