@@ -540,7 +540,7 @@ mod tests {
             bytes_median: 11_000,
             ..Kpis::default()
         };
-        assert!(fence(&guard, &fine, &base).is_empty());
+        assert_eq!(fence(&guard, &fine, &base).len(), 0);
     }
 
     #[test]

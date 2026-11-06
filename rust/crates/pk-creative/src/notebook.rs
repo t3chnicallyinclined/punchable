@@ -403,7 +403,7 @@ mod tests {
     fn splitlines_is_pythons() {
         assert_eq!(py_splitlines("a\r\nb\rc\n\nd"), ["a", "b", "c", "", "d"]);
         assert_eq!(py_splitlines("a\n"), ["a"]);
-        assert!(py_splitlines("").is_empty());
+        assert_eq!(py_splitlines("").len(), 0);
     }
 
     #[test]

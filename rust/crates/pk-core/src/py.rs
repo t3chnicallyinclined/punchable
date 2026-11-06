@@ -546,7 +546,6 @@ mod tests {
         );
     }
     #[test]
-    #[expect(clippy::float_cmp, reason = "the exact float CPython returns")]
     fn sum_is_compensated_like_cpython_and_splitlines_is_python_s() {
         // CPython 3.12+: sum([0.1] * 10) == 1.0; a plain fold gives 0.9999999999999999
         assert_eq!(sum([0.1; 10]), 1.0);

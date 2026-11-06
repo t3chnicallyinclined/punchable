@@ -63,8 +63,7 @@ pub async fn live(
     if let Some(o) = headers.get(header::ORIGIN)
         && o.to_str()
             .ok()
-            .filter(|o| o.is_empty() || crate::cors::origin_ok(o, &st.config().origins))
-            .is_none()
+            .is_none_or(|o| !(o.is_empty() || crate::cors::origin_ok(o, &st.config().origins)))
     {
         return Err(ApiError::forbidden("origin not allowed"));
     }

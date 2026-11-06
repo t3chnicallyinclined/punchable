@@ -487,7 +487,7 @@ mod tests {
         assert_eq!(query_words("The dog, the DOG's lawyer!"), ["dog", "s", "lawyer"]);
         let many = (0..40).map(|i| format!("w{i}")).collect::<Vec<_>>().join(" ");
         assert_eq!(query_words(&many).len(), MAX_WORDS);
-        assert!(query_words("  ...  ").is_empty());
+        assert_eq!(query_words("  ...  ").len(), 0);
     }
 
     fn recs(keys: &[(&str, &str)]) -> HashMap<String, Hit> {

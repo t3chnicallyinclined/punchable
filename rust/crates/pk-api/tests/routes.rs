@@ -118,7 +118,7 @@ async fn the_preflight_is_fixed_and_needs_no_token() {
         .unwrap();
     let (s, h, b) = send(&st, req).await;
     assert_eq!(s, StatusCode::NO_CONTENT);
-    assert!(b.is_empty());
+    assert_eq!(b.len(), 0);
     assert_eq!(h[header::ACCESS_CONTROL_ALLOW_ORIGIN], "http://localhost:8081");
     assert_eq!(h[header::ACCESS_CONTROL_ALLOW_METHODS], pk_api::cors::ALLOW_METHODS);
     assert_eq!(h[header::ACCESS_CONTROL_ALLOW_HEADERS], pk_api::cors::ALLOW_HEADERS);

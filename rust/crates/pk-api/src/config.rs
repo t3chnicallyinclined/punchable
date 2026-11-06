@@ -213,7 +213,7 @@ mod tests {
         m.push(("PK_VEC_SWEEP_S", "86400"));
         assert_eq!(
             ApiConfig::from_env(&Env::from_map(m.clone())).unwrap().sweep_every,
-            Some(std::time::Duration::from_secs(86400))
+            Some(std::time::Duration::from_hours(24))
         );
         m.push(("PK_VEC_SWEEP_S", "0"));
         assert_eq!(ApiConfig::from_env(&Env::from_map(m)).unwrap().sweep_every, None);

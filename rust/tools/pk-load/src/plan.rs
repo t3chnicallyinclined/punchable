@@ -355,6 +355,6 @@ mod tests {
     fn ids_are_read_from_the_list_shape() {
         let body = serde_json::json!({"jokes": [{"id": "joke:a"}, {"id": 3}, {"title": "x"}, {"id": "joke:b"}]});
         assert_eq!(Ids::of(&body, "jokes"), vec!["joke:a", "joke:b"]);
-        assert!(Ids::of(&body, "sets").is_empty());
+        assert_eq!(Ids::of(&body, "sets").len(), 0);
     }
 }

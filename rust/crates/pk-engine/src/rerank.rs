@@ -403,7 +403,7 @@ mod tests {
     fn rrf_positive_leaves_out_what_scored_nowhere() {
         assert_eq!(rrf_positive(&[vec![2.0, 0.0, 0.0], vec![0.0, 0.0, 1.0]], RRF_K), [0, 2]);
         assert_eq!(rrf_positive(&[vec![1.0, 2.0, 0.0], vec![0.0, 3.0, 0.0]], RRF_K), [1, 0]);
-        assert!(rrf_positive(&[vec![0.0, 0.0]], RRF_K).is_empty());
+        assert_eq!(rrf_positive(&[vec![0.0, 0.0]], RRF_K).len(), 0);
     }
 
     #[test]

@@ -273,7 +273,7 @@ pub async fn attach(
                     .map(py::str)
                     .unwrap_or_default()
             };
-            units.sort_by(|a, b| date(&b.0).cmp(&date(&a.0)));
+            units.sort_by_key(|a| std::cmp::Reverse(date(&a.0)));
             for (u, eid) in units {
                 if !rejected(&v, eid)
                     && let Some(t) = v
