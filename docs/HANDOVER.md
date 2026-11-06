@@ -145,6 +145,21 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0e. **Film it, the rant half (owner: "did we do the rant stuff … lets get it in and built", 2026-11-06): TestFlight
+   build 24, branch `app/film-it-rant` (not merged, not pushed, not built, not deployed).** The spec's §11 "Built, the
+   rant half" row lists what is in and the eleven deviations. In short: the bit page's sparkle opens a sheet with
+   **Make it a rant** (Claude's whole-line changes, Keep / Skip each, Save rant cut) and **Pick a hook** (three
+   openers, Use this one, Show others once); a version's cut is its `source` (`rant`, `rant_session`, `rant_hook`), so
+   the page shows the newest stage version, the stepper says "rant", and Film it opens on the newest rant cut with a
+   Rant / Stage picker. Server: job kinds `rant` and `hook` in the Python worker and pk-worker, routes
+   `POST /api/jokes/<id>/rant` and `/hook` on the Python API and pk-api. **It needs the Python API image, then the
+   Python worker image, rolled out (in that order: a worker that asks for `rant` is refused by an older API) before
+   the phone's sheet can answer; that rollout is the owner's go.** No new native module (the build is JS only on top
+   of build 23's binary set). Owner checks on build 24: Make it a rant → the changes with the AI badge, Keep three,
+   Skip one, Save rant cut → "Saved as v9 · rant" and the page still shows the stage version; the Versions row's
+   stepper reads "v9 of 9 · Nov 6 · rant · Make it a rant" and that version shows "Rant cut" above its lines; Film it
+   opens on it with "Rant ▾"; Pick a hook → three openers, Use this one → "New first line", Save version; a swipe
+   down with a change kept asks first; airplane mode greys both rows with "offline".
 0d. **Film it, v1 (owner: "lets get this in", 2026-11-03): `docs/design/SPEC-2026-11-03-film-it.md` (the screens, the
    copy) built on `docs/design/SPIKE-2026-11-03-film-it-feasibility.md` (the technical path; the lead took the spike's
    side on every §9a point).** Branch `app/film-it-v1` (from `7147fda`), **not pushed, not built**; the spec's §11 v1
