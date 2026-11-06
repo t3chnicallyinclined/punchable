@@ -183,6 +183,23 @@ spec:
           - { path: /api/suggestions/not-a-joke/hide, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 2: the merge candidates (GET only on the Python too)
           - { path: /api/merge/candidates, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 3 (group 5): the live socket and the hosted worker's routes. DEPLOY ORDER: the Python image
+          # with this round's api-dev changes FIRST (its claim route writes `worker:seen` and its Tonight/Connections
+          # read it; its sweeper takes `lease:embedder`), then pk-api (which applies db/schema_extra.surql's two new
+          # tables at start as the Python does). /api/live is a WebSocket: ingress-nginx passes the Upgrade; the
+          # proxy-read-timeout of 60 s above is longer than the server's 20 s keep-alive ping. /api/worker/jobs/<id>/file
+          # stays the Python's (the upload is on its disk until uploads move).
+          - { path: /api/live, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/claim, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/decisions, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/creative, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/profile/voice, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 3 (group 6, the cheap half; POST only on the Python too): the one-shot questions and the imports
+          # that only queue a job. /api/ask is an exact path: /api/ask/chats* (the conversations) stays the Python's.
+          - { path: /api/ask, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/riff, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/facts, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/import/youtube, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -240,6 +257,10 @@ spec:
           - { path: "/api/workingsets/[^/]+/try$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/workingsets/[^/]+/try/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/workingsets/[^/]+/bits/[^/]+/punchup$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 3 (group 5): a job's result (POST only on the Python too); ".../file$" stays the Python's
+          - { path: "/api/worker/jobs/[^/]+/result$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 3 (group 6): his drop of a queued job (POST only on the Python too)
+          - { path: "/api/jobs/[^/]+/drop$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

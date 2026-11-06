@@ -60,3 +60,22 @@ DEFINE INDEX OVERWRITE joke_sum_ft  ON joke        FIELDS summary FULLTEXT ANALY
 DEFINE INDEX OVERWRITE perf_ft      ON performance FIELDS text    FULLTEXT ANALYZER punch_en BM25 HIGHLIGHTS;
 DEFINE INDEX OVERWRITE joke_vec     ON joke        FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 150 M 12;
 DEFINE INDEX OVERWRITE perf_vec     ON performance FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 150 M 12;
+
+-- The worker's last claim (2026-11-03, T10 group 5): one row, `worker:seen`, written by whichever API answered
+-- POST /api/worker/claim and read by both for the worker's line (Tonight, Settings > Connections, Ask), so the two
+-- servers agree on it while both serve. It was the Python process's memory before; never again.
+DEFINE TABLE IF NOT EXISTS worker SCHEMAFULL;
+DEFINE FIELD OVERWRITE t      ON worker TYPE float;                       -- the claim's time.time()
+DEFINE FIELD OVERWRITE at     ON worker TYPE string;                      -- the same instant, ISO
+DEFINE FIELD OVERWRITE name   ON worker TYPE string;
+DEFINE FIELD OVERWRITE hosted ON worker TYPE bool;
+DEFINE FIELD OVERWRITE model  ON worker TYPE option<string | null>;
+DEFINE FIELD OVERWRITE paused ON worker TYPE option<string | null>;
+
+-- One owner per background task over this database (2026-11-03): the vector sweeper takes `lease:embedder` before a
+-- pass and renews it per batch; a process whose lease lapsed stops its pass. Two API processes serve during T10, so
+-- the lease, not the process, says who embeds: never two embedders over one database.
+DEFINE TABLE IF NOT EXISTS lease SCHEMAFULL;
+DEFINE FIELD OVERWRITE kind  ON lease TYPE string;
+DEFINE FIELD OVERWRITE owner ON lease TYPE option<string>;
+DEFINE FIELD OVERWRITE until ON lease TYPE option<datetime>;

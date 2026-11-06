@@ -240,7 +240,7 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
 fn write_methods(path: &str) -> &'static [&'static str] {
     match path {
         "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" => &["PATCH"],
-        "/api/profile/voice" => &["PUT"],
+        "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],
     }
 }
@@ -256,8 +256,9 @@ async fn every_moved_path_is_answered_here() {
     let ids = pk_api::OWN_PATTERNS.map(|p| p.replace("{id}", "joke:a%2Fb").replace("{id2}", "joke:c"));
     for p in pk_api::OWN_PATHS.iter().copied().chain(ids.iter().map(String::as_str)) {
         let (s, _, b) = send(&st, get(p).body(Body::empty()).unwrap()).await;
-        let answered_here =
-            s == StatusCode::UNAUTHORIZED || (p == "/api/health" && s == StatusCode::SERVICE_UNAVAILABLE);
+        // `/api/health` and `/api/live` take no token: before any data they answer the boot 503 themselves
+        let answered_here = s == StatusCode::UNAUTHORIZED
+            || (matches!(p, "/api/health" | "/api/live") && s == StatusCode::SERVICE_UNAVAILABLE);
         assert!(answered_here, "{p}: {s} {}", String::from_utf8_lossy(&b));
     }
 }
@@ -310,6 +311,9 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         "/api/merge/history",
         "/api/jokes/a/b/versions",
         "/api/jokes/x/versions/y",
+        "/api/ask/chats",
+        "/api/worker/jobs/x/file",
+        "/api/worker/files",
     ] {
         let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, post).await.0, StatusCode::NOT_FOUND, "{p} is forwarded");

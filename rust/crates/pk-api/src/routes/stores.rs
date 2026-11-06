@@ -54,6 +54,16 @@ pub(crate) fn voice_view(doc: Option<&Map<String, Value>>, owner: &str) -> Value
     out
 }
 
+/// `profile_api.view(doc, worker=True, laughs=...)`: the worker's copy: no `previous`, his laugh lines instead.
+pub(crate) fn voice_worker_view(doc: Option<&Map<String, Value>>, owner: &str, laughs: Vec<Value>) -> Value {
+    let mut out = voice_view(doc, owner);
+    if let Some(m) = out.as_object_mut() {
+        m.remove("previous");
+        m.insert("laugh_lines".into(), Value::Array(laughs));
+    }
+    out
+}
+
 /// `GET /api/profile/voice`: his voice profile, its previous version (the app's Undo) and what was learned.
 pub async fn voice(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());

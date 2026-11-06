@@ -1,7 +1,8 @@
 //! `SurrealDB` through the official `surrealdb` crate, for Punchable's hosted services: the row mapping that
 //! `db/kbmap.py` defines, the schema (`db/schema.surql` and `db/schema_extra.surql`, compiled in), the
 //! decision-append transaction of `api-dev/surreal_kb.py`, the `creative_event` mirror of `api-dev/creative_api.py`,
-//! and one `LIVE` subscription over the tables the app watches.
+//! one `LIVE` subscription over the tables the app watches, the vector sweeper's rows (`vectors`) and the lease one
+//! background task takes over the database (`lease`).
 //!
 //! **Crate version.** The server is `SurrealDB` 3.3.4. The crate is `surrealdb` 3.3.5 (workspace `Cargo.toml`): the
 //! 3.x line is stable (3.0.0 shipped in 2025; 3.3.5 is the latest stable on 2026-10-29), it speaks the 3.x RPC and
@@ -27,10 +28,12 @@ pub mod engine;
 pub mod error;
 pub mod ids;
 pub mod kbmap;
+pub mod lease;
 pub mod live;
 pub mod schema;
 pub mod store;
 pub mod value;
+pub mod vectors;
 
 pub use config::{Auth, Config};
 pub use creative::{Reconcile, Reconciled, line_hash, same_line};
@@ -40,3 +43,8 @@ pub use live::{Change, Changes, LIVE_TABLES};
 pub use schema::{CHANGEFEED_TABLES, SCHEMA, SCHEMA_EXTRA, schema_shas};
 pub use store::{Appended, MIN_VERSION, Snapshot, Store, Vars, vars};
 pub use value::{from_db, to_db};
+pub use vectors::{PendingRow, VECTOR_TABLES};
+
+/// The database's record id, for callers that carry one between this crate's reads and writes (the sweeper's
+/// rows) without naming the database crate themselves.
+pub use surrealdb::types::RecordId;

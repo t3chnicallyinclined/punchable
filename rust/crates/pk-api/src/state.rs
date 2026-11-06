@@ -75,6 +75,10 @@ struct Inner {
     /// the service's one parsed copy (the row's text is in `SrcTexts` like every file's), shared by every
     /// generation's groups memo ([`crate::snapshot::Data::merge_groups`]).
     judge: Mutex<Option<Judge>>,
+    /// The `/api/live` hub (its tasks are started by `serve`, or by a test).
+    live: crate::live::LiveHub,
+    /// The vector sweeper's status (`Sweeper.status()`), for the log and the tests.
+    sweep: crate::sweep::Status,
 }
 
 /// The judge's pairs as parsed, with the sha of the row they came from.
@@ -143,7 +147,19 @@ impl AppState {
             creative_lock: tokio::sync::Mutex::new(()),
             last_merge_index: Mutex::new(None),
             judge: Mutex::new(None),
+            live: crate::live::LiveHub::new(),
+            sweep: crate::sweep::Status::default(),
         }))
+    }
+
+    /// The `/api/live` hub.
+    pub fn live(&self) -> &crate::live::LiveHub {
+        &self.0.live
+    }
+
+    /// The vector sweeper's status.
+    pub fn sweep(&self) -> &crate::sweep::Status {
+        &self.0.sweep
     }
 
     /// SIGTERM arrived: readiness answers 503 from now on so the Service stops sending, while requests drain.
@@ -590,6 +606,13 @@ impl AppState {
                     .unwrap_or_else(|_| Err(pk_store::StoreError::mapping("connect timed out")))
                 {
                     Ok(s) => {
+                        // the tables added for hosting (`db/schema_extra.surql`), as the Python applies them at its
+                        // start: additive and idempotent, skipped when unchanged; a failure is logged, never fatal
+                        match s.apply_extra_schema(false).await {
+                            Ok(true) => tracing::info!("schema_extra applied"),
+                            Ok(false) => {}
+                            Err(e) => tracing::warn!(error = %e, "schema_extra could not be applied"),
+                        }
                         self.set_store(Some(s));
                         tracing::info!("connected to SurrealDB");
                     }

@@ -30,8 +30,8 @@ pub const TRANSCRIBER_KINDS: [&str; 2] = ["process_set", "import_youtube"];
 /// Claims a job gets before a retry is refused (`MAX_ATTEMPTS`).
 pub const MAX_ATTEMPTS: i64 = 3;
 
-/// Python's `repr(JOB_KINDS)`, the tuple as the refusal prints it.
-fn kinds_repr() -> String {
+/// Python's `repr(JOB_KINDS)`, the tuple as the refusals print it (here and in the claim route).
+pub fn kinds_repr() -> String {
     format!(
         "({})",
         JOB_KINDS

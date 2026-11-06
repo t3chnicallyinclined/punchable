@@ -115,15 +115,28 @@ impl Model {
 
     /// One text's vector (`query` = the search prefix): a turn at the model, then the blocking pool.
     pub async fn vector(&self, e: Arc<dyn Embedder>, text: String, query: bool) -> Result<Vec<f32>, VectorError> {
+        self.vectors(e, vec![text], query)
+            .await?
+            .into_iter()
+            .next()
+            .ok_or(VectorError::Empty)
+    }
+
+    /// A batch's vectors, in the texts' order (the sweeper's 16 at a time): one turn at the model for the batch.
+    pub async fn vectors(
+        &self,
+        e: Arc<dyn Embedder>,
+        texts: Vec<String>,
+        query: bool,
+    ) -> Result<Vec<Vec<f32>>, VectorError> {
         let turn = Arc::clone(&self.0.runs).acquire_owned().await?;
-        tokio::task::spawn_blocking(move || {
+        let out = tokio::task::spawn_blocking(move || {
             let _turn = turn;
-            e.embed(&[text.as_str()], query)
+            let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+            e.embed(&refs, query)
         })
-        .await??
-        .into_iter()
-        .next()
-        .ok_or(VectorError::Empty)
+        .await??;
+        Ok(out)
     }
 }
 

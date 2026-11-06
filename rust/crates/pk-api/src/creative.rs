@@ -309,6 +309,8 @@ pub struct Stores {
     pub profile: Replayed,
     /// His merges, the AI's attaches, the pairs he dismissed.
     pub merges: Replayed,
+    /// The rooms he pinned (the worker reads them; the venue routes are the Python's until group 6).
+    pub venues: Replayed,
 }
 
 impl Default for Stores {
@@ -321,6 +323,7 @@ impl Default for Stores {
             jobs: Replayed::new("jobs"),
             profile: Replayed::new("profile"),
             merges: Replayed::new("merges"),
+            venues: Replayed::new("venues"),
         }
     }
 }
@@ -336,6 +339,7 @@ impl Stores {
             "jobs" => &self.jobs,
             "profile" => &self.profile,
             "merges" => &self.merges,
+            "venues" => &self.venues,
             _ => return None,
         })
     }

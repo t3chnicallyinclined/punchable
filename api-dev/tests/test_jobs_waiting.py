@@ -7,6 +7,7 @@ and the claim check: no API process, no data, no network.
 """
 from __future__ import annotations
 
+import json
 import sys
 import time
 from pathlib import Path
@@ -104,6 +105,69 @@ def test_paused_claim_reports_the_budget_and_the_worker_line_says_the_server():
     w = CR.worker_status(SimpleNamespace(jobs_mode="worker", worker_seen=None))
     assert w["online"] is False and w["name"] is None and w["hosted"] is False
     assert CR.worker_status(SimpleNamespace(jobs_mode="inproc"))["online"] is True
+
+
+def test_a_claim_that_lost_its_row_to_the_other_server_never_claims_the_same_job(tmp_path):
+    """T10 round 3: pk-api and the Python both hand out jobs. When the Python's claim row is refused (pk-api wrote
+    that row, claiming the job), the Python checks the job again over the fresh rows and takes the next one instead
+    of writing a second claim on the same job. The red arm is `LineStore.append` without `recheck`: two claims."""
+    base = [json.dumps({"ts": "2026-11-03T10:00:00+00:00", "op": "enqueue", "id": "job:a", "by": "owner",
+                        "data": {"kind": "riff", "key": "riff|a", "input": {}}}),
+            json.dumps({"ts": "2026-11-03T10:00:01+00:00", "op": "enqueue", "id": "job:b", "by": "owner",
+                        "data": {"kind": "riff", "key": "riff|b", "input": {}}})]
+    # the other server's claim of job:a, landing on row 2 just before ours (stamped now: a claim older than the
+    # stale window would be claimable again, rightly)
+    theirs = json.dumps({"ts": CR.now_iso(), "op": "claim", "id": "job:a", "by": "worker:other",
+                         "data": {"worker": "other"}})
+    db = list(base)
+    written: list[str] = []
+
+    def writer(name, seq, line, ev):
+        if seq < len(db):
+            raise RuntimeError(f"Database index `creative_event_store_seq` already contains ['{name}', {seq}]")
+        db.append(line)
+        written.append(line)
+
+    st = CR.LineStore(tmp_path, "jobs", list(base), writer, reload=lambda: list(db))
+    cr = CR.Creative(tmp_path, None)
+    db.append(theirs)  # pk-api claimed job:a while we were choosing
+    j = cr.claim({"jobs": st}, ["riff"], "mine")
+    assert j is not None and j["id"] == "job:b", "the next job, not the one the other server took"
+    assert [json.loads(x)["id"] for x in written] == ["job:b"]
+    assert st.get("job:a")["worker"] == "other" and st.get("job:a")["attempts"] == 1, "the other server's claim stands alone"
+    # nothing left: None, and nothing written
+    assert cr.claim({"jobs": st}, ["riff"], "mine") is None and len(written) == 1
+
+
+def test_the_last_claim_lives_in_the_database_when_there_is_one():
+    """T10 group 5: with a SurrealDB connection (`cr.seen_rpc`) the claim is kept as the row `worker:seen`, which
+    pk-api writes and reads too, and the worker line is read from the row, never from this process's memory."""
+    rows: dict = {}
+
+    class Rpc:
+        def write(self, sql, vars=None, expect=None):
+            assert sql.startswith("UPSERT worker:seen") and expect == 1
+            rows["seen"] = dict(vars["w"])
+            return [rows["seen"]]
+
+        def last(self, sql, vars=None):
+            assert "worker:seen" in sql
+            return rows.get("seen")
+
+    cr = SimpleNamespace(jobs_mode="worker", worker_seen=None, seen_rpc=Rpc())
+    _, seen = CR.check_claim({"kinds": ["riff"], "worker": "server-1", "hosted": True})
+    CR.save_worker_seen(cr, seen)
+    assert rows["seen"] == {k: seen[k] for k in CR.SEEN_KEYS} and cr.worker_seen == seen
+    assert CR.worker_status(cr)["name"] == "server-1"
+    # the other server answered the next claim: this process says what the row says
+    rows["seen"] = {**rows["seen"], "name": "server-2", "t": time.time()}
+    assert CR.worker_status(cr)["name"] == "server-2" and CR.worker_status(cr)["online"] is True
+    # never heard from, on either server
+    rows.clear()
+    assert CR.worker_status(cr)["name"] is None and CR.worker_status(cr)["online"] is False
+    # no database (a files backend): the process's own memory, as before
+    cr.seen_rpc = None
+    assert CR.worker_status(cr)["name"] == "server-1"
 
 
 def test_ai_worker_route_is_the_worker_status_alone(monkeypatch):

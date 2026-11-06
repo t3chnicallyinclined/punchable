@@ -157,6 +157,30 @@ def test_sweeper_fills_vectors_once_and_again_only_when_the_text_changes(scratch
     S.sweep(r, emb, v)
 
 
+def test_the_embedder_lease_has_one_owner_at_a_time(scratch):
+    """T10 group 5: two API processes sweep over one database; the lease says which one embeds. Taken by the first
+    asker, refused to the second, renewed by its owner, free again once it lapsed; a pass whose lease lapsed stops."""
+    r = scratch
+    k = "embedder_test"
+    assert S.lease_acquire(r, "a", kind=k, ttl_s=2)
+    assert not S.lease_acquire(r, "b", kind=k, ttl_s=2)
+    assert S.lease_acquire(r, "a", kind=k, ttl_s=2), "the owner renews"
+    time.sleep(2.3)
+    assert S.lease_acquire(r, "b", kind=k, ttl_s=2), "lapsed: the next asker takes it"
+    assert not S.lease_acquire(r, "a", kind=k, ttl_s=2)
+    with pytest.raises(ValueError):
+        S.lease_acquire(r, "a", kind="not an identifier")
+    # a sweep renews before every batch and stops when the lease is gone (something pending, so a batch runs)
+    r.query("UPDATE joke:j2 SET summary = 'A line about a raccoon that wants a tight five.';")
+    try:
+        with pytest.raises(RuntimeError, match="lease lapsed"):
+            S.sweep(r, S.HashEmbedder(), view(), renew=lambda: False)
+        assert S.sweep(r, S.HashEmbedder(), view(), renew=lambda: True) == {"joke": 1, "performance": 0, "unit": 0}
+    finally:
+        r.query("UPDATE joke:j2 SET summary = $s;", {"s": GRAPH["nodes"][2]["summary"]})
+        S.sweep(r, S.HashEmbedder(), view())
+
+
 def test_fused_search_finds_a_typed_idea_and_a_taped_moment(scratch):
     r, v, emb = scratch, view(), S.HashEmbedder()
     S.sweep(r, emb, v)

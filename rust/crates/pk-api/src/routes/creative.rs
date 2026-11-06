@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use axum::extract::{RawQuery, State};
-use axum::http::{HeaderMap, header};
 use axum::response::Response;
 use pk_creative::Items;
 use serde_json::{Map, Value, json};
@@ -22,7 +21,7 @@ use crate::snapshot::Data;
 use crate::state::AppState;
 
 /// A store's items for this request, or the 500 the Python's exception would be.
-pub(super) async fn items_of(
+pub(crate) async fn items_of(
     st: &AppState,
     which: fn(&crate::creative::Stores) -> &Replayed,
 ) -> Result<Arc<Items>, ApiError> {
@@ -117,11 +116,20 @@ fn to_sort(judge: Option<&str>, kept: &Items, idx: &AppIndex) -> usize {
         .count()
 }
 
-/// The Python's `worker_status(cr)` when no worker has claimed (no Python behind this service to have seen one).
-fn worker_never_seen(st: &AppState) -> Value {
-    json!({"online": false, "last_seen": null, "name": null,
-           "where": if st.config().auth.is_some() { "the server" } else { "a development PC" },
-           "hosted": false, "model": null, "paused": null, "online_window_s": 120})
+/// `worker_status(cr)`: the worker's line from its last claim in the database, whichever server answered it; a
+/// database that cannot be read is the 500 the Python's would be.
+pub(super) async fn worker_status(st: &AppState) -> Result<Value, ApiError> {
+    let store = st
+        .store_handle()
+        .ok_or_else(|| ApiError::internal("ConnectionError", "the database is not connected"))?;
+    let seen = crate::worker::load_seen(&store)
+        .await
+        .map_err(|e| ApiError::internal("StoreError", e))?;
+    Ok(crate::worker::status(
+        seen.as_ref(),
+        st.config().auth.is_some(),
+        crate::worker::unix_now(),
+    ))
 }
 
 /// The path of the judge's verdicts.
@@ -149,13 +157,9 @@ pub(super) async fn judge_text(st: &AppState, d: &Data) -> Option<Arc<str>> {
 
 /// `GET /api/tonight/screen` (`say_api.tonight_screen`): the whole Tonight tab in one call: tonight's list, the
 /// newest set, the suggested questions, how many "not a joke?" suggestions wait, the worker and the counts. The
-/// worker's status is the Python process's memory of its last claim until T10: asked of the Python
-/// (`GET /api/ai/worker`) while the rest is built here.
-pub async fn tonight_screen(
-    State(st): State<AppState>,
-    headers: HeaderMap,
-    RawQuery(raw): RawQuery,
-) -> ApiResult<Response> {
+/// worker's status comes from its last claim in the database (`worker:seen`, written by whichever server answered
+/// it), read beside the stores while the rest is built.
+pub async fn tonight_screen(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());
     if let Err(e) = super::pick(&q) {
         st.data().await?;
@@ -163,16 +167,16 @@ pub async fn tonight_screen(
     }
     let me = st.clone();
     let (d, stores) = st
-        .data_and(async move { tokio::try_join!(items_of(&me, |s| &s.storyboards), items_of(&me, |s| &s.suggestions)) })
+        .data_and(async move {
+            tokio::try_join!(
+                items_of(&me, |s| &s.storyboards),
+                items_of(&me, |s| &s.suggestions),
+                worker_status(&me)
+            )
+        })
         .await?;
-    // the worker's status, asked of the Python while the rest is built; aborted if this request ends early
-    let mut worker = AbortOnDrop({
-        let st = st.clone();
-        let auth = headers.get(header::AUTHORIZATION).cloned();
-        tokio::spawn(async move { crate::proxy::python_json(&st, "/api/ai/worker", auth.as_ref()).await })
-    });
     let (idx, c) = tokio::try_join!(d.index(q.include_hidden()), d.corpus(&st))?;
-    let (boards, kept) = super::finish(stores).await??;
+    let (boards, kept, worker) = super::finish(stores).await??;
     let judge = judge_text(&st, &d).await;
     // `time.strftime` on the Python pod: its local day
     let now = chrono::Local::now();
@@ -194,31 +198,12 @@ pub async fn tonight_screen(
         qs.push("What's my strongest closer right now?".to_string());
         qs.push(never_tried(&c));
         json!({"date": date, "weekday": weekday, "board": board, "to_sort": to_sort(judge.as_deref(), &kept, &idx),
-               "latest_set": latest_set, "questions": qs, "worker": Value::Null,
+               "latest_set": latest_set, "questions": qs, "worker": worker,
                "counts": {"bits": c.jokes.len(), "sets": c.sets.len()}})
     })
     .await
     .map_err(|e| ApiError::internal("JoinError", e))?;
-    // the Python cannot fail to say where its worker is; when it cannot be asked, the screen is the 502 a forward
-    // that found no Python is (the app shows its own retry), never a made-up status
-    let worker = (&mut worker.0)
-        .await
-        .map_err(|e| ApiError::internal("JoinError", e))??
-        .unwrap_or_else(|| worker_never_seen(&st));
-    let mut body = body;
-    body["worker"] = worker;
     Ok(ok(&body))
-}
-
-/// A spawned task that is aborted when this is dropped before it is awaited (a handler that returns early or whose
-/// caller hung up), so it never holds a proxy slot for an answer nobody reads.
-struct AbortOnDrop<T>(tokio::task::JoinHandle<T>);
-
-impl<T> Drop for AbortOnDrop<T> {
-    fn drop(&mut self) {
-        // a no-op once the task has finished
-        self.0.abort();
-    }
 }
 
 /// The newest set as the Tonight row shows it (`latest_card`).
@@ -284,23 +269,6 @@ mod tests {
     fn obj(v: Value) -> Map<String, Value> {
         let Value::Object(m) = v else { panic!("an object") };
         m
-    }
-
-    #[tokio::test]
-    async fn a_sub_request_nobody_awaits_is_aborted() {
-        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
-        let task = AbortOnDrop(tokio::spawn(async move {
-            let _held = tx;
-            std::future::pending::<()>().await;
-        }));
-        drop(task);
-        // the task (and the sender it held) is gone, so the receiver sees a closed channel rather than waiting
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_secs(5), rx)
-                .await
-                .expect("not left running")
-                .is_err()
-        );
     }
 
     #[test]

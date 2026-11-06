@@ -44,7 +44,8 @@ fn sha(texts: &[&str]) -> String {
     hex::encode(h.finalize())
 }
 
-pub(crate) fn check_ident(s: &str, what: &str) -> Result<()> {
+/// A plain identifier (letters, digits, `_`) that may be spliced into a statement, or the error naming it.
+pub fn check_ident(s: &str, what: &str) -> Result<()> {
     if !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         Ok(())
     } else {

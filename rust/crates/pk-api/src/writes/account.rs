@@ -87,6 +87,24 @@ fn clean_text(b: &Map<String, Value>) -> ApiResult<String> {
     Ok(t)
 }
 
+/// `profile_api.put(cr, kb, body, by)`: validate (shape, size, legal), then one `put` event; the profile as the
+/// app's GET answers it. Shared by his PUT and the loader's worker PUT.
+pub(crate) async fn put_voice(st: &AppState, b: &Map<String, Value>, by: &str) -> ApiResult<Value> {
+    let _cr = st.creative_lock().lock().await;
+    let text = clean_text(b)?;
+    if st.legal().is_legal(&text) {
+        return Err(http(422, PROFILE_LEGAL_MSG));
+    }
+    let cr = Creative::new(st.clone());
+    let doc = cr
+        .append("profile", "put", VOICE_ID, json!({"kind": "voice", "text": text}), by)
+        .await?;
+    Ok(crate::routes::stores::voice_view(
+        doc.as_object(),
+        &st.config().owner_id,
+    ))
+}
+
 /// `PUT /api/profile/voice {text}`: his voice profile replaced (the previous one kept for Undo).
 pub async fn profile_put(
     State(st): State<AppState>,
@@ -97,22 +115,7 @@ pub async fn profile_put(
 ) -> ApiResult<Response> {
     let Req { st, q: _, b } = request(st, raw.as_deref(), &headers, body).await?;
     let by = actor(&st, &caller, &b)?;
-    let out = detached(async move {
-        let _cr = st.creative_lock().lock().await;
-        let text = clean_text(&b)?;
-        if st.legal().is_legal(&text) {
-            return Err(http(422, PROFILE_LEGAL_MSG));
-        }
-        let cr = Creative::new(st.clone());
-        let doc = cr
-            .append("profile", "put", VOICE_ID, json!({"kind": "voice", "text": text}), &by)
-            .await?;
-        Ok(crate::routes::stores::voice_view(
-            doc.as_object(),
-            &st.config().owner_id,
-        ))
-    })
-    .await?;
+    let out = detached(async move { put_voice(&st, &b, &by).await }).await?;
     Ok(ok(&out))
 }
 

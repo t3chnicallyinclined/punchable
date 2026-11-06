@@ -1049,6 +1049,23 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
 
+    _body_taken = False   # set by whoever reads the request body (body_json, upload)
+
+    def handle_one_request(self):
+        """One request, then the body nobody read (a route that answered 404 or 401 first) is thrown away: a kept-alive
+        connection (pk-api's pool) would otherwise parse it as the next request line and answer 400."""
+        self._body_taken = False
+        super().handle_one_request()
+        try:
+            n = int(self.headers.get("Content-Length") or 0) if getattr(self, "headers", None) else 0
+        except ValueError:
+            n = 0
+        if n > 0 and not self._body_taken and not self.close_connection:
+            if n <= MAX_BODY:
+                self.rfile.read(n)
+            else:
+                self.close_connection = True
+
     def send_response(self, code, message=None):
         self._pk_status = code   # metrics.instrument reads the status this handler sent
         super().send_response(code, message)
@@ -1101,6 +1118,7 @@ class Handler(BaseHTTPRequestHandler):
             return {}
         if n > limit:
             raise K.DecisionError("body too large")
+        self._body_taken = True
         try:
             b = json.loads(self.rfile.read(n).decode("utf-8"))
         except ValueError:
@@ -2053,6 +2071,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def upload(self):
         kb = self.kb
+        self._body_taken = True
         n = int(self.headers.get("Content-Length") or 0)
         if n <= 0 or n > MAX_UPLOAD:
             raise K.DecisionError("upload missing or over 1 GB")
@@ -2286,6 +2305,8 @@ def main():
         import creative_api as CR
         Handler.creative = CR.Creative(a.creative_dir.resolve(), a.vectors.resolve() if a.vectors else None,
                                        geocode=os.environ.get("PK_GEOCODE") == "1", jobs_mode=a.jobs)
+        if a.backend == "surreal":  # the worker's last claim lives in the database (shared with pk-api)
+            Handler.creative.seen_rpc = primary.rpc
     idx = primary.app()
     idx.summaries()
     srv = ThreadingHTTPServer((a.host, a.port), Handler)

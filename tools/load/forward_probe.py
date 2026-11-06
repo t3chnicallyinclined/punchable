@@ -17,7 +17,10 @@ transcript per call, 202), `POST /api/jokes/{joke}/versions` (a fresh version), 
 edit with a counter: never "nothing changed"); since T10 round 2 also `POST /api/review/rate:{perf}` (a rating that
 alternates per call on a moment of the thread's own), `POST /api/tonight:{joke}` (a list that alternates per call),
 `PATCH /api/settings` (a switch flipped per call), `POST /api/boards` (a fresh list), `PATCH /api/boards/{board}` (a
-title with a counter), `POST /api/workingsets/{set}/try` (a fresh note), `POST /api/profile/voice/learn` (a fresh dismissed draft); a write is asked of both servers at the same
+title with a counter), `POST /api/workingsets/{set}/try` (a fresh note), `POST /api/profile/voice/learn` (a fresh dismissed draft); since round 3 also
+`POST /api/worker/claim` (the hosted worker's heartbeat and next job; 204 once the queue is empty), `POST
+/api/boards/{board}/bridge` (a bridge queued) and `POST /api/jokes/{joke}/punchup` (a punch-up queued, then "already
+queued"); a write is asked of both servers at the same
 rate like a read, each with its own fresh body, so the gate is the same: at or below the Python at the same request
 rate.
 
@@ -114,17 +117,27 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
         return json.dumps({"training": turn % 2 == 1}).encode()
     if path == "/api/boards":
         return json.dumps({"title": f"Probe list {tag}", "joke_ids": []}).encode()
-    if path.startswith("/api/boards/"):
+    if path.startswith("/api/boards/") and not path.endswith("/bridge"):
         return json.dumps({"title": f"Probe list {tag}"}).encode()
     if path.endswith("/try"):
         return json.dumps({"text": f"probe try note {tag}"}).encode()
     if path == "/api/profile/voice/learn":
         return json.dumps({"dropped": [f"probe draft passed over {tag}"]}).encode()
+    # T10 round 3: the hosted worker's claim (a 204 once the queue is empty counts as answered) and the enqueue
+    # routes (a bridge per call; a punch-up of the thread's own bit, queued once then "already queued", both 202)
+    if path == "/api/worker/claim":
+        return json.dumps({"kinds": ["bridge", "punchup", "ask", "facts", "riff", "ask_chat", "embed", "memolink", "set_text"],
+                           "worker": f"probe-{col}", "hosted": True}).encode()
+    if path.endswith("/bridge"):
+        return json.dumps({"from": "{from}", "to": "{to}"}).encode()
+    if path.endswith("/punchup"):
+        return b"{}"
     return None
 
 
 PERFS: list[str] = []
 JOKES: list[str] = []
+BRIDGE: tuple[str, str] = ("", "")
 
 
 def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> dict:
@@ -150,6 +163,8 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
                 for turn_in_round, (col, c) in enumerate(order):
                     try:
                         body = body_for(path, col, w, i, 2 * i + turn_in_round) if method != "GET" else None
+                        if body and b"{from}" in body:
+                            body = body.replace(b"{from}", BRIDGE[0].encode()).replace(b"{to}", BRIDGE[1].encode())
                         colon = any(path.startswith(x) for x in ("/api/decision:", "/api/review/rate:", "/api/tonight:"))
                         took, status = c.call(method, path.split(":", 1)[0] if colon else path, body)
                     except Exception as e:  # noqa: BLE001
@@ -157,7 +172,7 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
                             errors.append(f"{col} {route}: {e}")
                         continue
                     with lock:
-                        if status not in (200, 201, 202):
+                        if status not in (200, 201, 202, 204):
                             errors.append(f"{col} {route}: HTTP {status}")
                         else:
                             out.setdefault((route, col), []).append(took)
@@ -242,6 +257,21 @@ def main() -> int:
         for ph, (path, key) in sources.items():
             if not any(ph in r for r in ROUTES):
                 continue
+            if ph == "{board}" and any(r.endswith("/bridge") for r in ROUTES):
+                # a bridge needs two bits of the list: the first two of the first list with two
+                # (the list's summary carries no bit ids: its page does)
+                boards = []
+                for b in fetch(path)[key]:
+                    page = fetch(f"/api/boards/{urllib.parse.quote(b['id'], safe=':')}")["board"]
+                    if len(page.get("joke_ids") or []) >= 2:
+                        boards.append(page)
+                        break
+                if boards:
+                    global BRIDGE
+                    BRIDGE = (boards[0]["joke_ids"][0], boards[0]["joke_ids"][1])
+                    ids = [boards[0]["id"]]
+                    ROUTES = [r.replace(ph, urllib.parse.quote(ids[0], safe=":")) for r in ROUTES]
+                    continue
             if ph == "{perf}":
                 # the moments of the first sets with an analysis: `perf:<set key>@<start_ms>`, one per thread
                 ids = []

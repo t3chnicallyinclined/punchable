@@ -40,6 +40,9 @@ pub struct ApiConfig {
     /// The court-material rule every stored text goes through (`refuse_legal`): the generic markers until the binary
     /// adds the file's.
     pub legal: pk_core::legal::Legal,
+    /// `PK_VEC_SWEEP_S` (default 60): how often the vector sweeper runs; `0` = never (a test pair, a pod that must
+    /// not embed).
+    pub sweep_every: Option<std::time::Duration>,
 }
 
 /// Keycloak.
@@ -122,6 +125,11 @@ impl ApiConfig {
                     .join("legal_rules.json")
             }),
             legal: pk_core::legal::Legal::default(),
+            sweep_every: match env.f64("PK_VEC_SWEEP_S")? {
+                None => Some(crate::sweep::DEFAULT_EVERY),
+                Some(s) if s > 0.0 => Some(std::time::Duration::from_secs_f64(s)),
+                Some(_) => None,
+            },
         })
     }
 }
@@ -175,5 +183,22 @@ mod tests {
         m.push(("PK_APP_FLAGS", r#"{"glass_accessory": false}"#));
         let c = ApiConfig::from_env(&Env::from_map(m)).unwrap();
         assert_eq!(c.flags["glass_accessory"], false);
+    }
+
+    #[test]
+    fn the_sweep_period_is_sixty_seconds_unless_set_and_zero_is_off() {
+        let mut m = base();
+        m.push(("OIDC_ISSUER", "https://auth.example/realms/punchable"));
+        assert_eq!(
+            ApiConfig::from_env(&Env::from_map(m.clone())).unwrap().sweep_every,
+            Some(std::time::Duration::from_secs(60))
+        );
+        m.push(("PK_VEC_SWEEP_S", "86400"));
+        assert_eq!(
+            ApiConfig::from_env(&Env::from_map(m.clone())).unwrap().sweep_every,
+            Some(std::time::Duration::from_secs(86400))
+        );
+        m.push(("PK_VEC_SWEEP_S", "0"));
+        assert_eq!(ApiConfig::from_env(&Env::from_map(m)).unwrap().sweep_every, None);
     }
 }

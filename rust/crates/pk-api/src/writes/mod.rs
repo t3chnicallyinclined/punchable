@@ -22,6 +22,7 @@
 //! cannot leave a unit without its edge or a merge half written, as the Python's request thread cannot.
 
 pub mod account;
+pub mod ask;
 pub mod bits;
 pub mod boards;
 pub mod ideas;
@@ -30,6 +31,7 @@ pub mod learned;
 pub mod merge;
 pub mod review;
 pub mod transcript;
+pub mod worker;
 pub mod workingsets;
 
 use std::sync::{Arc, LazyLock};
@@ -78,6 +80,11 @@ pub fn is_id(s: &str) -> bool {
 /// `server.py` `body_json`: `Content-Length` decides what is read (nothing = `{}`; over [`MAX_BODY`] = refused
 /// before the body is read, as the Python refuses it), then the three refusals in its order.
 pub async fn body_json(headers: &HeaderMap, body: Body) -> ApiResult<Map<String, Value>> {
+    body_json_within(headers, body, MAX_BODY).await
+}
+
+/// [`body_json`] with the limit given (`body_json(limit)`: 8 MiB on the worker's routes).
+pub async fn body_json_within(headers: &HeaderMap, body: Body, limit: usize) -> ApiResult<Map<String, Value>> {
     let n: i64 = headers
         .get(header::CONTENT_LENGTH)
         .and_then(|v| v.to_str().ok())
@@ -87,10 +94,10 @@ pub async fn body_json(headers: &HeaderMap, body: Body) -> ApiResult<Map<String,
         return Ok(Map::new());
     }
     let n = usize::try_from(n).unwrap_or(usize::MAX);
-    if n > MAX_BODY {
+    if n > limit {
         return Err(ApiError::bad_request("body too large"));
     }
-    let bytes = axum::body::to_bytes(body, MAX_BODY)
+    let bytes = axum::body::to_bytes(body, limit)
         .await
         .map_err(|e| ApiError::bad_request(format!("body could not be read: {e}")))?;
     let raw = &bytes[..n.min(bytes.len())];
@@ -121,10 +128,21 @@ pub struct Req {
 
 /// [`Req`] for one request.
 pub async fn request(st: AppState, raw: Option<&str>, headers: &HeaderMap, body: Body) -> ApiResult<Req> {
+    request_within(st, raw, headers, body, MAX_BODY).await
+}
+
+/// [`request`] with the body limit given (the worker's routes take 8 MiB).
+pub async fn request_within(
+    st: AppState,
+    raw: Option<&str>,
+    headers: &HeaderMap,
+    body: Body,
+    limit: usize,
+) -> ApiResult<Req> {
     let q = crate::query::Query::parse(raw);
     st.require_loaded()?;
     crate::routes::pick(&q)?;
-    let b = body_json(headers, body).await?;
+    let b = body_json_within(headers, body, limit).await?;
     Ok(Req { st, q, b })
 }
 
@@ -249,7 +267,7 @@ fn fault(kind: &str, e: impl std::fmt::Display) -> ApiError {
     ApiError::internal(kind, e)
 }
 
-fn not_connected() -> ApiError {
+pub(crate) fn not_connected() -> ApiError {
     ApiError::internal("ConnectionError", "the database is not connected")
 }
 
@@ -459,6 +477,22 @@ pub enum Pre {
     Done(StatusCode, Value),
 }
 
+/// What a route's plan over the current items says (`Creative.claim`: the job is chosen from the rows as they are,
+/// so the event's id is known only once they are read).
+pub enum Plan {
+    /// Append this event.
+    Event {
+        /// The op.
+        op: String,
+        /// The item.
+        id: String,
+        /// The data.
+        data: Value,
+    },
+    /// Nothing to append: answer this instead.
+    Done(StatusCode, Value),
+}
+
 /// What [`Creative::append_if`] came to.
 pub enum Written {
     /// The row landed: the item the event named, as `Store.append` returns it.
@@ -493,6 +527,12 @@ impl Creative {
             .items(store.as_deref(), &self.st.config().owner_id)
             .await
             .map_err(|e| ApiError::internal("CreativeError", e))
+    }
+
+    /// The store's lines as the database holds them (`Mirror.lines`).
+    pub async fn lines(&self, name: &str) -> ApiResult<Vec<String>> {
+        let store = self.st.store_handle().ok_or_else(not_connected)?;
+        store.creative_lines(name).await.map_err(store_err)
     }
 
     /// The store's lines and items as they are now: what a route reads to mint an id (`st.n_events`).
@@ -579,15 +619,39 @@ impl Creative {
         ts: Option<&str>,
         pre: impl Fn(&Items) -> ApiResult<Pre>,
     ) -> ApiResult<Written> {
+        let plan = |items: &Items| -> ApiResult<Plan> {
+            Ok(match pre(items)? {
+                Pre::Go => Plan::Event {
+                    op: op.to_string(),
+                    id: id.to_string(),
+                    data: data.clone(),
+                },
+                Pre::Done(status, v) => Plan::Done(status, v),
+            })
+        };
+        self.append_planned(name, by, ts, plan).await
+    }
+
+    /// [`Creative::append_if_at`] with the event itself chosen over the items as they are (`Creative.claim`: the
+    /// oldest claimable job), chosen again from fresh rows when another writer took the row meanwhile.
+    pub async fn append_planned(
+        &self,
+        name: &str,
+        by: &str,
+        ts: Option<&str>,
+        plan: impl Fn(&Items) -> ApiResult<Plan>,
+    ) -> ApiResult<Written> {
         let store = self.st.store_handle().ok_or_else(not_connected)?;
         for attempt in 0..RETRIES {
             back_off(attempt).await;
             let (lines, mut s) = self.replayed_now(name).await?;
-            if let Pre::Done(status, v) = pre(s.items())? {
-                return Ok(Written::Skipped(status, v));
-            }
+            let (op, id, data) = match plan(s.items())? {
+                Plan::Event { op, id, data } => (op, id, data),
+                Plan::Done(status, v) => return Ok(Written::Skipped(status, v)),
+            };
+            let (op, id) = (op.as_str(), id.as_str());
             let now = ts.map_or_else(pk_core::time::now_iso, str::to_string);
-            let ev = Event::new(op, id, data.clone(), by, &now);
+            let ev = Event::new(op, id, data, by, &now);
             // a refused event never reaches the log: the Python's `Store.append` raises the reducer's ValueError,
             // which a route's probe turned into its 400 before, so here it is the 500 an unprobed one is
             s.append_event(ev.clone()).map_err(|e| fault("ValueError", e.msg()))?;

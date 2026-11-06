@@ -318,7 +318,10 @@ class LineStore(Store):
     def events(self) -> list[dict]:
         return [json.loads(x) for x in self._lines]
 
-    def append(self, op: str, id_: str, data: dict, by: str = OWNER_ID, ts: str | None = None) -> dict:
+    def append(self, op: str, id_: str, data: dict, by: str = OWNER_ID, ts: str | None = None, recheck=None) -> dict | None:
+        """One event, written after the rows as they are now. `recheck(items)`, when given, runs over the rows read
+        again after another writer took the row: False means the event no longer holds (the job pk-api just claimed)
+        and nothing is written (None), where sending it again would write it twice."""
         for attempt in range(self.APPEND_RETRIES):
             ev = {"ts": ts or now_iso(), "op": op, "id": id_, "by": by, "data": data}
             probe = json.loads(json.dumps(self.items))  # validate on a copy: a bad op never reaches the log
@@ -333,6 +336,8 @@ class LineStore(Store):
                 sys.stderr.write(f"{self.name}: another writer took row {len(self._lines)} (attempt {attempt + 1}); reading again\n")
                 self._lines = self._reload()
                 self.rebuild()
+                if recheck is not None and not recheck(self.items):
+                    return None
                 continue
             self._lines.append(line)
             self.items = probe
@@ -374,7 +379,8 @@ class Creative:
         self.conflicts: dict[str, str] = {}
         # Settings > Connections: gsync writes its state next to the creative folder (comedy/kb/gsync) on his PC
         self.gsync_dir = Path(os.environ.get("PK_GSYNC_DIR") or self.dir.parent / "gsync")
-        self.worker_seen: dict | None = None   # the last /api/worker/claim (in memory: "online" is about now)
+        self.worker_seen: dict | None = None   # the last /api/worker/claim this process answered
+        self.seen_rpc = None                   # on SurrealDB: the connection `worker:seen` is kept on (both servers)
         self._corpus: dict[str, tuple] = {}
         self._vectors = None
         os.environ["PUNCHABLE_CREATIVE_DIR"] = str(self.dir)  # creative.venues / story read it
@@ -569,11 +575,18 @@ class Creative:
                 return now - _ts(j["claimed_at"]) > STALE_CLAIM_S
             return False
 
-        cand = sorted((j for j in jobs.items.values() if claimable(j)), key=lambda j: (j["created_at"], j["id"]))
-        if not cand:
-            return None
-        jobs.append("claim", cand[0]["id"], {"worker": worker}, by=f"worker:{worker}")
-        return jobs.get(cand[0]["id"])
+        # two servers hand out jobs (pk-api, T10): when the row this claim meant to write was taken meanwhile, the
+        # job is checked again over the fresh rows and, if it is gone, the next one is chosen; never the same job
+        # to two workers
+        for _ in range(LineStore.APPEND_RETRIES):
+            cand = sorted((j for j in jobs.items.values() if claimable(j)), key=lambda j: (j["created_at"], j["id"]))
+            if not cand:
+                return None
+            cid = cand[0]["id"]
+            again = {"recheck": lambda items: cid in items and claimable(items[cid])} if isinstance(jobs, LineStore) else {}
+            if jobs.append("claim", cid, {"worker": worker}, by=f"worker:{worker}", **again) is not None:
+                return jobs.get(cid)
+        return None
 
 
 def _ts(s: str | None) -> float:
@@ -632,6 +645,33 @@ def _queued(j: dict) -> dict:
     return out
 
 
+SEEN_KEYS = ("t", "at", "name", "hosted", "model", "paused")
+
+
+def save_worker_seen(cr, seen: dict) -> None:
+    """The worker's last claim: kept in this process and, on SurrealDB (`cr.seen_rpc`), as the one row `worker:seen`,
+    which pk-api writes and reads too, so both servers show the same worker line while both serve (T10 group 5)."""
+    cr.worker_seen = seen
+    rpc = getattr(cr, "seen_rpc", None)
+    if rpc is not None:
+        rpc.write("UPSERT worker:seen CONTENT $w RETURN AFTER;", {"w": {k: seen.get(k) for k in SEEN_KEYS}}, expect=1)
+
+
+def load_worker_seen(cr) -> dict | None:
+    """The last claim as the database holds it (whichever server answered it), else this process's own."""
+    rpc = getattr(cr, "seen_rpc", None)
+    if rpc is None:
+        return getattr(cr, "worker_seen", None)
+    row = rpc.last("SELECT * OMIT id FROM ONLY worker:seen;")
+    if not isinstance(row, dict):
+        return None
+    try:
+        import sdb  # db/sdb.py: on the path wherever a SurrealDB backend runs
+        return sdb.strip_none(row)
+    except ImportError:
+        return row
+
+
 def worker_status(cr) -> dict:
     """The AI worker as the app shows it (Settings > Connections, the line under anything queued). Hosted: the
     server's worker (name, last heartbeat, the models it writes with, a budget pause with its reason). `where` is
@@ -639,7 +679,7 @@ def worker_status(cr) -> dict:
     if getattr(cr, "jobs_mode", "worker") == "inproc":
         return {"online": True, "last_seen": None, "name": "inproc", "where": "this computer", "hosted": False,
                 "model": None, "paused": None, "online_window_s": WORKER_ONLINE_S}
-    w = getattr(cr, "worker_seen", None)
+    w = load_worker_seen(cr)
     online = bool(w) and time.time() - w["t"] < WORKER_ONLINE_S
     hosted = bool(w and w.get("hosted"))
     return {"online": online, "last_seen": w["at"] if w else None, "name": w["name"] if w else None,
@@ -1464,7 +1504,7 @@ class Routes:
     # ---------------------------------------------------------------- the home worker
     def w_claim(self):
         kinds, seen = check_claim(self.b)
-        self.cr.worker_seen = seen
+        save_worker_seen(self.cr, seen)
         if seen["paused"]:  # over its AI budget: the heartbeat lands, nothing is handed out, the jobs stay queued
             return 204, None
         with self.cr.lock:

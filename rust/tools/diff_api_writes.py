@@ -23,6 +23,13 @@ list made, changed, added to, archived, brought back and deleted, a bridge queue
 locks and try notes, the punch-ups (a locked bit and a bit with no tape answered with no job; the rest queued), the
 settings, the voice profile saved and a draft dismissed, a "not a joke?" kept and one hidden; and the merge
 candidates read on both after each (the judge file carries real keys: diff_api_reads.write_judge).
+Round 3 (T10 group 5), phase W: the hosted worker's routes over the one queue (a claim through each server hands out
+the next job and lands the heartbeat in the database, which the other server's Tonight screen and the Python's
+Connections read; a result through each; the requeue; a paused claim; the mirror's reads with every decision's hash;
+the loader's profile write), the enqueue routes of group 6 (an ask, a riff, a fact check and a video import through
+both; the same question to both is one job; his drop of a queued job) and `/api/live` on both (hello with the same
+rev; a jot, a decision, a set list and a tonight list reported by both sockets with the same records and the same
+generation; a bad token and a worker token refused the same way; an origin not allowed).
 Exit 1 on any difference. Needs what diff_api_reads.py needs (surreal 3.3.4, the API's Python deps, PK_BGE_DIR, a
 built pk-api).
 """
@@ -110,11 +117,12 @@ def write(base: str, method: str, path: str, b, headers: dict | None = None, wan
     return r[0], body(r)
 
 
-def both(label: str, paths: list[str]) -> None:
+def both(label: str, paths: list[str], headers: dict | None = None) -> None:
     """The same GETs on both servers, equal as the reads differential compares them."""
     global n_equal
+    h = app if headers is None else headers
     for p in paths:
-        got = R.compare(f"{label}: {p}", R.call(py, "GET", p, app), R.call(rs, "GET", p, app))
+        got = R.compare(f"{label}: {p}", R.call(py, "GET", p, h), R.call(rs, "GET", p, h))
         problems.extend(got)
         n_equal += not got
 
@@ -473,11 +481,12 @@ def raw_call(base: str, method: str, path: str, data: bytes, headers: dict):
         return 0, {}, b""
 
 
-def same_write(label: str, method: str, path: str, b_py, b_rs=None, by_shape: bool = False) -> None:
+def same_write(label: str, method: str, path: str, b_py, b_rs=None, by_shape: bool = False, headers: dict | None = None) -> None:
     """The same request to both; the answers equal after normalisation (status, body, the headers the app reads)."""
     global n_equal
-    a = R.call(py, method, path, app, b_py)
-    b = R.call(rs, method, path, app, b_rs if b_rs is not None else b_py)
+    h = app if headers is None else headers
+    a = R.call(py, method, path, h, b_py)
+    b = R.call(rs, method, path, h, b_rs if b_rs is not None else b_py)
     bad = []
     if a[0] != b[0]:
         bad.append(f"{label}: status python {a[0]} rust {b[0]}: {a[2][:200]!r} / {b[2][:200]!r}")
@@ -617,6 +626,27 @@ def refusals() -> None:
         ("candidates: bad joke", "GET", "/api/merge/candidates?joke=joke%20a", None, None),
         ("candidates: bad jokes", "GET", "/api/merge/candidates?jokes=joke:a,joke%20b", None, None),
         ("candidates: too many", "GET", "/api/merge/candidates?jokes=" + ",".join(f"joke:x{i:02d}" for i in range(51)), None, None),
+        # round 3 (group 5): the worker's routes
+        ("claim: bad kinds", "POST", "/api/worker/claim", {"kinds": ["riff", "zap"]}, worker_tok),
+        ("claim: kinds not a list", "POST", "/api/worker/claim", {"kinds": "riff"}, worker_tok),
+        ("claim: hosted without kinds", "POST", "/api/worker/claim", {"hosted": True}, worker_tok),
+        ("claim: hosted with a transcriber kind", "POST", "/api/worker/claim", {"hosted": True, "kinds": ["riff", "process_set"]}, worker_tok),
+        ("claim: app token", "POST", "/api/worker/claim", {"kinds": ["riff"]}, None),
+        ("claim: no token", "POST", "/api/worker/claim", {"kinds": ["riff"]}, {}),
+        ("result: no such job", "POST", "/api/worker/jobs/job:nope/result", {"ok": True, "result": {}}, worker_tok),
+        ("result: app token", "POST", "/api/worker/jobs/job:nope/result", {"ok": True, "result": {}}, None),
+        ("decisions: app token", "GET", "/api/worker/decisions", None, None),
+        ("creative: no store", "GET", "/api/worker/creative", None, worker_tok),
+        ("creative: bad store", "GET", "/api/worker/creative?store=jobs", None, worker_tok),
+        ("creative: app token", "GET", "/api/worker/creative?store=venues", None, None),
+        ("worker profile: no actor", "PUT", "/api/worker/profile/voice", {"text": "x"}, worker_tok),
+        ("worker profile: the owner as actor", "PUT", "/api/worker/profile/voice", {"text": "x", "actor": "owner"}, worker_tok),
+        ("worker profile: no text", "PUT", "/api/worker/profile/voice", {"actor": "import:profile"}, worker_tok),
+        ("worker profile: court", "PUT", "/api/worker/profile/voice", {"text": "The petitioner and the respondent walked in.", "actor": "import:profile"}, worker_tok),
+        ("worker profile: app token", "GET", "/api/worker/profile/voice", None, None),
+        ("worker profile: POST", "POST", "/api/worker/profile/voice", {"text": "x", "actor": "import:profile"}, worker_tok),
+        ("live: a plain GET", "GET", "/api/live", None, None),
+        ("live: backend", "GET", "/api/live?backend=files", None, None),
     ]
     for label, m, p, b, h in cases:
         a, c = R.call(py, m, p, h if h is not None else app, b), R.call(rs, m, p, h if h is not None else app, b)
@@ -727,6 +757,327 @@ def hammer(conc: int, each: int) -> None:
         t.join()
     problems.extend(errors[:10])
     ok("hammer: transcripts at once all queued", not errors, f"{len(errors)} errors")
+
+
+# ---------------------------------------------------------------- phase W: the worker's routes and /api/live
+WORKER_KINDS = ["bridge", "punchup", "ask", "facts", "riff", "ask_chat", "embed", "memolink", "set_text"]
+WORKER_STORES = ["storyboards", "workingsets", "venues", "merges", "suggestions"]
+
+
+class Live:
+    """A WebSocket client on `/api/live` with the standard library alone (RFC 6455: the handshake, masked client
+    frames, the server's frames read whole; pings answered). What the app does, minus the reconnects."""
+
+    def __init__(self, base: str, token: str | None = None):
+        import base64
+        import socket
+        from urllib.parse import urlsplit
+        u = urlsplit(base)
+        self.s = socket.create_connection((u.hostname, u.port), timeout=15)
+        key = base64.b64encode(os.urandom(16)).decode()
+        self.s.sendall((f"GET /api/live HTTP/1.1\r\nHost: {u.hostname}:{u.port}\r\nUpgrade: websocket\r\n"
+                        f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        self.buf = b""
+        head = self._until(b"\r\n\r\n", 15)
+        lines = head.decode("latin-1").split("\r\n")
+        self.status = int(lines[0].split()[1]) if lines[0].startswith("HTTP/") else 0
+        self.headers = {}
+        for h in lines[1:]:
+            k, _, v = h.partition(":")
+            self.headers[k.strip().lower()] = v.strip()
+        self.body = b""
+        if self.status != 101:
+            n = int(self.headers.get("content-length") or 0)
+            self.body = self._take(n, 15) if n else b""
+        elif token is not None:
+            self.send(0x1, json.dumps({"type": "auth", "token": token}).encode())
+
+    def send(self, op: int, data: bytes) -> None:
+        import struct
+        n = len(data)
+        head = bytes([0x80 | op])
+        if n < 126:
+            head += bytes([0x80 | n])
+        elif n < 65536:
+            head += bytes([0x80 | 126]) + struct.pack(">H", n)
+        else:
+            head += bytes([0x80 | 127]) + struct.pack(">Q", n)
+        mask = os.urandom(4)
+        self.s.sendall(head + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
+
+    def _fill(self, deadline: float) -> bool:
+        """Read more bytes into the buffer; False on a timeout or EOF. A socket timeout leaves the buffer (and a
+        frame half read) intact, which a buffered file object does not (it refuses every read after one)."""
+        left = deadline - time.time()
+        if left <= 0:
+            return False
+        self.s.settimeout(left)
+        try:
+            chunk = self.s.recv(65536)
+        except OSError:
+            return False
+        self.buf += chunk
+        return bool(chunk)
+
+    def _until(self, mark: bytes, secs: float) -> bytes:
+        deadline = time.time() + secs
+        while mark not in self.buf:
+            if not self._fill(deadline):
+                break
+        out, _, self.buf = self.buf.partition(mark)
+        return out
+
+    def _take(self, n: int, secs: float) -> bytes | None:
+        deadline = time.time() + secs
+        while len(self.buf) < n:
+            if not self._fill(deadline):
+                return None
+        out, self.buf = self.buf[:n], self.buf[n:]
+        return out
+
+    def frame(self, timeout: float):
+        """One frame, or (None, b"") when it has not fully arrived within `timeout` (nothing is consumed then)."""
+        import struct
+        deadline = time.time() + timeout
+        while True:
+            b = self.buf
+            if len(b) >= 2:
+                n, at = b[1] & 0x7F, 2
+                if n == 126 and len(b) >= 4:
+                    n, at = struct.unpack(">H", b[2:4])[0], 4
+                elif n == 127 and len(b) >= 10:
+                    n, at = struct.unpack(">Q", b[2:10])[0], 10
+                if (b[1] & 0x7F) < 126 or at > 2:
+                    masked = bool(b[1] & 0x80)
+                    end = at + (4 if masked else 0) + n
+                    if len(b) >= end:
+                        data = b[at + (4 if masked else 0):end]
+                        if masked:
+                            m = b[at:at + 4]
+                            data = bytes(x ^ m[i % 4] for i, x in enumerate(data))
+                        self.buf = b[end:]
+                        return b[0] & 0x0F, data
+            if not self._fill(deadline):
+                return None, b""
+
+    def recv(self, timeout: float = 10):
+        """The next text message (parsed) or close frame (`("close", code)`); pings are answered; None on a timeout."""
+        import struct
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                op, data = self.frame(max(0.1, deadline - time.time()))
+            except OSError:
+                return None
+            if op is None:
+                return None
+            if op == 0x9:
+                self.send(0xA, data)
+            elif op == 0x8:
+                return ("close", struct.unpack(">H", data[:2])[0] if len(data) >= 2 else None)
+            elif op == 0x1:
+                try:
+                    return json.loads(data.decode("utf-8"))
+                except ValueError:
+                    return data
+        return None
+
+    def events(self, secs: float) -> list:
+        """Every `change` event within `secs` (the two hubs may split one write's changes over two 150 ms windows)."""
+        out = []
+        deadline = time.time() + secs
+        while time.time() < deadline:
+            m = self.recv(max(0.1, deadline - time.time()))
+            if isinstance(m, dict) and m.get("type") == "change":
+                out.append(m)
+        return out
+
+    def close(self) -> None:
+        try:
+            self.send(0x8, b"")
+        except OSError:
+            pass
+        self.s.close()
+
+
+def changes_of(events: list) -> tuple[set, str | None]:
+    """The (table, action, id) set and the newest rev of a run of events, so a write split over two windows on one
+    server compares equal to one window on the other."""
+    seen = set()
+    rev = None
+    for ev in events:
+        for c in ev.get("changes") or []:
+            seen.add((c.get("table"), c.get("action"), c.get("id")))
+        if ev.get("rev"):
+            rev = ev["rev"]
+    return seen, rev
+
+
+def live_pair(token: str | None) -> tuple[Live, Live]:
+    a, b = Live(py, token), Live(rs, token)
+    ok("live: both servers upgrade the socket", a.status == 101 and b.status == 101, f"python {a.status} pk-api {b.status}")
+    return a, b
+
+
+def live_write(label: str, a: Live, b: Live, base: str, method: str, path: str, body_: dict, want_rev: bool) -> None:
+    """A write, then the events both sockets report for it: the same records, the same newest generation."""
+    st_, _ = write(base, method, path, body_, want=(200, 201, 202))
+    ea, eb = a.events(1.2), b.events(1.2)
+    ca, ra = changes_of(ea)
+    cb, rb = changes_of(eb)
+    who = "pk-api" if base == rs else "the Python"
+    ok(f"live: {label} via {who}: both sockets report it", bool(ea) and bool(eb), f"python {len(ea)} events, pk-api {len(eb)}")
+    ok(f"live: {label} via {who}: the same records on both", ca == cb and bool(ca), f"python {sorted(map(str, ca))[:6]} pk-api {sorted(map(str, cb))[:6]}")
+    if want_rev:
+        h = body(R.call(py, "GET", "/api/health", app))["rev"]
+        ok(f"live: {label} via {who}: the same rev, the generation the write made", ra == rb == h, f"python {ra} pk-api {rb} health {h}")
+    else:
+        ok(f"live: {label} via {who}: no generation moved, no rev", ra is None and rb is None, f"python {ra} pk-api {rb}")
+    ok(f"live: {label} via {who}: every event has the Python's keys", all(set(e) == {"type", "rev", "count", "changes", "at"} for e in ea + eb),
+       str([sorted(e) for e in (ea + eb)[:2]]))
+
+
+def live_phase(app_token: str, worker_token: str) -> None:
+    a, b = live_pair(app_token)
+    ha, hb = a.recv(10), b.recv(10)
+    ok("live: both say hello with the rev served and the subscription up",
+       isinstance(ha, dict) and isinstance(hb, dict) and ha.get("type") == hb.get("type") == "hello" and ha.get("live") is True and hb.get("live") is True
+       and ha.get("rev") == hb.get("rev") and str(ha.get("rev")).startswith("db:"), f"python {ha} pk-api {hb}")
+    live_write("a jot", a, b, py, "POST", "/api/ideas", {"text": "Live jot one: the gate agent who hums (L)."}, True)
+    live_write("a decision", a, b, rs, "POST", "/api/decision", {"target": "node", "id": "joke:x40", "action": "edit", "after": {"stage": "testing"}}, True)
+    live_write("a set list", a, b, rs, "POST", "/api/boards", {"title": "Live list (L)", "joke_ids": ["joke:a"]}, False)
+    live_write("a tonight list", a, b, py, "POST", "/api/tonight", {"items": [{"joke": "joke:x41"}]}, True)
+    a.close()
+    b.close()
+    # a refused token: one error message, then close 4401, on both; a worker token cannot subscribe
+    for label, tok in (("a bad token", "nope"), ("a worker token", worker_token)):
+        a, b = live_pair(tok)
+        ma, mb = a.recv(10), b.recv(10)
+        ok(f"live: {label}: both answer the error message", isinstance(ma, dict) and isinstance(mb, dict)
+           and ma.get("type") == mb.get("type") == "error" and ma.get("error") == mb.get("error") == "unauthorized", f"python {ma} pk-api {mb}")
+        ok(f"live: {label}: the same detail", isinstance(ma, dict) and isinstance(mb, dict) and ma.get("detail") == mb.get("detail"),
+           f"python {ma.get('detail') if isinstance(ma, dict) else ma!r} pk-api {mb.get('detail') if isinstance(mb, dict) else mb!r}")
+        ca, cb = a.recv(10), b.recv(10)
+        ok(f"live: {label}: both close with 4401", ca == cb == ("close", 4401), f"python {ca} pk-api {cb}")
+        a.close()
+        b.close()
+    # the origin rule: a page from elsewhere is refused before the upgrade, with the same body
+    orig = {**app, "Origin": "https://evil.example", "Upgrade": "websocket", "Connection": "Upgrade",
+            "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==", "Sec-WebSocket-Version": "13"}
+    got = R.compare("live: an origin not allowed", R.call(py, "GET", "/api/live", orig), R.call(rs, "GET", "/api/live", orig))
+    problems.extend(got)
+    global n_equal
+    n_equal += not got
+
+
+def worker_phase() -> None:
+    """The worker's routes through both servers over the one queue, the claim kept in the database for both."""
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    reads = ["/api/tonight/screen", "/api/connections", "/api/today"]
+    both("worker: before any claim", reads)
+    # 1. a claim through pk-api: the oldest queued job of the kinds asked, marked claimed; the heartbeat for both
+    st, r = write(rs, "POST", "/api/worker/claim", {"kinds": WORKER_KINDS, "worker": "diff-1", "hosted": True, "model": "claude-x"},
+                  headers=worker_tok, want=(200,))
+    ok("worker: a claim via pk-api hands out a job", r["job"]["status"] == "claimed" and r["job"]["worker"] == "diff-1" and r["job"]["attempts"] == 1
+       and r["job"]["kind"] in WORKER_KINDS and "input" in r["job"], json.dumps(r)[:300])
+    job_a = r["job"]["id"]
+    both("worker: after a claim via pk-api", reads + [f"/api/jobs/{q(job_a)}"])
+    for base, who in ((py, "the Python"), (rs, "pk-api")):
+        w = body(R.call(base, "GET", "/api/tonight/screen", app))["worker"]
+        ok(f"worker: {who} shows the claim pk-api answered", w["online"] is True and w["name"] == "diff-1" and w["hosted"] is True
+           and w["model"] == "claude-x" and w["where"] == "the server", json.dumps(w))
+    c = body(R.call(py, "GET", "/api/connections", app))
+    ok("worker: the Python's Connections read the claim from the database", c["ai"]["worker"]["name"] == "diff-1", json.dumps(c.get("ai"))[:200])
+    # 2. a claim through the Python: the next job; pk-api shows the new name
+    st, r = write(py, "POST", "/api/worker/claim", {"kinds": WORKER_KINDS, "worker": "diff-2", "hosted": True}, headers=worker_tok, want=(200,))
+    job_b = r["job"]["id"]
+    ok("worker: a claim via the Python hands out the next job", job_b != job_a and r["job"]["status"] == "claimed", json.dumps(r)[:300])
+    both("worker: after a claim via the Python", reads + [f"/api/jobs/{q(job_b)}"])
+    w = body(R.call(rs, "GET", "/api/tonight/screen", app))["worker"]
+    ok("worker: pk-api shows the claim the Python answered", w["name"] == "diff-2" and w["model"] is None, json.dumps(w))
+    # 3. the results: done via pk-api, failed-with-retry via the Python; a second result is the 409 on both
+    st, r = write(rs, "POST", f"/api/worker/jobs/{q(job_a)}/result", {"ok": True, "result": {"note": "done by the differential"}}, headers=worker_tok, want=(200,))
+    ok("worker: a result via pk-api ends the job", r["ok"] is True and r["job"]["status"] == "done" and r["job"]["id"] == job_a and "result" not in r["job"], json.dumps(r)[:300])
+    st, r = write(py, "POST", f"/api/worker/jobs/{q(job_b)}/result", {"ok": False, "error": "the model timed out", "retry": True}, headers=worker_tok, want=(200,))
+    ok("worker: a failed result via the Python queues the job again", r["job"]["status"] == "queued" and r["job"]["attempts"] == 1
+       and r["job"]["error"] == "the model timed out", json.dumps(r)[:300])
+    both("worker: after the results", reads + [f"/api/jobs/{q(job_a)}", f"/api/jobs/{q(job_b)}"])
+    same_write("same: a result on a done job", "POST", f"/api/worker/jobs/{q(job_a)}/result", {"ok": True, "result": {}}, headers=worker_tok)
+    same_write("same: a result that is not an object", "POST", f"/api/worker/jobs/{q(job_b)}/result", {"ok": True, "result": [1]}, headers=worker_tok)
+    # 4. the job queued again is handed out again (attempts 2) by whichever server claims it
+    st, r = write(rs, "POST", "/api/worker/claim", {"kinds": [body(R.call(py, "GET", f"/api/jobs/{q(job_b)}", app))["kind"]], "worker": "diff-1", "hosted": True},
+                  headers=worker_tok, want=(200,))
+    ok("worker: the requeued job is claimed again", r["job"]["id"] == job_b and r["job"]["attempts"] == 2, json.dumps(r)[:300])
+    st, r = write(py, "POST", f"/api/worker/jobs/{q(job_b)}/result", {"ok": False, "error": "gave up"}, headers=worker_tok, want=(200,))
+    ok("worker: a final failure", r["job"]["status"] == "failed" and r["job"]["error"] == "gave up", json.dumps(r)[:300])
+    # 5. a paused worker: the heartbeat lands, nothing is handed out, on both
+    same_write("same: a paused claim", "POST", "/api/worker/claim",
+               {"kinds": WORKER_KINDS, "worker": "diff-p", "hosted": True, "paused": "over today's AI budget"}, headers=worker_tok)
+    both("worker: after a paused claim", reads)
+    w = body(R.call(rs, "GET", "/api/tonight/screen", app))["worker"]
+    ok("worker: the pause is shown", w["paused"] == "over today's AI budget" and w["name"] == "diff-p", json.dumps(w))
+    # 6. the reads the hosted worker makes before a job, equal on both (the hash of every decision line included)
+    both("worker: the mirror's reads", ["/api/worker/decisions", "/api/worker/decisions?after=0", "/api/worker/decisions?after=3",
+                                       "/api/worker/decisions?after=x", "/api/worker/decisions?after=99999", "/api/worker/decisions?backend=files"]
+         + [f"/api/worker/creative?store={s}" for s in WORKER_STORES] + [f"/api/worker/creative?store={s}&snapshot=1" for s in WORKER_STORES]
+         + ["/api/worker/profile/voice", "/api/worker/profile/voice?backend=x"], headers=worker_tok)
+    d = body(R.call(rs, "GET", "/api/worker/decisions?after=0", worker_tok))
+    ok("worker: the decisions page carries every line with its hash",
+       d["total"] == len(d["lines"]) and all(x["h"] == hashlib.sha256(json.dumps(x["decision"], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                                             for x in d["lines"]), f"{d['total']} lines")
+    # 7. the loader's profile write on both, then the worker's and the app's views
+    same_write("same: the loader's profile", "PUT", "/api/worker/profile/voice", {"text": "Loaded profile (P).", "actor": "import:profile"},
+               {"text": "Loaded profile (R).", "actor": "import:profile"}, by_shape=True, headers=worker_tok)
+    both("worker: after the loader's profile", ["/api/worker/profile/voice"], headers=worker_tok)
+    both("worker: after the loader's profile", ["/api/profile/voice"])
+    v = body(R.call(rs, "GET", "/api/worker/profile/voice", worker_tok))
+    ok("worker: the worker's view has the laugh lines and no previous", "laugh_lines" in v and "previous" not in v and v["by"] == "import:profile", json.dumps(v)[:300])
+
+
+def enqueue_phase() -> None:
+    """Group 6, the cheap half: the one-shot questions and the imports that only queue a job, through both servers;
+    the same question to both is one job; his drop of a queued job."""
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    same_write("same: an ask", "POST", "/api/ask", {"question": "What's my strongest closer (P)?"}, {"question": "What's my strongest closer (R)?"})
+    same_write("same: a riff", "POST", "/api/riff", {"idea": "parking meters that talk back (P)", "lines": ["a line of his", "  "]},
+               {"idea": "parking meters that talk back (R)", "lines": ["a line of his", "  "]})
+    same_write("same: a fact check", "POST", "/api/facts", {"text": "The moon is a lightbulb (P)."}, {"text": "The moon is a lightbulb (R)."})
+    same_write("same: a video import", "POST", "/api/import/youtube", {"url": "https://youtu.be/" + "a" * 10 + "1?t=3"}, {"url": "https://www.youtube.com/watch?v=" + "b" * 10 + "2"})
+    st, r = write(rs, "POST", "/api/ask", {"question": "  Same   question, twice  "})
+    st2, r2 = write(py, "POST", "/api/ask", {"question": "same question, TWICE"})
+    ok("enqueue: the same question to both servers is one job (the key folds case and spacing)",
+       st == st2 == 202 and r["job"]["id"] == r2["job"]["id"], f"{r.get('job', {}).get('id')} vs {r2.get('job', {}).get('id')}")
+    ask_job = r["job"]["id"]
+    both("enqueue: after the asks", [f"/api/jobs/{q(ask_job)}", "/api/today"])
+    # his drop: the queued ask ends failed with his reason, on either server; again is the 409 on both
+    st, r = write(py, "POST", f"/api/jobs/{q(ask_job)}/drop", {"reason": "never mind"})
+    ok("enqueue: a drop via the Python ends the queued job", r["ok"] is True and r["job"]["status"] == "failed" and r["job"]["error"] == "never mind", json.dumps(r)[:300])
+    both("enqueue: after a drop", [f"/api/jobs/{q(ask_job)}"])
+    same_write("same: a drop of a job already over", "POST", f"/api/jobs/{q(ask_job)}/drop", {})
+    st, r = write(rs, "POST", "/api/facts", {"text": "Dropped fact (R)."})
+    fact_job = r["job"]["id"]
+    st, r = write(rs, "POST", f"/api/jobs/{q(fact_job)}/drop", {})
+    ok("enqueue: a drop via pk-api, the default reason", r["job"]["status"] == "failed" and r["job"]["error"] == "dropped by the owner", json.dumps(r)[:300])
+    both("enqueue: after a drop via pk-api", [f"/api/jobs/{q(fact_job)}"])
+    for label, m, p, b in [("ask: no question", "POST", "/api/ask", {}),
+                           ("ask: too long", "POST", "/api/ask", {"question": "x" * 1001}),
+                           ("riff: no idea", "POST", "/api/riff", {"lines": ["a"]}),
+                           ("riff: lines not a list", "POST", "/api/riff", {"idea": "x", "lines": "a"}),
+                           ("riff: too many lines", "POST", "/api/riff", {"idea": "x", "lines": ["a"] * 41}),
+                           ("riff: a line too long", "POST", "/api/riff", {"idea": "x", "lines": ["a" * 2001]}),
+                           ("riff: court", "POST", "/api/riff", {"idea": "The petitioner and the respondent walked in."}),
+                           ("facts: no text", "POST", "/api/facts", {"text": "  "}),
+                           ("facts: court", "POST", "/api/facts", {"text": "The petitioner and the respondent walked in."}),
+                           ("youtube: no url", "POST", "/api/import/youtube", {}),
+                           ("youtube: not a video link", "POST", "/api/import/youtube", {"url": "https://vimeo.com/123"}),
+                           ("youtube: too long", "POST", "/api/import/youtube", {"url": "https://youtu.be/" + "a" * 500}),
+                           ("drop: no such job", "POST", "/api/jobs/job:nope/drop", {}),
+                           ("ask: worker token", "POST", "/api/ask", {"question": "x"})]:
+        h = worker_tok if label.endswith("worker token") else app
+        got = R.compare(label, R.call(py, m, p, h, b), R.call(rs, m, p, h, b))
+        problems.extend(got)
+        global n_equal
+        n_equal += not got
 
 
 # ---------------------------------------------------------------- the run
@@ -870,6 +1221,10 @@ def main() -> int:
         check_rows(port, pw, (n_a0, minted_a["n_decisions"]), (minted_a["n_decisions"], minted_b["n_decisions"]))
         # F. two writers at once, then the counters and the Python's stores
         hammer(a.conc, 5)
+        # W. round 3: the worker's routes over the one queue, the enqueue routes, then /api/live on both
+        worker_phase()
+        enqueue_phase()
+        live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
                                       ("POST", "/api/decision", 200), ("POST", "/api/undo", 200), ("POST", "/api/merge", 200),
@@ -885,13 +1240,22 @@ def main() -> int:
                                       ("POST", "/api/jokes/{id}/punchup", 202), ("PATCH", "/api/settings", 200), ("OTHER", "/api/profile/voice", 200),
                                       ("POST", "/api/profile/voice/learn", 200), ("POST", "/api/suggestions/not-a-joke/keep", 200),
                                       ("POST", "/api/suggestions/not-a-joke/hide", 200), ("GET", "/api/merge/candidates", 200),
-                                      ("GET", "/api/merge/candidates", 400)):
+                                      ("GET", "/api/merge/candidates", 400),
+                                      # round 3
+                                      ("POST", "/api/worker/claim", 200), ("POST", "/api/worker/claim", 204), ("POST", "/api/worker/claim", 400),
+                                      ("POST", "/api/worker/jobs/{id}/result", 200), ("POST", "/api/worker/jobs/{id}/result", 409),
+                                      ("GET", "/api/worker/decisions", 200), ("GET", "/api/worker/creative", 200), ("GET", "/api/worker/creative", 400),
+                                      ("GET", "/api/worker/profile/voice", 200), ("OTHER", "/api/worker/profile/voice", 200),
+                                      ("POST", "/api/ask", 202), ("POST", "/api/riff", 202), ("POST", "/api/facts", 202),
+                                      ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409)):
             ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
+        ok("metrics: /api/live is not a counted request (its sockets are pk_live_clients)",
+           'route="/api/live"' not in mtext and "pk_live_clients 0" in mtext, mtext[:0])
         n0 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext.splitlines() if ln.startswith("pk_http_requests_total{"))
-        R.call(rs, "POST", "/api/jobs/job:nope/drop", app, {})
+        R.call(rs, "POST", "/api/ask/chats", app, {"question": "x"})
         mtext2 = R.call(rs, "GET", "/metrics")[2].decode()
         n1 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext2.splitlines() if ln.startswith("pk_http_requests_total{"))
-        ok("metrics: a forwarded write (POST /api/jobs/<id>/drop) is counted by nobody here", n1 == n0)
+        ok("metrics: a forwarded write (POST /api/ask/chats) is counted by nobody here", n1 == n0)
         plog = (tmp / "python-api-model.log").read_text(encoding="utf-8", errors="replace")
         ok("the Python's creative stores never diverged from the database", "differ from event" not in plog, plog[-600:])
         report["rss_mib"] = {"python": R.rss_mib(pp.pid), "rust": R.rss_mib(rp.pid)}
