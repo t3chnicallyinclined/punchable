@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn durations() {
-        assert_eq!(parse_duration("20m").unwrap(), Duration::from_secs(1200));
+        assert_eq!(parse_duration("20m").unwrap(), Duration::from_mins(20));
         assert_eq!(parse_duration("90s").unwrap(), Duration::from_secs(90));
         assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
         assert_eq!(parse_duration("15").unwrap(), Duration::from_secs(15));

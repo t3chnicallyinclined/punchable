@@ -1526,25 +1526,51 @@ class Routes:
                 raise HttpError(413, "result too large")
             st["jobs"].append("done", jid, {"result": res}, by="worker")
             if j["kind"] == "process_set":
-                f = self._inbox_file(j)
-                if f:
-                    f.unlink(missing_ok=True)
+                self._inbox_drop(j)
         else:
             st["jobs"].append("fail", jid, {"error": str(self.b.get("error") or "failed")[:2000],
                                             "retry": bool(self.b.get("retry"))}, by="worker")
         return 200, {"ok": True, "job": job_brief(st["jobs"].get(jid))}
 
-    def _inbox_file(self, j) -> Path | None:
+    def _upload_name(self, j) -> str | None:
         name = (j.get("input") or {}).get("file") or ""
-        if not re.match(r"^[A-Za-z0-9._\-]{1,200}$", name):
+        return name if re.match(r"^[A-Za-z0-9._\-]{1,200}$", name) else None
+
+    def _hosted_upload(self) -> bool:
+        """The uploads are rows in the database (hosted), not files in the pod's inbox folder (server.hosted_uploads)."""
+        import upload_store as US
+        return bool(getattr(self.h, "jobs_on_upload", False)) and getattr(self.kb, "rpc", None) is not None and US.enabled()
+
+    def _inbox_file(self, j) -> Path | None:
+        name = self._upload_name(j)
+        if name is None:
             return None
         p = Path(self.kb.inbox) / name
         return p if p.is_file() else None
+
+    def _inbox_drop(self, j) -> None:
+        """The job is done: its upload goes (no media library)."""
+        if self._hosted_upload():
+            import upload_store as US
+            name = self._upload_name(j)
+            if name is not None:
+                US.delete(self.kb.rpc, name)
+            return
+        f = self._inbox_file(j)
+        if f:
+            f.unlink(missing_ok=True)
 
     def w_file(self, jid):
         j = self.st()["jobs"].get(jid)
         if not j or j["kind"] != "process_set":
             raise HttpError(404, "no such upload job")
+        if self._hosted_upload():
+            import upload_store as US
+            name = self._upload_name(j)
+            row = US.get(self.kb.rpc, name) if name else None
+            if row is None:
+                raise HttpError(404, "the upload is gone (the pod restarted?)")
+            return "upload", row
         p = self._inbox_file(j)
         if not p:
             raise HttpError(404, "the upload is gone (the pod restarted?)")
@@ -1594,6 +1620,8 @@ def handle(cr: Creative, h, method: str, path: str, q: dict, body_fn) -> bool:
             status, out = getattr(Routes(cr, h, h.kb, q, body), name)(*args)
         if status == "file":
             h.send_file(out)
+        elif status == "upload":
+            h.send_upload(out)
         elif status == 204:
             h.send_response(204)
             h.send_header("Content-Length", "0")

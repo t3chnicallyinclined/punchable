@@ -6,7 +6,7 @@
 #   yet: pin them when the first Rust service image is (T8).
 # It prints, after the model loads, after one query, after 1,000 and after 1,000 passages, the `Anonymous:` line of
 # /proc/self/smaps_rollup (the cgroup `anon` unit) and the resident set. Nothing is read or written but the model.
-FROM rust:1.93.1-bookworm AS build
+FROM rust:1.99.1-bookworm AS build
 WORKDIR /src
 COPY rust/ rust/
 COPY db/schema.surql db/schema_extra.surql db/

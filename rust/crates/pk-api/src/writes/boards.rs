@@ -224,10 +224,9 @@ pub async fn patch(
             ));
         }
         cr.probe("storyboards", &ops, &owner).await?;
-        let mut last = Value::Null;
-        for (op, id, data) in &ops {
-            last = cr.append("storyboards", op, id, data.clone(), &owner).await?;
-        }
+        // one transaction for the whole sequence: a writer of the same list between two ops (the Python writes row by
+        // row) can no longer leave half of this body written
+        let last = cr.append_all("storyboards", &ops, &owner).await?;
         if delete {
             return Ok(json!({"ok": true, "board": {"id": id, "title": title0, "deleted": true}}));
         }

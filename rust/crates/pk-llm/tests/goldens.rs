@@ -67,7 +67,7 @@ fn the_router_resolves_every_hosted_task_as_the_python() {
     }
     // without a key there is no provider, and the error is the Python's words
     let empty = Router::new(Config::hosted(), vec![], None);
-    assert!(empty.resolve("creative_riff").unwrap().is_empty());
+    assert_eq!(empty.resolve("creative_riff").unwrap().len(), 0);
     assert_eq!(empty.describe("creative_riff"), "none");
 }
 

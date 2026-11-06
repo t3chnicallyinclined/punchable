@@ -16,7 +16,7 @@ use pk_obs::WorkerMetrics;
 use tokio_util::sync::CancellationToken;
 
 /// `/healthz` fails once the heartbeat is this old.
-pub const HEALTHY: Duration = Duration::from_secs(20 * 60);
+pub const HEALTHY: Duration = Duration::from_mins(20);
 
 fn text(status: StatusCode, ctype: &'static str, body: String) -> Response {
     (

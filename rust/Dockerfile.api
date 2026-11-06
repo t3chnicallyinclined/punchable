@@ -17,12 +17,12 @@
 #
 # Bases pinned by digest (the same three digests as rust/Dockerfile.worker, resolved 2026-11-02 with
 # `docker buildx imagetools inspect`):
-#   rust:1.93.1-slim-bookworm               = rust-toolchain.toml's 1.93.1
+#   rust:1.99.1-slim-bookworm               = rust-toolchain.toml's 1.99.1
 #   python:3.13-slim-bookworm               the digest infra/worker/Dockerfile pins (2026-10-22): the model stage
 #                                           fetches the model exactly as the Python image does
 #   gcr.io/distroless/cc-debian12:nonroot   the runtime
 # Move a pin only on purpose, with the build log's digest in the deploy log.
-FROM rust:1.93.1-slim-bookworm@sha256:5b9332190bb3b9ece73b810cd1f1e9f06343b294ce184bcb067f0747d7d333ea AS build
+FROM rust:1.99.1-slim-bookworm@sha256:f2c004e3d2d8b547e8cf7ffbc29205385f4e71d23e53e4e383065db5e9f822cd AS build
 WORKDIR /src
 # pk-store compiles the schema in (include_str!)
 COPY db/schema.surql db/schema_extra.surql db/

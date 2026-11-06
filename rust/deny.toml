@@ -48,7 +48,7 @@ confidence-threshold = 0.9
 # our own crates carry `license = "UNLICENSED"` (not SPDX) and `publish = false`
 private = { ignore = true }
 
-# crates that ship a LICENSE file but no SPDX `license` field in their manifest (read from the file, 2026-10-29)
+# crates that ship a LICENSE file but no SPDX `license` field in their manifest (read from the file, 2026-10-29; the 3.3.5 split crates cnf, common, engine-api, iam, parse-common, rpc: 2026-11-06)
 [[licenses.clarify]]
 crate = "surrealdb"
 expression = "BUSL-1.1"
@@ -71,6 +71,36 @@ license-files = []
 
 [[licenses.clarify]]
 crate = "surrealdb-strand"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-cnf"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-common"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-engine-api"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-iam"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-parse-common"
+expression = "BUSL-1.1"
+license-files = []
+
+[[licenses.clarify]]
+crate = "surrealdb-rpc"
 expression = "BUSL-1.1"
 license-files = []
 

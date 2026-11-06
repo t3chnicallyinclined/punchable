@@ -149,16 +149,27 @@ def lease_acquire(r: sdb.Rpc, me: str, kind: str = "embedder", ttl_s: int = LEAS
     so two askers cannot both hold it."""
     if not re.match(r"^[a-z_]+$", kind):
         raise ValueError(f"lease kind {kind!r} is not a plain identifier")
-    try:
-        rows = r.last(f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
-                      f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
-                      "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;", {"k": kind, "me": me})
-    except Exception as e:  # noqa: BLE001
-        # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
-        if "already exists" in str(e).lower():
-            return False
-        raise
-    return bool(rows)
+    sql = (f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
+           f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
+           "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;")
+    jitter = sum(me.encode()) % 23
+    for wait in (0.015, 0.040, None):
+        try:
+            return bool(r.last(sql, {"k": kind, "me": me}))
+        except Exception as e:  # noqa: BLE001
+            msg = str(e).lower()
+            # the create and the update are two statements, not one transaction: a write conflict beside the other asker's
+            # update used to leave nobody holding the lease, and the loser of two first-ever creates ("already exists")
+            # can have its UPDATE commit after the CREATE failed, so it may hold the lease while it answers False. Both are
+            # asked again over the rows as they are now (ours: renewed; someone else's and live: no rows; absent: created
+            # again); only a conflict that outlasts the retries is a refusal for this pass.
+            if "conflict" in msg or "can be retried" in msg or "already exists" in msg:
+                if wait is None:
+                    return False
+                time.sleep(wait + jitter / 1000)
+                continue
+            raise
+    return False
 
 
 def sweep(r: sdb.Rpc, emb, v, renew=None) -> dict[str, int]:
@@ -192,24 +203,40 @@ class Sweeper:
         self.kb, self.emb, self.log = kb, embedder, log
         self.every = float(every if every is not None else os.environ.get("PK_VEC_SWEEP_S", "60"))
         self.me = me or f"python:{os.environ.get('HOSTNAME') or 'local'}:{os.getpid()}"
+        self.ttl_s = int(2 * self.every + 30)   # never lapses between two passes of its own (a fixed 90 s did at every=60)
         self.runs, self.last, self.error, self.last_at, self.held = 0, None, None, None, False
 
     def start(self):
         threading.Thread(target=self._loop, daemon=True, name="vector-sweep").start()
         return self
 
+    def stop(self):
+        """SIGTERM: give the lease up so the other process embeds at once, not after the lease lapses."""
+        self._stopped = True
+        r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
+        try:
+            # `until = NONE` would match the acquire's WHERE for anyone, this process's sweep thread in flight included:
+            # an owner tag that is nobody's and an `until` of now (the pass also checks `_stopped` before it asks)
+            r.query("UPDATE lease:embedder SET owner = $tag, until = time::now() WHERE owner = $me;",
+                    {"me": self.me, "tag": f"released:{self.me}"})
+        finally:
+            r.close()
+
     def once(self) -> dict[str, int] | None:
         """One pass; None when the lease is held by another process (nothing embedded here)."""
         r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
         try:
-            if not lease_acquire(r, self.me):
+            if self._stopped or not lease_acquire(r, self.me, ttl_s=self.ttl_s):
                 return None
-            return sweep(r, self.emb, self.kb.view(), renew=lambda: lease_acquire(r, self.me))
+            return sweep(r, self.emb, self.kb.view(),
+                         renew=lambda: not self._stopped and lease_acquire(r, self.me, ttl_s=self.ttl_s))
         finally:
             r.close()
 
+    _stopped = False
+
     def _loop(self):
-        while True:
+        while not self._stopped:
             try:
                 last = self.once()
                 self.held = last is not None

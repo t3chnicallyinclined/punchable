@@ -249,8 +249,7 @@ mod tests {
         assert!(
             b.get("from")
                 .and_then(Value::as_object)
-                .filter(|f| !f.is_empty())
-                .is_none()
+                .is_none_or(serde_json::Map::is_empty)
         );
     }
 }

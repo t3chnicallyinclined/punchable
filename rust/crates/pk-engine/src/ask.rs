@@ -153,6 +153,10 @@ mod tests {
     impl EngineStore for Mem {
         type Error = Down;
 
+        #[expect(
+            clippy::unused_async_trait_impl,
+            reason = "the trait method is async; this in-memory stand-in has nothing to await"
+        )]
         async fn read(&self, q: ReadQuery<'_>) -> Result<Read, Down> {
             if self.fail {
                 return Err(Down);
@@ -163,6 +167,10 @@ mod tests {
             })
         }
 
+        #[expect(
+            clippy::unused_async_trait_impl,
+            reason = "the trait method is async; this in-memory stand-in has nothing to await"
+        )]
         async fn lessons(&self, _question: &str, k: usize) -> Result<Vec<Hit>, Down> {
             if self.lessons_fail {
                 return Err(Down);

@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import sys
 import threading
 import time
@@ -254,6 +255,17 @@ def main():
     srv = ThreadingHTTPServer((host, port), SV.Handler)
     srv.daemon_threads = True
     log(f"punchable api on {host}:{port}, auth {'on' if verifier else 'OFF'}, data {DATA}")
+    def on_term(*_):
+        # SIGTERM: give the embedder's lease up so pk-api (or the next pod) embeds at once, not after it lapses
+        sw = getattr(SV.Handler.kbs.get(SV.Handler.primary), "sweeper", None)
+        if sw is not None:
+            try:
+                sw.stop()
+            except Exception as e:  # noqa: BLE001  the lease lapses by itself
+                log(f"the embedder lease was not released: {type(e).__name__}: {e}")
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, on_term)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

@@ -19,3 +19,4 @@ from `docs/HANDOVER.md`, `docs/RUST.md` and `docs/design/HIG.md`.
 | [0011](0011-worker-speaks-http-only.md) | the worker speaks HTTP only |
 | [0012](0012-transcriber-kinds-stay-off-the-server.md) | the transcriber kinds stay off the server |
 | [0013](0013-fork-the-upstream-engine.md) | fork the upstream engine as `pk-engine`; one verbatim gate |
+| [0014](0014-uploads-in-the-database.md) | uploads in the database (**Proposed**; off by default, `PK_UPLOAD_DB`) |

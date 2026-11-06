@@ -42,6 +42,11 @@ fn skip(why: &str) {
 }
 
 async fn scratch() -> Option<(Scratch, Env, u16)> {
+    scratch_on("memory").await
+}
+
+/// [`scratch`] on `engine` (`memory`, or `surrealkv://<dir>?versioned=true`: the engine production runs on).
+async fn scratch_on(engine: &str) -> Option<(Scratch, Env, u16)> {
     let exe = std::env::var_os("PUNCH_SURREAL").map_or_else(
         || {
             std::env::home_dir()
@@ -67,14 +72,7 @@ async fn scratch() -> Option<(Scratch, Env, u16)> {
         .expect("a free port")
         .port();
     let child = Command::new(&exe)
-        .args([
-            "start",
-            "--log",
-            "warn",
-            "--bind",
-            &format!("127.0.0.1:{port}"),
-            "memory",
-        ])
+        .args(["start", "--log", "warn", "--bind", &format!("127.0.0.1:{port}"), engine])
         .env("SURREAL_USER", &user)
         .env("SURREAL_PASS", &pass)
         .stdout(Stdio::null())
@@ -120,6 +118,17 @@ async fn setup(env: &Env, port: u16, db: &str) -> (Store, AppState) {
 
 /// [`setup`] with the token check on (`auth`): a verifier whose key set cannot be fetched, so every token is refused.
 async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppState) {
+    setup_full(env, port, db, auth, &[]).await
+}
+
+/// [`setup_with`] and more settings for the API (`PK_LIVE_PING_S`, ...).
+async fn setup_full(
+    env: &Env,
+    port: u16,
+    db: &str,
+    auth: bool,
+    extra: &[(&'static str, &'static str)],
+) -> (Store, AppState) {
     let cfg = Config::scratch(env, port, "punchable_test", db).expect("config");
     let writer = Store::connect(cfg.clone()).await.expect("connect");
     assert!(writer.apply_schema(false).await.expect("schema"));
@@ -153,7 +162,9 @@ async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppSt
         ("PK_OWNER_ID", "owner"),
         ("PK_EMBEDDER", "hash"),
         ("PK_VEC_SWEEP_S", "0"),
+        ("PK_UPLOAD_DB", "1"),
     ];
+    pairs.extend(extra.iter().copied());
     if auth {
         pairs.push(("OIDC_ISSUER", "https://auth.example/realms/punchable"));
     } else {
@@ -180,6 +191,33 @@ async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppSt
     st.set_store(Some(Store::connect(cfg).await.expect("connect")));
     st.data().await.expect("first load");
     (writer, st)
+}
+
+/// Another process over the same database: its own state, its own `creative_lock`, its own connection.
+async fn another(env: &Env, port: u16, db: &str) -> AppState {
+    let api_env = Env::from_map(vec![
+        ("SURREAL_PASS", "x"),
+        ("PUBLIC_URL", "https://punchable.io/"),
+        ("HOST", "127.0.0.1"),
+        ("PK_OWNER_ID", "owner"),
+        ("PK_EMBEDDER", "hash"),
+        ("PK_VEC_SWEEP_S", "0"),
+        ("PK_AUTH", "0"),
+        ("PK_ALLOW_NO_AUTH", "1"),
+    ]);
+    let st = AppState::new(
+        ApiConfig::from_env(&api_env).expect("api config"),
+        None,
+        pk_obs::ApiMetrics::new("0.1.0", "").expect("metrics"),
+        reqwest::Client::new(),
+    );
+    st.set_store(Some(
+        Store::connect(Config::scratch(env, port, "punchable_test", db).expect("config"))
+            .await
+            .expect("connect"),
+    ));
+    st.data().await.expect("first load");
+    st
 }
 
 async fn call(st: &AppState, method: &str, path: &str, body: Option<Value>) -> (StatusCode, Value) {
@@ -496,6 +534,9 @@ async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
         return;
     };
     let (_writer, st) = setup(&env, port, "t_worker_race").await;
+    // two processes (two states, two connections): one `creative_lock` serialises the claimers of one process, so
+    // only the database's unique (store, seq) index arbitrates between these two
+    let states = [st.clone(), another(&env, port, "t_worker_race").await];
     let mut ids = Vec::new();
     for i in 0..3 {
         let (s, r) = call(
@@ -510,7 +551,7 @@ async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
     }
     let mut tasks = Vec::new();
     for w in 0..8 {
-        let st = st.clone();
+        let st = states[w % 2].clone();
         tasks.push(tokio::spawn(async move {
             call(
                 &st,
@@ -538,6 +579,104 @@ async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
         (ids, 5),
         "every job handed out once, the rest got nothing"
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_upload_is_rows_both_servers_read_and_a_taken_name_gets_the_next_suffix() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, _st) = setup(&env, port, "t_upload").await;
+    let meta = json!({"kind": "set", "title": "Late show", "marks_ms": [1, 2]});
+    let a: Vec<u8> = (0..2_500_000_u32).map(|i| (i % 251) as u8).collect();
+    for (seq, part) in a.chunks(pk_store::upload::PART).enumerate() {
+        writer
+            .upload_put_part("tok-a", i64::try_from(seq).unwrap(), part.to_vec())
+            .await
+            .unwrap();
+    }
+    let name = "2026-11-06_punchable-set_101010_take.m4a";
+    assert_eq!(
+        writer
+            .upload_commit(name, "tok-a", &meta, i64::try_from(a.len()).unwrap(), 3)
+            .await
+            .unwrap(),
+        name
+    );
+    writer.upload_put_part("tok-b", 0, vec![7; 5]).await.unwrap();
+    let second = writer.upload_commit(name, "tok-b", &meta, 5, 1).await.unwrap();
+    assert_eq!(
+        second, "2026-11-06_punchable-set_101010_take-2.m4a",
+        "the name is reserved by the unique record id"
+    );
+    let rows = writer.upload_rows().await.unwrap();
+    assert_eq!(
+        rows.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+        [second.as_str(), name],
+        "newest first"
+    );
+    assert_eq!(writer.upload_count().await.unwrap(), 2);
+    let row = writer.upload_get(name).await.unwrap().unwrap();
+    assert_eq!(
+        (row.bytes, row.parts, row.meta["title"].clone()),
+        (2_500_000, 3, json!("Late show"))
+    );
+    let mut back = Vec::new();
+    for seq in 0..row.parts {
+        back.extend(writer.upload_part(&row.token, seq).await.unwrap().unwrap());
+    }
+    assert_eq!(back, a, "the bytes come back whole, in order");
+    assert!(writer.upload_part(&row.token, 9).await.unwrap().is_none());
+    // a commit counts the parts: a recording with a part missing is never listed
+    writer.upload_put_part("tok-short", 0, vec![1]).await.unwrap();
+    let e = writer
+        .upload_commit("short.m4a", "tok-short", &meta, 2, 2)
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("2 parts expected"), "{e}");
+    assert!(writer.upload_get("short.m4a").await.unwrap().is_none());
+    // the sweep reads the staging rows, not the megabyte rows: a young upload in flight stays, one whose newest
+    // part is an hour old goes with its staging row, and a committed one only loses a stale staging row
+    writer.upload_put_part("tok-orphan", 0, vec![1]).await.unwrap();
+    writer.upload_sweep_orphans().await.unwrap();
+    assert!(
+        writer.upload_part("tok-orphan", 0).await.unwrap().is_some(),
+        "a young part stays"
+    );
+    writer
+        .query(
+            "UPDATE type::record('upload_stage', 'tok-orphan') SET t = 1.0; UPDATE type::record('upload_stage', 'tok-short') SET t = 1.0; \
+             UPSERT type::record('upload_stage', $kept) SET t = 1.0, n = 3;",
+            vars([("kept", to_db(&json!(row.token)))]),
+        )
+        .await
+        .unwrap();
+    writer.upload_sweep_orphans().await.unwrap();
+    assert!(
+        writer.upload_part("tok-orphan", 0).await.unwrap().is_none(),
+        "an old orphan goes"
+    );
+    assert!(writer.upload_part("tok-short", 0).await.unwrap().is_none());
+    assert!(
+        writer.upload_part(&row.token, 0).await.unwrap().is_some(),
+        "a committed upload keeps its bytes when only its staging row is old"
+    );
+    let left = writer
+        .last("RETURN count(SELECT id FROM upload_stage);", vars([]))
+        .await
+        .unwrap();
+    assert_eq!(pk_store::from_db(left), json!(0), "no staging row is left");
+    writer.upload_delete(name).await.unwrap();
+    assert!(writer.upload_get(name).await.unwrap().is_none());
+    assert!(
+        writer.upload_part(&row.token, 0).await.unwrap().is_none(),
+        "its parts went with it"
+    );
+    assert!(
+        writer.upload_part("tok-b", 0).await.unwrap().is_some(),
+        "another upload's parts stay"
+    );
+    writer.upload_delete("never-there.m4a").await.unwrap();
 }
 
 /// The next text message within `secs`, parsed.
@@ -770,13 +909,266 @@ async fn a_refused_token_on_the_socket_is_one_error_then_close_4401() {
     assert_eq!(err["error"], "unauthorized");
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
-async fn the_lease_is_granted_to_exactly_one_of_eight_askers_at_once() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_sequence_of_events_lands_whole_or_not_at_all() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
-    let (writer, _st) = setup(&env, port, "t_worker_lease").await;
-    let cfg = Config::scratch(&env, port, "punchable_test", "t_worker_lease").expect("config");
+    let (writer, _st) = setup(&env, port, "t_worker_tx").await;
+    let ev = |seq: i64, op: &str| {
+        let line =
+            json!({"ts": "2026-11-06T00:00:00+00:00", "op": op, "id": "sb:x", "data": {}, "by": "owner"}).to_string();
+        pk_store::CreativeEvent::new("storyboards", seq, &line).unwrap()
+    };
+    writer
+        .create_creative_events(&[ev(0, "a"), ev(1, "b"), ev(2, "c")])
+        .await
+        .unwrap();
+    assert_eq!(writer.creative_lines("storyboards").await.unwrap().len(), 3);
+    // a batch whose second row takes a place already taken: the first row of it is not left behind
+    let err = writer
+        .create_creative_events(&[ev(3, "d"), ev(1, "dup"), ev(4, "e")])
+        .await
+        .unwrap_err();
+    assert!(pk_api::writes::is_place_taken(&err), "{err}");
+    let lines = writer.creative_lines("storyboards").await.unwrap();
+    assert_eq!(lines.len(), 3, "nothing of the failed batch landed: {lines:?}");
+    writer.create_creative_events(&[ev(3, "d"), ev(4, "e")]).await.unwrap();
+    assert_eq!(writer.creative_lines("storyboards").await.unwrap().len(), 5);
+    writer.create_creative_events(&[]).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn two_line_writes_from_two_processes_lose_no_line_and_write_none_twice() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_worker_lines").await;
+    let other = another(&env, port, "t_worker_lines").await;
+    let joke = a_joke(&st).await;
+    let before = writer.decision_count().await.unwrap();
+    // eight writers over two processes, each writing two lines per round: the second line of a pair that finds its
+    // place taken by the other process is sent again (`Kb::append_lines`), the first starts the pair over
+    let (rounds, writers) = (40_usize, 16_usize);
+    let mut tasks = Vec::new();
+    for w in 0..writers {
+        let state = if w % 2 == 0 { st.clone() } else { other.clone() };
+        let joke = joke.clone();
+        tasks.push(tokio::spawn(async move {
+            let kb = pk_api::writes::Kb::new(state.clone(), false);
+            let mut landed = 0;
+            for r in 0..rounds {
+                let _lock = state.kb_lock().lock().await;
+                let joke = joke.clone();
+                let out = kb
+                    .append_lines("owner", move |_, _| {
+                        let line = |stage: &str| pk_api::writes::Raw {
+                            target: "node",
+                            id: joke.clone(),
+                            action: "edit",
+                            before: Value::Null,
+                            after: json!({ "stage": stage }),
+                            reason: format!("round {r}"),
+                        };
+                        Ok(vec![line("testing"), line("idea")])
+                    })
+                    .await
+                    .unwrap_or_else(|e| panic!("writer {w} round {r}: {} {}", e.status, e.msg));
+                landed += out.len();
+            }
+            landed
+        }));
+    }
+    let mut total = 0;
+    for t in tasks {
+        total += t.await.unwrap();
+    }
+    assert_eq!(total, 2 * rounds * writers);
+    let after = writer.decision_count().await.unwrap();
+    assert_eq!(
+        after - before,
+        i64::try_from(total).unwrap(),
+        "every line landed once: none lost, none written twice"
+    );
+}
+
+/// A listener over `st` for the socket tests, with the hub running.
+async fn serve_live(st: &AppState) -> std::net::SocketAddr {
+    tokio::spawn(st.live().clone().run(st.clone()));
+    tokio::spawn(st.live().clone().flush_loop());
+    let listener = pk_api::bind("127.0.0.1:0").await.unwrap();
+    let addr = {
+        use axum::serve::Listener as _;
+        listener.local_addr().unwrap()
+    };
+    tokio::spawn(axum::serve(listener, app(st.clone())).into_future());
+    addr
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_draining_pod_closes_its_live_sockets_with_1012() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port, "t_worker_drain").await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    assert_eq!(next_json(&mut ws, 10).await["type"], "hello");
+    st.start_draining();
+    let close = tokio::time::timeout(Duration::from_secs(10), ws.next())
+        .await
+        .expect("a close in time");
+    match close {
+        Some(Ok(Message::Close(Some(f)))) => assert_eq!(u16::from(f.code), 1012, "service restart"),
+        other => panic!("expected close 1012, got {other:?}"),
+    }
+    // a socket that arrives after the drain began is told at once, too
+    let (mut late, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    let mut got_close = false;
+    while let Ok(Some(Ok(m))) = tokio::time::timeout(Duration::from_secs(10), late.next()).await {
+        if let Message::Close(Some(f)) = m {
+            assert_eq!(u16::from(f.code), 1012);
+            got_close = true;
+            break;
+        }
+    }
+    assert!(got_close, "the late socket was closed with 1012");
+}
+
+/// A socket with events flowing and no frame from the client but its pongs must stay open past the idle limit: the
+/// ping runs on its own deadline, so an event never postpones it (the app sends only its auth frame and pong replies).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_busy_live_socket_stays_open_past_the_idle_limit() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup_full(
+        &env,
+        port,
+        "t_worker_busy",
+        false,
+        &[("PK_LIVE_PING_S", "0.15"), ("PK_LIVE_IDLE_S", "0.4")],
+    )
+    .await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    assert_eq!(next_json(&mut ws, 10).await["type"], "hello");
+    let joke = a_joke(&st).await;
+    let started = Instant::now();
+    let mut events = 0;
+    let mut i = 0;
+    // events every ~100 ms (faster than the ping), for 1.6 s: four times the idle limit
+    while started.elapsed() < Duration::from_millis(1600) {
+        i += 1;
+        let (s, r) = call(
+            &st,
+            "POST",
+            "/api/decision",
+            Some(json!({"target": "node", "id": joke, "action": "edit", "after": {"stage": if i % 2 == 0 { "testing" } else { "idea" }}})),
+        )
+        .await;
+        assert_eq!(s, StatusCode::OK, "{r}");
+        // reading answers the server's pings (tungstenite queues the pong), which is all a healthy app does
+        while let Ok(Some(m)) = tokio::time::timeout(Duration::from_millis(100), ws.next()).await {
+            match m.expect("the socket stays up") {
+                Message::Text(t) if t.contains("\"change\"") => events += 1,
+                Message::Close(f) => panic!("a busy socket was closed: {f:?} after {:?}", started.elapsed()),
+                _ => {}
+            }
+        }
+    }
+    assert!(events > 0, "events flowed");
+    assert_eq!(
+        st.metrics().live_clients.get(),
+        1,
+        "still a client after {:?}",
+        started.elapsed()
+    );
+}
+
+/// A client that stops answering (no frame at all) is closed after the idle limit, not when TCP gives up.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_silent_live_socket_is_closed_after_the_idle_limit() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup_full(
+        &env,
+        port,
+        "t_worker_silent",
+        false,
+        &[("PK_LIVE_PING_S", "0.15"), ("PK_LIVE_IDLE_S", "0.4")],
+    )
+    .await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    assert_eq!(next_json(&mut ws, 10).await["type"], "hello");
+    assert_eq!(st.metrics().live_clients.get(), 1);
+    // the client reads nothing and so answers nothing for longer than the idle limit
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    assert_eq!(
+        st.metrics().live_clients.get(),
+        0,
+        "the half-open socket was closed by the server"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_first_frame_over_32_kib_is_refused_before_it_is_read_whole() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup_with(&env, port, "t_worker_bigfirst", true).await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    let big = json!({"type": "auth", "token": "x".repeat(1 << 20)}).to_string();
+    let _ = ws.send(Message::Text(big.into())).await;
+    // the connection ends (a close for the size, or the stream dropped); it is never a verified token or a hello
+    let mut ended = false;
+    while let Ok(m) = tokio::time::timeout(Duration::from_secs(10), ws.next()).await {
+        match m {
+            None | Some(Err(_) | Ok(Message::Close(_))) => {
+                ended = true;
+                break;
+            }
+            Some(Ok(Message::Text(t))) => assert!(!t.contains("hello"), "{t}"),
+            Some(Ok(_)) => {}
+        }
+    }
+    assert!(ended, "the socket was ended");
+    assert_eq!(st.metrics().live_clients.get(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn the_lease_is_granted_to_exactly_one_of_eight_askers_at_once() {
+    lease_race("memory", "t_worker_lease").await;
+}
+
+/// The same race on `SurrealKV` with versioning (`SURREAL_PATH` of `infra/k8s/20-surrealdb.yaml`): the engine whose
+/// write-conflict behaviour production has.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn the_lease_is_granted_to_exactly_one_of_eight_askers_at_once_on_surrealkv() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("db").to_string_lossy().replace('\\', "/");
+    lease_race(&format!("surrealkv://{path}?versioned=true"), "t_worker_lease_kv").await;
+}
+
+async fn lease_race(engine: &str, db: &str) {
+    let Some((_srv, env, port)) = scratch_on(engine).await else {
+        return;
+    };
+    let (writer, _st) = setup(&env, port, db).await;
+    let cfg = Config::scratch(&env, port, "punchable_test", db).expect("config");
     // eight processes are eight connections (a test: the service itself never opens a second one)
     let mut stores = Vec::new();
     for _ in 0..8 {
@@ -830,7 +1222,7 @@ async fn the_sweeper_embeds_every_pending_row_once_under_one_lease() {
         count("RETURN count(SELECT id FROM unit WHERE embedding = NONE AND text != NONE AND string::len(text) > 0);")
             .await;
     assert!(units_pending > 0, "the fixture's units carry no vector");
-    let mine = Lease::embedder("pk-api:test:1");
+    let mine = Lease::embedder("pk-api:test:1", Duration::from_secs(30));
     let done = pk_api::sweep::once(&st, &mine)
         .await
         .unwrap()
@@ -850,11 +1242,11 @@ async fn the_sweeper_embeds_every_pending_row_once_under_one_lease() {
     let again = pk_api::sweep::once(&st, &mine).await.unwrap().unwrap();
     assert_eq!(again.values().sum::<usize>(), 0, "nothing pending twice: {again:?}");
     // another process asks while this one holds the lease: it embeds nothing; a lapsed lease is free again
-    let other = Lease::embedder("python:test:2");
+    let other = Lease::embedder("python:test:2", Duration::from_secs(30));
     assert!(pk_api::sweep::once(&st, &other).await.unwrap().is_none());
     let short = Lease {
         ttl_s: 1,
-        ..Lease::embedder("pk-api:test:3")
+        ..Lease::embedder("pk-api:test:3", Duration::from_secs(30))
     };
     assert!(!short.acquire(&writer).await.unwrap(), "held by the first");
     writer

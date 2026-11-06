@@ -481,7 +481,7 @@ async fn creative_event_mirror_and_reconcile() {
         store.creative_lines("storyboards").await.unwrap(),
         vec![line(0), line(1)]
     );
-    assert!(store.creative_lines("workingsets").await.unwrap().is_empty());
+    assert_eq!(store.creative_lines("workingsets").await.unwrap().len(), 0);
     // the row carries what the LIVE consumer reads
     let raw = store
         .last(

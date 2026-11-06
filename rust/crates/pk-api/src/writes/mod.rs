@@ -31,6 +31,7 @@ pub mod learned;
 pub mod merge;
 pub mod review;
 pub mod transcript;
+pub mod uploads;
 pub mod worker;
 pub mod workingsets;
 
@@ -554,6 +555,50 @@ impl Creative {
         }
     }
 
+    /// A sequence of events for one request, written as ONE transaction (`Store::create_creative_events`): each is
+    /// validated on the replay in turn, the rows take the next places together, and when another writer took any of
+    /// them everything runs again from the rows as they are then (a refusal on the fresh rows is the error it is).
+    /// The Python writes the same sequence one row at a time, so a writer of its own between two of them splits it;
+    /// here the sequence is whole. Returns the last event's item.
+    pub async fn append_all(&self, name: &str, ops: &[(String, String, Value)], by: &str) -> ApiResult<Value> {
+        let store = self.st.store_handle().ok_or_else(not_connected)?;
+        for attempt in 0..RETRIES {
+            back_off(attempt).await;
+            let (lines, mut s) = self.replayed_now(name).await?;
+            let now = pk_core::time::now_iso();
+            let mut new_lines = Vec::with_capacity(ops.len());
+            let mut rows = Vec::with_capacity(ops.len());
+            let mut last_id = "";
+            for (k, (op, id, data)) in ops.iter().enumerate() {
+                let ev = Event::new(op, id, data.clone(), by, &now);
+                s.append_event(ev.clone()).map_err(|e| creative_err(&e))?;
+                let line = pk_core::py::dumps(&serde_json::to_value(&ev).map_err(|e| fault("TypeError", e))?);
+                let seq = i64::try_from(lines.len() + k).map_err(|e| fault("OverflowError", e))?;
+                rows.push(CreativeEvent::new(name, seq, &line).map_err(store_err)?);
+                new_lines.push(line);
+                last_id = id;
+            }
+            match store.create_creative_events(&rows).await {
+                Ok(()) => {
+                    let item = s.get(last_id).cloned().unwrap_or(Value::Null);
+                    let mut all = lines;
+                    all.extend(new_lines);
+                    self.replayed(name)?.store(all, Arc::new(s.items().clone()));
+                    return Ok(item);
+                }
+                Err(e) if is_place_taken(&e) && attempt + 1 < RETRIES => {
+                    tracing::info!(
+                        store = name,
+                        attempt,
+                        "another writer took a row; the sequence runs again: {e}"
+                    );
+                }
+                Err(e) => return Err(store_err(e)),
+            }
+        }
+        unreachable!("the loop returns on its last attempt")
+    }
+
     /// A store's rows as they are now, replayed off the async threads (a few thousand `jobs` rows at production
     /// scale), with its lines.
     async fn replayed_now(&self, name: &str) -> ApiResult<(Vec<String>, ReplayedStore)> {
@@ -641,6 +686,20 @@ impl Creative {
         ts: Option<&str>,
         plan: impl Fn(&Items) -> ApiResult<Plan>,
     ) -> ApiResult<Written> {
+        self.append_planned_or(name, by, ts, plan, None).await
+    }
+
+    /// [`Creative::append_planned`] with the answer when every attempt lost its row to another writer: `Some(..)` is
+    /// that answer (a claim: the Python's `claim` returns none after `APPEND_RETRIES` and the route says 204), `None`
+    /// the store's own error.
+    pub async fn append_planned_or(
+        &self,
+        name: &str,
+        by: &str,
+        ts: Option<&str>,
+        plan: impl Fn(&Items) -> ApiResult<Plan>,
+        exhausted: Option<(StatusCode, Value)>,
+    ) -> ApiResult<Written> {
         let store = self.st.store_handle().ok_or_else(not_connected)?;
         for attempt in 0..RETRIES {
             back_off(attempt).await;
@@ -669,6 +728,10 @@ impl Creative {
                 }
                 Err(e) if is_place_taken(&e) && attempt + 1 < RETRIES => {
                     tracing::info!(store = name, attempt, "another writer took the row; reading again: {e}");
+                }
+                Err(e) if is_place_taken(&e) && exhausted.is_some() => {
+                    let (status, v) = exhausted.unwrap_or((StatusCode::NO_CONTENT, Value::Null));
+                    return Ok(Written::Skipped(status, v));
                 }
                 Err(e) => return Err(store_err(e)),
             }

@@ -177,9 +177,9 @@ fn reference(row: &[f32]) -> f32 {
 /// A float32 dot product in eight lanes (what a BLAS kernel does; the goldens compare cosines at float32 precision).
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     let mut acc = [0.0_f32; 8];
-    let (ca, cb) = (a.chunks_exact(8), b.chunks_exact(8));
-    let tail: f32 = ca.remainder().iter().zip(cb.remainder()).map(|(x, y)| x * y).sum();
-    for (x, y) in ca.zip(cb) {
+    let ((ca, ra), (cb, rb)) = (a.as_chunks::<8>(), b.as_chunks::<8>());
+    let tail: f32 = ra.iter().zip(rb).map(|(x, y)| x * y).sum();
+    for (x, y) in ca.iter().zip(cb) {
         for l in 0..8 {
             acc[l] += x[l] * y[l];
         }

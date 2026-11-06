@@ -81,7 +81,10 @@ class LiveHub:
             try:
                 r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
                 for t in self.TABLES:
-                    r.query(f"LIVE SELECT * FROM {t};")
+                    # `joke` by the fields a change reads: the sweeper's `UPDATE joke SET embedding` must not put the
+                    # 384-float vector in every notification
+                    fields = "id, working, working_sets" if t == "joke" else "*"
+                    r.query(f"LIVE SELECT {fields} FROM {t};")
                 self.connected = True
                 backoff = 1
                 while True:
