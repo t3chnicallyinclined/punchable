@@ -207,6 +207,9 @@ spec:
           # re-apply once a schema sha is stored), then pk-api. Uploads made by the old Python pod are in its inbox
           # folder and are not listed by the new code: drain the inbox (the transcriber, or drop the jobs) before the
           # Python image changes.
+          # UPLOADS IN THE DATABASE ARE OFF BY DEFAULT (docs/adr/0014, Proposed): set PK_UPLOAD_DB=1 on BOTH Deployments only
+          # after the owner accepts it. Off, pk-api answers POST /api/upload with 503 (so do not apply the upload Ingress at the
+          # end of this file), forwards /api/inbox and the transcriber's fetch to the Python, and the inbox folder is the home.
           - { path: /api/inbox, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/memos, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 4 (group 6b): what was folded into a bit (GET only on the Python too). One merge record is the
@@ -227,6 +230,8 @@ metadata:
   namespace: punchable
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
+    # a job's result takes up to 8 MiB (writes/worker.rs WORKER_BODY); the nginx default is 1m
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
     nginx.ingress.kubernetes.io/limit-rps: "30"
     nginx.ingress.kubernetes.io/limit-connections: "25"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"

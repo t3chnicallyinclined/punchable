@@ -1,4 +1,4 @@
-"""search_api.lease_acquire: a write conflict is asked again, "already exists" is an immediate refusal (run 4 of the
+"""search_api.lease_acquire: a write conflict is asked again, "already exists" is asked again too (run 4 of the
 group-6a gate saw eight first-ever askers all refused, so nobody held the lease). The real race is the Rust gate's
 eight-asker test against a scratch SurrealDB; this is the retry logic over a fake connection."""
 import search_api as S
@@ -30,9 +30,13 @@ def test_a_conflict_that_outlasts_the_retries_is_a_refusal_for_this_pass():
     assert S.lease_acquire(r, "a") is False and r.calls == 3
 
 
-def test_already_exists_is_an_immediate_refusal():
-    r = Scripted(RuntimeError("Database record `lease:embedder` already exists"))
-    assert S.lease_acquire(r, "a") is False and r.calls == 1
+def test_already_exists_is_asked_again_like_a_conflict():
+    # the loser of two first-ever creates: its UPDATE can commit after the CREATE failed, so it may own the lease
+    r = Scripted(RuntimeError("Database record `lease:embedder` already exists"), [{"owner": "a"}])
+    assert S.lease_acquire(r, "a") is True and r.calls == 2
+    e = RuntimeError("Database record `lease:embedder` already exists")
+    r = Scripted(e, e, e)
+    assert S.lease_acquire(r, "a") is False and r.calls == 3
 
 
 def test_another_error_surfaces():

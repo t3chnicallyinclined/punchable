@@ -158,14 +158,12 @@ def lease_acquire(r: sdb.Rpc, me: str, kind: str = "embedder", ttl_s: int = LEAS
             return bool(r.last(sql, {"k": kind, "me": me}))
         except Exception as e:  # noqa: BLE001
             msg = str(e).lower()
-            # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
-            if "already exists" in msg:
-                return False
             # the create and the update are two statements, not one transaction: a write conflict beside the other asker's
-            # update used to leave nobody holding the lease. Asked again over the rows as they are now (ours: renewed;
-            # someone else's and live: no rows; absent: created again); only a conflict that outlasts the retries is a
-            # refusal for this pass.
-            if "conflict" in msg or "can be retried" in msg:
+            # update used to leave nobody holding the lease, and the loser of two first-ever creates ("already exists")
+            # can have its UPDATE commit after the CREATE failed, so it may hold the lease while it answers False. Both are
+            # asked again over the rows as they are now (ours: renewed; someone else's and live: no rows; absent: created
+            # again); only a conflict that outlasts the retries is a refusal for this pass.
+            if "conflict" in msg or "can be retried" in msg or "already exists" in msg:
                 if wait is None:
                     return False
                 time.sleep(wait + jitter / 1000)
@@ -217,7 +215,10 @@ class Sweeper:
         self._stopped = True
         r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
         try:
-            r.query("UPDATE lease:embedder SET owner = NONE, until = NONE WHERE owner = $me;", {"me": self.me})
+            # `until = NONE` would match the acquire's WHERE for anyone, this process's sweep thread in flight included:
+            # an owner tag that is nobody's and an `until` of now (the pass also checks `_stopped` before it asks)
+            r.query("UPDATE lease:embedder SET owner = $tag, until = time::now() WHERE owner = $me;",
+                    {"me": self.me, "tag": f"released:{self.me}"})
         finally:
             r.close()
 
@@ -225,9 +226,10 @@ class Sweeper:
         """One pass; None when the lease is held by another process (nothing embedded here)."""
         r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
         try:
-            if not lease_acquire(r, self.me, ttl_s=self.ttl_s):
+            if self._stopped or not lease_acquire(r, self.me, ttl_s=self.ttl_s):
                 return None
-            return sweep(r, self.emb, self.kb.view(), renew=lambda: lease_acquire(r, self.me, ttl_s=self.ttl_s))
+            return sweep(r, self.emb, self.kb.view(),
+                         renew=lambda: not self._stopped and lease_acquire(r, self.me, ttl_s=self.ttl_s))
         finally:
             r.close()
 

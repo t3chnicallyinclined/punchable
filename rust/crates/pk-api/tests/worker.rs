@@ -118,6 +118,17 @@ async fn setup(env: &Env, port: u16, db: &str) -> (Store, AppState) {
 
 /// [`setup`] with the token check on (`auth`): a verifier whose key set cannot be fetched, so every token is refused.
 async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppState) {
+    setup_full(env, port, db, auth, &[]).await
+}
+
+/// [`setup_with`] and more settings for the API (`PK_LIVE_PING_S`, ...).
+async fn setup_full(
+    env: &Env,
+    port: u16,
+    db: &str,
+    auth: bool,
+    extra: &[(&'static str, &'static str)],
+) -> (Store, AppState) {
     let cfg = Config::scratch(env, port, "punchable_test", db).expect("config");
     let writer = Store::connect(cfg.clone()).await.expect("connect");
     assert!(writer.apply_schema(false).await.expect("schema"));
@@ -151,7 +162,9 @@ async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppSt
         ("PK_OWNER_ID", "owner"),
         ("PK_EMBEDDER", "hash"),
         ("PK_VEC_SWEEP_S", "0"),
+        ("PK_UPLOAD_DB", "1"),
     ];
+    pairs.extend(extra.iter().copied());
     if auth {
         pairs.push(("OIDC_ISSUER", "https://auth.example/realms/punchable"));
     } else {
@@ -614,13 +627,45 @@ async fn an_upload_is_rows_both_servers_read_and_a_taken_name_gets_the_next_suff
     }
     assert_eq!(back, a, "the bytes come back whole, in order");
     assert!(writer.upload_part(&row.token, 9).await.unwrap().is_none());
-    // a part with no upload row, an hour old, is an orphan; a young one is not
+    // a commit counts the parts: a recording with a part missing is never listed
+    writer.upload_put_part("tok-short", 0, vec![1]).await.unwrap();
+    let e = writer
+        .upload_commit("short.m4a", "tok-short", &meta, 2, 2)
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("2 parts expected"), "{e}");
+    assert!(writer.upload_get("short.m4a").await.unwrap().is_none());
+    // the sweep reads the staging rows, not the megabyte rows: a young upload in flight stays, one whose newest
+    // part is an hour old goes with its staging row, and a committed one only loses a stale staging row
     writer.upload_put_part("tok-orphan", 0, vec![1]).await.unwrap();
     writer.upload_sweep_orphans().await.unwrap();
     assert!(
         writer.upload_part("tok-orphan", 0).await.unwrap().is_some(),
         "a young part stays"
     );
+    writer
+        .query(
+            "UPDATE type::record('upload_stage', 'tok-orphan') SET t = 1.0; UPDATE type::record('upload_stage', 'tok-short') SET t = 1.0; \
+             UPSERT type::record('upload_stage', $kept) SET t = 1.0, n = 3;",
+            vars([("kept", to_db(&json!(row.token)))]),
+        )
+        .await
+        .unwrap();
+    writer.upload_sweep_orphans().await.unwrap();
+    assert!(
+        writer.upload_part("tok-orphan", 0).await.unwrap().is_none(),
+        "an old orphan goes"
+    );
+    assert!(writer.upload_part("tok-short", 0).await.unwrap().is_none());
+    assert!(
+        writer.upload_part(&row.token, 0).await.unwrap().is_some(),
+        "a committed upload keeps its bytes when only its staging row is old"
+    );
+    let left = writer
+        .last("RETURN count(SELECT id FROM upload_stage);", vars([]))
+        .await
+        .unwrap();
+    assert_eq!(pk_store::from_db(left), json!(0), "no staging row is left");
     writer.upload_delete(name).await.unwrap();
     assert!(writer.upload_get(name).await.unwrap().is_none());
     assert!(
@@ -992,6 +1037,88 @@ async fn a_draining_pod_closes_its_live_sockets_with_1012() {
         }
     }
     assert!(got_close, "the late socket was closed with 1012");
+}
+
+/// A socket with events flowing and no frame from the client but its pongs must stay open past the idle limit: the
+/// ping runs on its own deadline, so an event never postpones it (the app sends only its auth frame and pong replies).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_busy_live_socket_stays_open_past_the_idle_limit() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup_full(
+        &env,
+        port,
+        "t_worker_busy",
+        false,
+        &[("PK_LIVE_PING_S", "0.15"), ("PK_LIVE_IDLE_S", "0.4")],
+    )
+    .await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    assert_eq!(next_json(&mut ws, 10).await["type"], "hello");
+    let joke = a_joke(&st).await;
+    let started = Instant::now();
+    let mut events = 0;
+    let mut i = 0;
+    // events every ~100 ms (faster than the ping), for 1.6 s: four times the idle limit
+    while started.elapsed() < Duration::from_millis(1600) {
+        i += 1;
+        let (s, r) = call(
+            &st,
+            "POST",
+            "/api/decision",
+            Some(json!({"target": "node", "id": joke, "action": "edit", "after": {"stage": if i % 2 == 0 { "testing" } else { "idea" }}})),
+        )
+        .await;
+        assert_eq!(s, StatusCode::OK, "{r}");
+        // reading answers the server's pings (tungstenite queues the pong), which is all a healthy app does
+        while let Ok(Some(m)) = tokio::time::timeout(Duration::from_millis(100), ws.next()).await {
+            match m.expect("the socket stays up") {
+                Message::Text(t) if t.contains("\"change\"") => events += 1,
+                Message::Close(f) => panic!("a busy socket was closed: {f:?} after {:?}", started.elapsed()),
+                _ => {}
+            }
+        }
+    }
+    assert!(events > 0, "events flowed");
+    assert_eq!(
+        st.metrics().live_clients.get(),
+        1,
+        "still a client after {:?}",
+        started.elapsed()
+    );
+}
+
+/// A client that stops answering (no frame at all) is closed after the idle limit, not when TCP gives up.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_silent_live_socket_is_closed_after_the_idle_limit() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup_full(
+        &env,
+        port,
+        "t_worker_silent",
+        false,
+        &[("PK_LIVE_PING_S", "0.15"), ("PK_LIVE_IDLE_S", "0.4")],
+    )
+    .await;
+    let addr = serve_live(&st).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/live"))
+        .await
+        .expect("upgrade");
+    assert_eq!(next_json(&mut ws, 10).await["type"], "hello");
+    assert_eq!(st.metrics().live_clients.get(), 1);
+    // the client reads nothing and so answers nothing for longer than the idle limit
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    assert_eq!(
+        st.metrics().live_clients.get(),
+        0,
+        "the half-open socket was closed by the server"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

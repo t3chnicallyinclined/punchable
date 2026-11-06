@@ -258,6 +258,15 @@ pub async fn upload(
     RawQuery(raw): RawQuery,
     body: Body,
 ) -> ApiResult<Response> {
+    if !st.config().upload_db {
+        // a path moved here must never silently diverge from the Python, which keeps the upload in its inbox folder
+        tracing::error!(
+            "POST /api/upload refused: uploads in the database are off (PK_UPLOAD_DB is not 1) but this path is routed here"
+        );
+        return Err(ApiError::unavailable(
+            "uploads in the database are off (PK_UPLOAD_DB); route /api/upload to the Python API",
+        ));
+    }
     let q = Query::parse(raw.as_deref());
     st.require_loaded()?;
     crate::routes::pick(&q)?;
@@ -328,47 +337,58 @@ async fn stage_and_queue(
             return Err(e);
         }
     };
-    let mut out = Map::new();
-    out.insert("status".into(), json!("queued"));
-    out.insert("file".into(), json!(used));
-    out.insert("kind".into(), json!(kind));
-    out.insert("bytes".into(), json!(n));
-    // queued as process_set: no worker transcribes any more (the phone does), so the job says so, never a silent drop
-    let _cr = st.creative_lock().lock().await;
-    let cr = Creative::new(st.clone());
-    let (_, items) = cr.lines_and_items("jobs").await?;
-    if let Some(dup) = recent_duplicate(&items, &meta, crate::worker::unix_now()) {
-        store.upload_delete(&used).await.map_err(store_err)?;
-        let file = dup
-            .get("input")
-            .and_then(|i| i.get("file"))
-            .cloned()
-            .unwrap_or(Value::Null);
-        out.insert("file".into(), file);
-        out.insert("job".into(), brief(dup));
-        out.insert("duplicate".into(), json!(true));
-        if let Some(w) = dup.get("waiting_for").filter(|w| py::truthy(Some(w))) {
-            out.insert("waiting_for".into(), w.clone());
-            out.insert("note".into(), w.as_str().map_or(Value::Null, waiting_note));
+    let queued = async {
+        let mut out = Map::new();
+        out.insert("status".into(), json!("queued"));
+        out.insert("file".into(), json!(used));
+        out.insert("kind".into(), json!(kind));
+        out.insert("bytes".into(), json!(n));
+        // queued as process_set: no worker transcribes any more (the phone does), so the job says so, never a silent drop
+        let _cr = st.creative_lock().lock().await;
+        let cr = Creative::new(st.clone());
+        let (_, items) = cr.lines_and_items("jobs").await?;
+        if let Some(dup) = recent_duplicate(&items, &meta, crate::worker::unix_now()) {
+            store.upload_delete(&used).await.map_err(store_err)?;
+            let file = dup
+                .get("input")
+                .and_then(|i| i.get("file"))
+                .cloned()
+                .unwrap_or(Value::Null);
+            out.insert("file".into(), file);
+            out.insert("job".into(), brief(dup));
+            out.insert("duplicate".into(), json!(true));
+            if let Some(w) = dup.get("waiting_for").filter(|w| py::truthy(Some(w))) {
+                out.insert("waiting_for".into(), w.clone());
+                out.insert("note".into(), w.as_str().map_or(Value::Null, waiting_note));
+            }
+            return Ok(Value::Object(out));
         }
-        return Ok(Value::Object(out));
+        let owner = st.config().owner_id.clone();
+        let (_, q) = enqueue(
+            &cr,
+            "process_set",
+            &format!("process|{used}"),
+            json!({"file": used, "meta": meta}),
+            false,
+            &owner,
+        )
+        .await?;
+        out.insert("job".into(), q.get("job").cloned().unwrap_or(Value::Null));
+        if let Some(w) = q.get("waiting_for").filter(|w| py::truthy(Some(w))) {
+            out.insert("waiting_for".into(), w.clone());
+            out.insert("note".into(), q.get("note").cloned().unwrap_or(Value::Null));
+        }
+        Ok::<Value, ApiError>(Value::Object(out))
     }
-    let owner = st.config().owner_id.clone();
-    let (_, q) = enqueue(
-        &cr,
-        "process_set",
-        &format!("process|{used}"),
-        json!({"file": used, "meta": meta}),
-        false,
-        &owner,
-    )
-    .await?;
-    out.insert("job".into(), q.get("job").cloned().unwrap_or(Value::Null));
-    if let Some(w) = q.get("waiting_for").filter(|w| py::truthy(Some(w))) {
-        out.insert("waiting_for".into(), w.clone());
-        out.insert("note".into(), q.get("note").cloned().unwrap_or(Value::Null));
+    .await;
+    if queued.is_err()
+        && let Err(d) = store.upload_delete(&used).await
+    {
+        // the job was not queued and the phone will send the recording again: this copy must not stay (the sweep
+        // finds what is left by its staging row)
+        tracing::warn!(error = %d, file = %used, "upload: not deleted after a failed enqueue");
     }
-    Ok(Value::Object(out))
+    queued
 }
 
 /// `inbox_row(name, bytes, meta)`: one waiting upload as the app lists it (hosted: waiting for the transcriber).
@@ -395,8 +415,11 @@ pub fn inbox_row(u: &UploadRow) -> Value {
 }
 
 /// `GET /api/inbox`: the uploads waiting for a transcriber, newest first.
-pub async fn inbox(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
-    let q = Query::parse(raw.as_deref());
+pub async fn inbox(State(st): State<AppState>, req: axum::extract::Request) -> ApiResult<Response> {
+    if !st.config().upload_db {
+        return Ok(crate::proxy::forward(State(st), req).await);
+    }
+    let q = Query::parse(req.uri().query());
     st.require_loaded()?;
     crate::routes::pick(&q)?;
     let store = st.store_handle().ok_or_else(not_connected)?;
@@ -411,8 +434,15 @@ pub fn upload_name(job: &Map<String, Value>) -> Option<String> {
 }
 
 /// `GET /api/worker/jobs/<id>/file`: the upload's bytes, part by part (`send_file`'s headers).
-pub async fn file(State(st): State<AppState>, Path(jid): Path<String>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
-    let q = Query::parse(raw.as_deref());
+pub async fn file(
+    State(st): State<AppState>,
+    Path(jid): Path<String>,
+    req: axum::extract::Request,
+) -> ApiResult<Response> {
+    if !st.config().upload_db {
+        return Ok(crate::proxy::forward(State(st), req).await);
+    }
+    let q = Query::parse(req.uri().query());
     st.require_loaded()?;
     crate::routes::pick(&q)?;
     let items = Creative::new(st.clone()).items("jobs").await?;

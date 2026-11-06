@@ -9,31 +9,47 @@ suffix. Local development (no jobs_on_upload) keeps the inbox folder and none of
 """
 from __future__ import annotations
 
+import os
 import re
 import time
 
 PART = 1024 * 1024
+
+
+def enabled() -> bool:
+    """Uploads in the database (docs/adr/0014, Proposed) are OFF unless PK_UPLOAD_DB=1: off, a hosted upload is a file in
+    the pod's inbox folder as before and pk-api refuses to take /api/upload."""
+    return os.environ.get("PK_UPLOAD_DB") == "1"
 ORPHAN_S = 3600
 NAME_RE = re.compile(r"^[A-Za-z0-9._\-]{1,200}$")
 
 
 def put_part(rpc, token: str, seq: int, data: bytes) -> None:
-    rpc.write("CREATE upload_part CONTENT {token: $k, seq: $s, t: $t, data: $d} RETURN id;",
-              {"k": token, "s": seq, "t": time.time(), "d": data}, expect=1)
+    """One part and the staging row that counts it, in one transaction."""
+    rpc.query("BEGIN; CREATE upload_part CONTENT {token: $k, seq: $s, data: $d} RETURN id; "
+              "UPSERT type::record('upload_stage', $k) SET t = $t, n = (n ?? 0) + 1 RETURN id; COMMIT;",
+              {"k": token, "s": seq, "t": time.time(), "d": data})
 
 
 def drop_parts(rpc, token: str) -> None:
-    rpc.query("DELETE upload_part WHERE token = $k RETURN NONE;", {"k": token})
+    rpc.query("DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload_stage', $k) RETURN NONE;",
+              {"k": token})
 
 
 def sweep_orphans(rpc) -> None:
-    """Parts of an upload that never committed (the pod died mid-body): gone after an hour. Cheap, per upload."""
-    rpc.query("DELETE upload_part WHERE t < $old AND token NOT IN (SELECT VALUE token FROM upload) RETURN NONE;",
-              {"old": time.time() - ORPHAN_S})
+    """Parts of an upload that never committed (or whose row was deleted first), found by their staging row's newest-part
+    time, never by scanning the megabyte rows. A token that did commit only loses its staging row."""
+    rpc.query("LET $stale = (SELECT VALUE record::id(id) FROM upload_stage WHERE t < $old); "
+              "LET $kept = (SELECT VALUE token FROM upload WHERE token IN $stale); "
+              "FOR $k IN $stale { IF $k NOT IN $kept { DELETE upload_part WHERE token = $k RETURN NONE; }; }; "
+              "DELETE upload_stage WHERE t < $old RETURN NONE;", {"old": time.time() - ORPHAN_S})
 
 
 def commit(rpc, name: str, token: str, meta: dict, nbytes: int, parts: int) -> str:
     """Make the `upload:<name>` row, the next free suffix when the name is taken (`<stem>-2.<ext>`); the name used."""
+    counted = rpc.last("SELECT VALUE n FROM ONLY type::record('upload_stage', $k);", {"k": token})
+    if counted != parts:
+        raise RuntimeError(f"upload {name}: {parts} parts expected, {counted!r} written")
     stem, dot, ext = name.rpartition(".")
     stem, ext = (stem, "." + ext) if dot else (name, "")
     k, use = 2, name
@@ -41,6 +57,7 @@ def commit(rpc, name: str, token: str, meta: dict, nbytes: int, parts: int) -> s
         try:
             rpc.write("CREATE type::record('upload', $n) CONTENT {name: $n, token: $k, meta: $m, bytes: $b, parts: $p, t: $t} "
                       "RETURN id;", {"n": use, "k": token, "m": {**meta}, "b": nbytes, "p": parts, "t": time.time()}, expect=1)
+            rpc.query("DELETE type::record('upload_stage', $k) RETURN NONE;", {"k": token})
             return use
         except Exception as e:  # noqa: BLE001
             if "already exists" not in str(e).lower():
@@ -73,9 +90,13 @@ def part(rpc, token: str, seq: int) -> bytes:
 
 
 def delete(rpc, name: str) -> None:
-    """The upload and its parts (the transcriber's result landed, or a duplicate is thrown away)."""
+    """The upload and its parts: the row first (a stale staging row marks the token for the sweep in the same
+    transaction), then the bytes, so a crash between the two leaves orphans the sweep removes, never an inbox row with no
+    bytes."""
     row = get(rpc, name)
     if row is None:
         return
-    rpc.query("DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload', $n) RETURN NONE;",
+    rpc.query("BEGIN; DELETE type::record('upload', $n) RETURN NONE; "
+              "UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
               {"k": row["token"], "n": name})
+    drop_parts(rpc, row["token"])

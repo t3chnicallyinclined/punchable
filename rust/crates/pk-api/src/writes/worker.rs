@@ -149,7 +149,8 @@ pub async fn result(
             Written::Landed(job) => {
                 let job = obj(&job);
                 // `w_result`: the transcriber is done with the recording, so it goes (no media library)
-                if py::truthy(b.get("ok"))
+                if st.config().upload_db
+                    && py::truthy(b.get("ok"))
                     && job.get("kind").and_then(Value::as_str) == Some("process_set")
                     && let Some(name) = super::uploads::upload_name(&job)
                 {

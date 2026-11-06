@@ -1538,7 +1538,8 @@ class Routes:
 
     def _hosted_upload(self) -> bool:
         """The uploads are rows in the database (hosted), not files in the pod's inbox folder (server.hosted_uploads)."""
-        return bool(getattr(self.h, "jobs_on_upload", False)) and getattr(self.kb, "rpc", None) is not None
+        import upload_store as US
+        return bool(getattr(self.h, "jobs_on_upload", False)) and getattr(self.kb, "rpc", None) is not None and US.enabled()
 
     def _inbox_file(self, j) -> Path | None:
         name = self._upload_name(j)

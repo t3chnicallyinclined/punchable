@@ -12,8 +12,8 @@ use crate::store::{Store, rows_of, vars};
 use crate::value::to_db;
 
 impl Store {
-    /// Take or renew `lease:<kind>` for `me`: `true` when this process holds it now. "Already exists" (the loser of two
-    /// first-ever creates) is an immediate refusal: that asker holds it. A write conflict is retried after a short
+    /// Take or renew `lease:<kind>` for `me`: `true` when this process holds it now. A write conflict, and "already exists"
+    /// (the loser of two first-ever creates, whose UPDATE can commit after its CREATE failed), are retried after a short
     /// wait of this asker's own length ([`RETRY_WAITS_MS`]), the statement asked again over the rows as they are now:
     /// ours -> renewed (`true`), someone else's and live -> no rows (`false`), still absent -> created again. The create
     /// and the update are two statements, not one transaction, so a create that landed beside eight conflicting
@@ -37,8 +37,7 @@ impl Store {
         for wait in RETRY_WAITS_MS.iter().map(|w| Some(w + jitter)).chain([None]) {
             match self.last(&sql, bound.clone()).await {
                 Ok(rows) => return Ok(!rows_of(rows).is_empty()),
-                Err(e) if is_exists(&e) => return Ok(false),
-                Err(e) if is_conflict(&e) => match wait {
+                Err(e) if is_conflict(&e) || is_exists(&e) => match wait {
                     Some(ms) => tokio::time::sleep(std::time::Duration::from_millis(ms)).await,
                     None => return Ok(false),
                 },
@@ -86,7 +85,8 @@ fn is_conflict(e: &StoreError) -> bool {
     text.contains("can be retried") || text.contains("conflict")
 }
 
-/// The loser of two first-ever `CREATE lease:<kind>`: the winner holds the lease.
+/// The loser of two first-ever `CREATE lease:<kind>`: its UPDATE (statement 2) can still commit after the CREATE failed, so
+/// it is asked again like a conflict, never answered `false` while it may own the row.
 fn is_exists(e: &StoreError) -> bool {
     e.to_string().to_lowercase().contains("already exists")
 }

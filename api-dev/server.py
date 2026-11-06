@@ -1002,9 +1002,10 @@ def ai_status(kb: AppKB) -> dict:
 
 
 def hosted_uploads(kb) -> bool:
-    """Hosted (jobs on upload) over a database: an upload is rows both API servers see (upload_store.py), not a file
-    in the pod's inbox folder."""
-    return bool(Handler.jobs_on_upload) and getattr(kb, "rpc", None) is not None
+    """Hosted (jobs on upload) over a database AND PK_UPLOAD_DB=1 (docs/adr/0014, Proposed; off by default): an upload
+    is rows both API servers see (upload_store.py), not a file in the pod's inbox folder."""
+    import upload_store as US
+    return bool(Handler.jobs_on_upload) and getattr(kb, "rpc", None) is not None and US.enabled()
 
 
 def inbox_row(name: str, nbytes: int, meta: dict) -> dict:
@@ -2179,7 +2180,15 @@ class Handler(BaseHTTPRequestHandler):
         out = {"status": "queued", "file": used, "kind": kind, "bytes": n}
         if self.creative is None:
             return self.send_json(out)
-        return self.send_json(self.upload_job(kb, out, used, meta, lambda: US.delete(kb.rpc, used)))
+        try:
+            return self.send_json(self.upload_job(kb, out, used, meta, lambda: US.delete(kb.rpc, used)))
+        except BaseException:
+            # the job was not queued: the phone will send the recording again, so this copy must not stay
+            try:
+                US.delete(kb.rpc, used)
+            except Exception as e:  # noqa: BLE001  the sweep removes what is left
+                self.log_message("upload %s not deleted after a failed enqueue: %r", used, e)
+            raise
 
     def upload_meta(self, kind: str, orig: str, n: int) -> dict:
         try:

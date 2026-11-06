@@ -1197,6 +1197,8 @@ def upload_phase(port: int, pw: str) -> None:
     keep = len(body(R.call(py, "GET", "/api/inbox", app))["items"])
     st, res = write(rs, "POST", f"/api/worker/jobs/{q(r1['job']['id'])}/result", {"ok": False, "error": "no transcriber"}, headers=worker_tok, want=(200,))
     ok("upload: a failed result keeps the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep, json.dumps(res)[:200])
+    stages = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM upload_stage);")[-1]["result"]
+    ok("upload: no staging row is left once every upload is committed, cut short or deleted", stages == 0, str(stages))
     # the transcriber's result: ok deletes the upload (through either server), the other keeps nothing behind
     for base, who in ((rs, "pk-api"), (py, "the Python")):
         st, c = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-ts", "hosted": False}, headers=worker_tok, want=(200,))
@@ -1244,6 +1246,7 @@ def main() -> int:
     if not (Path(bge) / "onnx" / "model.onnx").is_file():
         raise SystemExit("set PK_BGE_DIR to the bge-small folder (python tools/kb/fetch_bge.py --dest <dir>)")
     env["PK_VEC_SWEEP_S"] = "86400"
+    env["PK_UPLOAD_DB"] = "1"   # uploads in the database (docs/adr/0014, off by default): both servers, or neither
     procs: list[subprocess.Popen] = []
     logs = []
 

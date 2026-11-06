@@ -25,11 +25,10 @@ use crate::state::AppState;
 
 /// The first message (the token) must arrive within this.
 const AUTH_WAIT: Duration = Duration::from_secs(10);
-/// A keep-alive ping after this much quiet (`q.get(timeout=20)`).
-const PING_AFTER: Duration = Duration::from_secs(20);
-/// A client that has sent no frame (its pong included) for this long is half open: the session ends, instead of
-/// living until TCP gives up (a browser answers every ping, so a live one never goes this quiet).
-const IDLE_AFTER: Duration = Duration::from_secs(40);
+// The keep-alive ping (`PK_LIVE_PING_S`, 20 s) and the half-open limit (`PK_LIVE_IDLE_S`, 40 s) are settings
+// (`ApiConfig::live_ping`, `live_idle`): a ping is sent every `live_ping` on its own deadline, never reset by an event
+// (the app sends only its auth frame and pong replies, so only the pings make a healthy socket speak), and a client
+// that has sent no frame for `live_idle` is half open and closed instead of living until TCP gives up.
 /// The close code of a pod that is draining: "service restart", the client connects again.
 const RESTARTING: u16 = 1012;
 /// The largest client message read (`frame(limit=1 << 20)`).
@@ -177,7 +176,9 @@ async fn session(st: AppState, mut sock: WebSocket) {
     let hub = st.live().clone();
     let mut rx = hub.subscribe();
     let mut drain = st.drain_watch();
+    let (ping_every, idle_after) = (st.config().live_ping, st.config().live_idle);
     let mut last_rx = tokio::time::Instant::now();
+    let mut next_ping = last_rx + ping_every;
     let _client = Client::open(&st.metrics().live_clients);
     let hello = json!({"type": "hello", "rev": st.data_now().map(|d| d.rev()), "live": hub.connected()});
     if !send(&mut sock, Message::Text(hello.to_string().into())).await {
@@ -207,7 +208,7 @@ async fn session(st: AppState, mut sock: WebSocket) {
                 Some(Ok(_)) => last_rx = tokio::time::Instant::now(),
             },
             // no frame, not even a pong, for twice the ping interval: a half-open socket
-            () = tokio::time::sleep_until(last_rx + IDLE_AFTER) => break,
+            () = tokio::time::sleep_until(last_rx + idle_after) => break,
             // the pod is draining: tell the client to come back (1012), not a silent drop
             () = crate::state::drained(&mut drain) => {
                 send(
@@ -217,7 +218,10 @@ async fn session(st: AppState, mut sock: WebSocket) {
                 .await;
                 break;
             }
-            () = tokio::time::sleep(PING_AFTER) => {
+            // its own deadline: events do not move it, so a socket with events flowing still gets its pings and
+            // answers with the pongs that keep `last_rx` fresh
+            () = tokio::time::sleep_until(next_ping) => {
+                next_ping = tokio::time::Instant::now() + ping_every;
                 if !send(&mut sock, Message::Ping(Vec::new().into())).await {
                     break;
                 }

@@ -94,6 +94,14 @@ DEFINE FIELD OVERWRITE t     ON upload TYPE float;                       -- time
 DEFINE TABLE IF NOT EXISTS upload_part SCHEMAFULL;
 DEFINE FIELD OVERWRITE token ON upload_part TYPE string;
 DEFINE FIELD OVERWRITE seq   ON upload_part TYPE int;
-DEFINE FIELD OVERWRITE t     ON upload_part TYPE float;                  -- when written: a part with no upload row after an hour is an orphan
 DEFINE FIELD OVERWRITE data  ON upload_part TYPE bytes;
 DEFINE INDEX OVERWRITE upload_part_seq ON upload_part FIELDS token, seq UNIQUE;
+DEFINE INDEX OVERWRITE upload_token ON upload FIELDS token;
+-- One small row per upload still being received (record id = its token): when its newest part was written and how many
+-- parts there are. The orphan sweep reads THESE rows, never the megabyte rows, and the commit checks the count so a
+-- recording is never listed with bytes missing. Gone at commit; left behind by a crash, it is what lets the sweep find
+-- (and delete) the parts of an upload that never committed or whose row was deleted first.
+DEFINE TABLE IF NOT EXISTS upload_stage SCHEMAFULL;
+DEFINE FIELD OVERWRITE t ON upload_stage TYPE float;
+DEFINE FIELD OVERWRITE n ON upload_stage TYPE int;
+DEFINE INDEX OVERWRITE upload_stage_t ON upload_stage FIELDS t;

@@ -152,6 +152,28 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
     assert_eq!(s, StatusCode::NOT_FOUND);
 }
 
+/// Uploads in the database are off unless `PK_UPLOAD_DB=1` (docs/adr/0014): a moved `/api/upload` refuses loudly, and
+/// the inbox is the Python's (forwarded; with no Python configured here the answer is its 404).
+#[tokio::test]
+async fn upload_is_refused_while_uploads_in_the_database_are_off() {
+    let st = state(false);
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/upload")
+        .header("content-length", "12")
+        .body(Body::from("RIFF0000WAVE"))
+        .unwrap();
+    let (s, _, b) = send(&st, req).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE);
+    assert!(error_of(&b).contains("PK_UPLOAD_DB"), "{}", error_of(&b));
+    let (s, _, b) = send(&st, get("/api/inbox").body(Body::empty()).unwrap()).await;
+    assert_eq!(
+        (s, error_of(&b).as_str()),
+        (StatusCode::NOT_FOUND, "not found"),
+        "forwarded to the Python"
+    );
+}
+
 #[tokio::test]
 async fn search_similar_and_the_hybrid_list_are_answered_here() {
     // no PK_PYTHON_URL: forwarded = the fallback's 404; answered here = this service's own auth layer's 401

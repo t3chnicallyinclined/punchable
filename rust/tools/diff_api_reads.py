@@ -888,6 +888,7 @@ def main() -> int:
         raise SystemExit("set PK_BGE_DIR to the bge-small folder (python tools/kb/fetch_bge.py --dest <dir>): "
                          "search, /similar and the hybrid list embed on both servers")
     env["PK_VEC_SWEEP_S"] = "86400"
+    env["PK_UPLOAD_DB"] = "1"   # uploads in the database (docs/adr/0014, off by default): both servers, or neither
     procs: list[subprocess.Popen] = []
     logs = []
 

@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use surrealdb::types::{Bytes, Number, Object, Value};
 
-use crate::error::Result;
+use crate::error::{Result, StoreError};
 use crate::store::{Store, rows_of, vars};
 use crate::value::{as_i64, as_str, from_db, to_db};
 
@@ -58,36 +58,41 @@ fn row_of(o: &Object) -> Option<UploadRow> {
 }
 
 impl Store {
-    /// One part of an upload.
+    /// One part of an upload, and the staging row that counts it (one transaction: a part is never there uncounted).
     pub async fn upload_put_part(&self, token: &str, seq: i64, data: Vec<u8>) -> Result<()> {
-        self.write(
-            "CREATE upload_part CONTENT {token: $k, seq: $s, t: $t, data: $d} RETURN id;",
+        self.query(
+            "BEGIN; CREATE upload_part CONTENT {token: $k, seq: $s, data: $d} RETURN id; \
+             UPSERT type::record('upload_stage', $k) SET t = $t, n = (n ?? 0) + 1 RETURN id; COMMIT;",
             vars([
                 ("k", Value::String(token.to_string())),
                 ("s", Value::Number(Number::Int(seq))),
                 ("t", float(now())),
                 ("d", Value::Bytes(Bytes::from(data))),
             ]),
-            Some(1),
         )
         .await?;
         Ok(())
     }
 
-    /// The parts of a token (an upload cut short, a duplicate thrown away, a result that landed).
+    /// The parts of a token and its staging row (an upload cut short, a failed commit).
     pub async fn upload_drop_parts(&self, token: &str) -> Result<()> {
         self.query(
-            "DELETE upload_part WHERE token = $k RETURN NONE;",
+            "DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload_stage', $k) RETURN NONE;",
             vars([("k", Value::String(token.to_string()))]),
         )
         .await?;
         Ok(())
     }
 
-    /// Parts of an upload that never committed, an hour old: gone.
+    /// Parts of an upload that never committed (or whose row was deleted first): found by their STAGING row, whose
+    /// newest-part time is older than [`ORPHAN_S`] (a long upload keeps its row fresh with every part), never by
+    /// scanning the megabyte rows. A token that did commit only loses its staging row.
     pub async fn upload_sweep_orphans(&self) -> Result<()> {
         self.query(
-            "DELETE upload_part WHERE t < $old AND token NOT IN (SELECT VALUE token FROM upload) RETURN NONE;",
+            "LET $stale = (SELECT VALUE record::id(id) FROM upload_stage WHERE t < $old); \
+             LET $kept = (SELECT VALUE token FROM upload WHERE token IN $stale); \
+             FOR $k IN $stale { IF $k NOT IN $kept { DELETE upload_part WHERE token = $k RETURN NONE; }; }; \
+             DELETE upload_stage WHERE t < $old RETURN NONE;",
             vars([("old", float(now() - ORPHAN_S))]),
         )
         .await?;
@@ -95,6 +100,7 @@ impl Store {
     }
 
     /// Make the `upload:<name>` row (the commit): the next free suffix when the name is taken (`<stem>-2.<ext>`).
+    /// Refused when the staging row does not count exactly `parts` parts, so a listed upload always has every part.
     /// The name used.
     pub async fn upload_commit(
         &self,
@@ -104,6 +110,17 @@ impl Store {
         bytes: i64,
         parts: i64,
     ) -> Result<String> {
+        let counted = self
+            .last(
+                "SELECT VALUE n FROM ONLY type::record('upload_stage', $k);",
+                vars([("k", Value::String(token.to_string()))]),
+            )
+            .await?;
+        if as_i64(&counted) != Some(parts) {
+            return Err(StoreError::mapping(format!(
+                "upload {name}: {parts} parts expected, {counted:?} written"
+            )));
+        }
         let (stem, ext) = match name.rsplit_once('.') {
             Some((s, e)) => (s, format!(".{e}")),
             None => (name, String::new()),
@@ -127,7 +144,14 @@ impl Store {
                 )
                 .await;
             match r {
-                Ok(_) => return Ok(use_name),
+                Ok(_) => {
+                    self.query(
+                        "DELETE type::record('upload_stage', $k) RETURN NONE;",
+                        vars([("k", Value::String(token.to_string()))]),
+                    )
+                    .await?;
+                    return Ok(use_name);
+                }
                 Err(e) if e.to_string().to_lowercase().contains("already exists") => {
                     use_name = format!("{stem}-{k}{ext}");
                     k += 1;
@@ -184,14 +208,21 @@ impl Store {
         }))
     }
 
-    /// An upload and its parts.
+    /// An upload and its parts: the row first (in the same transaction a stale staging row marks the token for the
+    /// sweep), then the bytes, so a crash between the two leaves orphan parts the sweep removes and never an inbox row
+    /// with no bytes.
     pub async fn upload_delete(&self, name: &str) -> Result<()> {
         if let Some(row) = self.upload_get(name).await? {
             self.query(
-                "DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload', $n) RETURN NONE;",
-                vars([("k", Value::String(row.token)), ("n", Value::String(name.to_string()))]),
+                "BEGIN; DELETE type::record('upload', $n) RETURN NONE; \
+                 UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
+                vars([
+                    ("k", Value::String(row.token.clone())),
+                    ("n", Value::String(name.to_string())),
+                ]),
             )
             .await?;
+            self.upload_drop_parts(&row.token).await?;
         }
         Ok(())
     }
