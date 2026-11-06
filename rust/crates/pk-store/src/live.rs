@@ -18,6 +18,9 @@ use crate::value::{as_i64, as_str};
 /// The tables subscribed to, in order.
 pub const LIVE_TABLES: [&str; 4] = ["meta", "joke", "decision", "creative_event"];
 
+/// What a `joke` change reads of the record (`working_of`): its id, whether it is working, and the sets it hit in.
+pub const JOKE_FIELDS: &str = "id, working, working_sets";
+
 /// One change, as the app receives it. Table-specific fields are `None` for the other tables.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Change {
@@ -108,11 +111,14 @@ impl Change {
 pub type Changes = Pin<Box<dyn Stream<Item = Result<Change>> + Send>>;
 
 impl Store {
-    /// `LIVE SELECT * FROM` each of [`LIVE_TABLES`], on this connection, as one stream of changes.
+    /// `LIVE SELECT` each of [`LIVE_TABLES`], on this connection, as one stream of changes. `joke` is selected by
+    /// the fields a change reads ([`JOKE_FIELDS`]), never `*`: the sweeper's `UPDATE joke SET embedding` would carry
+    /// the 384-float vector in every notification.
     pub async fn subscribe(&self) -> Result<Changes> {
-        let sql = LIVE_TABLES
-            .iter()
-            .fold(String::new(), |acc, t| acc + "LIVE SELECT * FROM " + t + ";");
+        let sql = LIVE_TABLES.iter().fold(String::new(), |acc, t| {
+            let fields = if *t == "joke" { JOKE_FIELDS } else { "*" };
+            acc + "LIVE SELECT " + fields + " FROM " + t + ";"
+        });
         let mut resp = self.db().query(sql).await?;
         let stream = resp.stream::<Notification<Value>>(())?;
         Ok(Box::pin(stream.map(|r| {

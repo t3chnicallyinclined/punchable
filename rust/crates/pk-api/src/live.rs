@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+use axum::extract::ws::Utf8Bytes;
 use futures::StreamExt as _;
 use pk_store::Change;
 use serde_json::{Value, json};
@@ -28,7 +29,7 @@ pub const MAX_CHANGES: usize = 50;
 const BACKLOG: usize = 64;
 
 struct Inner {
-    tx: broadcast::Sender<Arc<str>>,
+    tx: broadcast::Sender<Utf8Bytes>,
     pending: Mutex<Vec<Change>>,
     connected: AtomicBool,
     sent: AtomicU64,
@@ -68,7 +69,7 @@ impl LiveHub {
     }
 
     /// A receiver of the events from now on (one per open socket).
-    pub fn subscribe(&self) -> broadcast::Receiver<Arc<str>> {
+    pub fn subscribe(&self) -> broadcast::Receiver<Utf8Bytes> {
         self.0.tx.subscribe()
     }
 
@@ -103,7 +104,7 @@ impl LiveHub {
 
     /// `LiveHub._flush_loop`'s one pass: the pending changes become one event unless the newest is a running reload
     /// (`meta.loading`: one event when it ends). Returns the event sent, if any.
-    pub fn flush_once(&self) -> Option<Arc<str>> {
+    pub fn flush_once(&self) -> Option<Utf8Bytes> {
         let batch = {
             let mut p = self.0.pending.lock().unwrap_or_else(PoisonError::into_inner);
             if p.is_empty() || p.last().is_some_and(reloading) {
@@ -112,11 +113,11 @@ impl LiveHub {
             std::mem::take(&mut *p)
         };
         let at = crate::worker::unix_now();
-        let text: Arc<str> = Arc::from(event(&batch, at).to_string());
+        let text = Utf8Bytes::from(event(&batch, at).to_string());
         *self.0.last_event_at.lock().unwrap_or_else(PoisonError::into_inner) = Some(at);
         self.0.sent.fetch_add(1, Ordering::SeqCst);
         // no receiver = nobody listening: the event is simply dropped, as the Python's queue-less hub drops it
-        let _ = self.0.tx.send(Arc::clone(&text));
+        let _ = self.0.tx.send(text.clone());
         Some(text)
     }
 
@@ -132,7 +133,7 @@ impl LiveHub {
     /// refetches once for whatever happened while nothing was watching. Nothing is sent when no socket is open.
     fn announce_gap(&self) {
         if self.0.tx.receiver_count() > 0 {
-            let _ = self.0.tx.send(Arc::from(catch_up(0, crate::worker::unix_now())));
+            let _ = self.0.tx.send(Utf8Bytes::from(catch_up(0, crate::worker::unix_now())));
         }
     }
 

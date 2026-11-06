@@ -76,7 +76,9 @@ pub async fn claim(
                 None => Plan::Done(StatusCode::NO_CONTENT, Value::Null),
             })
         };
-        match cr.append_planned("jobs", &by, None, plan).await? {
+        // after twelve lost races the Python's `claim` gives up and the route says 204: nothing for this worker now
+        let lost = Some((StatusCode::NO_CONTENT, Value::Null));
+        match cr.append_planned_or("jobs", &by, None, plan, lost).await? {
             Written::Landed(job) => Ok(Some(job)),
             Written::Skipped(..) => Ok(None),
         }

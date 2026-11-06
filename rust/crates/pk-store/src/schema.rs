@@ -148,6 +148,15 @@ impl Store {
         Ok(true)
     }
 
+    /// [`Store::apply_extra_schema`] only when no `extra_sha` is stored: a database whose schema the Python has
+    /// applied is the Python's to change (one owner until T11). Returns whether it was applied.
+    pub async fn apply_extra_schema_if_unowned(&self) -> Result<bool> {
+        if self.stored_shas().await?.1.is_some() {
+            return Ok(false);
+        }
+        self.apply_extra_schema(false).await
+    }
+
     async fn stored_shas(&self) -> Result<(Option<String>, Option<String>)> {
         let info = self.last("INFO FOR DB;", Object::new()).await?;
         let has_meta = match &info {

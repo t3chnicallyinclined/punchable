@@ -19,8 +19,9 @@ use pk_store::{RecordId, Store};
 use crate::state::AppState;
 use crate::worker::Lease;
 
-/// Texts embedded per model run (`BATCH`).
-pub const BATCH: usize = 16;
+/// Texts embedded per model run. The model has one slot, so a search's query vector waits for the batch in hand:
+/// 4 texts bound that wait to a quarter of the Python's `BATCH` of 16 (`PK_VEC_BATCH` overrides, for the measurement).
+pub const BATCH: usize = 4;
 /// The default `PK_VEC_SWEEP_S`.
 pub const DEFAULT_EVERY: Duration = Duration::from_secs(60);
 
@@ -98,8 +99,20 @@ pub fn me() -> String {
 /// `Sweeper._loop`: a pass every `every`, the first one `every` after start. Runs until the process ends, or until
 /// a pass finds no model to run (then the other process's sweeper has the lease).
 pub async fn run(st: AppState, lease: Lease, every: Duration) {
+    let mut drain = st.drain_watch();
     loop {
-        tokio::time::sleep(every).await;
+        tokio::select! {
+            () = tokio::time::sleep(every) => {}
+            // SIGTERM: the other process may embed at once, not after the lease lapses
+            () = crate::state::drained(&mut drain) => {
+                if let Some(store) = st.store_handle()
+                    && let Err(e) = lease.release(&store).await
+                {
+                    tracing::warn!("vectors: the lease could not be released on drain: {e}");
+                }
+                return;
+            }
+        }
         let r = once(&st, &lease).await;
         st.sweep().record(&r);
         match &r {
@@ -156,9 +169,10 @@ pub async fn once(st: &AppState, lease: &Lease) -> Result<Option<Done>, SweepErr
         return Ok(Some(Done::new()));
     };
     let mut done = Done::new();
+    let batch = batch_size();
     for (table, rows) in store.vectors_pending(jokes).await.map_err(failed)? {
         let mut n = 0;
-        for chunk in rows.chunks(BATCH) {
+        for chunk in rows.chunks(batch) {
             if !lease.acquire(&store).await.map_err(failed)? {
                 return Err(SweepError::Lapsed);
             }
@@ -181,4 +195,13 @@ pub async fn once(st: &AppState, lease: &Lease) -> Result<Option<Done>, SweepErr
         done.insert(table, n);
     }
     Ok(Some(done))
+}
+
+/// [`BATCH`], or `PK_VEC_BATCH` when set to a positive number.
+fn batch_size() -> usize {
+    std::env::var("PK_VEC_BATCH")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .filter(|n| *n > 0)
+        .unwrap_or(BATCH)
 }

@@ -55,6 +55,8 @@ struct Inner {
     cpu: Arc<tokio::sync::Semaphore>,
     failed: Mutex<Option<Failed>>,
     draining: std::sync::atomic::AtomicBool,
+    /// Flips to `true` when the pod starts draining: the live sockets close with 1012, the sweeper gives its lease up.
+    drain: tokio::sync::watch::Sender<bool>,
     cloud: tokio::sync::Mutex<Option<CloudCache>>,
     transcripts: crate::tape::TranscriptCache,
     src_texts: crate::creative::SrcTexts,
@@ -97,6 +99,19 @@ pub struct AppState(Arc<Inner>);
 impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AppState").finish_non_exhaustive()
+    }
+}
+
+/// Resolves once the drain watch says `true` (at once when it already did). The guard of the watch is never held
+/// across the wait, so the future is `Send`.
+pub async fn drained(rx: &mut tokio::sync::watch::Receiver<bool>) {
+    loop {
+        if *rx.borrow_and_update() {
+            return;
+        }
+        if rx.changed().await.is_err() {
+            return std::future::pending().await;
+        }
     }
 }
 
@@ -143,6 +158,7 @@ impl AppState {
             attached: crate::creative::Attached::default(),
             stores: crate::creative::Stores::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
+            drain: tokio::sync::watch::channel(false).0,
             kb_lock: tokio::sync::Mutex::new(()),
             creative_lock: tokio::sync::Mutex::new(()),
             last_merge_index: Mutex::new(None),
@@ -165,6 +181,12 @@ impl AppState {
     /// SIGTERM arrived: readiness answers 503 from now on so the Service stops sending, while requests drain.
     pub fn start_draining(&self) {
         self.0.draining.store(true, std::sync::atomic::Ordering::SeqCst);
+        self.0.drain.send_replace(true);
+    }
+
+    /// A watch on the drain: `true` from the moment SIGTERM arrived.
+    pub fn drain_watch(&self) -> tokio::sync::watch::Receiver<bool> {
+        self.0.drain.subscribe()
     }
 
     /// Whether the pod is shutting down.
@@ -606,9 +628,11 @@ impl AppState {
                     .unwrap_or_else(|_| Err(pk_store::StoreError::mapping("connect timed out")))
                 {
                     Ok(s) => {
-                        // the tables added for hosting (`db/schema_extra.surql`), as the Python applies them at its
-                        // start: additive and idempotent, skipped when unchanged; a failure is logged, never fatal
-                        match s.apply_extra_schema(false).await {
+                        // the tables added for hosting (`db/schema_extra.surql`): the Python applies them at its start and
+                        // owns them until T11 (two writers of one schema is a race); a database that has never had a
+                        // schema applied (a scratch one, a fresh install) gets them from here. A failure is logged,
+                        // never fatal
+                        match s.apply_extra_schema_if_unowned().await {
                             Ok(true) => tracing::info!("schema_extra applied"),
                             Ok(false) => {}
                             Err(e) => tracing::warn!(error = %e, "schema_extra could not be applied"),

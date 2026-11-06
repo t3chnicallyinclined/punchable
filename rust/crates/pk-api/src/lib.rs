@@ -465,7 +465,11 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
     if let Some(every) = st.config().sweep_every
         && !matches!(st.config().embedder, embed::Choice::None | embed::Choice::Missing(_))
     {
-        tokio::spawn(sweep::run(st.clone(), worker::Lease::embedder(sweep::me()), every));
+        tokio::spawn(sweep::run(
+            st.clone(),
+            worker::Lease::embedder(sweep::me(), every),
+            every,
+        ));
     }
     let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");

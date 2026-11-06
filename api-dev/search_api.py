@@ -205,24 +205,36 @@ class Sweeper:
         self.kb, self.emb, self.log = kb, embedder, log
         self.every = float(every if every is not None else os.environ.get("PK_VEC_SWEEP_S", "60"))
         self.me = me or f"python:{os.environ.get('HOSTNAME') or 'local'}:{os.getpid()}"
+        self.ttl_s = int(2 * self.every + 30)   # never lapses between two passes of its own (a fixed 90 s did at every=60)
         self.runs, self.last, self.error, self.last_at, self.held = 0, None, None, None, False
 
     def start(self):
         threading.Thread(target=self._loop, daemon=True, name="vector-sweep").start()
         return self
 
+    def stop(self):
+        """SIGTERM: give the lease up so the other process embeds at once, not after the lease lapses."""
+        self._stopped = True
+        r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
+        try:
+            r.query("UPDATE lease:embedder SET owner = NONE, until = NONE WHERE owner = $me;", {"me": self.me})
+        finally:
+            r.close()
+
     def once(self) -> dict[str, int] | None:
         """One pass; None when the lease is held by another process (nothing embedded here)."""
         r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
         try:
-            if not lease_acquire(r, self.me):
+            if not lease_acquire(r, self.me, ttl_s=self.ttl_s):
                 return None
-            return sweep(r, self.emb, self.kb.view(), renew=lambda: lease_acquire(r, self.me))
+            return sweep(r, self.emb, self.kb.view(), renew=lambda: lease_acquire(r, self.me, ttl_s=self.ttl_s))
         finally:
             r.close()
 
+    _stopped = False
+
     def _loop(self):
-        while True:
+        while not self._stopped:
             try:
                 last = self.once()
                 self.held = last is not None

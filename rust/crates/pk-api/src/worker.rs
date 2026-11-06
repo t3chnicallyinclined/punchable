@@ -231,12 +231,14 @@ pub struct Lease {
 }
 
 impl Lease {
-    /// The embedder's lease, for this process.
-    pub fn embedder(me: impl Into<String>) -> Self {
+    /// The embedder's lease, for this process: it lapses `2 x every + 30` s after its last renewal, so a pass that
+    /// runs every `every` never lets it lapse between two passes of its own (a fixed 90 s did at `PK_VEC_SWEEP_S`
+    /// 60: pass, 60 s quiet, a renewal after the lapse that another process could have taken).
+    pub fn embedder(me: impl Into<String>, every: std::time::Duration) -> Self {
         Self {
             kind: "embedder".into(),
             me: me.into(),
-            ttl_s: 90,
+            ttl_s: u32::try_from(every.as_secs().saturating_mul(2).saturating_add(30)).unwrap_or(u32::MAX),
         }
     }
 

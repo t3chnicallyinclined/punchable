@@ -11,7 +11,7 @@
 use std::time::Duration;
 
 use axum::extract::ws::rejection::WebSocketUpgradeRejection;
-use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
+use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgrade};
 use axum::extract::{RawQuery, State};
 use axum::http::{HeaderMap, header};
 use axum::response::Response;
@@ -27,9 +27,15 @@ use crate::state::AppState;
 const AUTH_WAIT: Duration = Duration::from_secs(10);
 /// A keep-alive ping after this much quiet (`q.get(timeout=20)`).
 const PING_AFTER: Duration = Duration::from_secs(20);
+/// A client that has sent no frame (its pong included) for this long is half open: the session ends, instead of
+/// living until TCP gives up (a browser answers every ping, so a live one never goes this quiet).
+const IDLE_AFTER: Duration = Duration::from_secs(40);
+/// The close code of a pod that is draining: "service restart", the client connects again.
+const RESTARTING: u16 = 1012;
 /// The largest client message read (`frame(limit=1 << 20)`).
 const MAX_MESSAGE: usize = 1 << 20;
-/// The largest first message (`frame(32768)` while the token is awaited).
+/// The largest first message (`frame(32768)` while the token is awaited): with auth on it is also the socket's frame
+/// limit, so a stranger's 1 MiB first frame is refused before it is read whole (the client sends nothing else).
 const MAX_AUTH_MESSAGE: usize = 32768;
 /// A send the client does not take within this ends the session (a peer that stopped reading).
 const SEND_WAIT: Duration = Duration::from_secs(20);
@@ -66,8 +72,15 @@ pub async fn live(
     // the handshake headers are there but the connection cannot be upgraded (an old version, a test without a
     // socket): the same 400 as the Python's refusal of a request that is not a WebSocket one
     let ws = ws.map_err(|_| ApiError::bad_request("this is a WebSocket endpoint"))?;
+    // with auth on the first frame is a token: nothing a client sends is larger than the auth message
+    let limit = if st.verifier().is_some() {
+        MAX_AUTH_MESSAGE
+    } else {
+        MAX_MESSAGE
+    };
     Ok(ws
-        .max_message_size(MAX_MESSAGE)
+        .max_message_size(limit)
+        .max_frame_size(limit)
         .on_upgrade(move |sock| session(st, sock)))
 }
 
@@ -163,6 +176,8 @@ async fn session(st: AppState, mut sock: WebSocket) {
     }
     let hub = st.live().clone();
     let mut rx = hub.subscribe();
+    let mut drain = st.drain_watch();
+    let mut last_rx = tokio::time::Instant::now();
     let _client = Client::open(&st.metrics().live_clients);
     let hello = json!({"type": "hello", "rev": st.data_now().map(|d| d.rev()), "live": hub.connected()});
     if !send(&mut sock, Message::Text(hello.to_string().into())).await {
@@ -172,16 +187,16 @@ async fn session(st: AppState, mut sock: WebSocket) {
         tokio::select! {
             ev = rx.recv() => {
                 let text = match ev {
-                    Ok(t) => t.to_string(),
+                    Ok(t) => t,
                     Err(RecvError::Lagged(n)) => {
                         // the backlog it fell behind on is dropped (a fresh receiver starts at now); one catch-up
                         // change makes it refetch once, which is all those events would have done
                         rx = rx.resubscribe();
-                        crate::live::catch_up(n, crate::worker::unix_now())
+                        Utf8Bytes::from(crate::live::catch_up(n, crate::worker::unix_now()))
                     }
                     Err(RecvError::Closed) => break,
                 };
-                if !send(&mut sock, Message::Text(text.into())).await {
+                if !send(&mut sock, Message::Text(text)).await {
                     break;
                 }
             }
@@ -189,8 +204,19 @@ async fn session(st: AppState, mut sock: WebSocket) {
                 // the client's frames: a close ends the session, anything else (its pings are answered by the
                 // socket layer) is ignored, as the Python's reader ignores payloads
                 None | Some(Err(_) | Ok(Message::Close(_))) => break,
-                Some(Ok(_)) => {}
+                Some(Ok(_)) => last_rx = tokio::time::Instant::now(),
             },
+            // no frame, not even a pong, for twice the ping interval: a half-open socket
+            () = tokio::time::sleep_until(last_rx + IDLE_AFTER) => break,
+            // the pod is draining: tell the client to come back (1012), not a silent drop
+            () = crate::state::drained(&mut drain) => {
+                send(
+                    &mut sock,
+                    Message::Close(Some(CloseFrame { code: RESTARTING, reason: "".into() })),
+                )
+                .await;
+                break;
+            }
             () = tokio::time::sleep(PING_AFTER) => {
                 if !send(&mut sock, Message::Ping(Vec::new().into())).await {
                     break;

@@ -642,6 +642,20 @@ impl Creative {
         ts: Option<&str>,
         plan: impl Fn(&Items) -> ApiResult<Plan>,
     ) -> ApiResult<Written> {
+        self.append_planned_or(name, by, ts, plan, None).await
+    }
+
+    /// [`Creative::append_planned`] with the answer when every attempt lost its row to another writer: `Some(..)` is
+    /// that answer (a claim: the Python's `claim` returns none after `APPEND_RETRIES` and the route says 204), `None`
+    /// the store's own error.
+    pub async fn append_planned_or(
+        &self,
+        name: &str,
+        by: &str,
+        ts: Option<&str>,
+        plan: impl Fn(&Items) -> ApiResult<Plan>,
+        exhausted: Option<(StatusCode, Value)>,
+    ) -> ApiResult<Written> {
         let store = self.st.store_handle().ok_or_else(not_connected)?;
         for attempt in 0..RETRIES {
             back_off(attempt).await;
@@ -670,6 +684,10 @@ impl Creative {
                 }
                 Err(e) if is_place_taken(&e) && attempt + 1 < RETRIES => {
                     tracing::info!(store = name, attempt, "another writer took the row; reading again: {e}");
+                }
+                Err(e) if is_place_taken(&e) && exhausted.is_some() => {
+                    let (status, v) = exhausted.unwrap_or((StatusCode::NO_CONTENT, Value::Null));
+                    return Ok(Written::Skipped(status, v));
                 }
                 Err(e) => return Err(store_err(e)),
             }
