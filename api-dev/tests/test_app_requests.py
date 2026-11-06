@@ -213,6 +213,28 @@ def test_upload_meta_headers(api):
     assert meta["gps"] == {"lat": 40.77, "lon": -73.95} and meta["align_working_set"] == "ws:x"
 
 
+def test_a_refused_upload_does_not_poison_the_connection(api):
+    """The body of a refused upload is thrown away, so the next request on the same kept-alive connection (pk-api's
+    pool) is read as a request, not as the leftover of the first (the 400 'Bad request syntax')."""
+    import http.client
+    a, _ = api
+    host, port = a.url.split("//", 1)[1].split(":")
+    c = http.client.HTTPConnection(host, int(port), timeout=30)
+    try:
+        for headers in ({"X-Kind": "nope", "Content-Type": "audio/wav"},          # the X-Kind refusal
+                        {"X-Kind": "set", "Content-Type": "text/plain"}):          # the file-type refusal
+            c.request("POST", "/api/upload", body=b"RIFF0000WAVE" * 1000, headers=headers)
+            r = c.getresponse()
+            r.read()
+            assert r.status == 400
+            c.request("GET", "/api/health")
+            r = c.getresponse()
+            r.read()
+            assert r.status == 200, "the next request on the connection was read from the refused body"
+    finally:
+        c.close()
+
+
 def test_youtube_import_queues_only(api):
     a, t = api
     st, r = a.post("/api/import/youtube", {"url": "https://youtu.be/dQw4w9WgXcQ"})

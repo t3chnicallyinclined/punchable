@@ -19,6 +19,9 @@ ignore = [
     # paste <- tokenizers 0.22.1: a compile-time macro crate, archived by its author; tokenizers is pinned to the
     # Python wheel's version so the goldens hold (rust/Cargo.toml), so it moves when the Python pin moves.
     { id = "RUSTSEC-2024-0436", reason = "paste is a proc-macro used at compile time by the pinned tokenizers" },
+    # pin-utils <- wasmtimer <- surrealdb(-core): archived upstream 2026-10-01 ("unmaintained", no vulnerability, no
+    # patched release); it is a pinning helper macro crate in surrealdb's wasm timer, which moves with surrealdb.
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils (unmaintained, no flaw) via wasmtimer via surrealdb" },
 ]
 
 [licenses]

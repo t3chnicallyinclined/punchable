@@ -1,7 +1,8 @@
 //! Punchable's API on axum (docs/ARCHITECTURE.md section 2). Lane T9: the read routes that answer from the database
 //! snapshot, behind the same Keycloak check, CORS, errors and metrics as `api-dev/server.py`; lane T10: the writes,
-//! group by group (`writes`). Every other request (`/api/worker/*`, `/api/live`, the routes not ported yet) is
-//! forwarded unchanged to the Python API until T10 is whole (`proxy`).
+//! group by group (`writes`), `/api/live` (`live`, `routes::live`), the worker's routes (`writes::worker`) and the
+//! vector sweeper (`sweep`). Every other request (the routes not ported yet) is forwarded unchanged to the Python
+//! API until T10 is whole (`proxy`).
 //!
 //! [`app`] builds the router over an [`AppState`]; route tests drive it with `tower::ServiceExt::oneshot`, no
 //! socket. [`serve`] binds, supervises the database connection and shuts down the way the manifest expects.
@@ -17,6 +18,7 @@ pub mod error;
 pub mod index;
 pub mod instrument;
 pub mod jokes;
+pub mod live;
 pub mod pages;
 pub mod proxy;
 pub mod query;
@@ -25,8 +27,10 @@ pub mod search;
 pub mod setlists;
 pub mod snapshot;
 pub mod state;
+pub mod sweep;
 pub mod tape;
 pub mod today;
+pub mod worker;
 pub mod writes;
 
 use std::time::Duration;
@@ -46,7 +50,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 20] = [
+pub const OWN_PATHS: [&str; 24] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -67,6 +71,10 @@ pub const OWN_PATHS: [&str; 20] = [
     "/api/workingsets",
     "/api/notebook/related",
     "/api/merge/candidates",
+    "/api/live",
+    "/api/worker/decisions",
+    "/api/worker/creative",
+    "/api/worker/profile/voice",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -94,9 +102,9 @@ pub const OWN_PATTERNS: [&str; 15] = [
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
-/// 1 to 4). An exact Ingress path moves every method: a method the Python has on the path and this service does
+/// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 19] = [
+pub const OWN_WRITE_PATHS: [&str; 25] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -116,11 +124,17 @@ pub const OWN_WRITE_PATHS: [&str; 19] = [
     "/api/profile/voice/learn",
     "/api/suggestions/not-a-joke/keep",
     "/api/suggestions/not-a-joke/hide",
+    "/api/worker/claim",
+    "/api/worker/profile/voice",
+    "/api/ask",
+    "/api/riff",
+    "/api/facts",
+    "/api/import/youtube",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version and punch-up, a set
-/// list's changes, a set's versions, locks and try notes.
-pub const OWN_WRITE_PATTERNS: [&str; 10] = [
+/// list's changes, a set's versions, locks and try notes, a job's result and its drop.
+pub const OWN_WRITE_PATTERNS: [&str; 12] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/boards/{id}",
@@ -131,6 +145,8 @@ pub const OWN_WRITE_PATTERNS: [&str; 10] = [
     "/api/workingsets/{id}/try",
     "/api/workingsets/{id}/try/{id2}",
     "/api/workingsets/{id}/bits/{id2}/punchup",
+    "/api/worker/jobs/{id}/result",
+    "/api/jobs/{id}/drop",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -160,6 +176,17 @@ where
     T: 'static,
 {
     guarded(st, h).layer(axum::extract::DefaultBodyLimit::disable())
+}
+
+/// The `/api/live` socket: CORS and auth, never the request metrics (`instrument(skip=("/api/live", ...))`: the
+/// open sockets are `pk_live_clients`), the upgrade answered here and any other method forwarded.
+fn live_route(st: &AppState) -> MethodRouter<AppState> {
+    let h = routes::live::live.layer(
+        ServiceBuilder::new()
+            .layer(from_fn_with_state(st.clone(), cors::cors))
+            .layer(from_fn_with_state(st.clone(), auth::authorize)),
+    );
+    finish(st, get(h))
 }
 
 /// The preflight: CORS and metrics, no auth.
@@ -354,7 +381,28 @@ pub fn app(st: AppState) -> Router {
             write_route(&st, writes::account::hide),
         )
         // T10: the merge candidates, with the judge memoised on the generation
-        .route("/api/merge/candidates", read_route(&st, routes::merge::candidates));
+        .route("/api/merge/candidates", read_route(&st, routes::merge::candidates))
+        // T10 group 5: the live socket and the hosted worker's routes (`/api/worker/jobs/<id>/file` stays the
+        // Python's: the upload is on its disk until uploads move)
+        .route("/api/live", live_route(&st))
+        .route("/api/worker/claim", write_route(&st, writes::worker::claim))
+        .route("/api/worker/jobs/{id}/result", write_route(&st, writes::worker::result))
+        .route("/api/worker/decisions", read_route(&st, writes::worker::decisions))
+        .route("/api/worker/creative", read_route(&st, writes::worker::creative))
+        .route(
+            "/api/worker/profile/voice",
+            finish(
+                &st,
+                get(guarded(&st, writes::worker::profile_get)).put(guarded_write(&st, writes::worker::profile_put)),
+            ),
+        )
+        // T10 group 6, the cheap half: the one-shot questions and the imports that only queue a job
+        // (`/api/ask/chats*`, the conversations, stays the Python's: an exact path moves `/api/ask` alone)
+        .route("/api/ask", write_route(&st, writes::ask::ask))
+        .route("/api/riff", write_route(&st, writes::ask::riff))
+        .route("/api/facts", write_route(&st, writes::ask::facts))
+        .route("/api/import/youtube", write_route(&st, writes::ask::youtube))
+        .route("/api/jobs/{id}/drop", write_route(&st, writes::ask::drop));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     r.fallback(proxy::forward).with_state(st)
@@ -392,6 +440,15 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
     let addr = format!("{}:{}", config.host, config.port);
     let st = state(config)?;
     tokio::spawn(st.clone().supervise());
+    // the live hub: one subscription, flushed every 150 ms
+    tokio::spawn(st.live().clone().run(st.clone()));
+    tokio::spawn(st.live().clone().flush_loop());
+    // the vector sweeper, when there is a model to run and `PK_VEC_SWEEP_S` is not 0
+    if let Some(every) = st.config().sweep_every
+        && !matches!(st.config().embedder, embed::Choice::None | embed::Choice::Missing(_))
+    {
+        tokio::spawn(sweep::run(st.clone(), worker::Lease::embedder(sweep::me()), every));
+    }
     let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");
     let drain = st.clone();

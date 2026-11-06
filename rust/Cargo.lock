@@ -3649,6 +3649,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-tungstenite 0.29.0",
  "tower",
  "tracing",
  "wiremock",

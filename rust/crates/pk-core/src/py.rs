@@ -168,6 +168,14 @@ pub fn dumps_sorted(value: &Value) -> String {
     dumps(&sort_keys(value))
 }
 
+/// `json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`: the compact form the worker
+/// routes hash a decision line with (`creative_api._h` over `w_decisions`).
+pub fn dumps_compact_sorted(value: &Value) -> String {
+    let mut out = String::new();
+    write_json_sep(&mut out, &sort_keys(value), ",", ":");
+    out
+}
+
 /// The value with every object's keys sorted, recursively (what `sort_keys=True` serialises).
 pub fn sort_keys(value: &Value) -> Value {
     match value {
@@ -186,6 +194,11 @@ pub fn sort_keys(value: &Value) -> Value {
 }
 
 fn write_json(out: &mut String, value: &Value) {
+    write_json_sep(out, value, ", ", ": ");
+}
+
+/// [`write_json`] with the item and key separators given (`json.dumps`'s `separators`).
+fn write_json_sep(out: &mut String, value: &Value, item_sep: &str, key_sep: &str) {
     match value {
         Value::Null => out.push_str("null"),
         Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
@@ -195,9 +208,9 @@ fn write_json(out: &mut String, value: &Value) {
             out.push('[');
             for (i, x) in a.iter().enumerate() {
                 if i > 0 {
-                    out.push_str(", ");
+                    out.push_str(item_sep);
                 }
-                write_json(out, x);
+                write_json_sep(out, x, item_sep, key_sep);
             }
             out.push(']');
         }
@@ -205,11 +218,11 @@ fn write_json(out: &mut String, value: &Value) {
             out.push('{');
             for (i, (k, v)) in m.iter().enumerate() {
                 if i > 0 {
-                    out.push_str(", ");
+                    out.push_str(item_sep);
                 }
                 write_json_str(out, k);
-                out.push_str(": ");
-                write_json(out, v);
+                out.push_str(key_sep);
+                write_json_sep(out, v, item_sep, key_sep);
             }
             out.push('}');
         }
@@ -405,6 +418,10 @@ mod tests {
         assert_eq!(
             dumps_sorted(&json!({"b": 1, "a": {"d": 1, "c": 2}})),
             r#"{"a": {"c": 2, "d": 1}, "b": 1}"#
+        );
+        assert_eq!(
+            dumps_compact_sorted(&json!({"b": [1, 2.5], "a": {"d": "é", "c": null}})),
+            r#"{"a":{"c":null,"d":"é"},"b":[1,2.5]}"#
         );
         assert_eq!(dumps(&json!([])), "[]");
         assert_eq!(dumps(&json!({})), "{}");

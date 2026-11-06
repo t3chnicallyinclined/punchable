@@ -7,7 +7,8 @@ a temp folder that is removed afterwards.
 
 What runs, in the order production runs it:
   1. A synthetic knowledge base shaped like the hosted one (1,414 bits with 1-3 versions each, 162 typed ideas,
-     60 taped sets with 11 moments each, 14 topics, 5 set lists), written as the comedy folder layout.
+     60 taped sets with 11 moments each, 14 topics, 5 set lists; since T10 round 3 also 20 working sets and a job
+     log of 3,050 rows: 1,000 finished jobs and 50 queued), written as the comedy folder layout.
   2. A throwaway `surreal start memory` (SurrealDB 3.3.4 from ~/.punchable/bin) on a free loopback port, with a
      random root password in a temp secrets file (PUNCH_SECRETS), so the real ~/.punchable/secrets.env is never read.
      The namespace, the STRICT database and the EDITOR user `api` are defined as infra/db-init.sh does.
@@ -73,7 +74,8 @@ def write_json(p: Path, obj) -> None:
     p.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8", newline="\n")
 
 
-def build_comedy(root: Path, bits: int = 1414, ideas: int = 162, sets: int = 60, per_set: int = 11) -> dict:
+def build_comedy(root: Path, bits: int = 1414, ideas: int = 162, sets: int = 60, per_set: int = 11,
+                 jobs_done: int = 1000, jobs_queued: int = 50) -> dict:
     """The synthetic comedy folder (kb/v0, corpus/sets, kb/creative). Deterministic (seeded)."""
     rng = random.Random(7)
     topics = list(TOPICS)
@@ -156,8 +158,32 @@ def build_comedy(root: Path, bits: int = 1414, ideas: int = 162, sets: int = 60,
                                                           "notes": "", "seed": None}}))
     (root / "kb" / "creative").mkdir(parents=True, exist_ok=True)
     (root / "kb" / "creative" / "storyboards.jsonl").write_text("\n".join(boards) + "\n", encoding="utf-8", newline="\n")
+    # T10 round 3: his sets (one per set list plus fifteen more, each promoted with eight bits) and a job log at the
+    # production scale the row named (a few thousand rows: a thousand finished jobs, enqueue / claim / done, and fifty
+    # still queued), so the working-set routes, the claim and the enqueue routes replay what the server replays
+    wsets = []
+    for w in range(20):
+        ids = [f"joke:b{1 + (w * 53 + k * 17) % bits:04d}" for k in range(8)]
+        wsets.append(json.dumps({"ts": f"2026-10-{1 + w % 28:02d}T21:00:00+00:00", "op": "promote", "id": f"ws:load-{w}", "by": "owner",
+                                 "data": {"title": f"Set {w}", "storyboard_id": f"sb:load-{w}" if w < 5 else None, "target_s": 600,
+                                          "bits": [{"joke_id": j, "title": f"Bit {j[6:]}", "target_s": 75} for j in ids]}}))
+    (root / "kb" / "creative" / "workingsets.jsonl").write_text("\n".join(wsets) + "\n", encoding="utf-8", newline="\n")
+    jobs = []
+    kinds = ["riff", "punchup", "ask_chat", "bridge", "facts"]
+    for j in range(jobs_done + jobs_queued):
+        kind = kinds[j % len(kinds)]
+        jid = f"job:{kind}-{j:012x}"
+        day = f"2026-{1 + j % 9:02d}-{1 + j % 27:02d}"
+        jobs.append(json.dumps({"ts": f"{day}T10:00:00+00:00", "op": "enqueue", "id": jid, "by": "owner",
+                                "data": {"kind": kind, "key": f"{kind}|load-{j}", "input": {"joke": f"joke:b{1 + j % bits:04d}", "n": j}}}))
+        if j < jobs_done:
+            jobs.append(json.dumps({"ts": f"{day}T10:00:05+00:00", "op": "claim", "id": jid, "by": "worker:load", "data": {"worker": "load"}}))
+            jobs.append(json.dumps({"ts": f"{day}T10:00:40+00:00", "op": "done", "id": jid, "by": "worker",
+                                    "data": {"result": {"ideas": [{"text": f"A drafted line number {j} about the {TOPICS[topics[j % len(topics)]].split()[0]}."}],
+                                                        "model": "load-test"}}}))
+    (root / "kb" / "creative" / "jobs.jsonl").write_text("\n".join(jobs) + "\n", encoding="utf-8", newline="\n")
     return {"bits": bits + ideas, "units": sum(1 for n in nodes if n["type"] == "unit"), "sets": sets,
-            "moments": sets * per_set}
+            "moments": sets * per_set, "working_sets": len(wsets), "job_rows": len(jobs), "jobs_queued": jobs_queued}
 
 
 def free_port() -> int:

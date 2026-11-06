@@ -112,6 +112,64 @@ pub fn drafted(jobs: &Obj, text: &str) -> (Option<String>, Vec<String>) {
     }
 }
 
+/// `CAP_LAUGH`: how many laugh lines the worker's profile carries.
+pub const CAP_LAUGH: usize = 15;
+
+/// `laugh_lines(c)`: his top punchlines by the laugh the detector tied to them, across every taped night:
+/// `{text, bit, date, laugh_s}` (the laugh's length from the set's laugh map when it has timing, else a bar counts
+/// as a second). Empty for a notebook without punchlines. Never fails.
+pub fn laugh_lines(c: &crate::corpus::Corpus, cap: usize) -> Vec<Value> {
+    use crate::corpus::{num, round_to};
+    let mut best: indexmap::IndexMap<String, (f64, String, String, String)> = indexmap::IndexMap::new();
+    for (jid, ps) in &c.perfs {
+        for p in ps {
+            let events = c.laughs.get(&p.set);
+            for pl in &p.punchlines {
+                let text = collapse(
+                    &pl.get("text")
+                        .filter(|t| py::truthy(Some(t)))
+                        .map(py::str)
+                        .unwrap_or_default(),
+                );
+                if text.is_empty() || text.chars().count() < 8 {
+                    continue;
+                }
+                let ev = pl
+                    .get("laugh_id")
+                    .and_then(Value::as_str)
+                    .and_then(|id| events.and_then(|e| e.get(id)))
+                    .and_then(Value::as_object);
+                let (s0, s1) = (
+                    ev.and_then(|e| num(e.get("start_ms"))),
+                    ev.and_then(|e| num(e.get("end_ms"))),
+                );
+                let secs = match (s0, s1) {
+                    (Some(a), Some(b)) if b > a => round_to((b - a) / 1000.0, 1),
+                    _ => round_to(num(pl.get("bars").filter(|b| py::truthy(Some(b)))).unwrap_or(0.0), 1),
+                };
+                if secs <= 0.0 {
+                    continue;
+                }
+                let key = norm(&text);
+                if best.get(&key).is_none_or(|cur| secs > cur.0) {
+                    let cut: String = text.chars().take(LINE_CHARS).collect();
+                    best.insert(key, (secs, jid.clone(), p.date.clone(), cut));
+                }
+            }
+        }
+    }
+    let mut out: Vec<(f64, String, String, String)> = best.into_values().collect();
+    out.sort_by(|a, b| {
+        b.0.total_cmp(&a.0)
+            .then_with(|| a.2.cmp(&b.2))
+            .then_with(|| a.3.cmp(&b.3))
+    });
+    out.into_iter()
+        .take(cap)
+        .map(|(secs, bit, date, text)| json!({"text": text, "bit": bit, "date": date, "laugh_s": secs}))
+        .collect()
+}
+
 /// `_entry(x, ts)`: one line as stored, `{text, bit, date}` (+ `edited`), or nothing when it has no words.
 fn entry(x: &Value, ts: Option<&str>) -> Option<Obj> {
     let bare;

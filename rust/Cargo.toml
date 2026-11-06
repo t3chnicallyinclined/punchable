@@ -98,6 +98,8 @@ wiremock = "0.6"
 tempfile = "3"
 # pk-api tests: a throwaway RSA key made at test time (the aws-lc-rs jsonwebtoken already uses), never a committed key
 aws-lc-rs = "1"
+# pk-api tests: the client side of `/api/live` (the same crate axum's `ws` feature serves it with)
+tokio-tungstenite = "0.29"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

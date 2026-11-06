@@ -218,6 +218,7 @@ def start_kb(ns: str, db: str, bundle: dict):
     import creative_api as CR
     SV.Handler.creative = CR.Creative(COMEDY / "kb" / "creative", VEC if VEC.is_dir() else None, geocode=False,
                                       jobs_mode="worker")
+    SV.Handler.creative.seen_rpc = kb.rpc   # the worker's last claim lives in the database, shared with pk-api
     SV.Handler.primary = "surreal"
     SV.Handler.jobs_on_upload = True
     SV.Handler.files_mode = "db"  # worker file posts become srcfile rows (api-dev/ingest_api.py)

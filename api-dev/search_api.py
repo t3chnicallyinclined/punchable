@@ -139,13 +139,39 @@ def pending(r: sdb.Rpc, v) -> dict[str, list[dict]]:
     return {k: [x for x in rows if (x.get("text") or "").strip()] for k, rows in out.items()}
 
 
-def sweep(r: sdb.Rpc, emb, v) -> dict[str, int]:
-    """Embed and store every pending row; returns how many per table (all zero on a quiet pass)."""
+LEASE_TTL_S = 90
+
+
+def lease_acquire(r: sdb.Rpc, me: str, kind: str = "embedder", ttl_s: int = LEASE_TTL_S) -> bool:
+    """One owner per background task over this database (`lease:<kind>`, db/schema_extra.surql): taken by the first
+    process to ask, renewed by its owner, free again `ttl_s` after the owner's last renewal. Two API processes serve
+    during T10 (this one and pk-api) and both sweep: the lease says which one embeds. One statement tests and sets,
+    so two askers cannot both hold it."""
+    if not re.match(r"^[a-z_]+$", kind):
+        raise ValueError(f"lease kind {kind!r} is not a plain identifier")
+    try:
+        rows = r.last(f"IF !record::exists(lease:{kind}) {{ CREATE lease:{kind} CONTENT {{ kind: $k }} }};"
+                      f"UPDATE lease:{kind} SET owner = $me, until = time::now() + {int(ttl_s)}s "
+                      "WHERE owner = $me OR until = NONE OR until < time::now() RETURN AFTER;", {"k": kind, "me": me})
+    except Exception as e:  # noqa: BLE001
+        # two processes asking for the first time both run the CREATE: the loser's "already exists" means the other holds it
+        if "already exists" in str(e).lower():
+            return False
+        raise
+    return bool(rows)
+
+
+def sweep(r: sdb.Rpc, emb, v, renew=None) -> dict[str, int]:
+    """Embed and store every pending row; returns how many per table (all zero on a quiet pass). `renew` (the
+    lease, taken again before every batch) stops the pass when it comes back False: the lease lapsed and another
+    process may be embedding."""
     done: dict[str, int] = {}
     for table, rows in pending(r, v).items():
         n = 0
         for i in range(0, len(rows), BATCH):
             chunk = rows[i:i + BATCH]
+            if renew is not None and not renew():
+                raise RuntimeError("the embedder lease lapsed mid-pass; stopped")
             vecs = emb.embed([x["text"] for x in chunk])
             if table == "unit":
                 r.query("FOR $x IN $rows { LET $id = $x.id; UPDATE $id SET embedding = $x.v; };",
@@ -159,31 +185,39 @@ def sweep(r: sdb.Rpc, emb, v) -> dict[str, int]:
 
 
 class Sweeper:
-    """Keeps the vectors complete on its own connection: a pass at start, then every PK_VEC_SWEEP_S seconds."""
+    """Keeps the vectors complete on its own connection: a pass at start, then every PK_VEC_SWEEP_S seconds. A pass
+    takes the embedder's lease first (`lease_acquire`) and skips when another process holds it (`held` False)."""
 
-    def __init__(self, kb, embedder, log=print, every: float | None = None):
+    def __init__(self, kb, embedder, log=print, every: float | None = None, me: str | None = None):
         self.kb, self.emb, self.log = kb, embedder, log
         self.every = float(every if every is not None else os.environ.get("PK_VEC_SWEEP_S", "60"))
-        self.runs, self.last, self.error, self.last_at = 0, None, None, None
+        self.me = me or f"python:{os.environ.get('HOSTNAME') or 'local'}:{os.getpid()}"
+        self.runs, self.last, self.error, self.last_at, self.held = 0, None, None, None, False
 
     def start(self):
         threading.Thread(target=self._loop, daemon=True, name="vector-sweep").start()
         return self
 
-    def once(self) -> dict[str, int]:
+    def once(self) -> dict[str, int] | None:
+        """One pass; None when the lease is held by another process (nothing embedded here)."""
         r = sdb.Rpc(self.kb.port, self.kb.ns, self.kb.db)
         try:
-            return sweep(r, self.emb, self.kb.view())
+            if not lease_acquire(r, self.me):
+                return None
+            return sweep(r, self.emb, self.kb.view(), renew=lambda: lease_acquire(r, self.me))
         finally:
             r.close()
 
     def _loop(self):
         while True:
             try:
-                self.last = self.once()
+                last = self.once()
+                self.held = last is not None
+                if last is not None:
+                    self.last = last
+                    if sum(last.values()):
+                        self.log(f"vectors: embedded {last}")
                 self.error = None
-                if sum(self.last.values()):
-                    self.log(f"vectors: embedded {self.last}")
             except Exception as e:  # noqa: BLE001  a failed pass is retried on the next one
                 self.error = f"{type(e).__name__}: {str(e)[:200]}"
                 self.log(f"vectors: sweep failed ({self.error})")
@@ -193,7 +227,7 @@ class Sweeper:
 
     def status(self) -> dict:
         return {"embedder": getattr(self.emb, "name", None), "runs": self.runs, "last": self.last, "error": self.error,
-                "every_s": self.every}
+                "every_s": self.every, "held": self.held}
 
 
 # ---------------------------------------------------------------------------------------------------- search
