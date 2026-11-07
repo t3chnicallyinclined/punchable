@@ -1,6 +1,8 @@
 # SPEC 2026-11-06: the Rant tab (topics and trends, write it, film it, finish it)
 
-Status: **proposed, not built.** Owner direction 2026-11-06:
+Status: **slice 1 built 2026-11-07** (branch `app/rant-tab`, TestFlight build 25; §11 lists what is in and the
+calls taken against this text). Slices 2-4 proposed, not built. Owner direction 2026-11-06 (and 2026-11-07: "i dont see the
+new record/rant tab/button, where are we with that ?? lets get it going"):
 
 - "the recording works, but i dont like that its hidden, i think it should be one of the main features"; "lets name it
   rant".
@@ -226,8 +228,35 @@ video, INFERRED), a posted mark from the activity type, and "Mark as posted". A 
 
 ## 10. Owner checks (per slice, written when built)
 
-Slice 1, in order: the tab bar reads Rant · Bits · Sets; Sets opens on tonight's list bar and Record a set; Bits shows
-"N to sort" with the badge and Record a memo in ⋯; Rant › My topics › + "self-checkout machines" → it lists with
-"3 bits"; tap it → Write a rant with the topic filled → Gather lists his bits ticked → Write it → his lines plain with
-their source, new lines with the badge → Keep two, Skip one → Save rant → the bit page shows "v1 · rant" and the topic
-reads "ranted"; Hook check reads "hook lands at 2.1 s"; Pick a hook works on it; Film a rant opens Film it on it.
+**Slice 1 (build 25), in order, one line each:**
+
+1. The tab bar reads **Rant · Bits · Sets**, Rant first with a megaphone; the app opens on Rant.
+2. **Sets** opens on tonight's set list bar (tap: the list) and **Record a set** under it, then Set lists · Recorded.
+3. **Bits** shows "N to sort" as its first row (tap: the inbox, Back returns to Bits); the Bits tab carries the badge
+   when there is something to sort; **⋯** holds Record a memo, Import a recording… and a Sort section with a check.
+4. Bits' search still asks: type a question, tap Ask: the conversation opens **in Bits** (no tab switch).
+5. Rant › My topics › type "self-checkout machines" in **Add a topic**, Return: it lists, and a moment later reads
+   "3 bits" (the close matches only; it may say another number). Long-press it: Delete; swipe left: Delete, Undo.
+6. Tap the topic: **Write a rant** opens full height with the topic filled; "From your material" lists his bits, the
+   close ones ticked, taped moments unticked; untick one, tick another; Find more adds more.
+7. **Write it**: "Writing…" and the worker line, then the lines (about 6-14): his lines plain with "from <bit> v8"
+   under them, new lines with the AI badge; a **Hook check** above them: "Hook lands at 2.1 s" (or "late") and "a
+   claim · 4 words before yours".
+8. Skip one new line (it strikes through, the button reads Put back), Cut one of his; the hook check updates. **Save
+   rant** (top right, grey until there is a line) → "Saved as v1 · rant", the sheet closes, the new bit's page opens
+   (in Bits) on v1 · rant; Elsewhere shows the bits it drew on.
+9. Back on Rant: the topic reads "ranted Nov 7"; **Drafts** lists the rant ("v1 · Nov 7"); **Film a rant** (the red
+   disc) opens Film it on it (with two drafts: a picker).
+10. Film a take and Keep it: the rant moves from Drafts to **Finished** ("Nov 7 · 0:58 · in Photos"); tap: the take.
+11. Pick a hook on the new bit (its page's sparkle) still works on the rant cut.
+12. Airplane mode: Add a topic and Write it grey with "offline"; Film a rant still opens.
+13. Swipe down a Write a rant sheet with lines in it: it does not close; Close asks "Leave without saving?".
+
+Tell us: whether the drafted lines sound like him (the his / new split), whether "3 bits" matches what he expects for a
+topic, and whether opening the saved rant in Bits (the tab switches) is fine or should stay on Rant.
+
+## 11. Built
+
+| Slice | What is in (2026-11-07, branch `app/rant-tab`) | Calls taken against this text |
+|---|---|---|
+| 1 | **App:** the tab bar is Rant · Bits · Sets (`lib/TabsShell.native.tsx`, `megaphone.fill`, the "N to sort" badge on Bits); the `(tonight)` group is now `(rant)` and its index is the Rant screen (`app/(tabs)/(rant)/index.tsx`: Film a rant, My topics, Drafts, Finished); the inbox, the conversation (`/say`), Ask and Import moved into Bits' stack; Sets opens on tonight's bar (`lib/SetBar.tsx` TonightCard) and Record a set; Bits has "N to sort" and a ⋯ with Record a memo, Import a recording… and Sort; `lib/tonight.ts` (the Tonight screen's request, which feeds the badge from launch); Write a rant (`app/rant/new.tsx`, a full-height form sheet; `lib/rant.ts`); `rules/rantRules.ts`, `rules/hookRules.ts`; tests `rantRules.test.mjs` and `rantTab.test.mjs` (the Tonight-parts move read from the files), each with a `--red` arm. **No new native module** (JS only on build 23's binary set). **Server (Rust only, R7):** pk-api `GET`/`POST /api/topics`, `PATCH /api/topics/<id>` (`ranted` / `delete`), `POST /api/rant/draft`, `GET /api/rants` (`writes/rant.rs`, the prepared Ingress); pk-worker kind `rant_draft` (`kinds/rant_draft.rs`); the `topics` creative store (`pk-creative` reducers/topics.rs). | (1) **Every drafted line is in until he takes it out** (Cut his, Skip a new one, Put back): the standing owner rule "no review step is ever required" wins over §3.3's "Keeps or Skips each new line"; Save is always shown, inactive until there is a line. (2) **Topics are a creative store** (`creative_event` rows, store `topics`, append-only like the others), **not a new table**: no schema change, nothing for `schema_extra` (so nothing to coordinate with round 5's schema owner). (3) `rant_draft` **reuses the `creative_rant` task** (Opus, high effort): a new task would change the Python-recorded routing goldens for a kind the Python never runs; it shares that task's spend line. (4) The Python API's `JOB_KINDS` tuple gains `rant_draft` (vocabulary only: the Python replays the shared `jobs` store and refuses an unknown kind, which would break every creative route it still answers); the Python worker never runs it. (5) Trending is slice 2: no Trending section, and the empty state reads "Add a topic, or tap + to write a rant." (6) Tonight's three suggested questions and the "Last set" row are not carried over (asking is the Bits search; the last set is Sets › Recorded). (7) The conversation, Ask and Import moved with the inbox to Bits (reviews: a tap there must not switch tabs); the bit page stays in Bits, so a Drafts row and Save open it there (the tab switches). (8) A topic's count is the close search hits only (a word match, or a distance under 0.4) from `/api/search?limit=12`, once per topic per session. (9) Film a rant has no "ready" mark: the one draft, or a picker of the newest five. Finished = Film it takes of rant bits kept on this phone (no captions until slice 3). (10) Hook check shows in Write a rant (the script), not on the bit page. (11) A his line may be part of a source line; it must sit on word boundaries and within one of his lines (the verbatim gate plus those two checks); a line that fails is dropped, never shown as his and never re-labelled new. (12) A topic typed in the sheet that is not in My topics is not added to it. (13) The draft's cache key is the topic and the sources' words (a new version of a ticked bit is a new draft), not their tick order. (14) At most 200 topics (the route's 400, not the reducer's). |
