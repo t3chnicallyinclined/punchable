@@ -12,13 +12,18 @@
 # (engine/config.hosted.toml via pk-llm's include_str!), so no ENGINE_CONFIG path exists.
 # PK_WITH_BGE=0 builds without the model: the worker then claims none of embed / memolink / ask (and says so at start).
 #
-# Bases pinned by digest (multi-arch index digests, resolved 2026-11-02 with `docker buildx imagetools inspect`):
-#   rust:1.99.1-slim-bookworm               = rust-toolchain.toml's 1.99.1; has gcc + libc6-dev for SQLite's C
+# Bases pinned by digest (multi-arch index digests, resolved 2026-11-02 (trixie pins 2026-11-07) with `docker buildx imagetools inspect`):
+#   rust:1.99.1-slim-trixie                 = rust-toolchain.toml's 1.99.1; trixie because pyke's prebuilt ONNX Runtime needs GCC 13+ libstdc++ and glibc 2.38+
 #   python:3.13-slim-bookworm               the digest infra/worker/Dockerfile pins (2026-10-22): the model stage
 #                                           fetches the model exactly as the Python image does
-#   gcr.io/distroless/cc-debian12:nonroot   the runtime
+#   gcr.io/distroless/cc-debian13:nonroot   the runtime (trixie, to match the build stage's glibc and libstdc++)
 # Move a pin only on purpose, with the build log's digest in the deploy log.
-FROM rust:1.99.1-slim-bookworm@sha256:f2c004e3d2d8b547e8cf7ffbc29205385f4e71d23e53e4e383065db5e9f822cd AS build
+FROM rust:1.99.1-slim-trixie@sha256:7eab7ce19273ce785e0ca7578bdf7bc1fcbae621775a8197379a04c9f6e03cd5 AS build
+# ort-sys links its static ONNX Runtime against libstdc++: the slim image has gcc but no g++, so rust-lld finds no
+# -lstdc++. Build stage only; the runtime image (distroless cc) already carries libstdc++.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends g++ \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY engine/config.hosted.toml engine/config.hosted.toml
 COPY db/schema.surql db/schema_extra.surql db/
@@ -37,7 +42,7 @@ RUN mkdir -p /opt/punchable/models \
       && python /src/tools/kb/fetch_bge.py --dest /opt/punchable/models/bge-small-en-v1.5; \
     fi
 
-FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 COPY --from=build /pk-worker /pk-worker
 COPY --from=model /opt/punchable/models /opt/punchable/models
 ARG PK_BUILD_SHA=dev

@@ -274,19 +274,20 @@ jobs:
           export PK_BGE_DIR="$HOME/.punchable/models/bge-small-en-v1.5"
           python rust/tools/diff_api_writes.py --pk-api rust/target/debug/pk-api --conc 4
 
-  # T9 round 8: the pk-api image is BUILT here, never on the production node and never pushed from CI (no registry
-  # credentials in this repo). Docker Desktop is not run on the owner's PC either, so this job is the one place the
-  # image is proven to build. The worker image (rust/Dockerfile.worker) is not built in CI yet; it is built off the
-  # node by hand. BuildKit reads rust/Dockerfile.api.dockerignore (a Dockerfile-specific ignore file). The digest the
-  # deploy uses is the one from the build off the node, recorded in the private deploy log; this job prints its own
-  # image id and size so a drift in the bases or the model shows in the log.
+  # The pk-api and pk-worker images are BUILT here, never on the production node and never pushed from CI (no registry
+  # credentials in this repo). Docker Desktop is not run on the owner's PC either, so these jobs are the one place the
+  # images are proven to build AND where they are kept: each job `docker save`s its image (gzip) as a workflow
+  # artifact. The deploy path (docs/RUST_WORKSTREAM.md "Deploying the images"): `gh run download` the artifact,
+  # `docker load`, push to the cluster registry, roll out by the pushed digest. BuildKit reads
+  # rust/Dockerfile.<name>.dockerignore (a Dockerfile-specific ignore file). The job prints the image id (the config
+  # digest) and the sha256 of the saved archive, so a drift in the bases or the model shows in the log.
   api-image:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build rust/Dockerfile.api (build only, no push)
+      - name: Build rust/Dockerfile.api (no push)
         env:
           DOCKER_BUILDKIT: '1'
         run: |
@@ -296,3 +297,46 @@ jobs:
         run: |
           docker image inspect punchable-api-rs:ci --format 'id={{.Id}} size={{.Size}} user={{.Config.User}}'
           test "$(docker image inspect punchable-api-rs:ci --format '{{.Config.User}}')" = "10001:10001"
+
+      - name: Save the image (gzip) and print its id and archive hash
+        run: |
+          docker save punchable-api-rs:ci | gzip -6 > punchable-api-rs.tar.gz
+          echo "image id: $(docker image inspect punchable-api-rs:ci --format '{{.Id}}')"
+          echo "archive:  $(sha256sum punchable-api-rs.tar.gz) ($(stat -c %s punchable-api-rs.tar.gz) bytes)"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: punchable-api-rs-image-${{ github.sha }}
+          path: punchable-api-rs.tar.gz
+          retention-days: 14
+          compression-level: 0
+
+  worker-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build rust/Dockerfile.worker (no push)
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: |
+          docker build -f rust/Dockerfile.worker --build-arg PK_BUILD_SHA="$GITHUB_SHA" -t punchable-worker-rs:ci .
+
+      - name: The image runs as uid 10001, not root
+        run: |
+          docker image inspect punchable-worker-rs:ci --format 'id={{.Id}} size={{.Size}} user={{.Config.User}}'
+          test "$(docker image inspect punchable-worker-rs:ci --format '{{.Config.User}}')" = "10001:10001"
+
+      - name: Save the image (gzip) and print its id and archive hash
+        run: |
+          docker save punchable-worker-rs:ci | gzip -6 > punchable-worker-rs.tar.gz
+          echo "image id: $(docker image inspect punchable-worker-rs:ci --format '{{.Id}}')"
+          echo "archive:  $(sha256sum punchable-worker-rs.tar.gz) ($(stat -c %s punchable-worker-rs.tar.gz) bytes)"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: punchable-worker-rs-image-${{ github.sha }}
+          path: punchable-worker-rs.tar.gz
+          retention-days: 14
+          compression-level: 0

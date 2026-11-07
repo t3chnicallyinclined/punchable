@@ -7,7 +7,7 @@
 # and moving any path to it is the owner's call (docs/RUST_WORKSTREAM.md T9).
 #
 # What is in it: one binary (rustls, no OpenSSL; ONNX Runtime linked in by `ort` for search's query and passage
-# vectors) on distroless cc (glibc, libgcc, libstdc++), non-root uid 10001, read-only root filesystem; the bge-small
+# vectors) on distroless cc (glibc, libgcc, libstdc++; Debian 13), non-root uid 10001, read-only root filesystem; the bge-small
 # model, fetched and checked against the hub's hashes and the fingerprint by tools/kb/fetch_bge.py (the Python image's
 # own step, as rust/Dockerfile.worker does), at the path the manifest's PK_BGE_DIR names. pk-api writes nothing to
 # disk (PK_DATA only names the paths /api/health reports, as the Python pod names them); no `diagnostics` feature
@@ -15,14 +15,19 @@
 # PK_WITH_BGE=0 builds without the model: search, /similar and the hybrid list then answer on words only, with a
 # warning at the first search (the manifest's PK_BGE_DIR names an empty folder).
 #
-# Bases pinned by digest (the same three digests as rust/Dockerfile.worker, resolved 2026-11-02 with
+# Bases pinned by digest (the same three digests as rust/Dockerfile.worker, resolved 2026-11-02 (trixie pins 2026-11-07) with
 # `docker buildx imagetools inspect`):
-#   rust:1.99.1-slim-bookworm               = rust-toolchain.toml's 1.99.1
+#   rust:1.99.1-slim-trixie                 = rust-toolchain.toml's 1.99.1; trixie because pyke's prebuilt ONNX Runtime needs GCC 13+ libstdc++ and glibc 2.38+
 #   python:3.13-slim-bookworm               the digest infra/worker/Dockerfile pins (2026-10-22): the model stage
 #                                           fetches the model exactly as the Python image does
-#   gcr.io/distroless/cc-debian12:nonroot   the runtime
+#   gcr.io/distroless/cc-debian13:nonroot   the runtime (trixie, to match the build stage's glibc and libstdc++)
 # Move a pin only on purpose, with the build log's digest in the deploy log.
-FROM rust:1.99.1-slim-bookworm@sha256:f2c004e3d2d8b547e8cf7ffbc29205385f4e71d23e53e4e383065db5e9f822cd AS build
+FROM rust:1.99.1-slim-trixie@sha256:7eab7ce19273ce785e0ca7578bdf7bc1fcbae621775a8197379a04c9f6e03cd5 AS build
+# ort-sys links its static ONNX Runtime against libstdc++: the slim image has gcc but no g++, so rust-lld finds no
+# -lstdc++. Build stage only; the runtime image (distroless cc) already carries libstdc++.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends g++ \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # pk-store compiles the schema in (include_str!)
 COPY db/schema.surql db/schema_extra.surql db/
@@ -41,7 +46,7 @@ RUN mkdir -p /opt/punchable/models/bge-small-en-v1.5 \
       && python /src/tools/kb/fetch_bge.py --dest /opt/punchable/models/bge-small-en-v1.5; \
     fi
 
-FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 COPY --from=build /pk-api /pk-api
 COPY --from=model /opt/punchable/models /opt/punchable/models
 ARG PK_BUILD_SHA=dev

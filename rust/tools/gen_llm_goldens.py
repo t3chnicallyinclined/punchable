@@ -10,6 +10,8 @@ Needs the pinned SDK (infra/worker/requirements.txt): pip install anthropic==0.1
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import json
 import os
 import sys

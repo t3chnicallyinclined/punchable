@@ -1248,6 +1248,23 @@ def film_phase() -> None:
     same_write("same: a hook", "POST", "/api/jokes/joke:c/hook", {"unit": units["R"], "exclude": [" One (P). ", "Two."]},
                {"unit": units["P"], "exclude": [" One (R). ", "Two."]})
     same_write("same: a hidden bit's version, asked for", "POST", "/api/jokes/joke:g/hook?include_hidden=1", {"unit": "unit:g1"})
+    # The claims below hand out the OLDEST queued rant or hook job, ordered by (created_at, id) and created_at has a
+    # one-second resolution. The same_write checks above leave jobs queued (a hook on the hidden bit, a rant on the
+    # stage cut, ...): on a slow box they fall in earlier seconds than the staged ones and the staged ones are the
+    # oldest left only by luck of the clock; on CI's fast runner they share a second and the random job id decided
+    # (2026-11-06: "film: a claim via diff-film-r hands out ... the version's lines" got the hidden bit's hook).
+    # So the phase starts from an empty rant/hook queue: fail out what the earlier checks left (retry off).
+    drained = []
+    for _ in range(40):
+        r_ = R.call(py, "POST", "/api/worker/claim", worker_tok, {"kinds": ["rant", "hook"], "worker": "diff-film-drain", "hosted": True})
+        if r_[0] == 204:
+            break
+        ok("film: draining claim answers 200", r_[0] == 200, f"{r_[0]} {r_[2][:200]!r}")
+        jd = body(r_)["job"]
+        write(py, "POST", f"/api/worker/jobs/{q(jd['id'])}/result", {"ok": False, "error": "left over from an earlier check", "retry": False},
+              headers=worker_tok, want=(200,))
+        drained.append(jd["id"])
+    ok("film: the earlier checks' queued rant/hook jobs are failed out, and the queue is then empty", 1 <= len(drained) < 40, str(drained))
     # one version to both servers is one job; fresh while it is queued answers that job
     jobs = {}
     for kind, b in (("rant", {"unit": units["P"]}), ("hook", {"unit": units["P"], "exclude": ["Seen (P)."]})):
