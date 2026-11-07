@@ -54,6 +54,8 @@ def graph():
             {"id": "perf:p2", "type": "performance", "set": "set:2025-03-04_cellar", "start_ms": 120000, "end_ms": 150000, "text": "cat", "kind": "crowd_work"},
             {"id": "perf:p3", "type": "performance", "set": "set:2025-03-04_cellar", "start_ms": 200000, "end_ms": 230000, "text": "third"},
             {"id": "perf:p4", "type": "performance", "set": "set:2025-03-04_cellar", "start_ms": 300000, "end_ms": 330000, "text": "fourth"},
+            # a repeated id: the later record replaces the earlier and keeps the earlier one's place (a dict's way)
+            {"id": "joke:old", "type": "joke", "title": "Old, again", "stage": "testing"},
         ],
         "edges": [
             {"id": "e:aaaaaaaaaaa1", "kind": "performed_as", "src": "perf:p1", "dst": "joke:meters", "status": "proposed", "confidence": 0.5},
@@ -62,6 +64,7 @@ def graph():
             {"id": "e:aaaaaaaaaaa4", "kind": "performed_as", "src": "perf:p3", "dst": "joke:cat"},
             {"id": "e:aaaaaaaaaaa5", "kind": "part_of", "src": "unit:m1", "dst": "joke:meters", "status": "proposed"},
             {"id": "e:aaaaaaaaaaa6", "kind": "performed_as", "src": "perf:p4", "dst": "joke:old", "status": "proposed"},
+            {"id": "e:aaaaaaaaaaa5", "kind": "part_of", "src": "unit:m1", "dst": "joke:meters", "status": "confirmed"},
         ],
     }
 

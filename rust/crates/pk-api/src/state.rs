@@ -676,6 +676,16 @@ impl AppState {
     /// round reconnects. Runs until the process ends.
     pub async fn supervise(self) {
         loop {
+            self.supervise_round().await;
+            let wait = if self.loaded() { 15 } else { 5 };
+            tokio::time::sleep(Duration::from_secs(wait)).await;
+        }
+    }
+
+    /// One round of [`AppState::supervise`] without its wait: connect when there is no connection, check the schema,
+    /// clear a `loading` flag a dead sync left ([`AppState::recover_sync`]), read the state and warm the data.
+    pub async fn supervise_round(&self) {
+        {
             if self.store().is_none() {
                 let connect = tokio::time::timeout(CONNECT_TIMEOUT, Store::connect(self.0.config.store.clone()));
                 match connect
@@ -683,15 +693,6 @@ impl AppState {
                     .unwrap_or_else(|_| Err(pk_store::StoreError::mapping("connect timed out")))
                 {
                     Ok(s) => {
-                        // a process killed in the middle of a graph sync leaves `loading` true (every write 503):
-                        // cleared here when nobody holds a live `lease:sync`; the sync is then owed
-                        match s.sync_recover().await {
-                            Ok(true) => tracing::warn!(
-                                "meta:state.loading was left true by a sync that died: cleared, the next worker post syncs again"
-                            ),
-                            Ok(false) => {}
-                            Err(e) => tracing::warn!(error = %e, "sync_recover could not run"),
-                        }
                         self.set_store(Some(s));
                         tracing::info!("connected to SurrealDB");
                     }
@@ -705,6 +706,7 @@ impl AppState {
                 }
             }
             self.check_schema().await;
+            self.recover_sync().await;
             if let Some(store) = self.store()
                 && self.read_state(&store).await.is_none()
             {
@@ -712,8 +714,21 @@ impl AppState {
             } else if self.store().is_some() {
                 let _ = self.data().await;
             }
-            let wait = if self.loaded() { 15 } else { 5 };
-            tokio::time::sleep(Duration::from_secs(wait)).await;
+        }
+    }
+
+    /// A process killed in the middle of a graph sync (an OOM kill, a node going away) leaves `meta:state.loading` true
+    /// with `loading_by = 'sync'`, and every write answers 503 while it is. Run every supervise round: once nobody holds a
+    /// live `lease:sync` (the dead sync's lapses within its short TTL) the flag is cleared and the sync is owed. A flag
+    /// without `loading_by` (a dbload's) is never touched.
+    pub async fn recover_sync(&self) {
+        let Some(store) = self.store() else { return };
+        match store.sync_recover().await {
+            Ok(true) => tracing::warn!(
+                "meta:state.loading was left true by a sync that died: cleared, the next worker post syncs again"
+            ),
+            Ok(false) => {}
+            Err(e) => tracing::warn!(error = %e, "sync_recover could not run"),
         }
     }
 }

@@ -618,18 +618,17 @@ async fn a_sync_that_dies_midway_leaves_loading_cleared_at_the_next_start() {
             break;
         }
     }
-    let files = pk_kb::overlay::OverlayFiles::default();
     let input = pk_store::SyncInput {
-        graph: &changed,
-        files: &files,
-        laughs: &[],
+        graph: changed,
+        files: pk_kb::overlay::OverlayFiles::default(),
+        laughs: vec![],
         sources: vec![],
         paths: std::collections::BTreeMap::new(),
         owner: "owner",
     };
     // 1. a sync that fails: the flag comes down, the sync is owed
     let r = store
-        .sync_graph(&input, async || Err(StoreError::mapping("the vector cache is gone")))
+        .sync_graph(input, async || Err(StoreError::mapping("the vector cache is gone")))
         .await;
     assert!(r.is_err(), "the sync failed");
     assert_eq!(loading_and_owed(&store).await, (Some(false), true), "down, and owed");

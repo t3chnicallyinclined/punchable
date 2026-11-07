@@ -314,9 +314,7 @@ pub fn eq(a: &Value, b: &Value) -> bool {
         (Value::Null, Value::Null) => true,
         (Value::String(x), Value::String(y)) => x == y,
         (Value::Array(x), Value::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(p, q)| eq(p, q)),
-        (Value::Object(x), Value::Object(y)) => {
-            x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| eq(v, w)))
-        }
+        (Value::Object(x), Value::Object(y)) => eq_map(x, y),
         (Value::Number(x), Value::Number(y)) if x.is_i64() && y.is_i64() => x.as_i64() == y.as_i64(),
         (Value::Number(x), Value::Number(y)) if x.is_u64() && y.is_u64() => x.as_u64() == y.as_u64(),
         _ => match (num(a), num(b)) {
@@ -324,6 +322,11 @@ pub fn eq(a: &Value, b: &Value) -> bool {
             _ => false,
         },
     }
+}
+
+/// [`eq`] of two objects, without wrapping (and so copying) them in `Value`s.
+pub fn eq_map(x: &serde_json::Map<String, Value>, y: &serde_json::Map<String, Value>) -> bool {
+    x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| eq(v, w)))
 }
 
 /// `len(s)` in code points.

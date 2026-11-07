@@ -72,6 +72,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -116,6 +122,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -148,8 +161,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -232,7 +245,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -323,6 +336,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -367,6 +386,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -568,8 +594,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -679,7 +705,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -802,6 +828,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -846,6 +878,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -897,8 +936,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -981,7 +1020,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -1078,6 +1117,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -1122,6 +1167,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -1290,8 +1342,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -1477,7 +1529,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -1779,6 +1831,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -1823,6 +1881,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -2117,8 +2182,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -2285,7 +2350,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -2552,6 +2617,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -2596,6 +2667,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -2708,8 +2786,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -2793,7 +2871,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
@@ -2954,6 +3032,12 @@
      "start_ms": 300000,
      "end_ms": 330000,
      "text": "fourth"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old, again",
+     "stage": "testing"
     }
    ],
    "edges": [
@@ -2998,6 +3082,13 @@
      "src": "perf:p4",
      "dst": "joke:old",
      "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "confirmed"
     }
    ]
   },
@@ -3036,8 +3127,8 @@
     {
      "id": "joke:old",
      "type": "joke",
-     "title": "Old",
-     "stage": "idea"
+     "title": "Old, again",
+     "stage": "testing"
     },
     {
      "id": "unit:m1",
@@ -3120,7 +3211,7 @@
      "kind": "part_of",
      "src": "unit:m1",
      "dst": "joke:meters",
-     "status": "proposed"
+     "status": "confirmed"
     },
     {
      "id": "e:aaaaaaaaaaa6",
