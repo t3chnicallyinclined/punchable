@@ -943,7 +943,7 @@ struct MapLink {
 
 /// `notebook.all_map(c, cap, same_idea)`: every bit as a node (the top `cap` by nights, then laughs) and the links
 /// between them, grouped like the per-joke map: next (his segues, done back to back), tags (a line of one bit tagging
-/// another), same_world (same premise, a shared persona, the same Insights chunk), callbacks, versions (the merge
+/// another), `same_world` (same premise, a shared persona, the same Insights chunk), callbacks, versions (the merge
 /// judge's same-idea groups, `same_idea`). Names only: no bodies.
 #[allow(clippy::too_many_lines)]
 pub fn all_map(c: &Corpus, cap: usize, same_idea: &[Value]) -> Value {

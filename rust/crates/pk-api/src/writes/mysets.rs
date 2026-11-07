@@ -211,7 +211,7 @@ pub async fn patch(
                 {
                     return Err(http(400, "note must be text"));
                 }
-                let given = note.and_then(Value::as_str).map(py::strip).unwrap_or("");
+                let given = note.and_then(Value::as_str).map_or("", py::strip);
                 let note = if given.is_empty() {
                     M::change_note(&c, &old_ids, &ids, cur_t, target)
                 } else {
@@ -274,7 +274,7 @@ pub async fn lock(
         }
         let unlock = py::truthy(b.get("unlock"));
         let wid = text(ws, "id");
-        if M::bit_locked(ws, &jid) != !unlock {
+        if M::bit_locked(ws, &jid) == unlock {
             let op = if unlock { "unlock_bit" } else { "lock_bit" };
             cr.append(STORE, op, &wid, json!({"joke_id": jid}), &owner).await?;
         }
