@@ -1578,3 +1578,142 @@ async fn a_dead_syncs_flag_is_cleared_by_a_supervise_round_after_its_lease_lapse
     st.supervise_round().await;
     assert!(flag().await, "a dbload's flag is never cleared");
 }
+
+/// A sync held open past its lease (a slow step) renews the lease: a supervise round does not clear `loading` under it,
+/// and the sync ends cleanly. When the lease is taken from it meanwhile the sync stops before its next write, answers an
+/// error, owes the sync and brings the flag down. Red arm: without the renewal task the lease lapses under the first
+/// sync and the round clears its flag (the first assertion).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_sync_held_open_past_its_lease_keeps_it_and_one_that_loses_it_stops() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_worker_synclease").await;
+    let state = || async {
+        let v = writer
+            .last(
+                "SELECT loading, sync_owed FROM ONLY meta:state;",
+                pk_store::store::vars([]),
+            )
+            .await
+            .expect("state");
+        let j = pk_store::from_db(v);
+        (j["loading"] == json!(true), j["sync_owed"] == json!(true))
+    };
+    let input = |text: &str| {
+        let mut g = graph();
+        for n in g["nodes"].as_array_mut().unwrap().iter_mut() {
+            if n["type"] == "unit" {
+                n["text"] = json!(text);
+                break;
+            }
+        }
+        pk_store::SyncInput {
+            graph: g,
+            files: pk_kb::overlay::OverlayFiles::default(),
+            laughs: vec![],
+            sources: vec![],
+            paths: std::collections::BTreeMap::new(),
+            owner: "owner",
+        }
+    };
+    let slow = async || {
+        tokio::time::sleep(Duration::from_millis(3000)).await;
+        Ok(std::collections::HashMap::new())
+    };
+    // 1. held open for three lease lengths: renewed, so a round leaves its flag alone
+    let w = writer.clone();
+    let first = tokio::spawn(async move {
+        w.sync_graph_with(
+            input("a unit text that changed, once"),
+            slow,
+            1,
+            Duration::from_millis(300),
+        )
+        .await
+    });
+    tokio::time::sleep(Duration::from_millis(1700)).await;
+    assert!(state().await.0, "the sync is running and raised its flag");
+    st.supervise_round().await;
+    assert!(state().await.0, "a live (renewed) lease: the round leaves the flag");
+    first.await.expect("task").expect("the sync ends cleanly");
+    assert_eq!(state().await, (false, false), "down, and not owed");
+    // 2. the lease taken from a running sync: it stops at its next write and is owed
+    let w = writer.clone();
+    let second = tokio::spawn(async move {
+        w.sync_graph_with(
+            input("a unit text that changed, twice"),
+            slow,
+            1,
+            Duration::from_millis(300),
+        )
+        .await
+    });
+    tokio::time::sleep(Duration::from_millis(900)).await;
+    writer
+        .query(
+            "UPDATE lease:sync SET owner = 'someone-else', until = time::now() + 60s RETURN NONE;",
+            pk_store::store::vars([]),
+        )
+        .await
+        .expect("steal");
+    let r = second.await.expect("task");
+    assert!(r.is_err(), "a sync that lost its lease stops: {r:?}");
+    assert_eq!(state().await, (false, true), "the flag is down and the sync is owed");
+}
+
+/// A sync whose future is dropped half-way (the process shutting down, an aborted task) stops renewing its lease: the
+/// lease lapses and the next supervise round clears the flag it left. Red arm: a renewal task that outlives the future (the
+/// guard without its `Drop`) keeps the lease for ever and the flag stays.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_cancelled_sync_stops_renewing_and_its_flag_is_recovered() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_worker_synccancel").await;
+    let loading = || async {
+        let v = writer
+            .last("SELECT VALUE loading FROM ONLY meta:state;", pk_store::store::vars([]))
+            .await
+            .expect("loading");
+        pk_store::from_db(v) == json!(true)
+    };
+    let mut g = graph();
+    for n in g["nodes"].as_array_mut().unwrap().iter_mut() {
+        if n["type"] == "unit" {
+            n["text"] = json!("a unit text that changed for a sync nobody finishes");
+            break;
+        }
+    }
+    let input = pk_store::SyncInput {
+        graph: g,
+        files: pk_kb::overlay::OverlayFiles::default(),
+        laughs: vec![],
+        sources: vec![],
+        paths: std::collections::BTreeMap::new(),
+        owner: "owner",
+    };
+    let w = writer.clone();
+    let task = tokio::spawn(async move {
+        w.sync_graph_with(
+            input,
+            async || {
+                tokio::time::sleep(Duration::from_secs(30)).await;
+                Ok(std::collections::HashMap::new())
+            },
+            1,
+            Duration::from_millis(300),
+        )
+        .await
+    });
+    tokio::time::sleep(Duration::from_millis(700)).await;
+    assert!(loading().await, "the sync raised its flag");
+    task.abort();
+    let _ = task.await;
+    tokio::time::sleep(Duration::from_millis(2200)).await;
+    st.supervise_round().await;
+    assert!(
+        !loading().await,
+        "the renewal stopped with the sync: the lease lapsed and the round cleared the flag"
+    );
+}

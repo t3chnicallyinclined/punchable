@@ -12,6 +12,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write as _;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use pk_kb::overlay::{Overlaid, OverlayFiles, build_overlay_owned, set_id_of};
@@ -40,6 +42,26 @@ pub struct SyncInput<'a> {
     pub paths: BTreeMap<&'static str, Json>,
     /// The actor id on the comic's own edits (the replay marks them).
     pub owner: &'a str,
+}
+
+/// Aborts the renewal of `lease:sync` when it is dropped, whichever way the sync ends (a cancelled future included).
+struct RenewGuard(tokio::task::JoinHandle<()>);
+
+impl Drop for RenewGuard {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// `Err` once the renewal of the lease has failed or been refused: the sync stops before its next write.
+fn lease_alive(lease_lost: &AtomicBool) -> Result<()> {
+    if lease_lost.load(Ordering::SeqCst) {
+        return Err(StoreError::refused(
+            503,
+            "lease:sync was lost while the sync ran; it stopped and is owed",
+        ));
+    }
+    Ok(())
 }
 
 /// What `load_info` is told about a sync, once the graph itself has been given up.
@@ -152,7 +174,7 @@ impl Store {
                 continue;
             };
             let set_rid = parse_node_rid(&sid)?;
-            let laughs_v = obj.remove("laughs");
+            let laughs_v = obj.shift_remove("laughs");
             let kept: serde_json::Map<String, Json> = std::mem::take(obj);
             let mut content = Object::new();
             content.insert("set", Value::RecordId(set_rid.clone()));
@@ -271,6 +293,24 @@ impl Store {
         input: SyncInput<'_>,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
     ) -> Result<SyncOutcome> {
+        self.sync_graph_with(
+            input,
+            vectors,
+            SYNC_LEASE_S,
+            std::time::Duration::from_secs(SYNC_RENEW_S),
+        )
+        .await
+    }
+
+    /// [`Store::sync_graph`] with the lease length and the renewal interval given (a test holds a sync open past a lease of
+    /// a second).
+    pub async fn sync_graph_with(
+        &self,
+        input: SyncInput<'_>,
+        vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
+        lease_s: u32,
+        renew_every: std::time::Duration,
+    ) -> Result<SyncOutcome> {
         let me = format!(
             "sync-{}-{}",
             std::process::id(),
@@ -278,27 +318,40 @@ impl Store {
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |d| d.as_nanos())
         );
-        if !self.lease_acquire("sync", &me, SYNC_LEASE_S).await? {
+        if !self.lease_acquire("sync", &me, lease_s).await? {
             return Err(StoreError::refused(
                 503,
                 "another sync is running; this file is saved and the next post syncs it",
             ));
         }
         // the lease is renewed while the sync runs, so it can be short: a process that dies mid-sync loses it within
-        // `SYNC_LEASE_S`, and the recovery (every supervise round) clears the flag it left
-        let renew = {
-            let (store, me) = (self.clone(), me.clone());
+        // `lease_s`, and the recovery (every supervise round) clears the flag it left. A renewal that fails or is refused
+        // (someone else holds the lease now) sets `lease_lost`: the sync stops before its next write. The guard stops the
+        // renewal whichever way this future ends, a cancelled one included.
+        let lease_lost = Arc::new(AtomicBool::new(false));
+        let renew = RenewGuard({
+            let (store, me, lease_lost) = (self.clone(), me.clone(), Arc::clone(&lease_lost));
             tokio::spawn(async move {
                 loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(SYNC_RENEW_S)).await;
-                    if let Err(e) = store.lease_acquire("sync", &me, SYNC_LEASE_S).await {
-                        tracing::warn!(error = %e, "lease:sync was not renewed");
+                    tokio::time::sleep(renew_every).await;
+                    match store.lease_acquire("sync", &me, lease_s).await {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            tracing::warn!("lease:sync is another process's now: the sync stops");
+                            lease_lost.store(true, Ordering::SeqCst);
+                            return;
+                        }
+                        Err(e) => {
+                            tracing::warn!(error = %e, "lease:sync was not renewed: the sync stops");
+                            lease_lost.store(true, Ordering::SeqCst);
+                            return;
+                        }
                     }
                 }
             })
-        };
-        let out = self.sync_locked(input, vectors).await;
-        renew.abort();
+        });
+        let out = self.sync_locked(input, vectors, &lease_lost).await;
+        drop(renew);
         // the lease is given back whatever happened; a process that dies keeps it until it lapses, and the next
         // start clears `loading` when nobody holds it (`sync_recover`)
         if let Err(e) = self.lease_release("sync", &me).await {
@@ -348,6 +401,7 @@ impl Store {
         &self,
         input: SyncInput<'_>,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
+        lease_lost: &AtomicBool,
     ) -> Result<SyncOutcome> {
         let t0 = Instant::now();
         let st = self.last("SELECT * FROM ONLY meta:state;", Object::new()).await?;
@@ -435,6 +489,7 @@ impl Store {
                 &ords,
                 n_db,
                 vectors,
+                lease_lost,
             )
             .await;
         // `finally`: the flag comes down whatever happened above
@@ -470,6 +525,7 @@ impl Store {
         ords: &HashMap<(char, String), f64>,
         n_db: usize,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
+        lease_lost: &AtomicBool,
     ) -> Result<Json> {
         let (mut n_nodes, mut n_edges, mut removed) = (0u64, 0u64, 0u64);
         let mut vec: Option<HashMap<String, Vec<f64>>> = None;
@@ -480,6 +536,7 @@ impl Store {
             .cloned()
             .collect();
         for nid in gone_nodes {
+            lease_alive(lease_lost)?;
             nodes_db.remove(&nid);
             self.write(
                 "DELETE $id RETURN BEFORE;",
@@ -491,7 +548,7 @@ impl Store {
         }
         let gone_edges: Vec<Rec> = edges_db
             .iter()
-            .filter(|(k, _)| !want.edges.contains_key(*k))
+            .filter(|(k, (_, e))| e.get("id").and_then(Json::as_str).is_some() && !want.edges.contains_key(*k))
             .map(|(_, (_, e))| e.clone())
             .collect();
         // a record is given up as soon as it has been compared or written
@@ -502,6 +559,7 @@ impl Store {
                 continue;
             }
             let row = NodeRow::from_node(&n, ords[&('n', nid.clone())])?;
+            lease_alive(lease_lost)?;
             let mut content = match row.content() {
                 Value::Object(o) => o,
                 other => return Err(StoreError::mapping(format!("node row is not an object: {other:?}"))),
@@ -553,6 +611,7 @@ impl Store {
             ))
         };
         for e in gone_edges {
+            lease_alive(lease_lost)?;
             // an edge whose node was deleted above went with it (SurrealDB removes a record's edges): already gone is
             // fine here, where the Python's `write` answers EmptyWrite (a 500) for the removal of a set's analysis
             let id = e.get("id").and_then(Json::as_str).unwrap_or("").to_string();
@@ -576,11 +635,14 @@ impl Store {
                     .await?;
             }
             let row = EdgeRow::from_edge(&e, ords[&('e', eid.clone())])?.content();
+            lease_alive(lease_lost)?;
             self.write("INSERT RELATION [$row] RETURN id;", vars([("row", row)]), Some(1))
                 .await?;
             n_edges += 1;
         }
+        lease_alive(lease_lost)?;
         let nl = self.write_side_tables(laughs, index).await?;
+        lease_alive(lease_lost)?;
         let mx = ords.values().copied().fold(-1.0_f64, f64::max);
         self.write(
             "UPDATE meta:state SET ord_next = $n RETURN id;",

@@ -56,7 +56,10 @@ ENV PK_BUILD_SHA=$PK_BUILD_SHA \
     PK_DATA=/tmp/punchable \
     PK_BGE_DIR=/opt/punchable/models/bge-small-en-v1.5 \
     PUNCH_SECRETS=/nonexistent \
-    RUST_LOG=info     MALLOC_ARENA_MAX=1     MALLOC_TRIM_THRESHOLD_=65536     MALLOC_MMAP_THRESHOLD_=65536
+    RUST_LOG=info \
+    MALLOC_ARENA_MAX=1 \
+    MALLOC_TRIM_THRESHOLD_=65536 \
+    MALLOC_MMAP_THRESHOLD_=65536
 # glibc's malloc: one arena, and anything over 64 KiB straight from the OS and back to it when freed. Without these the
 # graph sync's bursts (T10 round 6b: tools/load/sync_mem.py) stayed resident in per-thread arenas, 594 MiB after one
 # sync on production data. Measured on glibc 2.43 at a quarter of that data: 157 -> 88 MiB after a sync, 500 -> 279 MiB

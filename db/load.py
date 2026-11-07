@@ -322,7 +322,7 @@ def load(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
     t0 = time.perf_counter()
     phases = {}
     apply_schema(r, ns, db)
-    r.write("UPDATE meta:state SET loading = true, gen += 1 RETURN id;")
+    r.write("UPDATE meta:state SET loading = true, loading_by = 'dbload', gen += 1 RETURN id;")
     try:
         # -- clear (definitions and change feeds stay; only rows go)
         t = time.perf_counter()
@@ -412,7 +412,7 @@ def load(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
         keep_foreign(r, info)
         r.write("UPDATE meta:state SET load_info = $info RETURN id;", {"info": info})
     finally:
-        r.query("UPDATE meta:state SET loading = false, gen += 1 RETURN NONE;")
+        r.query("UPDATE meta:state SET loading = false, loading_by = NONE, gen += 1 RETURN NONE;")
     missing = sdb.check_changefeeds(r)
     if missing:
         raise SystemExit(f"change feed missing after load: {missing}")
@@ -507,7 +507,7 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
         for i, pk in enumerate(pending):
             ords[(kind, pk)] = top + i + 1
 
-    r.write("UPDATE meta:state SET loading = true, gen += 1 RETURN id;")
+    r.write("UPDATE meta:state SET loading = true, loading_by = 'dbload', gen += 1 RETURN id;")
     changed = {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}
     try:
         vec = None
@@ -557,7 +557,7 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
         keep_foreign(r, info)
         r.write("UPDATE meta:state SET load_info = $info RETURN id;", {"info": info})
     finally:
-        r.query("UPDATE meta:state SET loading = false, gen += 1 RETURN NONE;")
+        r.query("UPDATE meta:state SET loading = false, loading_by = NONE, gen += 1 RETURN NONE;")
     info["total_s"] = round(time.perf_counter() - t0, 2)
     return info
 

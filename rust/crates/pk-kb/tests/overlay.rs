@@ -142,6 +142,31 @@ fn the_owned_overlay_is_the_pythons_as_well() {
         if let Some(d) = first_diff(&got, &want, "merged") {
             panic!("{name}: {d}");
         }
-        assert!(py::eq(&o.meta["version"], &c["merged"]["version"]), "{name}: version");
+        // the graph's own header, whole, and the index the side tables are written from
+        let want_meta = serde_json::json!({"version": c["merged"]["version"], "generated_at": c["merged"]["generated_at"],
+                                           "runs": c["merged"]["runs"]});
+        if let Some(d) = first_diff(&o.meta, &want_meta, "meta") {
+            panic!("{name}: {d}");
+        }
+        let rows: serde_json::Map<String, Value> = o
+            .index
+            .rows
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    Value::Array(
+                        v.iter()
+                            .map(|(r, p)| Value::Array(vec![r.clone(), Value::String(p.clone())]))
+                            .collect(),
+                    ),
+                )
+            })
+            .collect();
+        let got_index = serde_json::json!({"rows": rows, "analysis": o.index.analysis, "inferred": o.index.inferred,
+                                           "id_map": o.index.id_map});
+        if let Some(d) = first_diff(&got_index, &c["index"], "index") {
+            panic!("{name}: {d}");
+        }
     }
 }
