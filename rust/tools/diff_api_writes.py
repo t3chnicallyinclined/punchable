@@ -2199,6 +2199,7 @@ def main() -> int:
     R.build_comedy(comedy)
     R.write_vectors(tmp / "cache" / "kb", R.make_graph())
     judge = R.write_judge(comedy, tmp / "cache" / "kb")
+    (home / "no-rules.json").write_text("{}", encoding="utf-8")  # pk-api refuses to start when the named file is missing
     port = R.free_port()
     pw = secrets.token_hex(16)
     env = {**os.environ, "PUNCHABLE_HOME": str(home), "COMEDY_DIR": str(comedy), "PUNCH_COMEDY": str(comedy),
