@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
-#   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker
+#   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker [ref]
 #                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
 #                 | legal-rules | cutover [--undo] | keycloak-theme [--dry-run]   (mounts the login theme: RESTARTS the shared Keycloak) | ai-secret | worker-secret
 #                 | observability | bugsink-secret | bugsink | sentry-secret   (infra/OBSERVABILITY.md)
@@ -28,7 +28,10 @@ if [ -z "$CFG" ]; then
 fi
 [ -f "$CFG" ] || { echo "!! no infra config: copy infra/config.env.example to ~/.punchable/infra.env and fill it in"; exit 1; }
 . "$CFG"
-STEP="${1:?usage: infra/ship.sh <step> [arg]}"; ARG="${2:-}"
+STEP="${1:?usage: infra/ship.sh <step> [arg] [ref]}"; ARG="${2:-}"; REF="${3:-}"
+# a rollout ref (an image digest) goes through to deploy.sh: without it deploy.sh takes the last built image of that
+# kind, which is not always the one meant (2026-11-07: the old Python worker went live for 8 s)
+case "$REF" in ""|*[!A-Za-z0-9@:/._-]*) [ -z "$REF" ] || { echo "!! bad ref: $REF"; exit 1; } ;; esac
 HOST="${PK_SSH_HOST:?set PK_SSH_HOST (user@host) in $CFG}"
 KEY="${PK_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 cd "$(git rev-parse --show-toplevel)"
@@ -95,4 +98,4 @@ if [ "$STEP" = dbload ]; then
   ssh -i "$KEY" "$HOST" "umask 077 && cat > ~/$B" < "$TMP/bundle.tgz"
   ARG="\$HOME/$B $ARG"
 fi
-ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh $STEP $ARG"
+ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh $STEP $ARG $REF"
