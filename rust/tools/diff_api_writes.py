@@ -1151,110 +1151,202 @@ def short_post(base: str, claimed: int, sent: bytes, headers: dict) -> None:
     c.close()
 
 
-def upload_phase(port: int, pw: str) -> None:
-    """Group 6a: the phone's recording posted through each server, the inbox and the transcriber's fetch read through
-    both, the same recording twice, the refusals, a body cut short, and the transcriber's `ok` result deleting the
-    upload through either server (`w_result`)."""
-    global n_equal
+def upload_leg(base: str, who: str) -> tuple[list, list[str], int]:
+    """One server's whole upload story, recorded as (label, status, normalised answer) lines: the phone's recording,
+    the inbox, the notes and Today's count, the transcriber's fetch, the same recording twice, the refusals, a body cut
+    short, the cap. The Python keeps an upload in its pod's inbox folder and pk-api in the recordings bucket, so the two
+    servers can not share one upload; each runs this alone, one after the other, and the two recordings are compared
+    line by line. Returns the lines, the ids of the jobs it made and how many empty placeholders the inbox showed (the Python's
+    file mode reserves a name with an empty file before it reads the body and leaves it when the body is cut short; pk-api
+    lists an upload only once it is whole, and the placeholders are left out of the comparison)."""
     q = lambda s: quote(s, safe="")  # noqa: E731
-    parts = lambda: R.surreal_sql(port, pw, "RETURN count(SELECT id FROM upload_part);")[-1]["result"]  # noqa: E731
-    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set", "X-Filename": "Late%20Show%20%231.m4a", "X-Duration-S": "61.5",
+    rec: list = []
+    jobs: list[str] = []
+    empties = [0]
+
+    def note(label: str, resp) -> None:
+        j = body(resp)
+        rec.append((label, resp[0], norm(j)))
+
+    def inbox(label: str) -> None:
+        n_empty = 0
+        for p in ("/api/inbox", "/api/notes"):
+            r_ = R.call(base, "GET", p, app)
+            j = body(r_)
+            if isinstance(j, dict) and isinstance(j.get("items"), list):
+                if p == "/api/inbox":
+                    n_empty = sum(1 for x in j["items"] if x.get("bytes") == 0)
+                j["items"] = [x for x in j["items"] if x.get("bytes") != 0]
+            rec.append((f"{label}: {p}", r_[0], norm(j)))
+        empties[0] = max(empties[0], n_empty)
+        t = R.call(base, "GET", "/api/today", app)
+        rec.append((f"{label}: /api/today inbox", t[0], ((body(t) or {}).get("inbox") or 0) - n_empty))
+
+    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set", "X-Filename": f"Late%20Show%20%231%20{q(who)}.m4a", "X-Duration-S": "61.5",
            "X-Marks-Ms": '[1000, 2500.7, "3000"]', "X-Recorded-At": "2026-11-05T21:30:00Z", "X-Venue": "The%20Cellar",
            "X-Lat": "40.73", "X-Lng": "-73.99", "X-Show-Group": "friday"}
-    big = bytes((i * 7 + 3) % 251 for i in range(3 * 1024 * 1024 + 17))   # three whole parts and 17 bytes over
+    # a part of 8 MiB and a few bytes over: pk-api sends it as a multipart upload of two parts
+    big = bytes((i * 7 + 3) % 251 for i in range(8 * 1024 * 1024 + 5))
     tiny = b"RIFF0000WAVE"
-    p0 = parts()
-    both("upload: before any", ["/api/inbox", "/api/notes", "/api/today", "/api/inbox?backend=files"])
-    got = {}
-    for base, who, data, title in ((py, "the Python", big, "Late show (P)"), (rs, "pk-api", big[::-1], "Late show (R)")):
-        st, h, b = post_bytes(base, "/api/upload", data, {**hdr, "X-Title": title})
-        r = json.loads(b) if b else {}
-        ok(f"upload: {who} queues a recording of {len(data)} bytes", st == 200 and r.get("status") == "queued" and r.get("bytes") == len(data)
-           and r.get("job", {}).get("kind") == "process_set" and r.get("waiting_for") == "transcriber", f"{st} {b[:300]!r}")
-        got[who] = (data, r)
-    ok("upload: four parts a recording (three whole and the rest), in the database", parts() == p0 + 8, f"{p0} -> {parts()}")
-    bad = [f"upload: the answers differ: {p}: python {json.dumps(u)[:120]} rust {json.dumps(v)[:120]}"
-           for p, u, v in R.diff(norm(got["the Python"][1]), norm(got["pk-api"][1]))]
-    problems.extend(bad)
-    n_equal += not bad
-    both("upload: after one each", ["/api/inbox", "/api/notes", "/api/today", "/api/connections"])
-    for who, (data, r) in got.items():
-        ib = body(R.call(rs, "GET", "/api/inbox", app))["items"]
-        row = next((x for x in ib if x["file"] == r["file"]), None)
-        ok(f"upload: the inbox lists {who}'s recording with its capture details", row is not None and row["bytes"] == len(data)
-           and row["kind"] == "set" and row["duration_s"] == 61.5 and row["marks_ms"] == [1000, 2500, 3000] and row["waiting_for"] == "transcriber"
-           and row["title"].startswith("Late show"), json.dumps(row)[:300])
-        for base, via in ((py, "the Python"), (rs, "pk-api")):
-            f = R.call(base, "GET", f"/api/worker/jobs/{q(r['job']['id'])}/file", worker_tok)
-            ok(f"upload: {via} gives the transcriber {who}'s bytes back, whole", f[0] == 200 and f[2] == data
-               and f[1].get("content-type") == "application/octet-stream" and f[1].get("content-length") == str(len(data))
-               and f[1].get("cache-control") == "no-store", f"{f[0]} {len(f[2])} {f[1]}")
-    # the same recording twice within two minutes: one job, the first file, whichever server saw it second
-    p1 = parts()
-    same = {**hdr, "X-Title": "Twice"}
-    st, h, b1 = post_bytes(rs, "/api/upload", tiny, same)
-    st2, h2, b2 = post_bytes(py, "/api/upload", tiny, same)
+    inbox("before any")
+    st, h, b = post_bytes(base, "/api/upload", big, {**hdr, "X-Title": "Late show"})
+    rec.append(("upload: the answer", st, norm(json.loads(b))))
+    r = json.loads(b)
+    ok(f"upload: {who} queues a recording of {len(big)} bytes", st == 200 and r.get("status") == "queued" and r.get("bytes") == len(big)
+       and r.get("job", {}).get("kind") == "process_set" and r.get("waiting_for") == "transcriber", f"{st} {b[:300]!r}")
+    jobs.append(r["job"]["id"])
+    inbox("after one")
+    row = next((x for x in body(R.call(base, "GET", "/api/inbox", app))["items"] if x["file"] == r["file"]), None)
+    ok(f"upload: the inbox of {who} lists the recording with its capture details", row is not None and row["bytes"] == len(big)
+       and row["kind"] == "set" and row["duration_s"] == 61.5 and row["marks_ms"] == [1000, 2500, 3000] and row["waiting_for"] == "transcriber"
+       and row["title"].startswith("Late show"), json.dumps(row)[:300])
+    f = R.call(base, "GET", f"/api/worker/jobs/{q(r['job']['id'])}/file", worker_tok)
+    rec.append(("fetch: the bytes back", f[0], {"equal": f[2] == big, "len": len(f[2]), "type": f[1].get("content-type"),
+                                              "length": f[1].get("content-length"), "cache": f[1].get("cache-control")}))
+    ok(f"upload: {who} gives the transcriber the recording back, whole", f[0] == 200 and f[2] == big
+       and f[1].get("content-type") == "application/octet-stream" and f[1].get("content-length") == str(len(big))
+       and f[1].get("cache-control") == "no-store", f"{f[0]} {len(f[2])} {f[1]}")
+    # the same recording twice within two minutes: one job, the first file
+    same = {**hdr, "X-Title": "Twice", "X-Filename": f"twice-{q(who)}.m4a"}
+    st, h, b1 = post_bytes(base, "/api/upload", tiny, same)
+    st2, h2, b2 = post_bytes(base, "/api/upload", tiny, same)
     r1, r2 = json.loads(b1), json.loads(b2)
-    ok("upload: the same recording twice is one job, the first file", st == st2 == 200 and r2.get("duplicate") is True and r2["file"] == r1["file"]
-       and r2["job"]["id"] == r1["job"]["id"] and "duplicate" not in r1, f"{b1[:200]!r} / {b2[:200]!r}")
-    st3, h3, b3 = post_bytes(rs, "/api/upload", tiny, same)
-    r3 = json.loads(b3)
-    ok("upload: and again through pk-api", r3.get("duplicate") is True and r3["file"] == r1["file"], f"{b3[:200]!r}")
-    both("upload: after the duplicates", ["/api/inbox", "/api/today", f"/api/jobs/{q(r1['job']['id'])}"])
-    ok("upload: a duplicate leaves no bytes behind", parts() == p1 + 1, f"{p1} -> {parts()}")
-    # the refusals, the same on both
-    cases = [("no body", b"", hdr, "/api/upload"), ("a kind that is not one", tiny, {**hdr, "X-Kind": "movie"}, "/api/upload"),
-             ("not audio", b"hello", {"Content-Type": "text/plain", "X-Filename": "notes.txt"}, "/api/upload"),
-             ("the wrong backend", tiny, hdr, "/api/upload?backend=files")]
-    for label, data, h, path in cases:
-        a_, b_ = post_bytes(py, path, data, h), post_bytes(rs, path, data, h)
-        bad = []
-        if a_[0] != b_[0]:
-            bad.append(f"upload refusal {label}: status python {a_[0]} rust {b_[0]}: {a_[2][:160]!r} / {b_[2][:160]!r}")
-        for p, u, v in R.diff(norm(json.loads(a_[2])), norm(json.loads(b_[2]))):
-            bad.append(f"upload refusal {label}: {p}: python {json.dumps(u)[:120]} rust {json.dumps(v)[:120]}")
-        problems.extend(bad)
-        n_equal += not bad
+    rec.append(("twice: the first", st, norm(r1)))
+    rec.append(("twice: the second", st2, norm(r2)))
+    ok(f"upload: the same recording twice is one job on {who}, the first file", st == st2 == 200 and r2.get("duplicate") is True
+       and r2["file"] == r1["file"] and r2["job"]["id"] == r1["job"]["id"] and "duplicate" not in r1, f"{b1[:200]!r} / {b2[:200]!r}")
+    jobs.append(r1["job"]["id"])
+    inbox("after the duplicate")
+    # the refusals
+    for label, data, h_, path in (("no body", b"", hdr, "/api/upload"), ("a kind that is not one", tiny, {**hdr, "X-Kind": "movie"}, "/api/upload"),
+                                  ("not audio", b"hello", {"Content-Type": "text/plain", "X-Filename": "notes.txt"}, "/api/upload"),
+                                  ("the wrong backend", tiny, hdr, "/api/upload?backend=files")):
+        a_ = post_bytes(base, path, data, h_)
+        rec.append((f"refusal: {label}", a_[0], norm(json.loads(a_[2]))))
     # the type decides the extension when the name has none; a missing kind is "upload"
-    for base, who in ((py, "the Python"), (rs, "pk-api")):
-        st, h, b = post_bytes(base, "/api/upload", tiny + who.encode(), {"Content-Type": "audio/webm", "X-Filename": "blob", "X-Title": "By type " + who})
-        r = json.loads(b)
-        ok(f"upload: {who} reads the extension from the type and the kind as upload", st == 200 and "_punchable-upload_" in r["file"]
-           and re.search(r"_blob(-\d+)?\.webm$", r["file"]) is not None and r["kind"] == "upload", b[:200].decode("utf-8", "replace"))
-    st, h, b = post_bytes(rs, "/api/upload", tiny, hdr, worker_tok)
-    st2, h2, b2 = post_bytes(py, "/api/upload", tiny, hdr, worker_tok)
-    ok("upload: a worker token is refused alike", st == st2 == 403 and json.loads(b) == json.loads(b2), f"{st} {b[:120]!r} / {st2} {b2[:120]!r}")
-    p2 = parts()
-    for base in (py, rs):
-        short_post(base, 5000, b"only a few bytes", {**hdr, "X-Title": "Cut short"})
-    ok("upload: a body cut short leaves no bytes behind on either server", parts() == p2, f"{p2} -> {parts()}")
-    left = body(R.call(rs, "GET", "/api/inbox", app))["items"]
-    ok("upload: and no row in the inbox", not any(x["title"] == "Cut short" for x in left), json.dumps(left)[:300])
-    both("upload: after the refusals", ["/api/inbox", "/api/today", "/api/notes"])
+    st, h, b = post_bytes(base, "/api/upload", tiny + b"+", {"Content-Type": "audio/webm", "X-Filename": "blob", "X-Title": "By type"})
+    r = json.loads(b)
+    rec.append(("by type", st, norm(r)))
+    ok(f"upload: {who} reads the extension from the type and the kind as upload", st == 200 and "_punchable-upload_" in r["file"]
+       and re.search(r"_blob(-\d+)?\.webm$", r["file"]) is not None and r["kind"] == "upload", b[:200].decode("utf-8", "replace"))
+    jobs.append(r["job"]["id"])
+    st, h, b = post_bytes(base, "/api/upload", tiny, hdr, worker_tok)
+    rec.append(("a worker token", st, norm(json.loads(b))))
+    # a body that stops short of its Content-Length: the phone lost signal. A few bytes, and 9 MiB of 20 (pk-api has
+    # begun a multipart upload by then and must abort it)
+    short_post(base, 5000, b"only a few bytes", {**hdr, "X-Title": "Cut short"})
+    short_post(base, 20 * 1024 * 1024, big[:9 * 1024 * 1024], {**hdr, "X-Title": "Cut short, later"})
+    left = body(R.call(base, "GET", "/api/inbox", app))["items"]
+    ok(f"upload: a body cut short leaves no row in the inbox of {who}", not any(x["title"].startswith("Cut short") for x in left), json.dumps(left)[:300])
+    inbox("after the cut-short bodies")
+    # the cap, from the header alone
+    extra = "Content-Type: audio/mp4\r\nX-Kind: set\r\n"
+    for label, claimed in (("one byte over 1 GB", (1 << 30) + 1), ("two gigabytes", 2 << 30)):
+        a_ = refused_unread(base, "/api/upload", claimed, extra, detail=True)
+        rec.append((f"cap: {label}", a_[0], norm(a_[1])))
+        ok(f"upload cap: {label} is the 400 `upload missing or over 1 GB` on {who}", a_ == (400, {"error": "upload missing or over 1 GB"}), str(a_))
     # the file route's own refusals
-    both("upload: the transcriber's fetch refused", ["/api/worker/jobs/job:nope/file", "/api/worker/jobs/job:nope/file?backend=files"], headers=worker_tok)
-    st, r = write(rs, "POST", "/api/ask", {"question": "A job that is not an upload?"})
-    both("upload: a job that is no upload", [f"/api/worker/jobs/{q(r['job']['id'])}/file"], headers=worker_tok)
-    # a final failure lets go of the recording (ADR 0014: a queued transcriber kind may end only as a final failure)
-    keep = len(body(R.call(py, "GET", "/api/inbox", app))["items"])
-    st, res = write(rs, "POST", f"/api/worker/jobs/{q(r1['job']['id'])}/result", {"ok": False, "error": "no transcriber"}, headers=worker_tok, want=(200,))
-    ok("upload: a failed result lets go of the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep - 1, json.dumps(res)[:200])
-    stages = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM upload_stage);")[-1]["result"]
-    ok("upload: no staging row is left once every upload is committed, cut short or deleted", stages == 0, str(stages))
-    # the transcriber's result: ok deletes the upload (through either server), the other keeps nothing behind
-    for base, who in ((rs, "pk-api"), (py, "the Python")):
-        st, c = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-ts", "hosted": False}, headers=worker_tok, want=(200,))
-        ok(f"upload: a transcriber claims an upload job through {who}", c["job"]["kind"] == "process_set", json.dumps(c)[:200])
-        jid, file_ = c["job"]["id"], c["job"]["input"]["file"]
-        n_before = len(body(R.call(py, "GET", "/api/inbox", app))["items"])
-        st, res = write(base, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": True, "result": {"sets": 1}}, headers=worker_tok, want=(200,))
-        ok(f"upload: an ok result through {who} ends the job", res["job"]["status"] == "done", json.dumps(res)[:200])
-        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok) for b_ in (py, rs)]
-        ok(f"upload: the upload {who} finished is gone on both servers",
-           all(g[0] == 404 and json.loads(g[2])["error"] == "the upload is gone (the pod restarted?)" for g in gone), str([(g[0], g[2][:100]) for g in gone]))
-        inbox = body(R.call(py, "GET", "/api/inbox", app))["items"]
-        ok("upload: and out of the inbox", len(inbox) == n_before - 1 and not any(x["file"] == file_ for x in inbox), file_)
-    both("upload: after the results", ["/api/inbox", "/api/today", "/api/notes"])
+    for p in ("/api/worker/jobs/job:nope/file", "/api/worker/jobs/job:nope/file?backend=files"):
+        note(f"fetch refused: {p}", R.call(base, "GET", p, worker_tok))
+    st, ask = write(base, "POST", "/api/ask", {"question": f"A job that is not an upload? ({who})"})
+    note("fetch refused: a job that is no upload", R.call(base, "GET", f"/api/worker/jobs/{q(ask['job']['id'])}/file", worker_tok))
+    jobs.append(ask["job"]["id"])
+    return rec, jobs, empties[0]
+
+
+def upload_phase(standin) -> None:
+    """The phone's recording through each server, one after the other (the Python's file mode in its pod's inbox folder,
+    pk-api's R2 mode in the bucket), the two stories compared line by line; then pk-api's own storage proved against the
+    stand-in: what is in the bucket while a recording waits, that a body cut short leaves no object and no open multipart
+    upload, that every upload is released when its job ends (drop, failure, success), and that nothing is left."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    standin.reset()
+    py_rec, py_jobs, py_empty = upload_leg(py, "the Python")
+    # the Python keeps the recordings in its folder: drop its jobs and empty the folder, so what follows starts level
+    for jid in py_jobs:
+        R.call(py, "POST", f"/api/jobs/{q(jid)}/drop", app, {"reason": "end of the Python's leg"})
+    for p in (PY_DATA / "inbox").glob("*") if (PY_DATA / "inbox").is_dir() else []:
+        p.unlink()
+    ok("upload: the Python's leg left the bucket alone", standin.state()["objects"] == [] and standin.count("put") == 0, str(standin.state()["ops"])[:200])
+    rs_rec, rs_jobs, rs_empty = upload_leg(rs, "pk-api")
+    ok("upload: pk-api never lists half an upload (the Python's file mode left %d empty placeholder(s) of its cut-short bodies)" % py_empty, rs_empty == 0, str(rs_empty))
+    # what is in the bucket while the recordings of the leg wait: the 8 MiB + 5 byte one as two parts, the tiny ones as one PUT
+    st_ = standin.state()
+    sizes = sorted(o["size"] for o in st_["objects"])
+    big_n = 8 * 1024 * 1024 + 5
+    ok("upload: pk-api's bucket holds exactly the recordings that wait, as uploaded (the duplicate and the cut-short bodies left none)",
+       sizes == sorted([12, 13, big_n]), f"sizes {sizes}")
+    ok("upload: the big recording went in as a multipart upload (two parts), the small ones as single PUTs",
+       standin.count("start") >= 1 and standin.count("part") >= 2 and standin.count("put") >= 2, str(st_["ops"])[:300])
+    ok("upload: a body cut short leaves no open multipart upload and the cut one was aborted", st_["open_uploads"] == 0 and st_["aborted"] >= 1,
+       f"open {st_['open_uploads']} aborted {st_['aborted']}")
+    ok("upload: no signature, credential or bucket was refused by the stand-in", st_["refused"] == 0, str(st_["refused"]))
+    bad = []
+    if len(py_rec) != len(rs_rec):
+        bad.append(f"upload: the two stories differ in length: python {len(py_rec)} lines, pk-api {len(rs_rec)}")
+    for (la, sa, ja), (lb, sb, jb) in zip(py_rec, rs_rec):
+        if la != lb:
+            bad.append(f"upload: the stories are out of step: {la!r} / {lb!r}")
+            break
+        if sa != sb:
+            bad.append(f"upload: {la}: status python {sa} pk-api {sb}: {json.dumps(ja)[:160]} / {json.dumps(jb)[:160]}")
+        for p, u, v in R.diff(ja, jb):
+            bad.append(f"upload: {la}: {p}: python {json.dumps(u)[:120]} pk-api {json.dumps(v)[:120]}")
+        n_equal += not bad
+    problems.extend(bad)
+    ok(f"upload: the two stories compared {len(rs_rec)} lines", len(rs_rec) > 20, str(len(rs_rec)))
+    # pk-api's recordings are released when the jobs end (the Python's file mode keeps its folder: it has no such rule)
+    keep = len(body(R.call(rs, "GET", "/api/inbox", app))["items"])
+    ok("upload: pk-api lists its recordings", keep >= 3, str(keep))
+    for jid in rs_jobs:
+        R.call(rs, "POST", f"/api/jobs/{q(jid)}/drop", app, {"reason": "end of pk-api's leg"})
+    left = body(R.call(rs, "GET", "/api/inbox", app))["items"]
+    objects = standin.state()["objects"]
+    ok("upload: every drop released its recording: no row in the inbox and no object in the bucket", left == [] and objects == [], f"{left} {objects}")
+
+
+def upload_end_phase(standin) -> None:
+    """ADR 0014's rules on pk-api's recordings in the bucket (ADR 0015): the bytes go with a job he dropped, a job that
+    failed for good and a job that was done, stay when a failed result sends the job back to the queue; an object the
+    bucket refuses to delete is found by the sweep (shown in the Rust tests); the fetch of a recording whose object is
+    gone is a 404, not a hang."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set"}
+    inbox = lambda: body(R.call(rs, "GET", "/api/inbox", app))["items"]  # noqa: E731
+    objs = lambda: len(standin.state()["objects"])  # noqa: E731
+    base_objs = objs()
+    post_bytes(rs, "/api/upload", b"drop pk-api " * 80, {**hdr, "X-Title": "Drop", "X-Filename": "drop.m4a"})
+    n0 = len(inbox())
+    st, c = write(rs, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+    jid = c["job"]["id"]
+    st, res = write(rs, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": True}, headers=worker_tok, want=(200,))
+    kept = R.call(rs, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0]
+    ok("upload end: a failed result sent back to the queue keeps the recording", res["job"]["status"] == "queued" and kept == 200 and objs() == base_objs + 1,
+       f"{res['job']['status']} {kept} {objs()}")
+    st, c2 = write(rs, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+    ok("upload end: the same job is handed out again", c2["job"]["id"] == jid, f"{c2['job']['id']} vs {jid}")
+    st, res = write(rs, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": False}, headers=worker_tok, want=(200,))
+    gone = R.call(rs, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)
+    ok("upload end: a job that failed for good lets go of the recording: row, object and fetch",
+       res["job"]["status"] == "failed" and gone[0] == 404 and len(inbox()) == n0 - 1 and objs() == base_objs, f"{res['job']['status']} {gone[0]} {objs()}")
+    # done
+    post_bytes(rs, "/api/upload", b"done pk-api " * 80, {**hdr, "X-Title": "Done", "X-Filename": "done.m4a"})
+    st, c = write(rs, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+    st, res = write(rs, "POST", f"/api/worker/jobs/{q(c['job']['id'])}/result", {"ok": True, "result": {"sets": 1}}, headers=worker_tok, want=(200,))
+    ok("upload end: a job that is done lets go of the recording", res["job"]["status"] == "done" and objs() == base_objs and len(inbox()) == n0 - 1,
+       f"{res['job']['status']} {objs()}")
+    # the object is gone but the row stays (a restored pointer, or an object the lifecycle rule took): the fetch says so
+    st, h, b = post_bytes(rs, "/api/upload", b"lost pk-api " * 80, {**hdr, "X-Title": "Lost", "X-Filename": "lost.m4a"})
+    lost = json.loads(b)
+    key = standin.state()["objects"][0]["key"]
+    standin.delete_object(key)
+    f = R.call(rs, "GET", f"/api/worker/jobs/{q(lost['job']['id'])}/file", worker_tok)
+    ok("upload end: a recording whose object is gone is a 404 with the reason, not a hang", f[0] == 404 and b"gone" in f[2], f"{f[0]} {f[2][:120]!r}")
+    R.call(rs, "POST", f"/api/jobs/{q(lost['job']['id'])}/drop", app, {"reason": "end of the test"})
+    ok("upload end: dropping that job removes its row though the object is gone", inbox() == [] and objs() == base_objs, f"{inbox()} {objs()}")
+    both("upload end: after", ["/api/inbox", "/api/today", "/api/notes"])
 
 
 def film_phase() -> None:
@@ -1530,42 +1622,6 @@ def chats_phase() -> None:
         got = R.compare(label, raw_call(py, "POST", "/api/ask/chats", data, app), raw_call(rs, "POST", "/api/ask/chats", data, app))
         problems.extend(got)
         n_equal += not got
-
-
-def upload_end_phase() -> None:
-    """ADR 0014's lead defaults on both servers: 413 over 64 MiB with the Python's error, a recording's bytes gone with
-    a job he dropped and with a job that failed for good (through the other server than the one that took the upload),
-    kept when a failed result sends the job back to the queue."""
-    global n_equal
-    q = lambda s: quote(s, safe="")  # noqa: E731
-    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set", "X-Filename": "end.m4a"}
-    extra = "Content-Type: audio/mp4\r\nX-Kind: set\r\n"
-    for label, claimed in (("one byte over 64 MiB", 64 * 1024 * 1024 + 1), ("a gigabyte", 1 << 30)):
-        a_, c_ = (refused_unread(base, "/api/upload", claimed, extra, detail=True) for base in (py, rs))
-        ok(f"upload cap: {label} is the same 413 on both", a_ == c_ == (413, {"error": "upload over 64 MiB"}), f"{a_} / {c_}")
-    inbox = lambda: body(R.call(py, "GET", "/api/inbox", app))["items"]  # noqa: E731
-    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
-        st, h, b = post_bytes(base, "/api/upload", (f"drop {who} ").encode() * 80, {**hdr, "X-Title": "Drop " + who})
-        r = json.loads(b)
-        jid, n0 = r["job"]["id"], len(inbox())
-        st, d = write(other, "POST", f"/api/jobs/{q(jid)}/drop", {"reason": "end test"})
-        ok(f"upload end: his drop through the other server ends {who}'s job", d["job"]["status"] == "failed", json.dumps(d)[:200])
-        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok) for b_ in (py, rs)]
-        ok(f"upload end: the dropped job's recording is gone on both servers",
-           all(g[0] == 404 for g in gone) and len(inbox()) == n0 - 1, str([(g[0], g[2][:80]) for g in gone]))
-    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
-        post_bytes(base, "/api/upload", (f"fail {who} ").encode() * 90, {**hdr, "X-Title": "Fail " + who})
-        st, c = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
-        jid = c["job"]["id"]
-        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": True}, headers=worker_tok, want=(200,))
-        kept = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
-        ok(f"upload end: a failed result sent back to the queue keeps {who}'s recording", res["job"]["status"] == "queued" and kept == [200, 200], f"{res['job']['status']} {kept}")
-        st, c2 = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
-        ok(f"upload end: the same job is handed out again", c2["job"]["id"] == jid, f"{c2['job']['id']} vs {jid}")
-        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": False}, headers=worker_tok, want=(200,))
-        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
-        ok(f"upload end: a job that failed for good lets go of {who}'s recording", res["job"]["status"] == "failed" and gone == [404, 404], f"{res['job']['status']} {gone}")
-    both("upload end: after", ["/api/inbox", "/api/today", "/api/notes"])
 
 
 def venues_same(label: str, path: str) -> None:
@@ -2185,6 +2241,7 @@ def main() -> int:
     global app, py, rs, worker_tok
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pk-api", required=True, type=Path)
+    ap.add_argument("--s3-standin", type=Path, default=None, help="the S3 stand-in (default: pk-s3-standin beside pk-api)")
     ap.add_argument("--report", type=Path, default=None)
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--conc", type=int, default=8)
@@ -2214,7 +2271,6 @@ def main() -> int:
     if not (Path(bge) / "onnx" / "model.onnx").is_file():
         raise SystemExit("set PK_BGE_DIR to the bge-small folder (python tools/kb/fetch_bge.py --dest <dir>)")
     env["PK_VEC_SWEEP_S"] = "86400"
-    env["PK_UPLOAD_DB"] = "1"   # uploads in the database (docs/adr/0014, off by default): both servers, or neither
     procs: list[subprocess.Popen] = []
     logs = []
 
@@ -2236,6 +2292,7 @@ def main() -> int:
             if r.returncode != 0:
                 raise SystemExit(f"push_remote {step[0]} failed:\n{r.stdout[-2000:]}\n{r.stderr[-3000:]}")
         R.write_merges(port, pw)
+        standin = R.Standin(start, a.s3_standin or a.pk_api.with_name("pk-s3-standin" + a.pk_api.suffix))
         key = JK.Key("t10", seed=9)
         jwks = R.JwksServer([key])
         auth_env = {"PK_AUTH": "1", "OIDC_ISSUER": JK.ISS, "OIDC_AUDIENCE": JK.AUD, "OIDC_JWKS_URL": jwks.url,
@@ -2254,7 +2311,7 @@ def main() -> int:
             py, rs = f"http://127.0.0.1:{py_port}", f"http://127.0.0.1:{rs_port}"
             pp_ = start([sys.executable, str(ROOT / "api" / "entry.py")], {**e, "PORT": str(py_port)}, f"python-api-{name}")
             R.wait_http(py + "/api/health?ready=1", pp_, "python api")
-            rp_ = start([str(a.pk_api)], {**e, "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, f"pk-api-{name}")
+            rp_ = start([str(a.pk_api)], {**e, **standin.env(), "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, f"pk-api-{name}")
             R.wait_http(rs + "/api/health?ready=1", rp_, "pk-api")
             return pp_, rp_
 
@@ -2329,8 +2386,8 @@ def main() -> int:
         # W. round 3: the worker's routes over the one queue, the enqueue routes, then /api/live on both
         worker_phase()
         enqueue_phase()
-        upload_phase(port, pw)
-        upload_end_phase()
+        upload_phase(standin)
+        upload_end_phase(standin)
         film_phase()
         chats_phase()
         venues_phase()
@@ -2385,7 +2442,7 @@ def main() -> int:
                                       ("POST", "/api/ask", 202), ("POST", "/api/riff", 202), ("POST", "/api/facts", 202),
                                       ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409),
                                       # round 4, group 6a
-                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("POST", "/api/upload", 413), ("GET", "/api/inbox", 200),
+                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("GET", "/api/inbox", 200),
                                       ("GET", "/api/worker/jobs/{id}/file", 200), ("GET", "/api/worker/jobs/{id}/file", 404),
                                       # Film it (build 24)
                                       ("POST", "/api/jokes/{id}/rant", 202), ("POST", "/api/jokes/{id}/hook", 202),

@@ -33,6 +33,13 @@ pub async fn health(
         b["error"] = json!("shutting down");
         return Ok(json_response(StatusCode::SERVICE_UNAVAILABLE, &b));
     }
+    if ready_probe && !st.recordings_ready() {
+        // docs/adr/0015: a wrong token or bucket must stop the rollout, not surface at the first upload
+        let mut b = st.boot_status();
+        b["ready"] = Value::Bool(false);
+        b["error"] = json!("the recordings bucket cannot be reached");
+        return Ok(json_response(StatusCode::SERVICE_UNAVAILABLE, &b));
+    }
     // signed out (the kubelet's probes, the app before sign-in) the answer is `{ok, rev, auth, flags}`: nobody reads
     // data from it, so it never waits for a rebuild once there is data
     let signed_out = st.verifier().is_some() && caller.0.is_none();

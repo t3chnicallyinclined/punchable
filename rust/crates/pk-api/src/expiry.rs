@@ -1,12 +1,18 @@
-//! The recordings nobody collected (T10 round 5, group D; docs/adr/0014): an upload whose job no transcriber has
-//! claimed within `PK_UPLOAD_KEEP_S` (7 days) is deleted, and the job that waited for it ends `failed` with the
-//! reason, so the app shows the recording is gone and the phone can send it again. A recording whose job was claimed
-//! is left alone (somebody is working on it); one whose job is over (done, failed, dropped) or that has no job is a
-//! stray and goes too. The bytes of a dropped job, of one that failed for good and of one that was done are deleted
-//! when that happens (`writes::uploads::release_for_job`); this is the backstop for the ones nobody ever touches.
+//! The recordings nobody collected (T10 round 5, group D; docs/adr/0014, 0015): an upload whose job no transcriber has
+//! claimed within `PK_UPLOAD_KEEP_S` (7 days) is deleted (its pointer row and its object in the bucket), and the job
+//! that waited for it ends `failed` with the reason, so the app shows the recording is gone and the phone can send it
+//! again. A recording whose job was claimed is left alone (somebody is working on it); one whose job is over (done,
+//! failed, dropped) or that has no job is a stray and goes too. A job's own end deletes its recording
+//! (`writes::uploads::release_for_job`); this is the backstop for the ones nobody ever touches.
+//!
+//! The second half of a pass is the bucket sweep ([`sweep_bucket`]): an object under `rec/` more than an hour old that
+//! no pointer row names (an upload whose row was never written, or a delete that failed after its row went) is deleted.
+//! It reads the rows and the bucket listing, never the bytes. The R2 lifecycle rule (infra/recordings/) is the layer
+//! under both: it removes anything older than eight days even when this process is down.
 //!
 //! One owner: a pass takes `lease:uploads` first, like the vector sweeper's, so two API processes never both run it.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use axum::http::StatusCode;
@@ -16,7 +22,7 @@ use serde_json::{Map, Value, json};
 use crate::error::ApiResult;
 use crate::state::AppState;
 use crate::worker::Lease;
-use crate::writes::uploads::upload_name;
+use crate::writes::uploads::{drop_upload, upload_name};
 use crate::writes::{Creative, Plan, Written, not_connected, store_err};
 
 /// The default `PK_UPLOAD_KEEP_S`: seven days.
@@ -102,8 +108,40 @@ pub async fn expire_once(st: &AppState, now: f64) -> ApiResult<usize> {
             }
             _ => {}
         }
-        store.upload_delete(&name).await.map_err(store_err)?;
-        gone += 1;
+        if drop_upload(st, &name).await? {
+            gone += 1;
+        }
+    }
+    Ok(gone)
+}
+
+/// An object this young may be an upload that has completed and not yet written its row.
+pub const ORPHAN_AGE_S: f64 = 3600.0;
+
+/// Delete the objects under `rec/` that are older than [`ORPHAN_AGE_S`] at `now` and that no `upload` row names; how
+/// many went. Nothing is deleted when the listing or the rows cannot be read (an empty read must never look like "no
+/// row names it").
+pub async fn sweep_bucket(st: &AppState, now: f64) -> ApiResult<usize> {
+    let (Some(rec), Some(store)) = (st.recordings(), st.store_handle()) else {
+        return Ok(0);
+    };
+    let listed = rec
+        .list()
+        .await
+        .map_err(|e| crate::error::ApiError::unavailable(format!("{e}")))?;
+    if listed.is_empty() {
+        return Ok(0);
+    }
+    let named: HashSet<String> = store.upload_keys().await.map_err(store_err)?.into_iter().collect();
+    let mut gone = 0;
+    for o in listed {
+        let old = o.modified.is_some_and(|t| now - t > ORPHAN_AGE_S);
+        if old && !named.contains(&o.key) {
+            match rec.delete(&o.key).await {
+                Ok(()) => gone += 1,
+                Err(e) => tracing::warn!("uploads: an orphan object was not deleted: {e}"),
+            }
+        }
     }
     Ok(gone)
 }
@@ -125,11 +163,19 @@ pub async fn run(st: AppState, lease: Lease, every: Duration) {
         }
         let Some(store) = st.store_handle() else { continue };
         match lease.acquire(&store).await {
-            Ok(true) => match expire_once(&st, crate::worker::unix_now()).await {
-                Ok(0) => {}
-                Ok(n) => tracing::info!(deleted = n, "uploads: expired recordings nobody collected"),
-                Err(e) => tracing::warn!("uploads: the expiry pass failed: {}", e.msg),
-            },
+            Ok(true) => {
+                let now = crate::worker::unix_now();
+                match expire_once(&st, now).await {
+                    Ok(0) => {}
+                    Ok(n) => tracing::info!(deleted = n, "uploads: expired recordings nobody collected"),
+                    Err(e) => tracing::warn!("uploads: the expiry pass failed: {}", e.msg),
+                }
+                match sweep_bucket(&st, now).await {
+                    Ok(0) => {}
+                    Ok(n) => tracing::info!(deleted = n, "uploads: deleted objects no upload row names"),
+                    Err(e) => tracing::warn!("uploads: the bucket sweep failed: {}", e.msg),
+                }
+            }
             Ok(false) => {}
             Err(e) => tracing::warn!("uploads: the expiry lease could not be taken: {e}"),
         }

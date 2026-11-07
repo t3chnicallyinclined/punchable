@@ -10,12 +10,25 @@ publish.workspace = true
 [features]
 # `diagnostics`: GET /api/_t9/summaries, the whole Bits-list row this service computes, so the T9 differential can
 # compare it with the Python's /api/jokes before that route moves. Never in a shipped image.
-diagnostics = []
+diagnostics = ["dep:aws-lc-rs"]
+
+# The S3 stand-in the recordings tests and the differentials run against (tests/support/s3_standin.rs): a program for
+# the checkout, never in a shipped image (the Dockerfile builds `-p pk-api` without the feature).
+[[bin]]
+name = "pk-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "pk-s3-standin"
+path = "src/bin/pk_s3_standin.rs"
+required-features = ["diagnostics"]
 
 [dependencies]
 anyhow = { workspace = true }
+aws-lc-rs = { workspace = true, optional = true }
 axum = { workspace = true }
 base64 = { workspace = true }
+bytes = { workspace = true }
 chrono = { workspace = true }
 form_urlencoded = { workspace = true }
 futures = { workspace = true }
@@ -34,6 +47,7 @@ pk-wire = { path = "../pk-wire" }
 prometheus = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
+rusty-s3 = { workspace = true }
 sentry = { workspace = true }
 sha1 = { workspace = true }
 sha2 = { workspace = true }
@@ -47,6 +61,7 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 aws-lc-rs = { workspace = true }
+sysinfo = { workspace = true }
 tempfile = { workspace = true }
 tokio-tungstenite = { workspace = true }
 wiremock = { workspace = true }

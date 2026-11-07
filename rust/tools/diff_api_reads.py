@@ -30,6 +30,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -595,6 +596,40 @@ def surreal_exe() -> str:
     return p
 
 
+class Standin:
+    """The S3 stand-in (`pk-s3-standin`, built with `--features diagnostics`; crates/pk-api/tests/support/s3_standin.rs) the
+    recordings go to when pk-api runs in R2 mode: one process, a random key id and secret per run, a state page the harness
+    reads (objects, open multipart uploads, every operation seen). Not R2: it checks the SigV4 signature of every request and
+    R2's multipart rules, and nothing else."""
+
+    def __init__(self, start, exe: Path):
+        self.bucket = "diff-recordings"
+        self.key_id = secrets.token_hex(8).upper()
+        self.secret = secrets.token_hex(16)
+        port = free_port()
+        self.url = f"http://127.0.0.1:{port}"
+        self.proc = start([str(exe)], {"STANDIN_BUCKET": self.bucket, "STANDIN_KEY_ID": self.key_id, "STANDIN_SECRET": self.secret,
+                                       "STANDIN_PORT": str(port)}, "s3-standin")
+        wait_http(self.url + "/_standin/state", self.proc, "s3 stand-in")
+
+    def env(self) -> dict:
+        """What turns pk-api's recordings on (and only pk-api's: the Python keeps its inbox folder)."""
+        return {"PK_UPLOAD_R2": "1", "PK_REC_ENDPOINT": self.url, "PK_REC_BUCKET": self.bucket, "PK_REC_ACCESS_KEY_ID": self.key_id,
+                "PK_REC_SECRET_ACCESS_KEY": self.secret}
+
+    def state(self) -> dict:
+        return json.loads(call(self.url, "GET", "/_standin/state")[2])
+
+    def count(self, kind: str) -> int:
+        return sum(1 for o in self.state()["ops"] if o.split(" ")[0] == kind.upper())
+
+    def reset(self) -> None:
+        call(self.url, "POST", "/_standin/reset")
+
+    def delete_object(self, key: str) -> None:
+        call(self.url, "POST", "/_standin/delete?key=" + urllib.parse.quote(key, safe=""))
+
+
 def wait_http(url: str, proc: subprocess.Popen, what: str, secs: float = 120) -> None:
     t = time.time()
     while time.time() - t < secs:
@@ -861,6 +896,7 @@ def coverage(py: str, app: dict) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pk-api", required=True, type=Path)
+    ap.add_argument("--s3-standin", type=Path, default=None, help="the S3 stand-in (default: pk-s3-standin beside pk-api)")
     ap.add_argument("--bench", type=int, default=0, help="requests per route group per server for the timing (0 = none)")
     ap.add_argument("--report", type=Path, default=None)
     ap.add_argument("--keep", action="store_true", help="keep the temp folder (logs)")
@@ -892,7 +928,6 @@ def main() -> int:
         raise SystemExit("set PK_BGE_DIR to the bge-small folder (python tools/kb/fetch_bge.py --dest <dir>): "
                          "search, /similar and the hybrid list embed on both servers")
     env["PK_VEC_SWEEP_S"] = "86400"
-    env["PK_UPLOAD_DB"] = "1"   # uploads in the database (docs/adr/0014, off by default): both servers, or neither
     procs: list[subprocess.Popen] = []
     logs = []
 
@@ -927,7 +962,8 @@ def main() -> int:
         rs = f"http://127.0.0.1:{rs_port}"
         pp = start([sys.executable, str(ROOT / "api" / "entry.py")], {**auth_env, "PORT": str(py_port)}, "python-api")
         wait_http(py + "/api/health?ready=1", pp, "python api")
-        rp = start([str(a.pk_api)], {**auth_env, "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, "pk-api")
+        standin = Standin(start, a.s3_standin or a.pk_api.with_name("pk-s3-standin" + a.pk_api.suffix))
+        rp = start([str(a.pk_api)], {**auth_env, **standin.env(), "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, "pk-api")
         wait_http(rs + "/api/health?ready=1", rp, "pk-api")
 
         now = time.time()
@@ -1287,7 +1323,7 @@ def main() -> int:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
                        if ln.startswith("pk_http_requests_total{"))
         n0 = counted()
-        # a path pk-api does not own (with PK_UPLOAD_DB=1 here, /api/notes is answered by pk-api itself, so it is no
+        # a path pk-api does not own (with recordings in R2 on here, /api/notes is answered by pk-api itself, so it is no
         # longer a forward in this harness): the fallback sends it to the Python and records nothing
         call(rs, "GET", "/api/no-such-route", app)
         if counted() != n0:

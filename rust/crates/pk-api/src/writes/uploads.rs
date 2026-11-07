@@ -1,12 +1,12 @@
-//! Uploads, the inbox and the transcriber's fetch (T10 group 6a; `server.py` `upload`, `inbox_list`,
-//! `creative_api.Routes.w_file`): `POST /api/upload` (the phone's recording, streamed into the database a megabyte at
-//! a time, then queued as a `process_set` job for the transcriber), `GET /api/inbox` (what waits) and `GET
-//! /api/worker/jobs/<id>/file` (the bytes back). The bytes live in `upload_part` rows and the commit is the
-//! `upload:<name>` row (`pk_store::upload`; `api-dev/upload_store.py` writes and reads the same rows), so either
-//! server sees every upload and the pod's disk holds none.
+//! Uploads, the inbox and the transcriber's fetch (T10 group 6a, rebuilt for R2 in T11 round 2; `server.py` `upload`,
+//! `inbox_list`, `creative_api.Routes.w_file`): `POST /api/upload` (the phone's recording, streamed into the recordings
+//! bucket, then queued as a `process_set` job for the transcriber), `GET /api/inbox` (what waits) and `GET
+//! /api/worker/jobs/<id>/file` (the bytes back, streamed from the bucket). The bytes are one object in R2 and the
+//! `upload:<name>` row is only its pointer (`pk_store::upload`, docs/adr/0015); the pod's disk and the database hold
+//! no recording.
 //!
-//! A write runs to its end once started ([`detached`]): a phone that loses signal mid-body ends the stream, the parts
-//! already written are dropped and the answer is "upload was cut short", as the Python's.
+//! A write runs to its end once started ([`detached`]): a phone that loses signal mid-body ends the stream, the
+//! multipart upload is aborted and the answer is "upload was cut short", as the Python's.
 
 use std::sync::LazyLock;
 
@@ -18,8 +18,7 @@ use axum::response::{IntoResponse, Response};
 use futures::StreamExt as _;
 use pk_core::py;
 use pk_creative::Items;
-use pk_store::Store;
-use pk_store::upload::{PART, UploadRow};
+use pk_store::upload::UploadRow;
 use regex::Regex;
 use serde_json::{Map, Value, json};
 
@@ -28,11 +27,14 @@ use super::{Creative, detached, http, not_connected, store_err};
 use crate::auth::Caller;
 use crate::error::{ApiError, ApiResult, ok};
 use crate::query::Query;
+use crate::recordings::{RecError, new_key};
 use crate::state::AppState;
 
-/// The largest upload when the database is its home (docs/adr/0014): 64 MiB. Audio of a set is tens of megabytes; a
-/// Film-it video never leaves the phone. Over it is a 413, on both servers while both exist (`server.py` `upload`).
-pub const MAX_UPLOAD: i64 = 64 * 1024 * 1024;
+/// The largest upload: the Python's `MAX_UPLOAD`, 1 GB (docs/adr/0015: ADR 0014's 64 MiB existed only because of the
+/// database disk). Over it, like an empty one, is the Python's 400 `upload missing or over 1 GB`.
+pub const MAX_UPLOAD: i64 = 1024 * 1024 * 1024;
+/// How long a body may say nothing before the upload counts as cut short (a phone that lost its signal).
+const BODY_IDLE: std::time::Duration = std::time::Duration::from_secs(60);
 /// `AUDIO_EXT`.
 const AUDIO_EXT: [&str; 12] = [
     ".webm", ".m4a", ".mp3", ".wav", ".ogg", ".opus", ".mp4", ".mov", ".aac", ".flac", ".caf", ".3gp",
@@ -219,39 +221,18 @@ fn cut_short() -> ApiError {
     ApiError::bad_request("upload was cut short")
 }
 
-/// The body into `upload_part` rows, `PART` bytes each; how many parts.
-async fn stage(store: &Store, token: &str, body: Body, n: usize) -> ApiResult<i64> {
-    // best effort: concurrent uploads each sweep the same stale staging rows and can lose a write conflict (seen under
-    // the same-rate probe as a 500 on the upload that happened to sweep); the next upload sweeps again
-    if let Err(e) = store.upload_sweep_orphans().await {
-        tracing::warn!(error = %e, "upload: the orphan sweep failed; the next upload tries again");
-    }
-    let mut stream = body.into_data_stream();
-    let mut buf: Vec<u8> = Vec::with_capacity(PART.min(n));
-    let (mut seq, mut got) = (0_i64, 0_usize);
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|_| cut_short())?;
-        got += chunk.len();
-        let mut rest = &chunk[..];
-        while !rest.is_empty() {
-            let take = (PART - buf.len()).min(rest.len());
-            buf.extend_from_slice(&rest[..take]);
-            rest = &rest[take..];
-            if buf.len() == PART {
-                let part = std::mem::replace(&mut buf, Vec::with_capacity(PART.min(n - got.min(n))));
-                store.upload_put_part(token, seq, part).await.map_err(store_err)?;
-                seq += 1;
-            }
+/// A bucket failure as the app sees it: the 503 with the reason (the phone still has the recording), and the cause in
+/// the log. The reason names a status, never a URL, a key or a bucket.
+fn rec_err(e: &RecError) -> ApiError {
+    match e {
+        RecError::Cut => cut_short(),
+        RecError::Store(_) => {
+            tracing::error!(error = %e, "upload: the recording store failed");
+            ApiError::unavailable(format!(
+                "the recording could not be stored right now ({e}); the phone keeps it, try again shortly"
+            ))
         }
     }
-    if !buf.is_empty() {
-        store.upload_put_part(token, seq, buf).await.map_err(store_err)?;
-        seq += 1;
-    }
-    if got < n {
-        return Err(cut_short());
-    }
-    Ok(seq)
 }
 
 /// `POST /api/upload`: the recording in the body, its kind and name in the headers; answers `queued` with the file
@@ -263,17 +244,22 @@ pub async fn upload(
     RawQuery(raw): RawQuery,
     body: Body,
 ) -> ApiResult<Response> {
-    if !st.config().upload_db {
+    if st.config().uploads.is_none() {
         // a path moved here must never silently diverge from the Python, which keeps the upload in its inbox folder
         tracing::error!(
-            "POST /api/upload refused: uploads in the database are off (PK_UPLOAD_DB is not 1) but this path is routed here"
+            "POST /api/upload refused: recordings in R2 are off (PK_UPLOAD_R2 is not 1) but this path is routed here"
         );
         return Err(ApiError::unavailable(
-            "uploads in the database are off (PK_UPLOAD_DB); route /api/upload to the Python API",
+            "recordings in R2 are off (PK_UPLOAD_R2); route /api/upload to the Python API",
+        ));
+    }
+    if st.recordings().is_none() {
+        return Err(ApiError::unavailable(
+            "the recording store is not configured (see the log)",
         ));
     }
     if !st.schema_extra_current() {
-        // the `upload` tables are another build's (a deploy in progress): never write rows the schema does not describe
+        // the `upload` table is another build's (a deploy in progress): never write rows the schema does not describe
         return Err(ApiError::unavailable(
             "the database schema is not the one this build expects (a deploy is in progress); try again shortly",
         ));
@@ -286,11 +272,9 @@ pub async fn upload(
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.trim().parse::<i64>().ok())
         .unwrap_or(0);
-    if n <= 0 {
-        return Err(ApiError::bad_request("upload missing"));
-    }
-    if n > MAX_UPLOAD {
-        return Err(ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "upload over 64 MiB"));
+    // decided from Content-Length before a byte is read (`server.py` `upload`, file mode)
+    if n <= 0 || n > MAX_UPLOAD {
+        return Err(ApiError::bad_request("upload missing or over 1 GB"));
     }
     let kind = {
         let k = py::strip(&hdr(&headers, "X-Kind")).to_string();
@@ -320,6 +304,28 @@ pub async fn upload(
     Ok(ok(&out))
 }
 
+/// Delete an upload the way ADR 0014 ordered it and ADR 0015 kept: the pointer row first (so nothing is ever listed
+/// without its bytes), then the object. A failed object delete is logged and left to the bucket sweep and the
+/// lifecycle rule: the caller's own work (a job's end, a refused duplicate) has already happened. `false` when there
+/// was no such upload.
+pub async fn drop_upload(st: &AppState, name: &str) -> ApiResult<bool> {
+    let store = st.store_handle().ok_or_else(not_connected)?;
+    let Some(row) = store.upload_delete(name).await.map_err(store_err)? else {
+        return Ok(false);
+    };
+    forget_object(st, &row.key, name).await;
+    Ok(true)
+}
+
+/// Delete one object, best effort.
+async fn forget_object(st: &AppState, key: &str, name: &str) {
+    if let Some(rec) = st.recordings()
+        && let Err(e) = rec.delete(key).await
+    {
+        tracing::warn!(error = %e, file = %name, "upload: the recording's object was not deleted; the sweep will find it");
+    }
+}
+
 async fn stage_and_queue(
     st: AppState,
     body: Body,
@@ -330,12 +336,21 @@ async fn stage_and_queue(
     headers: HeaderMap,
 ) -> ApiResult<Value> {
     let store = st.store_handle().ok_or_else(not_connected)?;
-    let token = uuid::Uuid::new_v4().simple().to_string();
+    let rec = st
+        .recordings()
+        .ok_or_else(|| ApiError::unavailable("the recording store is not configured"))?;
+    let key = new_key();
+    // the body goes to the bucket as it arrives; a part at a time is all that is held
+    let stream = body.into_data_stream().boxed();
+    let stored = rec.put_stream(&key, stream, BODY_IDLE).await.map_err(|e| rec_err(&e))?;
     let committed = async {
-        let parts = stage(&store, &token, body, usize::try_from(n).unwrap_or(usize::MAX)).await?;
+        if i64::try_from(stored.bytes).ok() != Some(n) {
+            // the body ended before its Content-Length: the phone lost signal; nothing may be listed
+            return Err(cut_short());
+        }
         let meta = upload_meta(&headers, &kind, &orig, n);
         let used = store
-            .upload_commit(&name, &token, &Value::Object(meta.clone()), n, parts)
+            .upload_commit(&name, &key, &Value::Object(meta.clone()), n, stored.parts)
             .await
             .map_err(store_err)?;
         Ok::<_, ApiError>((used, meta))
@@ -344,10 +359,8 @@ async fn stage_and_queue(
     let (used, meta) = match committed {
         Ok(x) => x,
         Err(e) => {
-            // never a part that belongs to nothing
-            if let Err(d) = store.upload_drop_parts(&token).await {
-                tracing::warn!(error = %d, "upload: the parts of a failed upload could not be dropped");
-            }
+            // never an object that belongs to nothing
+            forget_object(&st, &key, &name).await;
             return Err(e);
         }
     };
@@ -362,7 +375,7 @@ async fn stage_and_queue(
         let cr = Creative::new(st.clone());
         let (_, items) = cr.lines_and_items("jobs").await?;
         if let Some(dup) = recent_duplicate(&items, &meta, crate::worker::unix_now()) {
-            store.upload_delete(&used).await.map_err(store_err)?;
+            drop_upload(&st, &used).await?;
             let file = dup
                 .get("input")
                 .and_then(|i| i.get("file"))
@@ -396,11 +409,11 @@ async fn stage_and_queue(
     }
     .await;
     if queued.is_err()
-        && let Err(d) = store.upload_delete(&used).await
+        && let Err(d) = drop_upload(&st, &used).await
     {
-        // the job was not queued and the phone will send the recording again: this copy must not stay (the sweep
-        // finds what is left by its staging row)
-        tracing::warn!(error = %d, file = %used, "upload: not deleted after a failed enqueue");
+        // the job was not queued and the phone will send the recording again: this copy must not stay (the bucket
+        // sweep finds what is left)
+        tracing::warn!(error = %d.msg, file = %used, "upload: not deleted after a failed enqueue");
     }
     queued
 }
@@ -430,7 +443,7 @@ pub fn inbox_row(u: &UploadRow) -> Value {
 
 /// `GET /api/inbox`: the uploads waiting for a transcriber, newest first.
 pub async fn inbox(State(st): State<AppState>, req: axum::extract::Request) -> ApiResult<Response> {
-    if !st.config().upload_db {
+    if st.config().uploads.is_none() {
         return Ok(crate::proxy::forward(State(st), req).await);
     }
     let q = Query::parse(req.uri().query());
@@ -443,7 +456,7 @@ pub async fn inbox(State(st): State<AppState>, req: axum::extract::Request) -> A
 
 /// `GET /api/notes`: the uploads that are notes (the inbox's `kind` is `note`), newest first.
 pub async fn notes(State(st): State<AppState>, req: axum::extract::Request) -> ApiResult<Response> {
-    if !st.config().upload_db {
+    if st.config().uploads.is_none() {
         return Ok(crate::proxy::forward(State(st), req).await);
     }
     let q = Query::parse(req.uri().query());
@@ -459,18 +472,16 @@ pub async fn notes(State(st): State<AppState>, req: axum::extract::Request) -> A
     Ok(ok(&json!({"items": items})))
 }
 
-/// A job that will not run again lets go of its recording (ADR 0014): the bytes of a `process_set` job that was
-/// dropped, or that failed for good, are deleted. A failed delete is logged and left to the expiry sweep: the job's
-/// own end has already been written and the caller must answer it.
+/// A job that will not run again lets go of its recording (ADR 0014, kept by 0015): the pointer row and the object of a
+/// `process_set` job that was dropped, that failed for good or that is done are deleted. A failure is logged and left to
+/// the expiry pass and the bucket sweep: the job's own end has already been written and the caller must answer it.
 pub async fn release_for_job(st: &AppState, job: &Map<String, Value>) {
-    if !st.config().upload_db || job.get("kind").and_then(Value::as_str) != Some("process_set") {
+    if st.config().uploads.is_none() || job.get("kind").and_then(Value::as_str) != Some("process_set") {
         return;
     }
-    let (Some(name), Some(store)) = (upload_name(job), st.store_handle()) else {
-        return;
-    };
-    if let Err(e) = store.upload_delete(&name).await {
-        tracing::warn!(error = %e, file = %name, "upload: not deleted after its job ended; the expiry sweep will find it");
+    let Some(name) = upload_name(job) else { return };
+    if let Err(e) = drop_upload(st, &name).await {
+        tracing::warn!(error = %e.msg, file = %name, "upload: not deleted after its job ended; the expiry sweep will find it");
     }
 }
 
@@ -480,13 +491,13 @@ pub fn upload_name(job: &Map<String, Value>) -> Option<String> {
     NAME_RE.is_match(name).then(|| name.to_string())
 }
 
-/// `GET /api/worker/jobs/<id>/file`: the upload's bytes, part by part (`send_file`'s headers).
+/// `GET /api/worker/jobs/<id>/file`: the upload's bytes, streamed from the bucket (`send_file`'s headers).
 pub async fn file(
     State(st): State<AppState>,
     Path(jid): Path<String>,
     req: axum::extract::Request,
 ) -> ApiResult<Response> {
-    if !st.config().upload_db {
+    if st.config().uploads.is_none() {
         return Ok(crate::proxy::forward(State(st), req).await);
     }
     let q = Query::parse(req.uri().query());
@@ -502,21 +513,23 @@ pub async fn file(
     let name = upload_name(job).ok_or_else(gone)?;
     let store = st.store_handle().ok_or_else(not_connected)?;
     let row = store.upload_get(&name).await.map_err(store_err)?.ok_or_else(gone)?;
-    let (len, parts, token) = (row.bytes, row.parts, row.token);
-    let stream = futures::stream::try_unfold(0_i64, move |seq| {
-        let (store, token) = (store.clone(), token.clone());
-        async move {
-            if seq >= parts {
-                return Ok::<_, std::io::Error>(None);
-            }
-            match store.upload_part(&token, seq).await {
-                Ok(Some(data)) => Ok(Some((axum::body::Bytes::from(data), seq + 1))),
-                Ok(None) => Err(std::io::Error::other(format!("upload part {seq} is missing"))),
-                Err(e) => Err(std::io::Error::other(e.to_string())),
-            }
-        }
-    });
-    let mut resp = Response::new(Body::from_stream(stream));
+    let rec = st
+        .recordings()
+        .ok_or_else(|| ApiError::unavailable("the recording store is not configured"))?;
+    let len = row.bytes;
+    let down = rec
+        .get(&row.key)
+        .await
+        .map_err(|e| rec_err(&e))?
+        .ok_or_else(|| http(404, "the recording is gone (it was deleted or expired); send it again"))?;
+    if i64::try_from(down.len).ok() != Some(len) {
+        tracing::error!(file = %name, row = len, object = down.len, "upload: the stored object is not the size its row says");
+        return Err(ApiError::internal(
+            "StoreError",
+            "the stored recording is not the size it was uploaded at",
+        ));
+    }
+    let mut resp = Response::new(Body::from_stream(down.stream));
     *resp.status_mut() = StatusCode::OK;
     let h = resp.headers_mut();
     h.insert(

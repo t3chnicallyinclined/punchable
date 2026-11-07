@@ -25,6 +25,7 @@ Punchable on your own computer; see the top-level README for that.
 | `ingress` | the `<domain>` Ingress and certificate |
 | `status` | what is live |
 | `backup-secret` | the R2 token for the backup bucket, from `~/.punchable/r2.env`, over ssh stdin, into a Secret |
+| `recordings-secret` | the R2 token for the RECORDINGS bucket (the `PK_REC_*` lines of `~/.punchable/r2-recordings.env`, never the backup token), over ssh stdin, into the Secret `punchable-r2-recordings` (docs/adr/0015, `recordings/README.md`) |
 | `backup` / `backup-now` / `backup-list` | schedule the nightly SurrealDB backup (and the Bugsink SQLite copy); run one now; list what is in the bucket |
 | `observability` | ServiceMonitors, alert rules and the Grafana dashboard (`OBSERVABILITY.md`); falls back to the plain Prometheus's ConfigMap without the operator |
 | `bugsink-secret` / `bugsink` | the self-hosted crash-report store at `bugs.<domain>` (`k8s/70-bugsink.yaml`): its key (generated on the server) and first user, then the Deployment and Ingress |
@@ -49,8 +50,9 @@ and `node infra/keycloak/theme_mockups.mjs` (PNGs of every page, phone and deskt
 The database on the server is the source of truth once you cut over; a worker posts results through `/api/worker/*`
 (`api-dev/ingest_api.py`, `worker/online.py`). The order (one last `dbload`, then `db/push_remote.py cutover` in the
 dbload pod's image) and the rollback are in your private notes. `legal-rules` must run before the first worker post,
-so court material is refused on the server too. Uploads from the app wait in the API pod's `/tmp` (2 Gi); no
-recording is kept on the server.
+so court material is refused on the server too. Uploads from the app wait in the Python API pod's `/tmp` (2 Gi); once pk-api
+answers `POST /api/upload` with recordings in R2 (docs/adr/0015, `recordings/README.md`) they wait in a dedicated bucket
+instead, are deleted when their job ends or after 7 days, and are never in a backup.
 
 ## The hosted worker (since 2026-10-27)
 

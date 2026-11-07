@@ -13,6 +13,7 @@
 #   dbload <bundle.tgz> [--check]   load Punchable's text/JSON data into SurrealDB from a pod (db/push_remote.py)
 #   ingress                  punchable.io Ingress + certificate (after DNS and both rollouts)
 #   backup-secret            Secret punchable-r2-backup from STDIN (ship.sh backup-secret; R2_* lines, never shown)
+#   recordings-secret        Secret punchable-r2-recordings from STDIN (ship.sh recordings-secret; PK_REC_* lines, never shown)
 #   legal-rules              Secret punchable-legal-rules from STDIN (ship.sh legal-rules; the private legal_rules.json)
 #   cutover [--undo]         online-first: the database becomes the source of truth (db/push_remote.py cutover in a
 #                            pod); every later dbload is refused. --undo rolls it back. Both are logged in meta:state.
@@ -217,6 +218,20 @@ case "$STEP" in
       | $K apply --server-side --field-manager=punchable -f - >/dev/null
     unset ENVF
     echo "punchable-r2-backup applied (values not shown). Next: infra/ship.sh backup" ;;
+  recordings-secret)
+    # STDIN = PK_REC_ENDPOINT / PK_REC_BUCKET / PK_REC_ACCESS_KEY_ID / PK_REC_SECRET_ACCESS_KEY lines (from ship.sh
+    # recordings-secret): a token scoped to the recordings bucket only (docs/adr/0015). Same path as backup-secret: a
+    # variable, printf, a pipe; never argv or a file.
+    ENVF="$(cat)"
+    for k in PK_REC_ENDPOINT PK_REC_BUCKET PK_REC_ACCESS_KEY_ID PK_REC_SECRET_ACCESS_KEY; do
+      grep -qE "^$k=.+" <<<"$ENVF" || { echo "!! expected $k on stdin"; exit 1; }
+    done
+    [ "$(grep -c . <<<"$ENVF")" = 4 ] || { echo "!! exactly the four PK_REC_* lines on stdin"; exit 1; }
+    printf '%s\n' "$ENVF" | $K -n $NS create secret generic punchable-r2-recordings --from-env-file=/dev/stdin \
+      --dry-run=client -o yaml | $K label --local -f - app.kubernetes.io/part-of=punchable -o yaml \
+      | $K apply --server-side --field-manager=punchable -f - >/dev/null
+    unset ENVF
+    echo "punchable-r2-recordings applied (values not shown). pk-api reads it at start: roll out pk-api" ;;
   backup)
     $K -n $NS get secret punchable-api >/dev/null || { echo "!! run base first"; exit 1; }
     $K -n $NS get secret punchable-r2-backup >/dev/null || { echo "!! run infra/ship.sh backup-secret first"; exit 1; }

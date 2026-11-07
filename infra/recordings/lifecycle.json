@@ -1,0 +1,11 @@
+{
+  "Rules": [
+    {
+      "ID": "recordings-expire-after-8-days",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "rec/" },
+      "Expiration": { "Days": 8 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}

@@ -54,12 +54,12 @@ pub struct ApiConfig {
     /// `PK_LIVE_IDLE_S` (default 40): a socket that has sent no frame (its pong included) this long is half open and
     /// is closed. A test sets both to a few hundred milliseconds.
     pub live_idle: std::time::Duration,
-    /// `PK_UPLOAD_DB` = `1` (default off): uploads are rows in the database (docs/adr/0014, accepted on the lead's defaults). Off, `POST
-    /// /api/upload` answers 503 here and the inbox and the transcriber's fetch are the Python's (the pod's inbox
-    /// folder), so a moved path can never silently diverge from it.
-    pub upload_db: bool,
+    /// Recordings in R2 (docs/adr/0015), on with `PK_UPLOAD_R2=1` (default off) and then needing the four `PK_REC_*`
+    /// settings. Off, `POST /api/upload` answers 503 here and the inbox and the transcriber's fetch are the Python's
+    /// (the pod's inbox folder), so a moved path can never silently diverge from it.
+    pub uploads: Option<RecConfig>,
     /// `PK_UPLOAD_KEEP_S` (default 7 days): how long a recording waits for a transcriber before the expiry pass
-    /// deletes it (docs/adr/0014).
+    /// deletes it (docs/adr/0014, 0015).
     pub upload_keep: std::time::Duration,
     /// `PK_SCHEMA_OWNER` (default on; `0` = off): this process applies `db/schema_extra.surql` when the database holds
     /// another sha of it, at connect and every supervise round (T10 round 5, group F: the Python no longer has to).
@@ -84,6 +84,65 @@ pub struct AuthConfig {
 }
 
 const LOOPBACK: [&str; 3] = ["127.0.0.1", "localhost", "::1"];
+
+/// Where the recordings wait (docs/adr/0015): one bucket in R2, reached with a token scoped to that bucket alone. The
+/// four values come from the Secret `punchable-r2-recordings` (the backup job's `punchable-r2-backup` has the same
+/// shape and its own bucket); nothing here has a default and nothing prints the secret.
+#[derive(Clone, PartialEq, Eq)]
+pub struct RecConfig {
+    /// `PK_REC_ENDPOINT`: the S3 endpoint, `https://<account>.r2.cloudflarestorage.com` (plain `http` only to a loopback
+    /// host, for the test stand-in).
+    pub endpoint: String,
+    /// `PK_REC_BUCKET`.
+    pub bucket: String,
+    /// `PK_REC_ACCESS_KEY_ID`.
+    pub key_id: String,
+    /// `PK_REC_SECRET_ACCESS_KEY`.
+    pub secret: String,
+    /// `PK_REC_REGION` (default `auto`, what R2 signs with).
+    pub region: String,
+}
+
+impl std::fmt::Debug for RecConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RecConfig")
+            .field("bucket", &"<set>")
+            .field("endpoint", &"<set>")
+            .field("credentials", &"<redacted>")
+            .finish_non_exhaustive()
+    }
+}
+
+impl RecConfig {
+    /// `None` unless `PK_UPLOAD_R2=1`; then every setting is required, and the endpoint must be https (or a loopback
+    /// host), so a mistyped Secret refuses the start instead of sending signed requests in the clear.
+    pub fn from_env(env: &Env) -> Result<Option<Self>, ConfigError> {
+        if env.opt("PK_UPLOAD_R2") != Some("1") {
+            return Ok(None);
+        }
+        let endpoint = env.str("PK_REC_ENDPOINT")?.trim_end_matches('/').to_string();
+        let url = reqwest::Url::parse(&endpoint).map_err(|_| ConfigError::Invalid {
+            key: "PK_REC_ENDPOINT".into(),
+            reason: "not a URL".into(),
+        })?;
+        let local = url
+            .host_str()
+            .is_some_and(|h| LOOPBACK.contains(&h.trim_matches(['[', ']'])));
+        if !(url.scheme() == "https" || (url.scheme() == "http" && local)) || url.host_str().is_none() {
+            return Err(ConfigError::Invalid {
+                key: "PK_REC_ENDPOINT".into(),
+                reason: "must be an https:// URL".into(),
+            });
+        }
+        Ok(Some(Self {
+            endpoint,
+            bucket: env.str("PK_REC_BUCKET")?.to_string(),
+            key_id: env.str("PK_REC_ACCESS_KEY_ID")?.to_string(),
+            secret: env.str("PK_REC_SECRET_ACCESS_KEY")?.to_string(),
+            region: env.opt("PK_REC_REGION").unwrap_or("auto").to_string(),
+        }))
+    }
+}
 
 impl ApiConfig {
     /// Read the settings; refuses auth off on anything but loopback, and auth on without an issuer.
@@ -160,7 +219,7 @@ impl ApiConfig {
             live_idle: std::time::Duration::from_secs_f64(
                 env.f64("PK_LIVE_IDLE_S")?.filter(|s| *s > 0.0).unwrap_or(40.0),
             ),
-            upload_db: env.opt("PK_UPLOAD_DB") == Some("1"),
+            uploads: RecConfig::from_env(env)?,
             schema_owner: env.opt("PK_SCHEMA_OWNER") != Some("0"),
             upload_keep: match env.f64("PK_UPLOAD_KEEP_S")? {
                 Some(s) if s > 0.0 => std::time::Duration::from_secs_f64(s),
@@ -247,5 +306,67 @@ mod tests {
         );
         m.push(("PK_VEC_SWEEP_S", "0"));
         assert_eq!(ApiConfig::from_env(&Env::from_map(m)).unwrap().sweep_every, None);
+    }
+
+    #[test]
+    fn recordings_in_r2_are_off_unless_asked_and_then_need_everything_over_https() {
+        let mut m = base();
+        m.extend([("PK_AUTH", "0"), ("PK_ALLOW_NO_AUTH", "1"), ("HOST", "127.0.0.1")]);
+        assert!(
+            ApiConfig::from_env(&Env::from_map(m.clone()))
+                .unwrap()
+                .uploads
+                .is_none(),
+            "off by default"
+        );
+        // the settings alone do not turn it on
+        m.extend([
+            ("PK_REC_ENDPOINT", "https://acct.r2.example"),
+            ("PK_REC_BUCKET", "b"),
+            ("PK_REC_ACCESS_KEY_ID", "kid"),
+            ("PK_REC_SECRET_ACCESS_KEY", "shh-secret"),
+        ]);
+        assert!(
+            ApiConfig::from_env(&Env::from_map(m.clone()))
+                .unwrap()
+                .uploads
+                .is_none()
+        );
+        m.push(("PK_UPLOAD_R2", "1"));
+        let c = ApiConfig::from_env(&Env::from_map(m.clone())).unwrap().uploads.unwrap();
+        assert_eq!((c.bucket.as_str(), c.region.as_str()), ("b", "auto"));
+        // the secret is never printed
+        let shown = format!("{c:?}");
+        for private in ["shh-secret", "kid", "acct.r2.example", "\"b\""] {
+            assert!(!shown.contains(private), "{shown}");
+        }
+        // on, every setting is required
+        for missing in [
+            "PK_REC_ENDPOINT",
+            "PK_REC_BUCKET",
+            "PK_REC_ACCESS_KEY_ID",
+            "PK_REC_SECRET_ACCESS_KEY",
+        ] {
+            let some: Vec<_> = m.iter().filter(|(k, _)| *k != missing).copied().collect();
+            let e = ApiConfig::from_env(&Env::from_map(some)).unwrap_err().to_string();
+            assert!(e.contains(missing), "{e}");
+        }
+        // plain http only to a loopback host; anything else is refused at the start
+        let with = |url: &'static str| {
+            let mut v: Vec<_> = m.iter().filter(|(k, _)| *k != "PK_REC_ENDPOINT").copied().collect();
+            v.push(("PK_REC_ENDPOINT", url));
+            ApiConfig::from_env(&Env::from_map(v)).map(|c| c.uploads.is_some())
+        };
+        assert!(with("http://127.0.0.1:9000").unwrap());
+        assert!(with("http://localhost:9000").unwrap());
+        for bad in [
+            "http://acct.r2.example",
+            "http://10.0.0.5:9000",
+            "ftp://acct.r2.example",
+            "acct.r2.example",
+            "https://",
+        ] {
+            assert!(with(bad).is_err(), "{bad} must be refused");
+        }
     }
 }
