@@ -35,7 +35,7 @@ pub struct ApiConfig {
     /// `PK_CACHE_DIR`), else none (loaded on first use: `embed`).
     pub embedder: crate::embed::Choice,
     /// The private legal rules file (`PUNCHABLE_LEGAL_RULES`, else `~/.punchable/legal_rules.json`); the binary reads
-    /// it into [`ApiConfig::legal`]. The hosted pod has none: the generic markers alone, as the Python's.
+    /// it into [`ApiConfig::legal`]. Hosted, the Secret punchable-legal-rules is mounted there, as for the Python API.
     pub legal_rules: PathBuf,
     /// The court-material rule every stored text goes through (`refuse_legal`): the generic markers until the binary
     /// adds the file's.
