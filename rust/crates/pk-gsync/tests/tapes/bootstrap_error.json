@@ -1,0 +1,2047 @@
+{
+ "name": "bootstrap_error",
+ "env": {},
+ "files": {
+  "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+  "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+  "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+  "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+  "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+  "ws/comedy/corpus/gdocs/.keep": ""
+ },
+ "steps": [
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-1",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes/startPageToken",
+     "query": {
+      "alt": [
+       "json"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "startPageToken": "2"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'me' in owners and mimeType='application/vnd.google-apps.document' and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-fine-00000000000",
+         "name": "Fine bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-broken-0000000000",
+         "name": "Broken bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/sample-folder-punchable-0000000000",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "sample-folder-punchable-0000000000",
+       "name": "Punchable",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "root0"
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/root0",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "root0",
+       "name": "My Drive",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-fine-00000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-fine-00000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 0,
+       "lines": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/ideas",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "text": "words",
+      "title": "Fine bit",
+      "from": {
+       "gdoc_id": "doc-fine-00000000000",
+       "title": "Fine bit",
+       "modified": "2026-10-20T10:00:00.000Z",
+       "note": "Google Doc: Fine bit"
+      },
+      "reason": "[gdocs] new Google Doc 'Fine bit' (doc-fine-00000000000, modified 2026-10-20T10:00:00.000Z)",
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true,
+       "id": "joke:fine-bit",
+       "indexes": [
+        0
+       ],
+       "attach": null
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 500,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": {
+        "code": 500,
+        "message": "boom"
+       }
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:fine-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Fine bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Fine bit' (doc-fine-00000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:fine-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Fine bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_kind' and value='voice_memos' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'sample-folder-punchable-0000000000' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-fine-00000000000",
+         "name": "Fine bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-broken-0000000000",
+         "name": "Broken bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "name": "Voice memos",
+      "mimeType": "application/vnd.google-apps.folder",
+      "appProperties": {
+       "punchable_kind": "voice_memos",
+       "punchable": "1"
+      },
+      "parents": [
+       "sample-folder-punchable-0000000000"
+      ]
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": null,\n \"docs\": {\n  \"doc-fine-00000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n   \"joke_id\": \"joke:fine-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Fine bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {\n  \"doc-broken-0000000000\": \"error\"\n },\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "35e170ad159936a7c1cb19356ceaae34e2e08bdd3c3df04ebaa5684b5066b647"
+       },
+       {
+        "path": "kb/gsync/memos.json",
+        "text": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+        "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+       },
+       {
+        "path": "kb/gsync/units.json",
+        "text": "[\n {\n  \"doc_id\": \"doc-fine-00000000000\",\n  \"doc_title\": \"Fine bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Fine bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-fine-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]",
+        "sha256": "9794816a1490b24df137c1e6ee44a8ee8db6e88b5359de4acdc27ace96944bbf"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "e36af6dfe01b1039e1e3e731053b276d57f33bb1a433d9d8f9c29d7ae35ebf23"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/memos.json",
+        "kb/gsync/units.json",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 2,
+   "stdout": "gs-20261026-120000 [bootstrap] adopt 5, memo_folder_create 1, new 1, seed_corpus 1; 1 error(s): HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \"boom\". Details: \"bo\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": null,\n \"docs\": {\n  \"doc-fine-00000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n   \"joke_id\": \"joke:fine-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Fine bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {\n  \"doc-broken-0000000000\": \"error\"\n },\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md": "---\nsource: gdoc\ndoc_id: doc-fine-00000000000\ntitle: \"Fine bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-fine-00000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-fine-00000000000\",\n  \"doc_title\": \"Fine bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Fine bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-fine-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]"
+   },
+   "note": "a doc fails during the bootstrap: the changes token is not kept",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-2",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "path": "kb/gsync/map.json",
+         "sha256": "35e170ad159936a7c1cb19356ceaae34e2e08bdd3c3df04ebaa5684b5066b647"
+        },
+        {
+         "path": "kb/gsync/memos.json",
+         "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+        },
+        {
+         "path": "kb/gsync/runs.jsonl",
+         "sha256": "e36af6dfe01b1039e1e3e731053b276d57f33bb1a433d9d8f9c29d7ae35ebf23"
+        },
+        {
+         "path": "kb/gsync/units.json",
+         "sha256": "9794816a1490b24df137c1e6ee44a8ee8db6e88b5359de4acdc27ace96944bbf"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes/startPageToken",
+     "query": {
+      "alt": [
+       "json"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "startPageToken": "3"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "path": "kb/gsync/map.json",
+         "sha256": "35e170ad159936a7c1cb19356ceaae34e2e08bdd3c3df04ebaa5684b5066b647"
+        },
+        {
+         "path": "kb/gsync/memos.json",
+         "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+        },
+        {
+         "path": "kb/gsync/runs.jsonl",
+         "sha256": "e36af6dfe01b1039e1e3e731053b276d57f33bb1a433d9d8f9c29d7ae35ebf23"
+        },
+        {
+         "path": "kb/gsync/units.json",
+         "sha256": "9794816a1490b24df137c1e6ee44a8ee8db6e88b5359de4acdc27ace96944bbf"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'me' in owners and mimeType='application/vnd.google-apps.document' and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-fine-00000000000",
+         "name": "Fine bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-broken-0000000000",
+         "name": "Broken bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-broken-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:fine-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Fine bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Fine bit' (doc-fine-00000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/ideas",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "text": "words",
+      "title": "Broken bit",
+      "from": {
+       "gdoc_id": "doc-broken-0000000000",
+       "title": "Broken bit",
+       "modified": "2026-10-20T10:00:00.000Z",
+       "note": "Google Doc: Broken bit"
+      },
+      "reason": "[gdocs] new Google Doc 'Broken bit' (doc-broken-0000000000, modified 2026-10-20T10:00:00.000Z)",
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true,
+       "id": "joke:broken-bit",
+       "indexes": [
+        1
+       ],
+       "attach": null
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 2,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:fine-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Fine bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Fine bit' (doc-fine-00000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:broken-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Broken bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Broken bit' (doc-broken-0000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:fine-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Fine bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:broken-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Broken bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/fold0001xxxxxxxx",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-broken-0000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n   \"joke_id\": \"joke:broken-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Broken bit\",\n   \"version\": \"1\"\n  },\n  \"doc-fine-00000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n   \"joke_id\": \"joke:fine-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Fine bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "e8bc58f65b172895d877dc77f512d2043860fd3376ab7bd34c757accd820ab47"
+       },
+       {
+        "path": "kb/gsync/units.json",
+        "text": "[\n {\n  \"doc_id\": \"doc-fine-00000000000\",\n  \"doc_title\": \"Fine bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Fine bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-fine-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n },\n {\n  \"doc_id\": \"doc-broken-0000000000\",\n  \"doc_title\": \"Broken bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Broken bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-brok-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]",
+        "sha256": "da080e07ecfd0b7ef12896f8f5f885ce733fd507426088ed501957415679e93a"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-broken-0000000000\",\"joke\":\"joke:broken-bit\",\"indexes\":[1],\"title\":\"Broken bit\"}],\"counts\":{\"seed_corpus\":1,\"new\":1},\"errors\":[],\"drive\":{\"calls\":6,\"exports\":2,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "de33e0cb28223bb90502132def791e146bedf621c9c107dc434ba2822ccfb104"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/units.json",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [bootstrap] new 1, seed_corpus 1\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-broken-0000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n   \"joke_id\": \"joke:broken-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Broken bit\",\n   \"version\": \"1\"\n  },\n  \"doc-fine-00000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n   \"joke_id\": \"joke:fine-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Fine bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md": "---\nsource: gdoc\ndoc_id: doc-broken-0000000000\ntitle: \"Broken bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-broken-0000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md": "---\nsource: gdoc\ndoc_id: doc-fine-00000000000\ntitle: \"Fine bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-fine-00000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-broken-0000000000\",\"joke\":\"joke:broken-bit\",\"indexes\":[1],\"title\":\"Broken bit\"}],\"counts\":{\"seed_corpus\":1,\"new\":1},\"errors\":[],\"drive\":{\"calls\":6,\"exports\":2,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-fine-00000000000\",\n  \"doc_title\": \"Fine bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Fine bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-fine-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n },\n {\n  \"doc_id\": \"doc-broken-0000000000\",\n  \"doc_title\": \"Broken bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Broken bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-brok-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]"
+   },
+   "note": "the bootstrap runs again and succeeds",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-3",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "path": "kb/gsync/map.json",
+         "sha256": "e8bc58f65b172895d877dc77f512d2043860fd3376ab7bd34c757accd820ab47"
+        },
+        {
+         "path": "kb/gsync/memos.json",
+         "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+        },
+        {
+         "path": "kb/gsync/runs.jsonl",
+         "sha256": "de33e0cb28223bb90502132def791e146bedf621c9c107dc434ba2822ccfb104"
+        },
+        {
+         "path": "kb/gsync/units.json",
+         "sha256": "da080e07ecfd0b7ef12896f8f5f885ce733fd507426088ed501957415679e93a"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,newStartPageToken,changes(fileId,removed,time,file(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties))"
+      ],
+      "includeRemoved": [
+       "true"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "pageToken": [
+       "3"
+      ],
+      "restrictToMyDrive": [
+       "true"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "changes": [],
+       "newStartPageToken": "3"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 2,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:fine-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Fine bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Fine bit' (doc-fine-00000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:broken-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Broken bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Broken bit' (doc-broken-0000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:broken-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Broken bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:fine-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Fine bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/fold0001xxxxxxxx",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-broken-0000000000\",\"joke\":\"joke:broken-bit\",\"indexes\":[1],\"title\":\"Broken bit\"}],\"counts\":{\"seed_corpus\":1,\"new\":1},\"errors\":[],\"drive\":{\"calls\":6,\"exports\":2,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[],\"counts\":{},\"errors\":[],\"drive\":{\"calls\":3,\"exports\":0,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":6,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "33a4a82ab4609985316f7a9c8964a732de2925d5d2747c0afd75a157ce14e5cf"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [pull] nothing to do\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-broken-0000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n   \"joke_id\": \"joke:broken-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Broken bit\",\n   \"version\": \"1\"\n  },\n  \"doc-fine-00000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n   \"joke_id\": \"joke:fine-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Fine bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md": "---\nsource: gdoc\ndoc_id: doc-broken-0000000000\ntitle: \"Broken bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-broken-0000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md": "---\nsource: gdoc\ndoc_id: doc-fine-00000000000\ntitle: \"Fine bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-fine-00000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-fine-00000000000\",\"joke\":\"joke:fine-bit\",\"indexes\":[0],\"title\":\"Fine bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[{\"doc\":\"doc-broken-0000000000\",\"error\":\"HttpError: <HttpError 500 when requesting {BASE}/drive/v3/files/doc-broken-0000000000/export?mimeType=text%2Fplain returned \\\"boom\\\". Details: \\\"boom\\\">\"}],\"drive\":{\"calls\":18,\"exports\":3,\"writes\":1,\"backoffs\":7,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-broken-0000000000\",\"joke\":\"joke:broken-bit\",\"indexes\":[1],\"title\":\"Broken bit\"}],\"counts\":{\"seed_corpus\":1,\"new\":1},\"errors\":[],\"drive\":{\"calls\":6,\"exports\":2,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[],\"counts\":{},\"errors\":[],\"drive\":{\"calls\":3,\"exports\":0,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":6,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-fine-00000000000\",\n  \"doc_title\": \"Fine bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_fine-bit__doc-fine.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Fine bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-fine-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n },\n {\n  \"doc_id\": \"doc-broken-0000000000\",\n  \"doc_title\": \"Broken bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_broken-bit__doc-brok.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Broken bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-brok-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]"
+   },
+   "note": "then pull",
+   "stderr_has_traceback": false
+  }
+ ]
+}

@@ -1,0 +1,37 @@
+[package]
+name = "pk-gsync"
+description = "gsync: Google Docs <-> Punchable sync on the owner's PC, ported as-is from gsync/ (T11 round 4)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pk-gsync"
+path = "src/main.rs"
+
+[dependencies]
+chrono = { workspace = true }
+clap = { workspace = true }
+form_urlencoded = { workspace = true }
+hex = { workspace = true }
+percent-encoding = { workspace = true }
+pk-core = { workspace = true }
+regex = { workspace = true }
+# blocking: the PC task is one thread that does one request after another, as the Python does
+reqwest = { workspace = true, features = ["blocking"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+sysinfo = { workspace = true, features = ["disk"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

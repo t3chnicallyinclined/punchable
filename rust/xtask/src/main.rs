@@ -21,6 +21,7 @@ const CRATES: &[&str] = &[
     "pk-obs",
     "pk-api",
     "pk-worker",
+    "pk-gsync",
     "pk-load",
     "pk-engine",
     "pk-fts",

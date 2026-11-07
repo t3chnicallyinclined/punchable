@@ -1,0 +1,2468 @@
+{
+ "name": "auth_device_and_commands",
+ "env": {},
+ "files": {
+  "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+  "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+  "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+  "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+  "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+  "ws/comedy/corpus/gdocs/.keep": ""
+ },
+ "steps": [
+  {
+   "argv": [
+    "status"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-1",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": null,
+     "ctype": "application/json",
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gsync status\n  libraries          ok\n  google-oauth.env   ok  {ROOT}/home/google-oauth.env\n  Keycloak sign-in   ok  {ROOT}/home/keycloak_gsync_token.json\n  Google token       ok (refreshed just now)\n  Punchable API      ok  {BASE}\n  map                {ROOT}/ws/comedy/kb/gsync/map.json\n    bootstrapped     not yet (the first run bootstraps)\n    docs             {}; hidden 0\n    legal excluded   0 (IDs only; never exported)\n    not comedy       0; pending 0\n    boards           0\n  last run           never\n  voice memos        No voice memos yet\n\nReady.\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": ""
+   },
+   "note": "status before the first run",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-2",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes/startPageToken",
+     "query": {
+      "alt": [
+       "json"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "startPageToken": "1"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'me' in owners and mimeType='application/vnd.google-apps.document' and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-status-0000000000",
+         "name": "Status bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/sample-folder-punchable-0000000000",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "sample-folder-punchable-0000000000",
+       "name": "Punchable",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "root0"
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/root0",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "root0",
+       "name": "My Drive",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-status-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-status-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 0,
+       "lines": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/ideas",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "text": "words",
+      "title": "Status bit",
+      "from": {
+       "gdoc_id": "doc-status-0000000000",
+       "title": "Status bit",
+       "modified": "2026-10-20T10:00:00.000Z",
+       "note": "Google Doc: Status bit"
+      },
+      "reason": "[gdocs] new Google Doc 'Status bit' (doc-status-0000000000, modified 2026-10-20T10:00:00.000Z)",
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true,
+       "id": "joke:status-bit",
+       "indexes": [
+        0
+       ],
+       "attach": null
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Status bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Status bit' (doc-status-0000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:status-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Status bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_kind' and value='voice_memos' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'sample-folder-punchable-0000000000' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-status-0000000000",
+         "name": "Status bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "name": "Voice memos",
+      "mimeType": "application/vnd.google-apps.folder",
+      "appProperties": {
+       "punchable_kind": "voice_memos",
+       "punchable": "1"
+      },
+      "parents": [
+       "sample-folder-punchable-0000000000"
+      ]
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"1\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "068b43f9ebc3862f7d3e5e7afc8b8523795b18306d1bf85ce6aea6b7dce80606"
+       },
+       {
+        "path": "kb/gsync/memos.json",
+        "text": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+        "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+       },
+       {
+        "path": "kb/gsync/units.json",
+        "text": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]",
+        "sha256": "b4daf60a47fa45b2e815e34ba2388243edd28c34f38f4c556f0f60c577ab42aa"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "edfa92f3b4798b462097252d7d72f53e7881fd6a8523a987160256bd95e5bffd"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/memos.json",
+        "kb/gsync/units.json",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [bootstrap] adopt 5, memo_folder_create 1, new 1, seed_corpus 1\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"1\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"dba36bffa5cab0f9\",\n   \"doc_hash\": \"dba36bffa5cab0f9\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nwords",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\"\n }\n]"
+   },
+   "note": "first run",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-3",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "path": "kb/gsync/map.json",
+         "sha256": "068b43f9ebc3862f7d3e5e7afc8b8523795b18306d1bf85ce6aea6b7dce80606"
+        },
+        {
+         "path": "kb/gsync/memos.json",
+         "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+        },
+        {
+         "path": "kb/gsync/runs.jsonl",
+         "sha256": "edfa92f3b4798b462097252d7d72f53e7881fd6a8523a987160256bd95e5bffd"
+        },
+        {
+         "path": "kb/gsync/units.json",
+         "sha256": "b4daf60a47fa45b2e815e34ba2388243edd28c34f38f4c556f0f60c577ab42aa"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,newStartPageToken,changes(fileId,removed,time,file(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties))"
+      ],
+      "includeRemoved": [
+       "true"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "pageToken": [
+       "1"
+      ],
+      "restrictToMyDrive": [
+       "true"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "changes": [
+        {
+         "fileId": "fold0001xxxxxxxx",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "fold0001xxxxxxxx",
+          "name": "Voice memos",
+          "mimeType": "application/vnd.google-apps.folder",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "version": "1",
+          "trashed": false,
+          "appProperties": {
+           "punchable_kind": "voice_memos",
+           "punchable": "1"
+          }
+         }
+        },
+        {
+         "fileId": "doc-status-0000000000",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "doc-status-0000000000",
+          "name": "Status bit",
+          "mimeType": "application/vnd.google-apps.document",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "modifiedTime": "2026-10-26T09:00:00.000Z",
+          "version": "2",
+          "trashed": false,
+          "appProperties": {}
+         }
+        }
+       ],
+       "newStartPageToken": "3"
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-status-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿changed words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-status-0000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿changed words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:status-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Status bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/decision",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "target": "node",
+      "action": "edit",
+      "id": "joke:status-bit",
+      "after": {
+       "summary": "changed words"
+      },
+      "reason": "[gdocs] edited in Google Docs 'Status bit' (doc-status-0000000000, modified 2026-10-26T09:00:00.000Z)",
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true,
+       "indexes": [
+        2
+       ],
+       "decisions": [
+        {
+         "id": "joke:status-bit"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Status bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Status bit' (doc-status-0000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-joke",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app joke",
+           "summary": "words of the app joke"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "2"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "edit",
+          "before": {
+           "summary": "words"
+          },
+          "after": {
+           "summary": "changed words"
+          },
+          "reason": "[gdocs] edited in Google Docs 'Status bit' (doc-status-0000000000, modified 2026-10-26T09:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-joke",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app joke",
+        "summary": "words of the app joke",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_joke' and value='joke:an-app-joke' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/upload/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ],
+      "uploadType": [
+       "multipart"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": "multipart/related",
+     "range": null,
+     "body": {
+      "meta": {
+       "name": "An app joke",
+       "mimeType": "application/vnd.google-apps.document",
+       "appProperties": {
+        "punchable_kind": "joke",
+        "punchable_joke": "joke:an-app-joke",
+        "punchable": "1"
+       },
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ]
+      },
+      "media": "words of the app joke"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "new0002xxxxxxxx",
+       "name": "An app joke",
+       "mimeType": "application/vnd.google-apps.document",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "joke",
+        "punchable_joke": "joke:an-app-joke",
+        "punchable": "1"
+       },
+       "modifiedTime": "2026-10-20T10:00:00.000Z"
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/new0002xxxxxxxx/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words of the app joke"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:status-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Status bit",
+        "summary": "changed words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/fold0001xxxxxxxx",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "8e07f619e208ce4ab45f835f818c6edd061e438ddbb6782049a0d2959d3e8a18"
+       },
+       {
+        "path": "kb/gsync/units.json",
+        "text": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]",
+        "sha256": "39729fa3738374797d23ba88a387f3cb6448967c0346b4b79c7ef6063fa385c3"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "76934975e688d73a7525bae102410027be09ef969046281c3be71d90c2fb89f8"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/units.json",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [pull] edit 1, push_new 1\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "a run with actions",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "status"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-4",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": null,
+     "ctype": "application/json",
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gsync status\n  libraries          ok\n  google-oauth.env   ok  {ROOT}/home/google-oauth.env\n  Keycloak sign-in   ok  {ROOT}/home/keycloak_gsync_token.json\n  Google token       ok (refreshed just now)\n  Punchable API      ok  {BASE}\n  map                {ROOT}/ws/comedy/kb/gsync/map.json\n    bootstrapped     2026-10-26T12:00:00+00:00\n    docs             {'gdocs': 1, 'app': 3, 'ai_draft': 1, 'board': 1, 'mixed': 1}; hidden 0\n    legal excluded   0 (IDs only; never exported)\n    not comedy       0; pending 0\n    boards           1\n  last run           gs-20261026-120000 [pull] edit 1, push_new 1\n  voice memos        No voice memos yet\n\nReady.\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "status after runs",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "undo",
+    "gs-20261026-120000"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/undo",
+     "query": {},
+     "auth": null,
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "indexes": [
+       2
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "undid 1 of 1 Punchable change(s) from gs-20261026-120000. Google Docs were not changed.\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "undo the run's changes",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "undo",
+    "gs-00000000-000000"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [],
+   "exit": 1,
+   "stdout": "no run gs-00000000-000000 in runs.jsonl\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "undo unknown run",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "undo",
+    "gs-fake-bad"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {
+     "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\": \"gs-fake-bad\", \"actions\": [{\"op\": \"edit\", \"indexes\": [999, 0]}]}\n"
+    },
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/undo",
+     "query": {},
+     "auth": null,
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "indexes": [
+       999
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 400,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": "no decision line 999"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/undo",
+     "query": {},
+     "auth": null,
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "indexes": [
+       0
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "  line 999: 400: no decision line 999\nundid 1 of 2 Punchable change(s) from gs-fake-bad. Google Docs were not changed.\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\": \"gs-fake-bad\", \"actions\": [{\"op\": \"edit\", \"indexes\": [999, 0]}]}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "undo with a refused line",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "auth"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": [
+     "home/keycloak_gsync_token.json"
+    ]
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/kc/realms/punchable/protocol/openid-connect/auth/device",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "client_id": "pk-gsync",
+      "scope": "openid offline_access"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "device_code": "fake-device-code",
+       "user_code": "ABCD-EFGH",
+       "interval": 1,
+       "expires_in": 600,
+       "verification_uri": "https://auth.example.com/device",
+       "verification_uri_complete": "https://auth.example.com/device?user_code=ABCD-EFGH"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/kc/realms/punchable/protocol/openid-connect/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+      "device_code": "fake-device-code",
+      "client_id": "pk-gsync"
+     },
+     "resp": {
+      "status": 400,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "error": "authorization_pending"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/kc/realms/punchable/protocol/openid-connect/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+      "device_code": "fake-device-code",
+      "client_id": "pk-gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-kc-access-device",
+       "refresh_token": "fake-kc-refresh-device",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-5",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "Sign in at https://auth.example.com/device?user_code=ABCD-EFGH\n  code: ABCD-EFGH  (choose 'Sign in with Google')\nsigned in; token saved (owner-only): {ROOT}/home/keycloak_gsync_token.json\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-device\", \"issuer\": \"{BASE}/kc/realms/punchable\", \"client_id\": \"pk-gsync\", \"saved_at\": 1793016000}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"3\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\": \"gs-fake-bad\", \"actions\": [{\"op\": \"edit\", \"indexes\": [999, 0]}]}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "device sign-in",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-6",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "path": "kb/gsync/map.json",
+         "sha256": "8e07f619e208ce4ab45f835f818c6edd061e438ddbb6782049a0d2959d3e8a18"
+        },
+        {
+         "path": "kb/gsync/memos.json",
+         "sha256": "2cd519678d8c60e6a2ab65024e72cf15ab56e1c0c546ec5a6d236097bf94046f"
+        },
+        {
+         "path": "kb/gsync/runs.jsonl",
+         "sha256": "76934975e688d73a7525bae102410027be09ef969046281c3be71d90c2fb89f8"
+        },
+        {
+         "path": "kb/gsync/units.json",
+         "sha256": "39729fa3738374797d23ba88a387f3cb6448967c0346b4b79c7ef6063fa385c3"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,newStartPageToken,changes(fileId,removed,time,file(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties))"
+      ],
+      "includeRemoved": [
+       "true"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "pageToken": [
+       "3"
+      ],
+      "restrictToMyDrive": [
+       "true"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-6",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "changes": [
+        {
+         "fileId": "new0002xxxxxxxx",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "new0002xxxxxxxx",
+          "name": "An app joke",
+          "mimeType": "application/vnd.google-apps.document",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "version": "1",
+          "trashed": false,
+          "appProperties": {
+           "punchable_kind": "joke",
+           "punchable_joke": "joke:an-app-joke",
+           "punchable": "1"
+          },
+          "modifiedTime": "2026-10-20T10:00:00.000Z"
+         }
+        }
+       ],
+       "newStartPageToken": "4"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 5,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Status bit",
+           "summary": "words"
+          },
+          "reason": "[gdocs] new Google Doc 'Status bit' (doc-status-0000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-joke",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app joke",
+           "summary": "words of the app joke"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "2"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 5,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "edit",
+          "before": {
+           "summary": "words"
+          },
+          "after": {
+           "summary": "changed words"
+          },
+          "reason": "[gdocs] edited in Google Docs 'Status bit' (doc-status-0000000000, modified 2026-10-26T09:00:00.000Z)"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "undo",
+          "undo_of": 2
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "4"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 5,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:status-bit",
+          "action": "undo",
+          "undo_of": 0
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-joke",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app joke",
+        "summary": "words of the app joke",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:status-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Status bit",
+        "summary": "words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/fold0001xxxxxxxx",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-6",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0001xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0001xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-6",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"4\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"noted_app_hash\": \"dba36bffa5cab0f9\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "530a99d4997adb05155db7ce52de8d03927b0dfbc30d4bb68d4c5ccc64da92ae"
+       },
+       {
+        "path": "kb/gsync/conflicts.jsonl",
+        "text": "{\"ts\":\"2026-10-26T12:00:00+00:00\",\"run_id\":\"gs-20261026-120000\",\"kind\":\"own_doc_not_written\",\"doc_id\":\"doc-status-0000000000\",\"joke_id\":\"joke:status-bit\",\"title\":\"Status bit\",\"app_text\":\"words\",\"resolution\":\"edited in the app; your own Google Doc is never written in v1\"}\n",
+        "sha256": "51b1033502236ce8982df58356b32c0e469a7622c657a67c2edacd228b48a79f"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\": \"gs-fake-bad\", \"actions\": [{\"op\": \"edit\", \"indexes\": [999, 0]}]}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"conflict\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"kind\":\"own_doc_not_written\"}],\"counts\":{\"conflict\":1},\"errors\":[],\"drive\":{\"calls\":3,\"exports\":0,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "a845525c576ed95e89f07f98361d5ce57456465de0a89ee641a077cc0906a6e2"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/conflicts.jsonl",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [pull] conflict 1\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-device\", \"issuer\": \"{BASE}/kc/realms/punchable\", \"client_id\": \"pk-gsync\", \"saved_at\": 1793016000}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/kb/gsync/conflicts.jsonl": "{\"ts\":\"2026-10-26T12:00:00+00:00\",\"run_id\":\"gs-20261026-120000\",\"kind\":\"own_doc_not_written\",\"doc_id\":\"doc-status-0000000000\",\"joke_id\":\"joke:status-bit\",\"title\":\"Status bit\",\"app_text\":\"words\",\"resolution\":\"edited in the app; your own Google Doc is never written in v1\"}\n",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"4\",\n \"docs\": {\n  \"doc-status-0000000000\": {\n   \"app_hash\": \"a057597e68dc77f3\",\n   \"doc_hash\": \"a057597e68dc77f3\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n   \"joke_id\": \"joke:status-bit\",\n   \"modified\": \"2026-10-26T09:00:00.000Z\",\n   \"noted_app_hash\": \"dba36bffa5cab0f9\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Status bit\",\n   \"version\": \"2\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"app_hash\": \"0ba97d47cbb30b4c\",\n   \"doc_hash\": \"0ba97d47cbb30b4c\",\n   \"joke_id\": \"joke:an-app-joke\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app joke\",\n   \"version\": \"1\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {},\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"fold0001xxxxxxxx\": [\n   \"sample-folder-punchable-0000000000\"\n  ],\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0001xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md": "---\nsource: gdoc\ndoc_id: doc-status-0000000000\ntitle: \"Status bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-26T09:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-status-0000000000/edit\n---\nchanged words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":0},{\"op\":\"new\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[0],\"title\":\"Status bit\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0001xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":10,\"exports\":2,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"edit\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"indexes\":[2]},{\"op\":\"push_new\",\"joke\":\"joke:an-app-joke\",\"doc\":\"new0002xxxxxxxx\",\"title\":\"An app joke\"}],\"counts\":{\"edit\":1,\"push_new\":1},\"errors\":[],\"drive\":{\"calls\":8,\"exports\":3,\"writes\":1,\"backoffs\":0,\"downloads\":0},\"api_calls\":9,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n{\"run_id\": \"gs-fake-bad\", \"actions\": [{\"op\": \"edit\", \"indexes\": [999, 0]}]}\n{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"pull\",\"actions\":[{\"op\":\"conflict\",\"doc\":\"doc-status-0000000000\",\"joke\":\"joke:status-bit\",\"kind\":\"own_doc_not_written\"}],\"counts\":{\"conflict\":1},\"errors\":[],\"drive\":{\"calls\":3,\"exports\":0,\"writes\":0,\"backoffs\":0,\"downloads\":0},\"api_calls\":8,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-status-0000000000\",\n  \"doc_title\": \"Status bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-26T09:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_status-bit__doc-stat.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Status bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-stat-00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 0,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"changed words\"\n }\n]"
+   },
+   "note": "run after sign-in",
+   "stderr_has_traceback": false
+  }
+ ]
+}
