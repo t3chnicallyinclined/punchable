@@ -311,6 +311,8 @@ pub struct Stores {
     pub merges: Replayed,
     /// The rooms he pinned (the worker reads them; the venue routes are the Python's until group 6).
     pub venues: Replayed,
+    /// His rant topics (the Rant tab; Rust only).
+    pub topics: Replayed,
 }
 
 impl Default for Stores {
@@ -324,6 +326,7 @@ impl Default for Stores {
             profile: Replayed::new("profile"),
             merges: Replayed::new("merges"),
             venues: Replayed::new("venues"),
+            topics: Replayed::new("topics"),
         }
     }
 }
@@ -340,6 +343,7 @@ impl Stores {
             "profile" => &self.profile,
             "merges" => &self.merges,
             "venues" => &self.venues,
+            "topics" => &self.topics,
             _ => return None,
         })
     }

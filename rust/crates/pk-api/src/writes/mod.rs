@@ -30,6 +30,7 @@ pub mod ideas;
 pub mod jobs;
 pub mod learned;
 pub mod merge;
+pub mod rant;
 pub mod review;
 pub mod transcript;
 pub mod uploads;

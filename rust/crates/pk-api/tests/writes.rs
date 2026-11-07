@@ -954,3 +954,221 @@ async fn the_film_it_sessions_queue_over_the_version_the_kb_holds() {
         );
     }
 }
+
+/// The Rant tab (slice 1, Rust only: no Python twin, so the statuses and words are this test's): his topics are
+/// added, answered once for the same words, marked ranted and deleted; a draft queues one `rant_draft` job over his
+/// words read from the KB (a bit's newest version, a taped moment), never the text the phone sends; `/api/rants` lists
+/// a bit once it has a rant cut. The red arm: the job's input must not carry the phone's text.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_rant_tab_topics_draft_and_rants() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.expect("data").view(false).await.expect("view");
+    let joke = v0.jokes.first().cloned().expect("a joke");
+
+    // topics: add, the same words again, list newest first
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/topics",
+        json!({"text": "  self-checkout \n machines "}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let tid = r["topic"]["id"].as_str().unwrap().to_string();
+    assert_eq!(r["topic"]["text"], "self-checkout machines");
+    let (_, again) = send(&st, "POST", "/api/topics", json!({"text": "Self-Checkout Machines"})).await;
+    assert_eq!(
+        again["topic"]["id"],
+        json!(tid),
+        "the same words answer the topic he has"
+    );
+    let (_, r) = send(&st, "POST", "/api/topics", json!({"text": "airport bins"})).await;
+    let tid2 = r["topic"]["id"].as_str().unwrap().to_string();
+    let (s, list) = send(&st, "GET", "/api/topics", Value::Null).await;
+    assert_eq!(s, StatusCode::OK);
+    let ids: Vec<&str> = list["topics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|t| t["id"].as_str())
+        .collect();
+    assert_eq!(ids, [tid2.as_str(), tid.as_str()], "newest first");
+
+    // a draft: his words from the KB, the job queued once
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": "Self-checkout is the store hiring you for free."}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let body = json!({"topic": "self-checkout machines", "topic_id": tid, "sources": [joke, "perf:p1", joke],
+                      "text": "PHONE TEXT, never read"});
+    let (s, r) = send(&st, "POST", "/api/rant/draft", body.clone()).await;
+    assert_eq!((s, r["status"].as_str()), (StatusCode::ACCEPTED, Some("queued")), "{r}");
+    let jid = r["job"]["id"].as_str().unwrap().to_string();
+    let (_, r2) = send(&st, "POST", "/api/rant/draft", body).await;
+    assert_eq!(r2["job"]["id"], json!(jid), "a repeat is the same job");
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let input = &jobs[&jid]["input"];
+    assert_eq!(jobs[&jid]["kind"], "rant_draft");
+    assert_eq!(input["topic_id"], json!(tid));
+    let srcs = input["sources"].as_array().unwrap();
+    assert_eq!(srcs.len(), 2, "each source once: {input}");
+    assert_eq!(srcs[0]["id"], json!(joke));
+    assert_eq!(srcs[0]["kind"], "bit");
+    assert_eq!(
+        srcs[0]["text"], "Self-checkout is the store hiring you for free.",
+        "the newest version, from the KB"
+    );
+    assert!(srcs[0]["label"].as_str().unwrap().contains(" v"), "{}", srcs[0]);
+    assert_eq!(srcs[1]["kind"], "moment");
+    assert_eq!(srcs[1]["text"], "so the parking meter wants my pronouns now");
+    // the red arm: nothing the phone sent as text reached the worker's input
+    assert!(
+        !input.to_string().contains("PHONE TEXT"),
+        "the phone's text must never be the source"
+    );
+
+    let cases = [
+        (json!({}), 400, "topic is required (what the rant is about)".to_string()),
+        (json!({"topic": "x", "topic_id": "joke:x"}), 400, "bad topic id".into()),
+        (
+            json!({"topic": "x", "sources": "joke:x"}),
+            400,
+            "sources must be a list of at most 12 bit or moment ids".into(),
+        ),
+        (
+            json!({"topic": "x", "sources": vec![joke.clone(); 13]}),
+            400,
+            "sources must be a list of at most 12 bit or moment ids".into(),
+        ),
+        (
+            json!({"topic": "x", "sources": ["joke:nope"]}),
+            404,
+            "joke:nope is not a bit or a taped moment with words".into(),
+        ),
+        // the red arm's twin: a source the phone sends as an object with its own words is refused, never read
+        (
+            json!({"topic": "x", "sources": [{"id": joke, "text": "PHONE TEXT"}]}),
+            400,
+            "sources must be a list of at most 12 bit or moment ids".into(),
+        ),
+    ];
+    for (b, status, msg) in cases {
+        let (s, r) = send(&st, "POST", "/api/rant/draft", b.clone()).await;
+        assert_eq!(
+            (s.as_u16(), r["error"].as_str().unwrap_or("")),
+            (status, msg.as_str()),
+            "{b}"
+        );
+    }
+
+    // a rant cut: the bit is listed, the topic marked, then deleted
+    let (_, rants) = send(&st, "GET", "/api/rants", Value::Null).await;
+    assert!(
+        rants["rants"].as_array().unwrap().is_empty(),
+        "no rant cut yet: {rants}"
+    );
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": "Stop scanning your own groceries.\nSelf-checkout is the store hiring you for free.",
+               "source": "rant_draft", "draft": true}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, rants) = send(&st, "GET", "/api/rants", Value::Null).await;
+    let row = &rants["rants"][0];
+    assert_eq!(row["id"], json!(joke), "{rants}");
+    assert_eq!(row["written"], true);
+    assert_eq!(row["v"], row["versions"], "the newest version is the rant cut");
+    let (s, r) = send(&st, "PATCH", &format!("/api/topics/{tid}"), json!({"ranted": joke})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["topic"]["rant"], json!(joke));
+    assert!(r["topic"]["ranted_at"].is_string());
+    let bad = [
+        (
+            format!("/api/topics/{tid}"),
+            json!({}),
+            400,
+            "send {ranted: <the rant's joke id>} or {delete: true}",
+        ),
+        (
+            format!("/api/topics/{tid}"),
+            json!({"ranted": "unit:x"}),
+            400,
+            "send {ranted: <the rant's joke id>} or {delete: true}",
+        ),
+        (
+            "/api/topics/topic:nope".to_string(),
+            json!({"delete": true}),
+            404,
+            "no topic topic:nope",
+        ),
+        (
+            "/api/topics/joke:x".to_string(),
+            json!({"delete": true}),
+            400,
+            "bad topic id",
+        ),
+    ];
+    for (path, b, status, msg) in bad {
+        let (s, r) = send(&st, "PATCH", &path, b.clone()).await;
+        assert_eq!(
+            (s.as_u16(), r["error"].as_str().unwrap_or("")),
+            (status, msg),
+            "{path} {b}"
+        );
+    }
+    let (s, _) = send(&st, "PATCH", &format!("/api/topics/{tid}"), json!({"delete": true})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (_, list) = send(&st, "GET", "/api/topics", Value::Null).await;
+    assert_eq!(list["topics"].as_array().unwrap().len(), 1);
+    let (s, r) = send(&st, "POST", "/api/topics", json!({"text": " "})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (400, Some("text is required (the topic)"))
+    );
+
+    // a new version of a ticked bit changes its text: a fresh draft, not the cached one
+    let (_, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": "A newer take."}),
+    )
+    .await;
+    assert!(r["unit"].is_string(), "{r}");
+    let (s, r3) = send(
+        &st,
+        "POST",
+        "/api/rant/draft",
+        json!({"topic": "self-checkout machines", "sources": ["perf:p1", joke]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r3}");
+    assert_ne!(r3["job"]["id"], json!(jid), "changed text, a fresh job");
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let srcs = jobs[r3["job"]["id"].as_str().unwrap()]["input"]["sources"].clone();
+    assert_eq!(
+        srcs[1]["text"], "A newer take.",
+        "the newest version, saved the same day: {srcs}"
+    );
+
+    // the cap is the route's 400, never the reducer's 500
+    for k in 0..199 {
+        let (s, r) = send(&st, "POST", "/api/topics", json!({"text": format!("topic {k}")})).await;
+        assert_eq!(s, StatusCode::OK, "{k}: {r}");
+    }
+    let (s, r) = send(&st, "POST", "/api/topics", json!({"text": "one too many"})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (400, Some("at most 200 topics: delete one first"))
+    );
+}

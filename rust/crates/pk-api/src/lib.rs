@@ -50,7 +50,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 27] = [
+pub const OWN_PATHS: [&str; 29] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -78,6 +78,8 @@ pub const OWN_PATHS: [&str; 27] = [
     "/api/inbox",
     "/api/memos",
     "/api/merge/history",
+    "/api/topics",
+    "/api/rants",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -111,7 +113,7 @@ pub const OWN_PATTERNS: [&str; 19] = [
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 26] = [
+pub const OWN_WRITE_PATHS: [&str; 28] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -138,11 +140,13 @@ pub const OWN_WRITE_PATHS: [&str; 26] = [
     "/api/facts",
     "/api/import/youtube",
     "/api/upload",
+    "/api/topics",
+    "/api/rant/draft",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 14] = [
+pub const OWN_WRITE_PATTERNS: [&str; 15] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -157,6 +161,7 @@ pub const OWN_WRITE_PATTERNS: [&str; 14] = [
     "/api/workingsets/{id}/bits/{id2}/punchup",
     "/api/worker/jobs/{id}/result",
     "/api/jobs/{id}/drop",
+    "/api/topics/{id}",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -425,7 +430,18 @@ pub fn app(st: AppState) -> Router {
         .route("/api/riff", write_route(&st, writes::ask::riff))
         .route("/api/facts", write_route(&st, writes::ask::facts))
         .route("/api/import/youtube", write_route(&st, writes::ask::youtube))
-        .route("/api/jobs/{id}/drop", write_route(&st, writes::ask::drop));
+        .route("/api/jobs/{id}/drop", write_route(&st, writes::ask::drop))
+        // the Rant tab (slice 1, Rust only): his topics, a rant drafted from them, the bits with a rant cut
+        .route(
+            "/api/topics",
+            finish(
+                &st,
+                get(guarded(&st, writes::rant::topics)).post(guarded_write(&st, writes::rant::add_topic)),
+            ),
+        )
+        .route("/api/topics/{id}", patch_route(&st, writes::rant::patch_topic))
+        .route("/api/rant/draft", write_route(&st, writes::rant::draft))
+        .route("/api/rants", read_route(&st, writes::rant::rants));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     r.fallback(proxy::forward).with_state(st)

@@ -261,7 +261,7 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
 /// on it is forwarded.
 fn write_methods(path: &str) -> &'static [&'static str] {
     match path {
-        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" => &["PATCH"],
+        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" | "/api/topics/{id}" => &["PATCH"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],
     }
