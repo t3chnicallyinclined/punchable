@@ -136,7 +136,10 @@ def build_comedy(root: Path, bits: int = 1414, ideas: int = 162, sets: int = 60,
         write_json(d / "transcript.json", {"segments": segs})
         write_json(d / "meta.json", {"title": f"{venue}, night {s}", "venue_guess": venue, "show_date": key[:10],
                                      "show_date_source": "the folder date", "duration": per_set * 60.0})
-        write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": []})
+        n_laughs = int(os.environ.get("PK_SCRATCH_LAUGHS", "0"))  # production scale: a few hundred laughs per taped set
+        laughs = [{"id": f"l{x}", "start_ms": x * 2000, "end_ms": x * 2000 + 1500, "strength": round(rng.uniform(0, 1), 3),
+                   "bars": rng.randint(1, 4), "kind": "laugh", "confidence": 0.9, "segment": f"s{x // 10}"} for x in range(n_laughs)]
+        write_json(d / "laughs_auto.json", {"detector": "synthetic", "run_id": "laughs-1", "laughs": laughs})
         write_json(d / "analysis.json", {
             "set": key, "run_id": "synthetic-1", "generated_at": "2026-10-01T00:00:00+00:00",
             "summary": {"laugh_s_per_min": 5.0, "room_heat": 1.0, "room_heat_basis": "set", "material_s": per_set * 55.0,
@@ -145,6 +148,15 @@ def build_comedy(root: Path, bits: int = 1414, ideas: int = 162, sets: int = 60,
                         "dead_air_max_s": 4.0, "dead_air_max_at_ms": 0, "duration_s": per_set * 60, "best": None,
                         "weakest": None, "jokes_counted": per_set, "new_material": 0},
             "jokes": rows})
+    # production scale (PK_SCRATCH_EDGES): more links among the bits, up to this many edges in all
+    want_edges = int(os.environ.get("PK_SCRATCH_EDGES", "0"))
+    k = 0
+    while len(edges) < want_edges:
+        a, b = 1 + (k * 7) % bits, 1 + (k * 13 + 5) % bits
+        if a != b:
+            edges.append({"id": f"e:x{k}", "src": f"joke:b{a:04d}", "dst": f"joke:b{b:04d}", "kind": "same_premise",
+                          "status": "proposed", "confidence": 0.5, "reason": "a shared premise", "evidence": []})
+        k += 1
     write_json(root / "kb" / "v0" / "graph.json",
                {"version": "load-test", "generated_at": "2026-10-01", "runs": ["r1"], "nodes": nodes, "edges": edges})
     (root / "kb" / "v0" / "decisions.jsonl").write_text("", encoding="utf-8", newline="\n")

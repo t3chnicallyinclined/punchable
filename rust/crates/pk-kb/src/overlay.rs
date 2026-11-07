@@ -275,23 +275,105 @@ fn perf_end(x: &Rec) -> String {
 }
 
 /// `build_overlay`: the merged graph (`graph.json` with the AI layer applied) and the index.
+pub fn build_overlay(graph: &Value, files: &OverlayFiles) -> Result<(Value, Index), String> {
+    let (nodes, edges) = records_of(graph.get("nodes"), graph.get("edges"));
+    let (nodes, edges, index) = overlay_core(nodes, edges, files)?;
+    Ok((graph_value(graph, nodes, edges), index))
+}
+
+/// `graph.json`'s records by id, in file order; cloned from a borrowed graph, moved out of an owned one.
+fn records_of(nodes: Option<&Value>, edges: Option<&Value>) -> (IndexMap<String, Rec>, IndexMap<String, Rec>) {
+    let by_id = |v: Option<&Value>| {
+        let mut out: IndexMap<String, Rec> = IndexMap::new();
+        for n in arr(v).iter().filter_map(Value::as_object) {
+            if let Some(id) = truthy_str(n.get("id")) {
+                out.insert(id.to_string(), n.clone());
+            }
+        }
+        out
+    };
+    (by_id(nodes), by_id(edges))
+}
+
+/// The same records MOVED out of an owned graph: no copy of the graph's megabytes is made.
+fn records_owned(graph: &mut Value) -> (IndexMap<String, Rec>, IndexMap<String, Rec>) {
+    let take = |graph: &mut Value, k: &str| -> IndexMap<String, Rec> {
+        let mut out: IndexMap<String, Rec> = IndexMap::new();
+        if let Some(Value::Array(items)) = graph.get_mut(k).map(Value::take) {
+            for n in items {
+                if let Value::Object(o) = n
+                    && let Some(id) = truthy_str(o.get("id")).map(str::to_string)
+                {
+                    out.insert(id, o);
+                }
+            }
+        }
+        out
+    };
+    let nodes = take(graph, "nodes");
+    let edges = take(graph, "edges");
+    (nodes, edges)
+}
+
+/// What an owned overlay hands back: the graph's own header, the merged records in order, and the index.
+#[derive(Debug)]
+pub struct Overlaid {
+    /// `version`, `generated_at` and `runs` of the graph.
+    pub meta: Value,
+    /// The merged nodes, in order.
+    pub nodes: Vec<Rec>,
+    /// The merged edges, in order.
+    pub edges: Vec<Rec>,
+    /// The index.
+    pub index: Index,
+}
+
+/// [`build_overlay`] over a graph it OWNS: the records are moved, not cloned, and come back as vectors (no second copy as a
+/// `Value`). The sync's memory is the graph's size times the copies it makes; this is two fewer.
+pub fn build_overlay_owned(mut graph: Value, files: &OverlayFiles) -> Result<Overlaid, String> {
+    let (nodes, edges) = records_owned(&mut graph);
+    let (nodes, edges, index) = overlay_core(nodes, edges, files)?;
+    let mut meta = Map::new();
+    for k in ["version", "generated_at", "runs"] {
+        meta.insert(k.into(), graph.get(k).cloned().unwrap_or(Value::Null));
+    }
+    Ok(Overlaid {
+        meta: Value::Object(meta),
+        nodes: nodes.into_values().collect(),
+        edges: edges.into_values().collect(),
+        index,
+    })
+}
+
+/// The merged graph as `graph.json`'s shape.
+fn graph_value(graph: &Value, nodes: IndexMap<String, Rec>, edges: IndexMap<String, Rec>) -> Value {
+    let mut merged = Map::new();
+    for k in ["version", "generated_at", "runs"] {
+        merged.insert(k.into(), graph.get(k).cloned().unwrap_or(Value::Null));
+    }
+    merged.insert(
+        "nodes".into(),
+        Value::Array(nodes.into_values().map(Value::Object).collect()),
+    );
+    merged.insert(
+        "edges".into(),
+        Value::Array(edges.into_values().map(Value::Object).collect()),
+    );
+    Value::Object(merged)
+}
+
+/// The merged nodes and edges by id, and the index.
+type Merged = (IndexMap<String, Rec>, IndexMap<String, Rec>, Index);
+
 #[expect(
     clippy::too_many_lines,
     reason = "one function in the Python; kept in its order so the two can be read side by side"
 )]
-pub fn build_overlay(graph: &Value, files: &OverlayFiles) -> Result<(Value, Index), String> {
-    let mut nodes: IndexMap<String, Rec> = IndexMap::new();
-    for n in arr(graph.get("nodes")).iter().filter_map(Value::as_object) {
-        if let Some(id) = truthy_str(n.get("id")) {
-            nodes.insert(id.to_string(), n.clone());
-        }
-    }
-    let mut edges: IndexMap<String, Rec> = IndexMap::new();
-    for e in arr(graph.get("edges")).iter().filter_map(Value::as_object) {
-        if let Some(id) = truthy_str(e.get("id")) {
-            edges.insert(id.to_string(), e.clone());
-        }
-    }
+fn overlay_core(
+    mut nodes: IndexMap<String, Rec>,
+    mut edges: IndexMap<String, Rec>,
+    files: &OverlayFiles,
+) -> Result<Merged, String> {
     let mut index = Index::default();
     let idmap = files.id_map.as_ref().filter(|m| py::truthy(Some(m)));
     let mut maplog = MapLog::default();
@@ -530,19 +612,7 @@ pub fn build_overlay(graph: &Value, files: &OverlayFiles) -> Result<(Value, Inde
     if idmap.is_some() {
         index.id_map = Some(maplog.to_value());
     }
-    let mut merged = Map::new();
-    for k in ["version", "generated_at", "runs"] {
-        merged.insert(k.into(), graph.get(k).cloned().unwrap_or(Value::Null));
-    }
-    merged.insert(
-        "nodes".into(),
-        Value::Array(nodes.into_values().map(Value::Object).collect()),
-    );
-    merged.insert(
-        "edges".into(),
-        Value::Array(edges.into_values().map(Value::Object).collect()),
-    );
-    Ok((Value::Object(merged), index))
+    Ok((nodes, edges, index))
 }
 
 /// The `inferred.json` half of `build_overlay`.

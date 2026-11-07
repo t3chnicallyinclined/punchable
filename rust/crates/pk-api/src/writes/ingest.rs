@@ -45,6 +45,9 @@ use crate::query::Query;
 use crate::state::AppState;
 use crate::tape::srcfile_key;
 
+/// How many set files one read of `srcfile` rows fetches during a sync (each is parsed and dropped before the next).
+const SYNC_READ_CHUNK: usize = 8;
+
 /// `MAX_FILES_BODY`: the largest body `POST /api/worker/files` takes.
 pub const MAX_FILES_BODY: usize = 24 * 1024 * 1024;
 
@@ -387,65 +390,83 @@ pub async fn sync_now(st: &AppState) -> ApiResult<Value> {
             want.push((p.clone(), h.clone()));
         }
     }
-    // the texts are parsed once and dropped: the laughs are megabytes and are read on every sync
-    let texts = crate::creative::SrcTexts::read_uncached(Some(&store), &want)
-        .await
-        .map_err(store_err)?;
-    let sources: Vec<(String, usize)> = texts.iter().map(|(p, _, t)| (p.clone(), t.len())).collect();
-    let by_path: BTreeMap<&str, &str> = texts.iter().map(|(p, _, t)| (p.as_str(), &**t)).collect();
-    // `AIFiles._load`: a document that is not a JSON object is as good as absent
-    let parsed = |p: &str| -> Option<Value> {
-        by_path
-            .get(p)
-            .and_then(|t| serde_json::from_str::<Value>(t).ok())
-            .filter(Value::is_object)
-    };
-    let graph: Value = by_path
-        .get(graph_path.as_str())
-        .and_then(|t| serde_json::from_str(t).ok())
-        .ok_or_else(|| {
-            http(
-                503,
-                "the graph tables need a full load first (graph.json unreadable): run dbload",
-            )
-        })?;
-    let mut files = OverlayFiles {
-        id_map: id_map_path.as_deref().and_then(parsed),
-        inferred: parsed("kb/v0/inferred.json").map(|doc| Doc {
+    // a few files at a time: each text is parsed and DROPPED before the next is read, so the strings (the laughs are
+    // megabytes and are read on every sync) are never alive together with the parsed documents
+    let mut sources: Vec<(String, usize)> = Vec::new();
+    let mut graph: Option<Value> = None;
+    let mut id_map: Option<Value> = None;
+    let mut inferred: Option<Value> = None;
+    let mut analyses: BTreeMap<String, Value> = BTreeMap::new();
+    let mut metas: BTreeMap<String, Value> = BTreeMap::new();
+    let mut laughs_by_dir: BTreeMap<String, Value> = BTreeMap::new();
+    for chunk in want.chunks(SYNC_READ_CHUNK) {
+        let texts = crate::creative::SrcTexts::read_uncached(Some(&store), chunk)
+            .await
+            .map_err(store_err)?;
+        for (p, _, t) in texts {
+            sources.push((p.clone(), t.len()));
+            // `AIFiles._load`: a document that is not a JSON object is as good as absent (the graph is the exception)
+            let doc: Option<Value> = serde_json::from_str::<Value>(&t).ok();
+            drop(t);
+            if p == graph_path {
+                graph = doc;
+                continue;
+            }
+            let obj = doc.filter(Value::is_object);
+            if Some(&p) == id_map_path.as_ref() {
+                id_map = obj;
+            } else if p == "kb/v0/inferred.json" {
+                inferred = obj;
+            } else if let Some((d, f)) = p.strip_prefix("corpus/sets/").and_then(|r| r.split_once('/'))
+                && set_id_of(d).is_some()
+                && let Some(o) = obj
+            {
+                match f {
+                    "analysis.json" if o.get("jokes").is_some_and(Value::is_array) => {
+                        analyses.insert(d.to_string(), o);
+                    }
+                    "meta.json" => {
+                        metas.insert(d.to_string(), o);
+                    }
+                    "laughs_auto.json" => {
+                        laughs_by_dir.insert(d.to_string(), o);
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    sources.sort();
+    let graph = graph.ok_or_else(|| {
+        http(
+            503,
+            "the graph tables need a full load first (graph.json unreadable): run dbload",
+        )
+    })?;
+    let files = OverlayFiles {
+        id_map,
+        inferred: inferred.map(|doc| Doc {
             doc,
             source: "real".into(),
             path: "kb/v0/inferred.json".into(),
         }),
-        analyses: Vec::new(),
-        set_meta: IndexMap::new(),
+        analyses: analyses
+            .into_iter()
+            .map(|(d, doc)| {
+                let path = format!("corpus/sets/{d}/analysis.json");
+                (
+                    d,
+                    Doc {
+                        doc,
+                        source: "real".into(),
+                        path,
+                    },
+                )
+            })
+            .collect(),
+        set_meta: metas.into_iter().collect::<IndexMap<_, _>>(),
     };
-    let mut laughs: Vec<(String, Value)> = Vec::new();
-    let dirs: std::collections::BTreeSet<&str> = by_path
-        .keys()
-        .filter_map(|p| p.strip_prefix("corpus/sets/")?.split_once('/').map(|(d, _)| d))
-        .collect();
-    for d in dirs {
-        if set_id_of(d).is_none() {
-            continue;
-        }
-        let at = |f: &str| format!("corpus/sets/{d}/{f}");
-        if let Some(doc) = parsed(&at("analysis.json")).filter(|v| v.get("jokes").is_some_and(Value::is_array)) {
-            files.analyses.push((
-                d.to_string(),
-                Doc {
-                    doc,
-                    source: "real".into(),
-                    path: at("analysis.json"),
-                },
-            ));
-        }
-        if let Some(meta) = parsed(&at("meta.json")) {
-            files.set_meta.insert(d.to_string(), meta);
-        }
-        if let Some(l) = parsed(&at("laughs_auto.json")) {
-            laughs.push((d.to_string(), l));
-        }
-    }
+    let laughs: Vec<(String, Value)> = laughs_by_dir.into_iter().collect();
     let mut paths: BTreeMap<&'static str, Value> = BTreeMap::new();
     paths.insert("graph", json!(graph_path));
     paths.insert("kb", json!("kb/v0"));
@@ -453,9 +474,9 @@ pub async fn sync_now(st: &AppState) -> ApiResult<Value> {
     paths.insert("corpus", json!("corpus"));
     paths.insert("id_map", id_map_path.as_ref().map_or(Value::Null, |p| json!(p)));
     let input = SyncInput {
-        graph: &graph,
-        files: &files,
-        laughs: &laughs,
+        graph,
+        files,
+        laughs,
         sources,
         paths,
         owner: &st.config().owner_id,
@@ -463,7 +484,7 @@ pub async fn sync_now(st: &AppState) -> ApiResult<Value> {
     // the hosted Python's `load_vectors` finds no vector cache folder in its pod, so a unit that changed is written
     // without a vector and the sweeper embeds it: the same here
     let out = store
-        .sync_graph(&input, async || Ok(HashMap::new()))
+        .sync_graph(input, async || Ok(HashMap::new()))
         .await
         .map_err(store_err)?;
     Ok(json!({"mode": out.mode, "changed": out.changed, "s": (out.seconds * 100.0).round() / 100.0}))

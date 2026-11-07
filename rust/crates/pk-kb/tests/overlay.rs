@@ -126,3 +126,22 @@ fn the_node_and_edge_order_is_the_pythons() {
     assert_eq!(ids(&merged, "nodes"), ids(&c["merged"], "nodes"));
     assert_eq!(ids(&merged, "edges"), ids(&c["merged"], "edges"));
 }
+
+/// The sync's way in (`build_overlay_owned`: the records moved, not copied) gives the Python's merged graph too.
+#[test]
+fn the_owned_overlay_is_the_pythons_as_well() {
+    for c in &golden() {
+        let name = c["name"].as_str().unwrap_or("?");
+        let o = pk_kb::overlay::build_overlay_owned(c["graph"].clone(), &files_of(&c["files"]))
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        let got = serde_json::json!({
+            "nodes": o.nodes.into_iter().map(Value::Object).collect::<Vec<_>>(),
+            "edges": o.edges.into_iter().map(Value::Object).collect::<Vec<_>>(),
+        });
+        let want = serde_json::json!({"nodes": c["merged"]["nodes"], "edges": c["merged"]["edges"]});
+        if let Some(d) = first_diff(&got, &want, "merged") {
+            panic!("{name}: {d}");
+        }
+        assert!(py::eq(&o.meta["version"], &c["merged"]["version"]), "{name}: version");
+    }
+}

@@ -1533,3 +1533,48 @@ async fn the_schema_owner_applies_the_tables_again_when_the_sha_differs() {
     let (s, r) = upload_with(&st, 701, 701).await;
     assert_eq!(s, StatusCode::OK, "{r}");
 }
+
+/// A sync killed in the middle (an OOM kill) leaves `loading` true with `loading_by = 'sync'` and its short lease held.
+/// The supervise round clears the flag once the lease has lapsed, with no reconnect (the restarted process is already
+/// connected when it first looks) and still never a flag without `loading_by` (a dbload's). Red arm: a round that does not
+/// call `recover_sync` leaves the flag up for good (the second assertion).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_dead_syncs_flag_is_cleared_by_a_supervise_round_after_its_lease_lapses() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_worker_syncdead").await;
+    let flag = || async {
+        let v = writer
+            .last("SELECT VALUE loading FROM ONLY meta:state;", pk_store::store::vars([]))
+            .await
+            .expect("loading");
+        pk_store::from_db(v) == json!(true)
+    };
+    writer
+        .query(
+            "UPDATE meta:state SET loading = true, loading_by = 'sync' RETURN NONE;",
+            pk_store::store::vars([]),
+        )
+        .await
+        .expect("flag");
+    assert!(writer.lease_acquire("sync", "the-dead-sync", 1).await.expect("lease"));
+    st.supervise_round().await;
+    assert!(flag().await, "the lease is live: that sync may still be running");
+    tokio::time::sleep(Duration::from_millis(1600)).await;
+    st.supervise_round().await;
+    assert!(
+        !flag().await,
+        "the lease lapsed: the round cleared the flag, no reconnect"
+    );
+    // a dbload's flag (no loading_by) stays
+    writer
+        .query(
+            "UPDATE meta:state SET loading = true, loading_by = NONE RETURN NONE;",
+            pk_store::store::vars([]),
+        )
+        .await
+        .expect("dbload flag");
+    st.supervise_round().await;
+    assert!(flag().await, "a dbload's flag is never cleared");
+}

@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write as _;
 use std::time::Instant;
 
-use pk_kb::overlay::{OverlayFiles, build_overlay, set_id_of};
+use pk_kb::overlay::{Overlaid, OverlayFiles, build_overlay_owned, set_id_of};
 use pk_kb::{Rec, View};
 use serde_json::{Value as Json, json};
 use surrealdb::types::{Array, Number, Object, RecordId, Value};
@@ -28,18 +28,29 @@ use crate::value::{from_db, to_db};
 /// What a sync reads: the parsed files and the paths `load_info` names them by.
 #[derive(Debug)]
 pub struct SyncInput<'a> {
-    /// `graph.json`, the bundle's.
-    pub graph: &'a Json,
+    /// `graph.json`, the bundle's. OWNED: the sync moves its records and frees what it has used as it goes.
+    pub graph: Json,
     /// The AI documents and set metas.
-    pub files: &'a OverlayFiles,
-    /// Each set folder's parsed `laughs_auto.json` (objects only, in folder-name order).
-    pub laughs: &'a [(String, Json)],
+    pub files: OverlayFiles,
+    /// Each set folder's parsed `laughs_auto.json` (objects only, in folder-name order); consumed by the side tables.
+    pub laughs: Vec<(String, Json)>,
     /// `(path, bytes)` of every input read, for `load_info.sources_sig`.
     pub sources: Vec<(String, usize)>,
     /// The `graph`, `kb`, `decisions`, `corpus` and `id_map` strings `load_info` carries.
     pub paths: BTreeMap<&'static str, Json>,
     /// The actor id on the comic's own edits (the replay marks them).
     pub owner: &'a str,
+}
+
+/// What `load_info` is told about a sync, once the graph itself has been given up.
+#[derive(Debug)]
+struct InfoCtx {
+    /// `version`, `generated_at` and `runs` of the graph.
+    meta: Json,
+    /// `(path, bytes)` of every input read.
+    sources: Vec<(String, usize)>,
+    /// The paths `load_info` carries.
+    paths: BTreeMap<&'static str, Json>,
 }
 
 /// What a sync did.
@@ -56,7 +67,9 @@ pub struct SyncOutcome {
 /// How many laughs one `INSERT` of the side-table transaction carries.
 const SIDE_BATCH: usize = 400;
 /// How long a sync may hold `lease:sync` without finishing before another process may take it (seconds).
-const SYNC_LEASE_S: u32 = 300;
+const SYNC_LEASE_S: u32 = 30;
+/// How often a running sync renews its lease (seconds): a third of the lease, so one missed beat is survived.
+const SYNC_RENEW_S: u64 = 10;
 
 /// `load_info` keys another writer owns and a sync carries over (`FOREIGN_INFO`).
 const FOREIGN_INFO: [&str; 1] = ["bundle"];
@@ -129,21 +142,18 @@ impl Store {
     /// `write_side_tables`: `laugh_run` + `laugh` (every set folder with a `laughs_auto.json`) and `analysis` (the AI
     /// index) are replaced. Returns how many laughs were written. ONE transaction (the Python's are separate
     /// statements): a crash or a refused row halfway leaves the tables as they were, never empty.
-    async fn write_side_tables(&self, laughs: &[(String, Json)], index: &pk_kb::overlay::Index) -> Result<usize> {
+    async fn write_side_tables(&self, laughs: Vec<(String, Json)>, index: &pk_kb::overlay::Index) -> Result<usize> {
         let mut sql =
             String::from("BEGIN; DELETE analysis RETURN NONE; DELETE laugh RETURN NONE; DELETE laugh_run RETURN NONE;");
         let mut bound = Object::new();
         let mut nl = 0;
-        for (n, (dir, doc)) in laughs.iter().enumerate() {
-            let (Some(sid), Some(obj)) = (set_id_of(dir), doc.as_object()) else {
+        for (n, (dir, mut doc)) in laughs.into_iter().enumerate() {
+            let (Some(sid), Some(obj)) = (set_id_of(&dir), doc.as_object_mut()) else {
                 continue;
             };
             let set_rid = parse_node_rid(&sid)?;
-            let kept: serde_json::Map<String, Json> = obj
-                .iter()
-                .filter(|(k, _)| *k != "laughs")
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
+            let laughs_v = obj.remove("laughs");
+            let kept: serde_json::Map<String, Json> = std::mem::take(obj);
             let mut content = Object::new();
             content.insert("set", Value::RecordId(set_rid.clone()));
             content.insert("set_dir", Value::String(dir.clone()));
@@ -154,18 +164,22 @@ impl Store {
                 sql,
                 "CREATE type::record('laugh_run', $rk{n}) CONTENT $rc{n} RETURN id;"
             );
-            let rows: Vec<Value> = obj
-                .get("laughs")
+            let mut rows: Vec<Value> = laughs_v
+                .as_ref()
                 .and_then(Json::as_array)
                 .into_iter()
                 .flatten()
                 .enumerate()
                 .filter_map(|(i, l)| l.as_object().map(|l| laugh_to_row(l, &set_rid, idx(i))))
                 .collect();
+            drop(laughs_v);
             nl += rows.len();
-            for (c, chunk) in rows.chunks(SIDE_BATCH).enumerate() {
-                bound.insert(format!("lr{n}_{c}"), Value::Array(Array::from(chunk.to_vec())));
+            let mut c = 0;
+            while !rows.is_empty() {
+                let chunk: Vec<Value> = rows.drain(..SIDE_BATCH.min(rows.len())).collect();
+                bound.insert(format!("lr{n}_{c}"), Value::Array(Array::from(chunk)));
                 let _ = write!(sql, "INSERT INTO laugh $lr{n}_{c} RETURN id;");
+                c += 1;
             }
         }
         // the AI index (set analyses and the inferred run), so the API needs no AI files at all
@@ -195,7 +209,7 @@ impl Store {
     /// `make_info`: what `load_info` says about this load (counts read from the tables).
     async fn make_info(
         &self,
-        input: &SyncInput<'_>,
+        ctx: &InfoCtx,
         li: &Json,
         merged_index: &pk_kb::overlay::Index,
         laughs: usize,
@@ -221,9 +235,9 @@ impl Store {
             Value::Object(o) => o.get("orphans").map_or(Json::Null, |v| from_db(v.clone())),
             _ => Json::Null,
         };
-        let p = |k: &str| input.paths.get(k).cloned().unwrap_or(Json::Null);
-        let g = input.graph;
-        let sig: Vec<Json> = input.sources.iter().map(|(path, n)| json!([path, 0, n])).collect();
+        let p = |k: &str| ctx.paths.get(k).cloned().unwrap_or(Json::Null);
+        let g = &ctx.meta;
+        let sig: Vec<Json> = ctx.sources.iter().map(|(path, n)| json!([path, 0, n])).collect();
         let mut info = json!({
             "graph": p("graph"),
             "graph_version": li.get("graph_version").cloned().unwrap_or_else(|| json!("?")),
@@ -254,7 +268,7 @@ impl Store {
     /// have one (`load_vectors`).
     pub async fn sync_graph(
         &self,
-        input: &SyncInput<'_>,
+        input: SyncInput<'_>,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
     ) -> Result<SyncOutcome> {
         let me = format!(
@@ -270,7 +284,21 @@ impl Store {
                 "another sync is running; this file is saved and the next post syncs it",
             ));
         }
+        // the lease is renewed while the sync runs, so it can be short: a process that dies mid-sync loses it within
+        // `SYNC_LEASE_S`, and the recovery (every supervise round) clears the flag it left
+        let renew = {
+            let (store, me) = (self.clone(), me.clone());
+            tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(SYNC_RENEW_S)).await;
+                    if let Err(e) = store.lease_acquire("sync", &me, SYNC_LEASE_S).await {
+                        tracing::warn!(error = %e, "lease:sync was not renewed");
+                    }
+                }
+            })
+        };
         let out = self.sync_locked(input, vectors).await;
+        renew.abort();
         // the lease is given back whatever happened; a process that dies keeps it until it lapses, and the next
         // start clears `loading` when nobody holds it (`sync_recover`)
         if let Err(e) = self.lease_release("sync", &me).await {
@@ -318,7 +346,7 @@ impl Store {
 
     async fn sync_locked(
         &self,
-        input: &SyncInput<'_>,
+        input: SyncInput<'_>,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
     ) -> Result<SyncOutcome> {
         let t0 = Instant::now();
@@ -330,19 +358,27 @@ impl Store {
         if !li.get("graph").is_some_and(|g| pk_core::py::truthy(Some(g))) {
             return Err(full_load("never loaded"));
         }
-        let (merged, index) = build_overlay(input.graph, input.files).map_err(StoreError::mapping)?;
-        let (nodes_db, edges_db, decs) = self.db_records().await?;
+        let SyncInput {
+            graph,
+            files,
+            laughs,
+            sources,
+            paths,
+            owner,
+        } = input;
+        // the graph's records are MOVED into the overlay and from there into the replay: one copy of the graph is alive at
+        // a time, and the files and the parsed graph are given up as soon as they have been used
+        let Overlaid {
+            meta,
+            nodes,
+            edges,
+            index,
+        } = build_overlay_owned(graph, &files).map_err(StoreError::mapping)?;
+        drop(files);
+        let (mut nodes_db, mut edges_db, decs) = self.db_records().await?;
         let n_db = decs.len();
-        let recs = |k: &str| -> Vec<Rec> {
-            merged
-                .get(k)
-                .and_then(Json::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(|v| v.as_object().cloned())
-                .collect()
-        };
-        let want = View::replayed(&merged, recs("nodes"), recs("edges"), decs, Vec::new(), input.owner);
+        let mut want = View::replayed(&meta, nodes, edges, decs, Vec::new(), owner);
+        let ctx = InfoCtx { meta, sources, paths };
 
         // ord: keep every existing record's ord; slot new ones between their neighbours (ord is a number). Order
         // matters within nodes and within edges (each is sorted on its own), not across them.
@@ -389,7 +425,16 @@ impl Store {
         .await?;
         let done = self
             .sync_writes(
-                input, &li, &merged, &index, &want, &nodes_db, &edges_db, &ords, n_db, vectors,
+                &ctx,
+                laughs,
+                &li,
+                &index,
+                &mut want,
+                &mut nodes_db,
+                &mut edges_db,
+                &ords,
+                n_db,
+                vectors,
             )
             .await;
         // `finally`: the flag comes down whatever happened above
@@ -415,13 +460,13 @@ impl Store {
     )]
     async fn sync_writes(
         &self,
-        input: &SyncInput<'_>,
+        ctx: &InfoCtx,
+        laughs: Vec<(String, Json)>,
         li: &Json,
-        _merged: &Json,
         index: &pk_kb::overlay::Index,
-        want: &View,
-        nodes_db: &BTreeMap<String, Existing>,
-        edges_db: &BTreeMap<String, Existing>,
+        want: &mut View,
+        nodes_db: &mut BTreeMap<String, Existing>,
+        edges_db: &mut BTreeMap<String, Existing>,
         ords: &HashMap<(char, String), f64>,
         n_db: usize,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
@@ -429,22 +474,34 @@ impl Store {
         let (mut n_nodes, mut n_edges, mut removed) = (0u64, 0u64, 0u64);
         let mut vec: Option<HashMap<String, Vec<f64>>> = None;
         let mut vectors = Some(vectors);
-        for nid in nodes_db.keys().filter(|k| !want.nodes.contains_key(*k)) {
+        let gone_nodes: Vec<String> = nodes_db
+            .keys()
+            .filter(|k| !want.nodes.contains_key(*k))
+            .cloned()
+            .collect();
+        for nid in gone_nodes {
+            nodes_db.remove(&nid);
             self.write(
                 "DELETE $id RETURN BEFORE;",
-                vars([("id", Value::RecordId(parse_node_rid(nid)?))]),
+                vars([("id", Value::RecordId(parse_node_rid(&nid)?))]),
                 None,
             )
             .await?;
             removed += 1;
         }
-        for (nid, n) in &want.nodes {
-            if let Some((_, cur)) = nodes_db.get(nid)
-                && pk_core::py::eq(&Json::Object(cur.clone()), &Json::Object(n.clone()))
+        let gone_edges: Vec<Rec> = edges_db
+            .iter()
+            .filter(|(k, _)| !want.edges.contains_key(*k))
+            .map(|(_, (_, e))| e.clone())
+            .collect();
+        // a record is given up as soon as it has been compared or written
+        for (nid, n) in std::mem::take(&mut want.nodes) {
+            if let Some((_, cur)) = nodes_db.remove(&nid)
+                && pk_core::py::eq_map(&cur, &n)
             {
                 continue;
             }
-            let row = NodeRow::from_node(n, ords[&('n', nid.clone())])?;
+            let row = NodeRow::from_node(&n, ords[&('n', nid.clone())])?;
             let mut content = match row.content() {
                 Value::Object(o) => o,
                 other => return Err(StoreError::mapping(format!("node row is not an object: {other:?}"))),
@@ -455,7 +512,7 @@ impl Store {
                 {
                     vec = Some(f().await?);
                 }
-                if let Some(v) = vec.as_ref().and_then(|m| m.get(nid)) {
+                if let Some(v) = vec.as_ref().and_then(|m| m.get(&nid)) {
                     content.insert(
                         "embedding",
                         Value::Array(Array::from(
@@ -495,34 +552,35 @@ impl Store {
                 id.strip_prefix("e:").unwrap_or(id),
             ))
         };
-        for (_, e) in edges_db.values().filter(|(_, e)| {
-            e.get("id")
-                .and_then(Json::as_str)
-                .is_some_and(|k| !want.edges.contains_key(k))
-        }) {
+        for e in gone_edges {
             // an edge whose node was deleted above went with it (SurrealDB removes a record's edges): already gone is
             // fine here, where the Python's `write` answers EmptyWrite (a 500) for the removal of a set's analysis
-            self.query("DELETE $id RETURN NONE;", vars([("id", Value::RecordId(edge_rid(e)?))]))
-                .await?;
+            let id = e.get("id").and_then(Json::as_str).unwrap_or("").to_string();
+            edges_db.remove(&id);
+            self.query(
+                "DELETE $id RETURN NONE;",
+                vars([("id", Value::RecordId(edge_rid(&e)?))]),
+            )
+            .await?;
             removed += 1;
         }
-        for (eid, e) in &want.edges {
-            let cur = edges_db.get(eid);
-            if let Some((_, c)) = cur
-                && pk_core::py::eq(&Json::Object(c.clone()), &Json::Object(e.clone()))
+        for (eid, e) in std::mem::take(&mut want.edges) {
+            let cur = edges_db.remove(&eid);
+            if let Some((_, c)) = &cur
+                && pk_core::py::eq_map(c, &e)
             {
                 continue;
             }
-            if let Some((_, c)) = cur {
+            if let Some((_, c)) = &cur {
                 self.query("DELETE $id RETURN NONE;", vars([("id", Value::RecordId(edge_rid(c)?))]))
                     .await?;
             }
-            let row = EdgeRow::from_edge(e, ords[&('e', eid.clone())])?.content();
+            let row = EdgeRow::from_edge(&e, ords[&('e', eid.clone())])?.content();
             self.write("INSERT RELATION [$row] RETURN id;", vars([("row", row)]), Some(1))
                 .await?;
             n_edges += 1;
         }
-        let nl = self.write_side_tables(input.laughs, index).await?;
+        let nl = self.write_side_tables(laughs, index).await?;
         let mx = ords.values().copied().fold(-1.0_f64, f64::max);
         self.write(
             "UPDATE meta:state SET ord_next = $n RETURN id;",
@@ -530,7 +588,7 @@ impl Store {
             None,
         )
         .await?;
-        let info = self.make_info(input, li, index, nl, n_db).await?;
+        let info = self.make_info(ctx, li, index, nl, n_db).await?;
         let mut info = info;
         let changed = json!({"nodes": n_nodes, "edges": n_edges, "removed": removed, "decisions": 0});
         if let Some(o) = info.as_object_mut() {
