@@ -15,6 +15,8 @@ KeyError / TypeError / AttributeError = a malformed event, a 500 today).
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import copy
 import json
 import os

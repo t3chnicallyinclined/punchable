@@ -8,9 +8,10 @@ import { useOnline } from './api';
 import { useSession } from './auth';
 import { Icon, SignInBtn, useUI } from './ui';
 
-// The three tabs (docs/UX_2026-10.md): Tonight · Bits · Sets. Ask is on every screen (the input bar), not a tab.
+// The three tabs: Rant · Bits · Sets (SPEC 2026-11-06 R1: Rant took Tonight's place at '/'; the key stays
+// `tonight` inside the app so the remembered last tab and the back fallback keep working). Ask is the Bits search.
 export const ROOTS = [
-  { key: 'tonight', label: 'Tonight', path: '/' },
+  { key: 'tonight', label: 'Rant', path: '/' },
   { key: 'bits', label: 'Bits', path: '/bits' },
   { key: 'sets', label: 'Sets', path: '/sets' },
 ];
@@ -20,7 +21,7 @@ export function goRoot(key: string) {
   if (r) router.navigate(r.path as any);
 }
 
-const ROOT_LABEL: Record<string, string> = { tonight: 'Tonight', bits: 'Bits', sets: 'Sets' };
+const ROOT_LABEL: Record<string, string> = { tonight: 'Rant', bits: 'Bits', sets: 'Sets' };
 /** The bar itself. The safe-area inset is NOT added here: `Screen` wraps every header (this one or a custom one) in it. */
 export function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
   const ui = useUI();

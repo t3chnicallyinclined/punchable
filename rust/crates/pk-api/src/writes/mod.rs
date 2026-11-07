@@ -33,6 +33,7 @@ pub mod jobs;
 pub mod learned;
 pub mod merge;
 pub mod mysets;
+pub mod rant;
 pub mod review;
 pub mod say;
 pub mod srcpaths;

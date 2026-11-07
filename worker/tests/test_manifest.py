@@ -18,19 +18,40 @@ K8S = DESK / "infra" / "k8s"
 FILL = {"__PK_DOMAIN__": "example.com", "__PK_AUTH_HOST__": "auth.example.com", "__PK_MAIL_FROM__": "x@example.com",
         "__PK_NS__": "punchable", "__PK_KC_NS__": "keycloak", "__PK_REALM__": "punchable", "__PK_ORIGIN_IP__": "203.0.113.10",
         "__PK_OWNER_ID__": "owner", "__PK_COMIC_NAME__": "the comic", "__PK_COMIC_FIRST__": "the comic",
-        "__IMAGE_REF__": "localhost:32000/punchable-worker@sha256:" + "0" * 64}
+        "__IMAGE_REF__": "localhost:32000/punchable-worker@sha256:" + "0" * 64,
+        # render.sh fills it from PK_WORKER_API in infra/config.env (the API the worker calls; render.sh defaults it to the Python Service)
+        "__PK_WORKER_API__": "http://punchable-api"}
 
 
 def render(name: str) -> list[dict]:
-    s = (K8S / name).read_text(encoding="utf-8")
+    s = ((K8S / name) if "/" not in name else (DESK / name)).read_text(encoding="utf-8")
     for k, v in FILL.items():
         s = s.replace(k, v)
     assert not re.search(r"__(PK_[A-Z_]+|IMAGE_REF)__", s), "a placeholder render.sh does not know"
     return [d for d in yaml.safe_load_all(s) if d]
 
 
-def test_worker_deployment():
+def test_rust_worker_deployment_is_live():
+    """infra/k8s/35-worker.yaml is the Rust worker since 2026-11-07 (T8 swap): same names, Secrets, limits and
+    listener as the Python one below; no engine config (compiled in); the probe is the binary's own."""
     dep, svc = render("35-worker.yaml")
+    assert dep["metadata"] == {"name": "punchable-worker", "namespace": "punchable"} and svc["kind"] == "Service"
+    spec = dep["spec"]
+    assert spec["replicas"] == 1 and spec["strategy"] == {"type": "Recreate"}
+    [c] = spec["template"]["spec"]["containers"]
+    env = {e["name"]: e.get("value") for e in c["env"]}
+    assert env["PK_API"] == "http://punchable-api" and env["PK_HOSTED"] == "1" and float(env["PK_AI_DAILY_USD"]) == 2.0
+    assert "ENGINE_CONFIG" not in env and "PK_ONLINE_FIRST" not in env
+    assert c["livenessProbe"]["exec"]["command"][:2] == ["/pk-worker", "probe"]
+    assert c["resources"]["limits"]["memory"] == "1Gi" and [p["containerPort"] for p in c["ports"]] == [9100]
+    refs = {s["secretRef"]["name"]: s["secretRef"].get("optional", False) for s in c["envFrom"]}
+    assert refs == {"punchable-worker": False, "punchable-anthropic": False, "punchable-sentry": True}
+    assert "ANTHROPIC" not in str(c["env"])
+
+
+def test_worker_deployment():
+    """The Python worker's manifest, kept for rollback at infra/worker/python/35-worker.yaml."""
+    dep, svc = render("infra/worker/python/35-worker.yaml")
     assert dep["kind"] == "Deployment" and dep["metadata"] == {"name": "punchable-worker", "namespace": "punchable"}
     # the metrics Service (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker, port `metrics`)
     assert svc["kind"] == "Service" and svc["metadata"]["labels"] == {"app": "punchable-worker"}

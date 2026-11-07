@@ -60,6 +60,8 @@ spec:
           env:
             - { name: PORT, value: "8080" }
             - { name: PK_AUTH, value: "1" }
+            # not the schema's owner while the Python API also applies db/schema_extra.surql (round-5 review M1)
+            - { name: PK_SCHEMA_OWNER, value: "0" }
             # only the paths /api/health names; pk-api writes nothing to disk
             - { name: PK_DATA, value: /tmp/punchable }
             - { name: PK_OWNER_ID, value: "__PK_OWNER_ID__" }
@@ -89,9 +91,11 @@ spec:
             capabilities: { drop: ["ALL"] }
           # the model once loaded adds its weights and runtime (measured in the T9 round-6 row of
           # docs/RUST_WORKSTREAM.md); the T15 measurement sets the request
+          # 2026-11-07: OOM-killed at 512Mi right after ONNX Runtime loaded bge-small on the first search (the server,
+          # exit 137 at 05:34:38Z); with the model and the vector sweeper the server peak is above 512Mi (T15)
           resources:
             requests: { cpu: 50m, memory: 64Mi }
-            limits: { cpu: "1", memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
           readinessProbe:
             httpGet: { path: "/api/health?ready=1", port: 8080 }
             periodSeconds: 3
@@ -203,8 +207,9 @@ spec:
           # path; the memo pages are regex paths below. POST /api/upload is in its own Ingress at the end of this file
           # (a recording streams through: 1 GB, no request buffering, a long timeout, none of which this one has).
           # DEPLOY ORDER: the Python image first (an upload is `upload` / `upload_part` rows for both servers, the
-          # `upload` tables come from db/schema_extra.surql which the Python applies at its start and pk-api does not
-          # re-apply once a schema sha is stored), then pk-api. Uploads made by the old Python pod are in its inbox
+          # `upload` tables come from db/schema_extra.surql which the Python applies at its start; pk-api runs with
+          # PK_SCHEMA_OWNER=0 until T11 retires the Python, because an owner pk-api re-applies ITS copy whenever the stored
+          # sha differs and would roll back a newer schema the Python just applied), then pk-api. Uploads made by the old Python pod are in its inbox
           # folder and are not listed by the new code: drain the inbox (the transcriber, or drop the jobs) before the
           # Python image changes.
           # UPLOADS IN THE DATABASE ARE OFF BY DEFAULT (docs/adr/0014, accepted on the lead's defaults 2026-11-06: 64 MiB cap
@@ -245,6 +250,11 @@ spec:
           - { path: /api/backend, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/notes, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/export, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the Rant tab (slice 1, Rust only: the Python has no such paths): his topics (GET + POST), a rant drafted
+          # from them (POST, a rant_draft job for pk-worker), the bits with a rant cut (GET)
+          - { path: /api/topics, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/rant/draft, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/rants, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -328,6 +338,8 @@ spec:
           - { path: "/api/mysets/[^/]+/bridge$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 6 (group E): a recording (none on the pod: the answer is "no audio")
           - { path: "/api/audio/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the Rant tab: one topic's PATCH (ranted, delete)
+          - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a): POST /api/upload, the phone's recording (at most 64 MiB with the database as its home, ADR 0014;
 # the servers answer 413 from Content-Length, so nginx's limit stays above it and the app gets the JSON error). The Python's own
@@ -382,6 +394,8 @@ spec:
         paths:
           - { path: /api/worker/files, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
+# render-flag: servicemonitor
+# (dropped by infra/render.sh unless PK_SERVICEMONITOR=1: the cluster may have no ServiceMonitor CRD)
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -405,6 +419,7 @@ spec:
   ingress:
     - from:
         - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+        - podSelector: { matchLabels: { app: punchable-worker } }
       ports:
         - { protocol: TCP, port: 8080 }
     - from:
@@ -460,3 +475,17 @@ spec:
   ingress:
     - from: [ { podSelector: { matchLabels: { app: punchable-api-rs } } } ]
       ports: [ { protocol: TCP, port: 8000 } ]
+---
+# the worker (egress): 10-networkpolicy.yaml lets it reach only app=punchable-api; this adds pk-api. Together with the
+# worker pod's selector in the pk-api ingress rule above, this is what lets PK_WORKER_API=http://punchable-api-rs work.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-worker-to-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-worker } }
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: punchable-api-rs } }
+      ports:
+        - { protocol: TCP, port: 8080 }

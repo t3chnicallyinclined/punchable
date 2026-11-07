@@ -229,7 +229,8 @@ class SurrealKB:
                 info = L.sync(r, ns=self.ns, db=self.db, graph=graph, kbdir=Path(self.kbdir), corpus=Path(self.corpus),
                               fixtures=self.ai.fixtures, id_map=self.ai.id_map_path,
                               version=li.get("graph_version", "?"), reason=li.get("graph_reason", ""),
-                              allow_moved=bool(os.environ.get("PK_DATA")))
+                              allow_moved=bool(os.environ.get("PK_DATA")),
+                              decisions_from_db=bool(getattr(self, "decisions_in_db", False)))
             finally:
                 r.close()
             self._jsig = self._sig(self.decisions_path)

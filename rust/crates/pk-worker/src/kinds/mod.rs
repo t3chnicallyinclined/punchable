@@ -11,6 +11,7 @@ pub mod facts;
 pub mod memolink;
 pub mod punchup;
 pub mod rant;
+pub mod rant_draft;
 pub mod riff;
 pub mod set_text;
 
@@ -56,6 +57,8 @@ pub enum Kind {
     Rant,
     /// Film it's "Pick a hook" on one version.
     Hook,
+    /// The Rant tab's "Write a rant": a rant drafted from a topic and the sources he ticked (Rust only, R7).
+    RantDraft,
 }
 
 /// The kinds that need audio; a hosted worker never asks for them and hands one back if given it.
@@ -75,6 +78,10 @@ impl Kind {
     ];
     /// `HOSTED_EMBED_KINDS`: only with the bge model in the image.
     pub const HOSTED_EMBED: [Kind; 3] = [Kind::Embed, Kind::Memolink, Kind::Ask];
+    /// Kinds only this worker has (the Rant tab, `docs/design/SPEC-2026-11-06-rant-tab.md` R7: new server work is
+    /// written once, in Rust). Claimed after the Python's kinds, so the differential's claim bodies are the Python's
+    /// with these appended.
+    pub const RUST_ONLY: [Kind; 1] = [Kind::RantDraft];
 
     /// The wire name.
     pub fn name(self) -> &'static str {
@@ -90,6 +97,7 @@ impl Kind {
             Kind::Ask => "ask",
             Kind::Rant => "rant",
             Kind::Hook => "hook",
+            Kind::RantDraft => "rant_draft",
         }
     }
 
@@ -98,6 +106,7 @@ impl Kind {
         Self::HOSTED
             .into_iter()
             .chain(Self::HOSTED_EMBED)
+            .chain(Self::RUST_ONLY)
             .find(|k| k.name() == s)
     }
 
@@ -114,7 +123,8 @@ impl Kind {
             | Kind::Memolink
             | Kind::Ask
             | Kind::Rant
-            | Kind::Hook => true,
+            | Kind::Hook
+            | Kind::RantDraft => true,
         }
     }
 
@@ -129,7 +139,7 @@ impl Kind {
     pub fn reads_notebook(self) -> bool {
         match self {
             Kind::Riff | Kind::Punchup | Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => true,
-            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Rant | Kind::Hook => false,
+            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Rant | Kind::Hook | Kind::RantDraft => false,
         }
     }
 
@@ -147,15 +157,18 @@ impl Kind {
             Kind::Ask => "ai:ask",
             Kind::Rant => "ai:rant",
             Kind::Hook => "ai:hook",
+            Kind::RantDraft => "ai:rant_draft",
         }
     }
 
-    /// The kinds the claim asks for: the hosted kinds (and the embedding kinds with a model), the ported ones only.
+    /// The kinds the claim asks for: the hosted kinds (and the embedding kinds with a model), the ported ones only,
+    /// then the Rust-only kinds.
     pub fn claimable(with_bge: bool) -> Vec<Kind> {
         let embed: &[Kind] = if with_bge { &Self::HOSTED_EMBED } else { &[] };
         Self::HOSTED
             .iter()
             .chain(embed)
+            .chain(&Self::RUST_ONLY)
             .copied()
             .filter(|k| k.ported())
             .collect()
@@ -343,6 +356,7 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Ask => run_typed::<ask::Ask>(ctx, input).await,
         Kind::Rant => run_typed::<rant::Rant>(ctx, input).await,
         Kind::Hook => run_typed::<rant::Hook>(ctx, input).await,
+        Kind::RantDraft => run_typed::<rant_draft::RantDraft>(ctx, input).await,
     }
 }
 
@@ -372,18 +386,37 @@ mod tests {
         assert_eq!(
             names,
             [
-                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "rant", "hook"
+                "bridge",
+                "punchup",
+                "facts",
+                "riff",
+                "ask_chat",
+                "set_text",
+                "rant",
+                "hook",
+                "rant_draft"
             ]
         );
         let all: Vec<&str> = Kind::claimable(true).into_iter().map(Kind::name).collect();
         assert_eq!(
             all,
             [
-                "bridge", "punchup", "facts", "riff", "ask_chat", "set_text", "rant", "hook", "embed", "memolink",
-                "ask"
+                "bridge",
+                "punchup",
+                "facts",
+                "riff",
+                "ask_chat",
+                "set_text",
+                "rant",
+                "hook",
+                "embed",
+                "memolink",
+                "ask",
+                "rant_draft"
             ],
-            "all eleven, the Python's order"
+            "the Python's eleven in its order, then the Rust-only kind"
         );
+        assert_eq!(Kind::parse("rant_draft"), Some(Kind::RantDraft));
         assert!(Kind::Ask.reads_notebook() && !Kind::Ask.builds_corpus() && Kind::Riff.builds_corpus());
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));
         assert_eq!(Kind::parse("process_set"), None);

@@ -149,13 +149,9 @@ pub async fn result(
             Written::Landed(job) => {
                 let job = obj(&job);
                 // `w_result`: the transcriber is done with the recording, so it goes (no media library)
-                if st.config().upload_db
-                    && py::truthy(b.get("ok"))
-                    && job.get("kind").and_then(Value::as_str) == Some("process_set")
-                    && let Some(name) = super::uploads::upload_name(&job)
-                {
-                    let store = st.store_handle().ok_or_else(super::not_connected)?;
-                    store.upload_delete(&name).await.map_err(store_err)?;
+                // the job is already done: a lost delete only logs (the expiry sweep finds the bytes), never a 500
+                if py::truthy(b.get("ok")) {
+                    super::uploads::release_for_job(&st, &job).await;
                 }
                 // a job that failed for good (not one sent back to the queue) lets go of its recording too (ADR 0014)
                 if !py::truthy(b.get("ok")) && job.get("status").and_then(Value::as_str) == Some("failed") {

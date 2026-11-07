@@ -145,6 +145,20 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0f. **The Rant tab, slice 1 (owner 2026-11-07: "i dont see the new record/rant tab/button, where are we with that ??
+   lets get it going"): TestFlight build 25, branch `app/rant-tab` (not merged, not pushed, not built, not deployed).**
+   `docs/design/SPEC-2026-11-06-rant-tab.md` §11 lists what is in and the fourteen calls; §10 is the owner's checks.
+   In short: the tab bar is **Rant · Bits · Sets** (Tonight is gone: its set list bar and Record a set open Sets, "N to
+   sort" with its badge and Record a memo are on Bits, asking is the Bits search; URLs unchanged); the Rant screen has
+   Film a rant, My topics, Drafts and Finished; **Write a rant** drafts a rant from a topic and the bits he ticks
+   (his lines word for word with their source, new lines with the AI badge, Hook check on the script) and saves it as a
+   new bit whose v1 is a rant cut. JS only on build 23's binary set. **Server, Rust only (R7):** pk-api routes
+   `GET`/`POST /api/topics`, `PATCH /api/topics/<id>`, `POST /api/rant/draft`, `GET /api/rants`; pk-worker kind
+   `rant_draft`; topics are a creative store (no schema change). **Deploy order matters (a `rant_draft` row in the
+   shared `jobs` store breaks any server that does not know the kind):** the Python API image (its `JOB_KINDS` gains
+   `rant_draft`) → pk-api → pk-worker → re-apply the pk-api Ingresses (`infra/k8s/prepared/t10-api-rs.yaml`: the new
+   paths). Once a `rant_draft` row exists, rolling the API back below this release needs that row dropped first; the
+   Python worker never runs the kind (a rollback to it leaves drafts queued).
 0e. **Film it, the rant half (owner: "did we do the rant stuff … lets get it in and built", 2026-11-06): TestFlight
    build 24, branch `app/film-it-rant` (not merged, not pushed, not built, not deployed).** The spec's §11 "Built, the
    rant half" row lists what is in and the eleven deviations. In short: the bit page's sparkle opens a sheet with
@@ -423,8 +437,9 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    later Asks 0.29 s vs 1.88 s; idle 13 vs 37 MiB working set; the first Ask after a NEW pod embeds every source
    (5,085 on a production-size synthetic notebook: about 2 minutes on one CPU, measured for the Rust one, INFERRED for the
    Python one on the pod's 1-CPU limit); a container
-   restart reads them back from the emptyDir. **Ready for the swap, which is the owner's call**: image (bases pinned
-   by digest) and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied;
+   restart reads them back from the emptyDir. **Swapped LIVE 2026-11-07 (owner's go 2026-11-06)**: image (bases pinned
+   by digest) from CI's worker-image artifact, manifest now `infra/k8s/35-worker.yaml` (the Python one kept at
+   `infra/worker/python/35-worker.yaml` for rollback);
    the runbook (build off the node, swap commit, `pk-worker crash-test` into Bugsink, the spend-ledger reset note,
    rollback) is in the T8 row of `docs/RUST_WORKSTREAM.md`. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at

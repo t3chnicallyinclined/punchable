@@ -20,7 +20,7 @@ const check = (c, m) => { if (!c) fails.push(m); };
 /** Still on `initialRouteName`: none since 2026-10-28 (the three tab layouts moved to `anchor`). Stays empty. */
 const KNOWN_INITIAL_ROUTE_NAME = new Set([]);
 /** Named component exports that a route file is allowed to keep for now (the builder moves them under src/features). */
-const KNOWN_EXTRA_EXPORTS = new Set(['(tabs)/(tonight)/index.tsx:SetBar', '(tabs)/(bits)/write.tsx:BitRow', '(tabs)/(sets)/sets.tsx:PaperCard']);
+const KNOWN_EXTRA_EXPORTS = new Set(['(tabs)/(bits)/write.tsx:BitRow', '(tabs)/(sets)/sets.tsx:PaperCard']);
 
 const files = walk(APP).filter((p) => /\.(ts|tsx)$/.test(p) && !/\.d\.ts$/.test(p));
 const DEFAULT = /export\s+default\b|export\s*\{[^}]*\bdefault\b[^}]*\}/;

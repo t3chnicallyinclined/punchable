@@ -2,7 +2,8 @@
 //! texts: [`jobs`] (`creative_api.job_apply`), [`story`] (`creative/story._apply`), [`workingset`]
 //! (`creative/workingset._apply`), [`venues`], [`account`] (`creative_api`), [`merges`] (`creative/merge.store_apply`),
 //! [`chats`] (`ask_api.chat_apply`), [`intents`] (`say_api.intent_apply`), [`suggestions`]
-//! (`suggest_api.store_apply`), [`profile`] (`profile_api.profile_apply`, with [`learned`]). [`for_store`] is the
+//! (`suggest_api.store_apply`), [`profile`] (`profile_api.profile_apply`, with [`learned`]), and [`topics`] (Rust
+//! only: the Rant tab's topics, no Python twin). [`for_store`] is the
 //! `APPLY` map: a reducer by store name.
 
 pub mod account;
@@ -14,6 +15,7 @@ pub mod merges;
 pub mod profile;
 pub mod story;
 pub mod suggestions;
+pub mod topics;
 pub mod venues;
 pub mod workingset;
 
@@ -25,7 +27,7 @@ use crate::store::{Items, Reducer};
 use pk_core::py;
 
 /// The store names, as the API and the `creative_event` mirror key them.
-pub const STORES: [&str; 10] = [
+pub const STORES: [&str; 11] = [
     "storyboards",
     "workingsets",
     "venues",
@@ -36,6 +38,7 @@ pub const STORES: [&str; 10] = [
     "intents",
     "suggestions",
     "profile",
+    "topics",
 ];
 
 /// The reducer for a store name (`creative_api.APPLY` after every route module registered). `owner_id` is the
@@ -52,6 +55,7 @@ pub fn for_store(name: &str, owner_id: &str) -> Option<Box<dyn Reducer + Send + 
         "intents" => Box::new(intents::Intents),
         "suggestions" => Box::new(suggestions::Suggestions),
         "profile" => Box::new(profile::Profile),
+        "topics" => Box::new(topics::Topics),
         _ => return None,
     })
 }

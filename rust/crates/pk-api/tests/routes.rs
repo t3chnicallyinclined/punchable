@@ -265,7 +265,8 @@ fn write_methods(path: &str) -> &'static [&'static str] {
         | "/api/boards/{id}"
         | "/api/workingsets/{id}/try/{id2}"
         | "/api/venues/{id}"
-        | "/api/mysets/{id}" => &["PATCH"],
+        | "/api/mysets/{id}"
+        | "/api/topics/{id}" => &["PATCH"],
         "/api/ask/chats/{id}" => &["POST", "PATCH"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],

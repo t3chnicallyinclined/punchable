@@ -27,6 +27,8 @@ per task, named and unnamed) and `pages.json` (creative/write.py's page text and
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import datetime as dt
 import hashlib
 import json

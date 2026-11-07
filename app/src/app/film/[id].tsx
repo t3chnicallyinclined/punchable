@@ -229,9 +229,10 @@ export default function FilmScreen() {
   useEffect(() => {
     if (!native) return;
     setRecording(true);
+    const cam = camRef;  // the ref object itself (stable); its current camera is read at cleanup, the one to stop
     return () => {
       setRecording(false);
-      try { camRef.current?.stopRecording(); } catch {}
+      try { cam.current?.stopRecording(); } catch {}
     };
   }, []);
   // the module, then the grant (the view mounts only after it: a session started under the prompt fails its
