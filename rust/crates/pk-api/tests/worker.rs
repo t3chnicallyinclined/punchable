@@ -530,13 +530,26 @@ async fn the_worker_routes_hand_out_and_end_jobs_and_keep_the_claim_in_the_datab
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
-    let Some((_srv, env, port)) = scratch().await else {
+    claim_race("memory", "t_worker_race").await;
+}
+
+/// The same race on `SurrealKV` with versioning, the engine production runs on: its write-conflict behaviour is the
+/// one that matters for two processes claiming.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn eight_claimers_racing_for_three_jobs_get_exactly_three_on_surrealkv() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("db").to_string_lossy().replace('\\', "/");
+    claim_race(&format!("surrealkv://{path}?versioned=true"), "t_worker_race_kv").await;
+}
+
+async fn claim_race(engine: &str, db: &str) {
+    let Some((_srv, env, port)) = scratch_on(engine).await else {
         return;
     };
-    let (_writer, st) = setup(&env, port, "t_worker_race").await;
+    let (_writer, st) = setup(&env, port, db).await;
     // two processes (two states, two connections): one `creative_lock` serialises the claimers of one process, so
     // only the database's unique (store, seq) index arbitrates between these two
-    let states = [st.clone(), another(&env, port, "t_worker_race").await];
+    let states = [st.clone(), another(&env, port, db).await];
     let mut ids = Vec::new();
     for i in 0..3 {
         let (s, r) = call(
@@ -1451,4 +1464,43 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         0,
         "a second pass finds nothing new"
     );
+}
+
+async fn set_extra_sha(writer: &Store, sha: &str) {
+    writer
+        .write(
+            "UPDATE meta:state SET extra_sha = $x RETURN id;",
+            vars([("x", to_db(&json!(sha)))]),
+            None,
+        )
+        .await
+        .expect("sha");
+}
+
+/// While the database holds another build's `extra_sha`, an upload answers 503 (never a row the schema does not
+/// describe); once it is this build's again the next check lets uploads through.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_upload_schema").await;
+    st.check_schema().await;
+    assert!(st.schema_extra_current(), "setup applied this build's schema");
+    let (s, _) = upload_with(&st, 500, 500).await;
+    assert_eq!(s, StatusCode::OK);
+    set_extra_sha(&writer, "another-build").await;
+    st.check_schema().await;
+    assert!(!st.schema_extra_current());
+    let (s, r) = upload_with(&st, 501, 501).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
+    assert!(
+        r["error"].as_str().unwrap().contains("not the one this build expects"),
+        "{r}"
+    );
+    assert_eq!(writer.upload_count().await.unwrap(), 1, "nothing was written");
+    set_extra_sha(&writer, &pk_store::schema_shas().1).await;
+    st.check_schema().await;
+    let (s, r) = upload_with(&st, 502, 502).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
 }

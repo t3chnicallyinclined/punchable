@@ -28,12 +28,18 @@ pub const MAX_CHANGES: usize = 50;
 /// How many events a slow client may fall behind before it is told to refetch once (a lagged receiver).
 const BACKLOG: usize = 64;
 
+/// What a joke notification said: whether it is working, and how many sets it hit in.
+type JokeSaid = (Option<bool>, Option<usize>);
+
 struct Inner {
     tx: broadcast::Sender<Utf8Bytes>,
     pending: Mutex<Vec<Change>>,
     connected: AtomicBool,
     sent: AtomicU64,
     last_event_at: Mutex<Option<f64>>,
+    /// What each joke's last notification said (`working`, how many sets it hit in): an update that says the same
+    /// again moved nothing the app reads and is not reported (the sweeper's `UPDATE joke SET embedding`).
+    jokes: Mutex<std::collections::HashMap<String, JokeSaid>>,
 }
 
 /// The hub: cheap to clone (one `Arc`).
@@ -65,6 +71,7 @@ impl LiveHub {
             connected: AtomicBool::new(false),
             sent: AtomicU64::new(0),
             last_event_at: Mutex::new(None),
+            jokes: Mutex::new(std::collections::HashMap::new()),
         }))
     }
 
@@ -99,6 +106,19 @@ impl LiveHub {
 
     /// One notification, reduced (`LiveHub._on`): queued for the next flush.
     pub fn push(&self, c: Change) {
+        if c.table.as_deref() == Some("joke")
+            && let Some(id) = c.id.clone()
+        {
+            let mut seen = self.0.jokes.lock().unwrap_or_else(PoisonError::into_inner);
+            if c.action == "delete" {
+                seen.remove(&id);
+            } else if seen.insert(id, (c.working, c.hit_sets)) == Some((c.working, c.hit_sets)) && c.action == "update"
+            {
+                // the same working flag and hit sets as the last time: not worth an event (a created or a first-seen
+                // joke is always reported; so is any change)
+                return;
+            }
+        }
         self.0.pending.lock().unwrap_or_else(PoisonError::into_inner).push(c);
     }
 
@@ -250,6 +270,63 @@ mod tests {
             loading,
             ..change("meta", "update", "meta:state")
         }
+    }
+
+    fn joke(action: &str, id: &str, working: bool, hit: usize) -> Change {
+        Change {
+            working: Some(working),
+            hit_sets: Some(hit),
+            ..change("joke", action, id)
+        }
+    }
+
+    fn reported(hub: &LiveHub) -> Vec<(String, String)> {
+        let ev: Value = serde_json::from_str(hub.flush_once().expect("an event").as_str()).expect("json");
+        ev["changes"]
+            .as_array()
+            .expect("changes")
+            .iter()
+            .map(|c| {
+                (
+                    c["action"].as_str().unwrap().to_string(),
+                    c["id"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_joke_update_that_says_the_same_again_is_not_reported() {
+        let hub = LiveHub::new();
+        // created, then the sweeper's updates (nothing the app reads moved), then a real change, then a repeat of it
+        for c in [
+            joke("create", "joke:a", false, 0),
+            joke("update", "joke:a", false, 0),
+            joke("update", "joke:a", false, 0),
+            joke("update", "joke:a", true, 1),
+            joke("update", "joke:a", true, 1),
+            joke("update", "joke:b", true, 2),
+            change("decision", "create", "decision:x"),
+        ] {
+            hub.push(c);
+        }
+        assert_eq!(
+            reported(&hub),
+            [
+                ("create".into(), "joke:a".into()),
+                ("update".into(), "joke:a".into()),
+                ("update".into(), "joke:b".into()),
+                ("create".into(), "decision:x".into()),
+            ],
+            "the repeats of joke:a are gone, the first sight of joke:b and the decision stay"
+        );
+        // a delete is always reported, and the joke is a stranger again after it
+        hub.push(joke("delete", "joke:a", false, 0));
+        hub.push(joke("update", "joke:a", true, 1));
+        assert_eq!(
+            reported(&hub),
+            [("delete".into(), "joke:a".into()), ("update".into(), "joke:a".into())]
+        );
     }
 
     #[test]

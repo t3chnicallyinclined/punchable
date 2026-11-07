@@ -81,6 +81,8 @@ struct Inner {
     live: crate::live::LiveHub,
     /// The vector sweeper's status (`Sweeper.status()`), for the log and the tests.
     sweep: crate::sweep::Status,
+    /// Whether the database's stored `extra_sha` is the one this build compiled in ([`AppState::check_schema`]).
+    schema_extra_ok: std::sync::atomic::AtomicBool,
 }
 
 /// The judge's pairs as parsed, with the sha of the row they came from.
@@ -165,6 +167,7 @@ impl AppState {
             judge: Mutex::new(None),
             live: crate::live::LiveHub::new(),
             sweep: crate::sweep::Status::default(),
+            schema_extra_ok: std::sync::atomic::AtomicBool::new(true),
         }))
     }
 
@@ -192,6 +195,32 @@ impl AppState {
     /// Whether the pod is shutting down.
     pub fn draining(&self) -> bool {
         self.0.draining.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// Whether the tables this build writes are the ones the database was last given (`false` while the stored
+    /// `extra_sha` is another build's): a route that writes them answers 503 until it is not ([`Self::check_schema`]).
+    pub fn schema_extra_current(&self) -> bool {
+        self.0.schema_extra_ok.load(Ordering::SeqCst)
+    }
+
+    /// Compare the stored `extra_sha` with this build's and remember whether they are the same; a read that fails
+    /// leaves the last answer as it was. Run every supervise round.
+    pub async fn check_schema(&self) {
+        let Some(store) = self.store() else { return };
+        match store.stored_extra_sha().await {
+            Ok(stored) => {
+                let ours = pk_store::schema_shas().1;
+                let same = stored.as_deref() == Some(ours.as_str());
+                if self.0.schema_extra_ok.swap(same, Ordering::SeqCst) != same {
+                    if same {
+                        tracing::info!("schema_extra: the database has this build's tables again");
+                    } else {
+                        tracing::warn!(stored = ?stored, "schema_extra: the database holds another build's tables; uploads answer 503 until it is this build's");
+                    }
+                }
+            }
+            Err(e) => tracing::warn!(error = %e, "schema_extra: the stored sha could not be read"),
+        }
     }
 
     /// The settings.
@@ -649,6 +678,7 @@ impl AppState {
                     }
                 }
             }
+            self.check_schema().await;
             if let Some(store) = self.store()
                 && self.read_state(&store).await.is_none()
             {

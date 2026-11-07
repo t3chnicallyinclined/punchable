@@ -272,6 +272,12 @@ pub async fn upload(
             "uploads in the database are off (PK_UPLOAD_DB); route /api/upload to the Python API",
         ));
     }
+    if !st.schema_extra_current() {
+        // the `upload` tables are another build's (a deploy in progress): never write rows the schema does not describe
+        return Err(ApiError::unavailable(
+            "the database schema is not the one this build expects (a deploy is in progress); try again shortly",
+        ));
+    }
     let q = Query::parse(raw.as_deref());
     st.require_loaded()?;
     crate::routes::pick(&q)?;

@@ -157,6 +157,11 @@ impl Store {
         self.apply_extra_schema(false).await
     }
 
+    /// The sha of `schema_extra.surql` as last applied (`meta:state.extra_sha`); none when none is stored.
+    pub async fn stored_extra_sha(&self) -> Result<Option<String>> {
+        Ok(self.stored_shas().await?.1)
+    }
+
     async fn stored_shas(&self) -> Result<(Option<String>, Option<String>)> {
         let info = self.last("INFO FOR DB;", Object::new()).await?;
         let has_meta = match &info {
