@@ -56,6 +56,10 @@ pub struct ApiConfig {
     /// `PK_UPLOAD_KEEP_S` (default 7 days): how long a recording waits for a transcriber before the expiry pass
     /// deletes it (docs/adr/0014).
     pub upload_keep: std::time::Duration,
+    /// `PK_SCHEMA_OWNER` (default on; `0` = off): this process applies `db/schema_extra.surql` when the database holds
+    /// another sha of it, at connect and every supervise round (T10 round 5, group F: the Python no longer has to).
+    /// Off, it only reports the difference (uploads answer 503 until the database has this build's tables).
+    pub schema_owner: bool,
     /// `PK_UPLOAD_SWEEP_S` (default an hour): how often the expiry pass runs; `0` = never.
     pub upload_sweep_every: Option<std::time::Duration>,
     /// `PK_COMIC_NAME` as set: how the AI prompts name him (the Ask conversations' system line). Unset, empty and
@@ -150,6 +154,7 @@ impl ApiConfig {
                 env.f64("PK_LIVE_IDLE_S")?.filter(|s| *s > 0.0).unwrap_or(40.0),
             ),
             upload_db: env.opt("PK_UPLOAD_DB") == Some("1"),
+            schema_owner: env.opt("PK_SCHEMA_OWNER") != Some("0"),
             upload_keep: match env.f64("PK_UPLOAD_KEEP_S")? {
                 Some(s) if s > 0.0 => std::time::Duration::from_secs_f64(s),
                 _ => crate::expiry::DEFAULT_KEEP,

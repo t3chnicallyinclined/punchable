@@ -203,23 +203,42 @@ impl AppState {
         self.0.schema_extra_ok.load(Ordering::SeqCst)
     }
 
-    /// Compare the stored `extra_sha` with this build's and remember whether they are the same; a read that fails
-    /// leaves the last answer as it was. Run every supervise round.
+    /// The tables added for hosting (`db/schema_extra.surql`) are this process's to keep (`PK_SCHEMA_OWNER`, on by
+    /// default): when the database holds another sha of the file it is applied again (and the sha stored); a process
+    /// that does not own them only reports. Then remember whether the stored sha is this build's. A read or an apply
+    /// that fails is logged and leaves the last answer as it was. Run every supervise round, the first time right
+    /// after the connection.
     pub async fn check_schema(&self) {
         let Some(store) = self.store() else { return };
-        match store.stored_extra_sha().await {
-            Ok(stored) => {
-                let ours = pk_store::schema_shas().1;
-                let same = stored.as_deref() == Some(ours.as_str());
-                if self.0.schema_extra_ok.swap(same, Ordering::SeqCst) != same {
-                    if same {
-                        tracing::info!("schema_extra: the database has this build's tables again");
-                    } else {
-                        tracing::warn!(stored = ?stored, "schema_extra: the database holds another build's tables; uploads answer 503 until it is this build's");
+        let ours = pk_store::schema_shas().1;
+        for attempt in 0..2 {
+            let stored = match store.stored_extra_sha().await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "schema_extra: the stored sha could not be read");
+                    return;
+                }
+            };
+            let same = stored.as_deref() == Some(ours.as_str());
+            if !same && attempt == 0 && self.0.config.schema_owner {
+                match store.apply_extra_schema(false).await {
+                    Ok(true) => tracing::info!(stored = ?stored, "schema_extra applied: the database held another sha"),
+                    Ok(false) => {}
+                    Err(e) => {
+                        tracing::warn!(error = %e, "schema_extra could not be applied");
+                        return;
                     }
                 }
+                continue;
             }
-            Err(e) => tracing::warn!(error = %e, "schema_extra: the stored sha could not be read"),
+            if self.0.schema_extra_ok.swap(same, Ordering::SeqCst) != same {
+                if same {
+                    tracing::info!("schema_extra: the database has this build's tables");
+                } else {
+                    tracing::warn!(stored = ?stored, "schema_extra: the database holds another build's tables; uploads answer 503 until it is this build's");
+                }
+            }
+            return;
         }
     }
 
@@ -657,15 +676,6 @@ impl AppState {
                     .unwrap_or_else(|_| Err(pk_store::StoreError::mapping("connect timed out")))
                 {
                     Ok(s) => {
-                        // the tables added for hosting (`db/schema_extra.surql`): the Python applies them at its start and
-                        // owns them until T11 (two writers of one schema is a race); a database that has never had a
-                        // schema applied (a scratch one, a fresh install) gets them from here. A failure is logged,
-                        // never fatal
-                        match s.apply_extra_schema_if_unowned().await {
-                            Ok(true) => tracing::info!("schema_extra applied"),
-                            Ok(false) => {}
-                            Err(e) => tracing::warn!(error = %e, "schema_extra could not be applied"),
-                        }
                         self.set_store(Some(s));
                         tracing::info!("connected to SurrealDB");
                     }

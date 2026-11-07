@@ -1449,14 +1449,12 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         "a claimed recording is left alone"
     );
     let jobs = pk_api::writes::Creative::new(st.clone()).items("jobs").await.unwrap();
-    let waiting_job = jobs
-        .values()
-        .find(|j| j["input"]["file"] == waiting_file.as_str())
-        .expect("the waiting job");
-    assert_eq!(waiting_job["status"], "failed");
+    // (an earlier job of this test may carry the same file name, made in the same second: look at all of them)
     assert!(
-        waiting_job["error"].as_str().unwrap().contains("waited a week"),
-        "{waiting_job}"
+        jobs.values().any(|j| j["input"]["file"] == waiting_file.as_str()
+            && j["status"] == "failed"
+            && j["error"].as_str().is_some_and(|e| e.contains("waited a week"))),
+        "the waiting job ended with the reason"
     );
     assert_eq!(jobs[&claimed_job]["status"], "claimed");
     assert_eq!(
@@ -1484,7 +1482,7 @@ async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
-    let (writer, st) = setup(&env, port, "t_upload_schema").await;
+    let (writer, st) = setup_full(&env, port, "t_upload_schema", false, &[("PK_SCHEMA_OWNER", "0")]).await;
     st.check_schema().await;
     assert!(st.schema_extra_current(), "setup applied this build's schema");
     let (s, _) = upload_with(&st, 500, 500).await;
@@ -1502,5 +1500,36 @@ async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
     set_extra_sha(&writer, &pk_store::schema_shas().1).await;
     st.check_schema().await;
     let (s, r) = upload_with(&st, 502, 502).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+}
+
+/// T10 round 5, group F: the schema is pk-api's to keep. A database that holds another sha of `schema_extra.surql`
+/// (and has lost a table of it) gets the file applied again by the next check, the sha stored, and uploads work.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_schema_owner_applies_the_tables_again_when_the_sha_differs() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_schema_owner").await;
+    writer
+        .write(
+            "REMOVE TABLE upload_stage; UPDATE meta:state SET extra_sha = 'an-older-build' RETURN id;",
+            vars([]),
+            None,
+        )
+        .await
+        .expect("the older database");
+    let (s, _) = upload_with(&st, 700, 700).await;
+    assert_eq!(
+        s,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "the table is gone: the write has nowhere to go"
+    );
+    st.check_schema().await;
+    assert!(
+        st.schema_extra_current(),
+        "the owner applied the file and stored its sha"
+    );
+    let (s, r) = upload_with(&st, 701, 701).await;
     assert_eq!(s, StatusCode::OK, "{r}");
 }

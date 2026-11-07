@@ -148,15 +148,6 @@ impl Store {
         Ok(true)
     }
 
-    /// [`Store::apply_extra_schema`] only when no `extra_sha` is stored: a database whose schema the Python has
-    /// applied is the Python's to change (one owner until T11). Returns whether it was applied.
-    pub async fn apply_extra_schema_if_unowned(&self) -> Result<bool> {
-        if self.stored_shas().await?.1.is_some() {
-            return Ok(false);
-        }
-        self.apply_extra_schema(false).await
-    }
-
     /// The sha of `schema_extra.surql` as last applied (`meta:state.extra_sha`); none when none is stored.
     pub async fn stored_extra_sha(&self) -> Result<Option<String>> {
         Ok(self.stored_shas().await?.1)
