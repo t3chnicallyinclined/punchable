@@ -315,6 +315,8 @@ pub struct Stores {
     pub chats: Replayed,
     /// His rant topics (the Rant tab; Rust only).
     pub topics: Replayed,
+    /// What he said on the input bar and how it was read (`POST /api/say`).
+    pub intents: Replayed,
 }
 
 impl Default for Stores {
@@ -330,6 +332,7 @@ impl Default for Stores {
             venues: Replayed::new("venues"),
             chats: Replayed::new("chats"),
             topics: Replayed::new("topics"),
+            intents: Replayed::new("intents"),
         }
     }
 }
@@ -348,6 +351,7 @@ impl Stores {
             "venues" => &self.venues,
             "chats" => &self.chats,
             "topics" => &self.topics,
+            "intents" => &self.intents,
             _ => return None,
         })
     }
