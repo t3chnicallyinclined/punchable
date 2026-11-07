@@ -18,7 +18,7 @@ const patterns = table.map(([, p]) => p);
 
 // the rule itself
 check(patternOf("(tabs)/(bits)/joke/[id].tsx") === "/joke/:id", "a group vanishes, [id] is a param");
-check(patternOf("(tabs)/(tonight)/index.tsx") === "/", "the tonight index is the root");
+check(patternOf("(tabs)/(rant)/index.tsx") === "/", "the rant index is the root (Tonight's place, SPEC 2026-11-06 R1)");
 check(patternOf("(tabs)/(bits)/map/index.tsx") === "/map", "index is its directory");
 check(patternOf("(tabs)/_layout.tsx") === null && patternOf("+not-found.tsx") === null && patternOf("x/readme.md") === null, "layouts, specials and non-code are not pages");
 check(matches("/joke/joke%3Aairport-bit?x=1", "/joke/:id") && !matches("/joke", "/joke/:id") && !matches("/joke/a/b", "/joke/:id"), "a param takes exactly one segment");
@@ -35,8 +35,8 @@ for (const [url, file] of Object.entries(STATIC_URLS)) check(existsSync(join(her
 
 // the tab groups hold the three roots and the root stack holds the full-screen tasks
 const fileOf = (url) => table.find(([, p]) => matches(url, p))?.[0] || "";
-check(fileOf("/").startsWith("(tabs)/(tonight)/") && fileOf("/bits").startsWith("(tabs)/(bits)/") && fileOf("/sets").startsWith("(tabs)/(sets)/"), "the three tab roots live in their groups");
-check(fileOf("/joke/x").startsWith("(tabs)/(bits)/") && fileOf("/list/x").startsWith("(tabs)/(sets)/") && fileOf("/inbox").startsWith("(tabs)/(tonight)/"), "pushed screens live under their tab (Back goes to it)");
+check(fileOf("/").startsWith("(tabs)/(rant)/") && fileOf("/bits").startsWith("(tabs)/(bits)/") && fileOf("/sets").startsWith("(tabs)/(sets)/"), "the three tab roots live in their groups");
+check(fileOf("/joke/x").startsWith("(tabs)/(bits)/") && fileOf("/list/x").startsWith("(tabs)/(sets)/") && fileOf("/inbox").startsWith("(tabs)/(bits)/") && fileOf("/rant/new") === "rant/new.tsx", "pushed screens live under their tab (Back goes to it)");
 check(!fileOf("/stage/x").startsWith("(tabs)") && !fileOf("/record").startsWith("(tabs)") && !fileOf("/review").startsWith("(tabs)"), "the stage, the recorder and the review are root-level full-screen modals");
 check(!fileOf("/film/x").startsWith("(tabs)") && !fileOf("/take/x").startsWith("(tabs)"), "the camera (Film it) and the take player are root-level full-screen modals (SPEC 2026-11-03)");
 check(!fileOf("/add/x").startsWith("(tabs)"), "the form sheet (add a joke) is a root-level route that covers the tab bar");

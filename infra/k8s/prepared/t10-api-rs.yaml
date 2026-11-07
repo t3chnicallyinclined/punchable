@@ -228,6 +228,11 @@ spec:
           # cache row.
           - { path: /api/venues, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/venues.geojson, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the Rant tab (slice 1, Rust only: the Python has no such paths): his topics (GET + POST), a rant drafted
+          # from them (POST, a rant_draft job for pk-worker), the bits with a rant cut (GET)
+          - { path: /api/topics, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/rant/draft, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/rants, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -304,6 +309,8 @@ spec:
           - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 5 (group B): his pin move, rename or reset (PATCH only on the Python too)
           - { path: "/api/venues/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the Rant tab: one topic's PATCH (ranted, delete)
+          - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a): POST /api/upload, the phone's recording (at most 64 MiB with the database as its home, ADR 0014;
 # the servers answer 413 from Content-Length, so nginx's limit stays above it and the app gets the JSON error). The Python's own

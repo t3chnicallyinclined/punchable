@@ -5,6 +5,8 @@
 // collapsed row at the bottom ("15 drafts from your Insights"), each with "Use this" (an owner write: the list becomes
 // his) and Archive (undoable: `{archive: true}` / `{unarchive: true}`); nothing is ever chosen for him
 // (docs/design/SPEC-2026-10-29-set-lists-and-stage-notes.md §1). Archived lists live on /archived (the toolbar menu).
+// 2026-11-07 (SPEC 2026-11-06 R2, Tonight retired): tonight's list as one bar and Record a set open the tab, above
+// the segments: he picks tonight's set here.
 import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -26,6 +28,8 @@ import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
+import { TonightCard } from '@/lib/SetBar';
+import { useTonight } from '@/lib/tonight';
 
 type Seg_ = 'lists' | 'performed';
 const PAPER = '#F2EEE4';
@@ -92,6 +96,7 @@ export default function Sets() {
   const [rename, setRename] = useState<BoardListItem | null>(null);
   const [draftsOpen, setDraftsOpen] = useState(() => getPrefs().draftsOpen);
   const ui = useUI();
+  const tonight = useTonight();
   const { his, drafts } = splitLists(b.data?.boards || []);
   // "tonight" for the card order only: the current list when it is his, else his newest; never a write
   const curId = (cur.current && his.some((x) => x.id === cur.current!.id) ? cur.current.id : his[0]?.id) || null;
@@ -201,6 +206,15 @@ export default function Sets() {
       )}
       {/* a set list is what he is working on; a set exists once it is recorded (owner, 2026-10-29). Equal-width nouns
           (HIG/segmented-controls); the count lives in the header row below, not in the segment. */}
+      <View testID="sets-tonight" style={{ gap: 4 }}>
+        <TonightCard board={tonight.data?.board} onNew={() => void startList()} />
+        <Pressable testID="sets-record-set" accessibilityRole="button" accessibilityLabel="Record a set" accessibilityHint="Opens the recorder; nothing tapes until the red disc"
+          onPress={recordSet} style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: pressed ? 0.7 : 1 })}>
+          <Icon name="record" size={22} color={C.rec} />
+          <Text maxFontSizeMultiplier={1.6} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>Record a set</Text>
+          <Icon name="chevron" size={18} color={C.dim} />
+        </Pressable>
+      </View>
       <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', 'Recorded']]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
       {seg === 'lists' ? (
         <>

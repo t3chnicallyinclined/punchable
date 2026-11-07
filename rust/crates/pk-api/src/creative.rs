@@ -313,6 +313,8 @@ pub struct Stores {
     pub venues: Replayed,
     /// His conversations with his notebook (Ask).
     pub chats: Replayed,
+    /// His rant topics (the Rant tab; Rust only).
+    pub topics: Replayed,
 }
 
 impl Default for Stores {
@@ -327,6 +329,7 @@ impl Default for Stores {
             merges: Replayed::new("merges"),
             venues: Replayed::new("venues"),
             chats: Replayed::new("chats"),
+            topics: Replayed::new("topics"),
         }
     }
 }
@@ -344,6 +347,7 @@ impl Stores {
             "merges" => &self.merges,
             "venues" => &self.venues,
             "chats" => &self.chats,
+            "topics" => &self.topics,
             _ => return None,
         })
     }

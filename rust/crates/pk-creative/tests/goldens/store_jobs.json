@@ -81,7 +81,7 @@
      "kind": "whisper"
     }
    },
-   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook')",
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook', 'rant_draft')",
    "type": "ValueError",
    "items": {
     "job:1": {
@@ -112,7 +112,7 @@
     "by": "owner",
     "data": {}
    },
-   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook')",
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook', 'rant_draft')",
    "type": "ValueError",
    "items": {
     "job:1": {
@@ -1872,7 +1872,7 @@
      ]
     }
    },
-   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook')",
+   "error": "job kind must be one of ('bridge', 'punchup', 'ask', 'process_set', 'import_youtube', 'facts', 'riff', 'ask_chat', 'embed', 'memolink', 'set_text', 'rant', 'hook', 'rant_draft')",
    "type": "ValueError",
    "items": {
     "job:1": {

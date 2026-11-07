@@ -172,6 +172,8 @@ function RootLayout() {
                 {/* Sessions with Claude on a bit (Film it §2.5: Make it a rant · Pick a hook): medium detent first, large on
                     drag; dimmed behind (the bit page must not change under a session that is being decided) */}
                 <Stack.Screen name="session/[bit]" options={{ ...sheet([0.5, 1]), title: t('Claude'), contentStyle: { backgroundColor: C.surface } }} />
+                {/* Write a rant (SPEC 2026-11-06 §3): a full-height sheet from the Rant tab (a topic, his material, the draft) */}
+                <Stack.Screen name="rant/new" options={{ ...sheet([1]), title: t('Write a rant'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

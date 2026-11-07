@@ -18,6 +18,13 @@ export default function BitsStack() {
       {/* the three device checks for the bit page (SPEC 2026-11-03 §4.1); Slice 1 only, removed in Slice 2 */}
       <Stack.Screen name="spike" options={{ title: t('Device checks') }} />
       <Stack.Screen name="merge" options={{ title: t('Merge') }} />
+      {/* "N to sort" lives on Bits now (SPEC 2026-11-06 R2): its inbox is pushed in this stack, so Back is Bits */}
+      <Stack.Screen name="inbox" options={{ title: t('Inbox') }} />
+      {/* the conversation (Ask your material is this tab's search), Ask, Import: here with the rows that open them */}
+      <Stack.Screen name="say" options={{ title: t('Asking') }} />
+      <Stack.Screen name="ask/index" options={{ title: t('Ask') }} />
+      <Stack.Screen name="ask/[id]" options={{ title: t('Ask') }} />
+      <Stack.Screen name="import" options={{ animation: 'slide_from_bottom', title: t('Import sets') }} />
       <Stack.Screen name="map/index" options={{ title: t('Map') }} />
       <Stack.Screen name="map/[id]" options={{ title: t('Joke map') }} />
       <Stack.Screen name="bit/[id]" options={{ title: t('The bit') }} />

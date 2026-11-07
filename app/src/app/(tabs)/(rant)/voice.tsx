@@ -1,7 +1,7 @@
 // Settings > Voice profile: what the AI reads before it drafts in his voice (riffs, punch-ups, bridges, Ask). One
 // document on the server (GET/PUT /api/profile/voice, api-dev/profile_api.py), shown, edited and saved here; Save is
 // undone by restoring the previous version (the API keeps one). On the phone this is a form sheet
-// ((tonight)/_layout.tsx); on the web a page. The rules are in lib/voiceProfile.ts (tested); the words are his.
+// ((rant)/_layout.tsx); on the web a page. The rules are in lib/voiceProfile.ts (tested); the words are his.
 import React, { useEffect, useRef, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { router } from 'expo-router';
