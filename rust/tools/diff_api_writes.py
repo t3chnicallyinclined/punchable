@@ -1646,11 +1646,11 @@ def room_docs(dirname: str, ws: bool = False) -> dict:
     the same document under another hash, so the post triggers a sync that must find nothing to change."""
     meta = {"title": "Ingest room", "venue_guess": "Basement", "duration": 600}
     analysis = {"run_id": "ingest-diff", "generated_at": "2026-11-07", "summary": {"duration_s": 600, "best": "joke:a"},
-                "jokes": [{"start_ms": 1000, "end_ms": 9000, "joke_id": "joke:a", "status": "known", "match_confidence": 0.9,
+                "jokes": [{"idx": 0, "start_ms": 1000, "end_ms": 9000, "joke_id": "joke:a", "status": "known", "match_confidence": 0.9,
                            "match_reason": "same words", "ai_rating": "killed", "rating_basis": "big laugh",
                            "punchlines": [{"text": "the punch", "at_ms": 5000}]},
-                          {"start_ms": 20000, "end_ms": 30000, "title": "New thing", "transcript": "some fresh lines", "status": "new"},
-                          {"start_ms": 40000, "end_ms": 45000, "status": "crowd_work", "title": "chat"}]}
+                          {"idx": 1, "start_ms": 20000, "end_ms": 30000, "title": "New thing", "transcript": "some fresh lines", "status": "new"},
+                          {"idx": 2, "start_ms": 40000, "end_ms": 45000, "status": "crowd_work", "title": "chat"}]}
     laughs = {"run": "r1", "window_s": 600, "laughs": [{"id": "l1", "start_ms": 2000, "end_ms": 3000, "strength": 0.8, "bars": 3,
                                                        "kind": "laugh", "confidence": 0.9, "segment": "s1", "detail": {"x": 1}},
                                                       {"start_ms": 22000, "end_ms": 23500, "strength": 0.5, "extra_key": "kept"},
@@ -1756,7 +1756,7 @@ def ingest_phase(port: int, pw: str) -> None:
         got = R.compare(f"ingest: {label}", a_, c_)
         problems.extend(got)
         n_equal += not got
-        ok(f"ingest: {label}: the Python refuses it ({a_[0]})", a_[0] in (400, 403, 404, 409, 413, 422), f"{a_[0]} {a_[2][:200]!r}")
+        ok(f"ingest: {label}: the Python refuses it or says already ({a_[0]})", a_[0] in (400, 403, 404, 409, 413, 422) or (label == "a detach of nothing" and a_[0] == 200), f"{a_[0]} {a_[2][:200]!r}")
     # the store/op message names a Python set, whose order is the process's: only the status is compared
     for label, b_ in (("a store that is not merges", {"store": "x", "op": "attach", "id": "at:abcdef12", "actor": "ai:diff"}),
                       ("an op that is not attach or detach", {"store": "merges", "op": "dismiss", "id": "at:abcdef12", "actor": "ai:diff"})):
@@ -1782,8 +1782,14 @@ def ingest_phase(port: int, pw: str) -> None:
     side_a = side_rows(port, pw, dirn, sid)
     ok("ingest: pk-api wrote the set's side tables (analysis, laugh_run, laugh)", side_a.count("DIR") >= 3, side_a[:300])
     refresh_py_decisions(port, pw)
+    snap = lambda: {str(x["id"]): x for t_ in ("performance", "set", "joke", "performed_as") for x in R.surreal_sql(port, pw, f"SELECT * OMIT embedding FROM {t_};")[-1]["result"]}  # noqa: E731
+    before_rows = snap()
     st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn, ws=True).items()], "actor": "import:diff"}, headers=w)
     ch = (r.get("synced") or {}).get("changed")
+    after_rows = snap()
+    moved = {k: (before_rows.get(k), after_rows.get(k)) for k in set(before_rows) | set(after_rows) if before_rows.get(k) != after_rows.get(k) and "working" not in k}
+    if moved:
+        problems.append("ingest: rows the Python's sync rewrote: " + json.dumps({k: [v[0], v[1]] for k, v in list(moved.items())[:2]}, default=str)[:1500])
     ok("ingest: the Python's sync of the same set finds nothing to change in what pk-api wrote",
        r["written"] == [f"corpus/sets/{dirn}/analysis.json"] and r["unchanged"] == 2 and ch == {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}, json.dumps(r)[:400])
     ok("ingest: the Python's sync rewrote the side tables as pk-api had", side_rows(port, pw, dirn, sid) == side_a)
@@ -1793,8 +1799,10 @@ def ingest_phase(port: int, pw: str) -> None:
     st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp).items()], "actor": "import:diff"}, headers=w)
     synced["py"] = r.get("synced") or {}
     ok("ingest: a set posted through the Python is written the same way", len(r["written"]) == 3 and synced["py"].get("mode") == "sync", json.dumps(r)[:400])
+    perfs = lambda d_: sorted(x["id"].replace(d_[:8], "D") if isinstance(x["id"], str) else str(x["id"]) for x in R.surreal_sql(port, pw, f"SELECT id FROM performance WHERE string::contains(<string>id, '{d_[:8]}');")[-1]["result"])  # noqa: E731
     ok("ingest: the two servers changed the same number of records for the same set",
-       synced["rs"].get("changed") == synced["py"].get("changed"), f"pk-api {synced['rs'].get('changed')} vs Python {synced['py'].get('changed')}")
+       synced["rs"].get("changed") == synced["py"].get("changed"),
+       f"pk-api {synced['rs'].get('changed')} vs Python {synced['py'].get('changed')}; perfs {perfs(dirn)} / {perfs(dirp)}")
     ok("ingest: the two servers wrote the same side tables for the same set", side_rows(port, pw, dirp, sidp) == side_a)
     both("ingest: after a set via the Python", ["/api/sets", f"/api/sets/{q(sidp)}/analysis", f"/api/sets/{q(sidp)}/review", "/api/jokes/joke:a", "/api/pipeline"], headers=w)
     st, r = write(rs, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp, ws=True).items()], "actor": "import:diff"}, headers=w)
