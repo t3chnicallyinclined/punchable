@@ -69,7 +69,7 @@ problems: list[str] = []
 n_equal = 0
 
 # ---------------------------------------------------------------- volatile parts of a write's answer
-VOLATILE_KEYS = {"ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
+VOLATILE_KEYS = {"s", "ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
@@ -1620,6 +1620,332 @@ def venues_phase() -> None:
     venues_same("venues: after the refusals", "/api/venues")
 
 
+# ---------------------------------------------------------------- round 6, group A: the ingest routes
+INGEST_ROOMS = {"rs": ("20990101_rsroom", "set:2099-01-01_rsroom"), "py": ("20990202_pyroom", "set:2099-02-02_pyroom")}
+
+
+def room_docs(dirname: str, ws: bool = False) -> dict:
+    """The three files of a new set (meta, analysis, laughs). `ws` re-serialises the analysis with other whitespace:
+    the same document under another hash, so the post triggers a sync that must find nothing to change."""
+    meta = {"title": "Ingest room", "venue_guess": "Basement", "duration": 600}
+    analysis = {"run_id": "ingest-diff", "generated_at": "2026-11-07", "summary": {"duration_s": 600, "best": "joke:a"},
+                "jokes": [{"start_ms": 1000, "end_ms": 9000, "joke_id": "joke:a", "status": "known", "match_confidence": 0.9,
+                           "match_reason": "same words", "ai_rating": "killed", "rating_basis": "big laugh",
+                           "punchlines": [{"text": "the punch", "at_ms": 5000}]},
+                          {"start_ms": 20000, "end_ms": 30000, "title": "New thing", "transcript": "some fresh lines", "status": "new"},
+                          {"start_ms": 40000, "end_ms": 45000, "status": "crowd_work", "title": "chat"}]}
+    laughs = {"run": "r1", "window_s": 600, "laughs": [{"id": "l1", "start_ms": 2000, "end_ms": 3000, "strength": 0.8, "bars": 3,
+                                                       "kind": "laugh", "confidence": 0.9, "segment": "s1", "detail": {"x": 1}},
+                                                      {"start_ms": 22000, "end_ms": 23500, "strength": 0.5, "extra_key": "kept"},
+                                                      "not a laugh"]}
+    base = f"corpus/sets/{dirname}/"
+    return {base + "meta.json": json.dumps(meta), base + "analysis.json": json.dumps(analysis, indent=2 if ws else None),
+            base + "laughs_auto.json": json.dumps(laughs)}
+
+
+def side_rows(port: int, pw: str, dirname: str, sid: str) -> str:
+    """The side tables of one set, with its names made the same, as text."""
+    out = R.surreal_sql(port, pw, "SELECT * FROM analysis ORDER BY ord; SELECT * FROM laugh_run; SELECT * FROM laugh ORDER BY set, ord;")
+    keep = [[x for x in r["result"] if dirname in json.dumps(x) or sid[4:] in json.dumps(x)] for r in out]
+    for rows in keep:
+        for x in rows:
+            if "meta" in x:
+                x.pop("ord", None)
+    return json.dumps(keep, sort_keys=True).replace(dirname, "DIR").replace(sid[4:], "SID")
+
+
+PY_DATA: Path | None = None
+
+
+def refresh_py_decisions(port: int, pw: str) -> None:
+    """The Python pod's decisions.jsonl cache made current. Its sync compares the database's decision rows with that file
+    and, when the database has more (every line pk-api wrote since the pod booted), does a FULL load from its files,
+    which drops them (journal: gotcha 2026-11-07). A pod that has just booted has a current file: so has this."""
+    sys.path.insert(0, str(ROOT / "db"))
+    from kbmap import row_to_decision  # noqa: PLC0415
+    rows = R.surreal_sql(port, pw, "SELECT * FROM decision ORDER BY seq;")[-1]["result"]
+    lines = "".join(json.dumps(row_to_decision(x), ensure_ascii=False, separators=(",", ":")) + chr(10) for x in rows)
+    (PY_DATA / "comedy" / "kb" / "v0" / "decisions.jsonl").write_text(lines, encoding="utf-8", newline=chr(10))
+
+
+def counts(port: int, pw: str) -> dict:
+    out = R.surreal_sql(port, pw, "RETURN {joke: count(SELECT id FROM joke), unit: count(SELECT id FROM unit), set: count(SELECT id FROM set), "
+                                  "performance: count(SELECT id FROM performance), performed_as: count(SELECT id FROM performed_as), "
+                                  "analysis: count(SELECT id FROM analysis), laugh_run: count(SELECT id FROM laugh_run), "
+                                  "laugh: count(SELECT id FROM laugh), srcfile: count(SELECT id FROM srcfile)};")
+    return out[-1]["result"]
+
+
+def ingest_phase(port: int, pw: str) -> None:
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    w = worker_tok
+    # 1. the reads, before anything: the file list, one file, the worker's state, a joke page
+    reads = ["/api/worker/files", "/api/worker/files?prefix=corpus/sets/", "/api/worker/files?prefix=nothing-here/",
+             "/api/worker/files/content?path=kb/v0/inferred.json", "/api/worker/files/content?path=nope.json",
+             "/api/worker/files/content?path=../x", "/api/worker/files/content", "/api/worker/state",
+             "/api/worker/jokes/joke:a", "/api/worker/jokes/joke:nope", "/api/worker/jokes/joke:a?backend=x"]
+    both("ingest: before any post", reads, headers=w)
+    for p_ in ("/api/worker/files", "/api/worker/state", "/api/worker/jokes/joke:a"):
+        for h_ in (app, {}):
+            got = R.compare(f"ingest: {p_} without the worker token ({'app' if h_ else 'none'})", R.call(py, "GET", p_, h_), R.call(rs, "GET", p_, h_))
+            problems.extend(got)
+            n_equal += not got
+    # 2. every refusal, to the letter (a refusal writes nothing)
+    text = "Petitioner and respondent filed this under penalty of perjury."
+    big = json.dumps({"k": "x" * (8 * 1024 * 1024 + 10)})
+    dirn, sid = INGEST_ROOMS["rs"]
+    d1 = f"corpus/sets/{dirn}/"
+    refuse = [
+        ("no actor", "/api/worker/files", {"files": []}),
+        ("a bad actor", "/api/worker/files", {"files": [], "actor": "gsync"}),
+        ("the comic as actor", "/api/worker/files", {"files": [], "actor": "owner"}),
+        ("files not a list", "/api/worker/files", {"files": {"a": 1}, "actor": "import:diff"}),
+        ("remove not a list", "/api/worker/files", {"remove": "x", "actor": "import:diff"}),
+        ("too many", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{}"}] * 501, "actor": "import:diff"}),
+        ("a file that is not an object", "/api/worker/files", {"files": ["x"], "actor": "import:diff"}),
+        ("a file with no text", "/api/worker/files", {"files": [{"path": f"{d1}meta.json"}], "actor": "import:diff"}),
+        ("a path outside the list", "/api/worker/files", {"files": [{"path": "kb/v0/decisions.jsonl", "text": "x"}], "actor": "import:diff"}),
+        ("a path with ..", "/api/worker/files", {"files": [{"path": "corpus/sets/../x.json", "text": "{}"}], "actor": "import:diff"}),
+        ("a path that is a number", "/api/worker/files", {"files": [{"path": 5, "text": "{}"}], "actor": "import:diff"}),
+        ("a path with no key", "/api/worker/files", {"files": [{"text": "{}"}], "actor": "import:diff"}),
+        ("json that is not json", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{nope"}], "actor": "import:diff"}),
+        ("a wrong sha256", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{}", "sha256": "0" * 64}], "actor": "import:diff"}),
+        ("a file over 8 MB", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": big}], "actor": "import:diff"}),
+        ("court material", "/api/worker/files", {"files": [{"path": "kb/gsync/runs.jsonl", "text": text}], "actor": "import:diff"}),
+        ("a remove outside the list", "/api/worker/files", {"remove": ["kb/v0/graph.json"], "actor": "import:diff"}),
+        ("a remove that is a number", "/api/worker/files", {"remove": [7], "actor": "import:diff"}),
+        ("an idea of court material", "/api/worker/ideas", {"text": text, "actor": "import:diff"}),
+        ("an idea with no actor", "/api/worker/ideas", {"text": "no actor"}),
+        ("an idea with no text", "/api/worker/ideas", {"actor": "import:diff"}),
+        ("a decision of court material", "/api/worker/decision", {"target": "node", "action": "add", "after": {"type": "joke", "title": text}, "actor": "import:diff"}),
+        ("a decision with a bad id", "/api/worker/decision", {"target": "node", "id": "bad id!", "action": "edit", "after": {}, "actor": "import:diff"}),
+        ("a decision with no actor", "/api/worker/decision", {"target": "node", "id": "joke:a", "action": "edit", "after": {"stage": "idea"}}),
+        ("a decision on nothing", "/api/worker/decision", {"target": "node", "id": "joke:nope", "action": "edit", "after": {"stage": "idea"}, "actor": "import:diff"}),
+        ("an undo with no indexes", "/api/worker/undo", {"actor": "import:diff"}),
+        ("an undo with indexes not ints", "/api/worker/undo", {"indexes": ["x"], "actor": "import:diff"}),
+        ("an undo of nothing", "/api/worker/undo", {"indexes": [99999], "actor": "import:diff"}),
+        ("an undo with no actor", "/api/worker/undo", {"indexes": [0]}),
+        ("an event from an import", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {}, "actor": "import:diff"}),
+        ("an event with no actor", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12"}),
+        ("an event with a bad id", "/api/worker/events", {"store": "merges", "op": "attach", "id": "x", "data": {}, "actor": "ai:diff"}),
+        ("an event with data that is a list", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": [1], "actor": "ai:diff"}),
+        ("an event of court material", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {"text": text}, "actor": "ai:diff"}),
+        ("an attach with nothing to attach", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {}, "actor": "ai:diff"}),
+        ("a detach of nothing", "/api/worker/events", {"store": "merges", "op": "detach", "id": "at:abcdef12", "actor": "ai:diff"}),
+    ]
+    for label, path_, b_ in refuse:
+        a_, c_ = R.call(py, "POST", path_, w, b_), R.call(rs, "POST", path_, w, b_)
+        got = R.compare(f"ingest: {label}", a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"ingest: {label}: the Python refuses it ({a_[0]})", a_[0] in (400, 403, 404, 409, 413, 422), f"{a_[0]} {a_[2][:200]!r}")
+    # the store/op message names a Python set, whose order is the process's: only the status is compared
+    for label, b_ in (("a store that is not merges", {"store": "x", "op": "attach", "id": "at:abcdef12", "actor": "ai:diff"}),
+                      ("an op that is not attach or detach", {"store": "merges", "op": "dismiss", "id": "at:abcdef12", "actor": "ai:diff"})):
+        a_, c_ = R.call(py, "POST", "/api/worker/events", w, b_), R.call(rs, "POST", "/api/worker/events", w, b_)
+        ok(f"ingest: {label}: 400 on both", a_[0] == 400 and c_[0] == 400, f"{a_[0]} / {c_[0]}")
+    for label, path_, b_, h_ in (("the app's token", "/api/worker/ideas", {"text": "x", "actor": "import:diff"}, app),
+                                 ("no token", "/api/worker/files", {"files": []}, {})):
+        got = R.compare(f"ingest: {label}", R.call(py, "POST", path_, h_, b_), R.call(rs, "POST", path_, h_, b_))
+        problems.extend(got)
+        n_equal += not got
+    both("ingest: after the refusals", ["/api/worker/files", "/api/worker/state"], headers=w)
+    # 3. a new set through pk-api, then a re-post of the same analysis (another hash) through the Python: the rows
+    #    pk-api wrote are exactly what the Python's own sync computes, so it finds nothing to change
+    base0 = counts(port, pw)
+    synced = {}
+    st, r = write(rs, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn).items()], "actor": "import:diff"}, headers=w)
+    synced["rs"] = r.get("synced") or {}
+    ok("ingest: a set posted through pk-api is written, three files and a sync", r["ok"] is True and len(r["written"]) == 3 and r["unchanged"] == 0
+       and synced["rs"].get("mode") == "sync" and synced["rs"]["changed"]["nodes"] >= 4 and synced["rs"]["changed"]["edges"] >= 1, json.dumps(r)[:400])
+    both("ingest: after a set via pk-api", reads + ["/api/sets", f"/api/sets/{q(sid)}/analysis", f"/api/sets/{q(sid)}/review",
+                                                     "/api/jokes/joke:a", "/api/pipeline", "/api/meta", "/api/today"], headers=w)
+    both("ingest: the app's reads after a set via pk-api", ["/api/sets", f"/api/sets/{q(sid)}/analysis", "/api/jokes?limit=5000", "/api/jokes/joke:a"])
+    side_a = side_rows(port, pw, dirn, sid)
+    ok("ingest: pk-api wrote the set's side tables (analysis, laugh_run, laugh)", side_a.count("DIR") >= 3, side_a[:300])
+    refresh_py_decisions(port, pw)
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn, ws=True).items()], "actor": "import:diff"}, headers=w)
+    ch = (r.get("synced") or {}).get("changed")
+    ok("ingest: the Python's sync of the same set finds nothing to change in what pk-api wrote",
+       r["written"] == [f"corpus/sets/{dirn}/analysis.json"] and r["unchanged"] == 2 and ch == {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}, json.dumps(r)[:400])
+    ok("ingest: the Python's sync rewrote the side tables as pk-api had", side_rows(port, pw, dirn, sid) == side_a)
+    # 4. the same set through the Python under other names, then pk-api re-posts it: the converse
+    dirp, sidp = INGEST_ROOMS["py"]
+    refresh_py_decisions(port, pw)
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp).items()], "actor": "import:diff"}, headers=w)
+    synced["py"] = r.get("synced") or {}
+    ok("ingest: a set posted through the Python is written the same way", len(r["written"]) == 3 and synced["py"].get("mode") == "sync", json.dumps(r)[:400])
+    ok("ingest: the two servers changed the same number of records for the same set",
+       synced["rs"].get("changed") == synced["py"].get("changed"), f"pk-api {synced['rs'].get('changed')} vs Python {synced['py'].get('changed')}")
+    ok("ingest: the two servers wrote the same side tables for the same set", side_rows(port, pw, dirp, sidp) == side_a)
+    both("ingest: after a set via the Python", ["/api/sets", f"/api/sets/{q(sidp)}/analysis", f"/api/sets/{q(sidp)}/review", "/api/jokes/joke:a", "/api/pipeline"], headers=w)
+    st, r = write(rs, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp, ws=True).items()], "actor": "import:diff"}, headers=w)
+    ch = (r.get("synced") or {}).get("changed")
+    ok("ingest: pk-api's sync of the same set finds nothing to change in what the Python wrote",
+       r["written"] == [f"corpus/sets/{dirp}/analysis.json"] and ch == {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}, json.dumps(r)[:400])
+    ok("ingest: pk-api rewrote the side tables as the Python had", side_rows(port, pw, dirp, sidp) == side_a)
+    # 5. a file that is not a set input: written, no sync; the same file again is unchanged; the list shows both
+    gs = {"files": [{"path": "kb/gsync/runs.jsonl", "text": '{"run": 1}\n'}], "actor": "import:gsync"}
+    st, r = write(rs, "POST", "/api/worker/files", gs, headers=w)
+    ok("ingest: a gsync file is written and not synced", r["written"] == ["kb/gsync/runs.jsonl"] and r["synced"] is None, json.dumps(r))
+    st, r = write(py, "POST", "/api/worker/files", gs, headers=w)
+    ok("ingest: the same file again is unchanged on the other server", r["written"] == [] and r["unchanged"] == 1 and r["synced"] is None, json.dumps(r))
+    both("ingest: after a gsync file", ["/api/worker/files?prefix=kb/gsync/", "/api/worker/files/content?path=kb/gsync/runs.jsonl",
+                                        "/api/worker/files/content?path=kb%5Cgsync%5Cruns.jsonl", "/api/worker/state"], headers=w)
+    # 6. an idea from an import through each server, a decision through one, its undo through the other
+    shapes = []
+    jid = ""
+    for base, who in ((rs, "pk-api"), (py, "python")):
+        st, r = write(base, "POST", "/api/worker/ideas", {"text": f"An imported idea about the {who} cat (I).", "actor": "import:memo"}, headers=w)
+        shapes.append(shape(norm(r)))
+        ok(f"ingest: an idea via {who} is a new bit by the import", r["ok"] is True and r["decisions"][0]["by"] == "import:memo"
+           and r["decisions"][0]["after"]["stage"] == "idea", json.dumps(r)[:300])
+        both(f"ingest: after an idea via {who}", ["/api/jokes?limit=5000", "/api/decisions?limit=5", "/api/today"])
+        jid = r["id"]
+    ok("ingest: the two answers to an idea have the same shape", shapes[0] == shapes[1], json.dumps(shapes)[:300])
+    jobs = R.surreal_sql(port, pw, "SELECT VALUE line FROM creative_event WHERE store = 'jobs' ORDER BY seq;")[-1]["result"]
+    ok("ingest: an imported memo idea queued its embed and memolink jobs", any('"embed"' in x for x in jobs) and any('"memolink"' in x for x in jobs), str(len(jobs)))
+    st, r = write(py, "POST", "/api/worker/decision", {"target": "node", "id": jid, "action": "edit", "after": {"stage": "to_try"}, "reason": "  by the worker  ", "actor": "ai:diff"}, headers=w)
+    didx = r["indexes"][0]
+    ok("ingest: a decision via the Python is by the actor", r["decisions"][0]["by"] == "ai:diff" and r["decisions"][0]["after"] == {"stage": "to_try"}, json.dumps(r)[:300])
+    both("ingest: after a decision via the Python", ["/api/jokes?limit=5000", f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    st, r = write(rs, "POST", "/api/worker/decision", {"target": "node", "id": jid, "action": "edit", "after": {"stage": "testing"}, "actor": "ai:diff"}, headers=w)
+    ok("ingest: a decision via pk-api is by the actor", r["decisions"][0]["by"] == "ai:diff", json.dumps(r)[:300])
+    both("ingest: after a decision via pk-api", [f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    st, r = write(rs, "POST", "/api/worker/undo", {"indexes": [didx + 1, didx], "actor": "ai:diff"}, headers=w)
+    ok("ingest: an undo of two lines via pk-api, newest first", len(r["indexes"]) == 2 and r["indexes"][0] > r["indexes"][1], json.dumps(r)[:300])
+    both("ingest: after an undo via pk-api", [f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    same_write("ingest: an undo of an undone line", "POST", "/api/worker/undo", {"indexes": [didx], "actor": "ai:diff"}, headers=w)
+    # 7. the merges store: an attach via pk-api, again (already), a detach via the Python, an attach of the same id (refused)
+    ev = {"store": "merges", "op": "attach", "id": "at:diff0001", "actor": "ai:diff",
+          "data": {"joke": jid, "into": "joke:b", "text": "an attached note", "date": "2026-11-07", "score": 0.9, "reasons": ["same words"], "source": "memo"}}
+    st, r = write(rs, "POST", "/api/worker/events", ev, headers=w)
+    ok("ingest: an attach via pk-api carries the record", r["ok"] is True and r["record"]["status"] == "attached" and "snapshot" not in r["record"], json.dumps(r)[:300])
+    both("ingest: after an attach via pk-api", ["/api/merge/history?joke=joke:b", "/api/merge/at:diff0001", "/api/jokes/joke:b"])
+    same_write("ingest: the same attach again", "POST", "/api/worker/events", ev, headers=w)
+    st, r = write(py, "POST", "/api/worker/events", {**ev, "op": "detach", "data": {}}, headers=w)
+    ok("ingest: a detach via the Python", r["ok"] is True and r["record"]["status"] == "detached", json.dumps(r)[:300])
+    both("ingest: after a detach via the Python", ["/api/merge/history?joke=joke:b", "/api/merge/at:diff0001"])
+    same_write("ingest: the same detach again", "POST", "/api/worker/events", {**ev, "op": "detach", "data": {}}, headers=w)
+    same_write("ingest: an attach of an id that was detached", "POST", "/api/worker/events", ev, headers=w)
+    # 8. both sets away: removed through the other server each, the tables as they were
+    # pk-api removes both: the Python's sync answers 500 (EmptyWrite) when a removed set's edges went with its nodes
+    for base, who, d_ in ((rs, "pk-api", dirn), (rs, "pk-api", dirp)):
+        paths = list(room_docs(d_))
+        refresh_py_decisions(port, pw)
+        st, r = write(base, "POST", "/api/worker/files", {"remove": paths + [f"corpus/sets/{d_}/transcript.json"], "actor": "import:diff"}, headers=w)
+        ok(f"ingest: {who} removes the set ({d_}) the other server wrote", sorted(r["removed"]) == sorted(paths) and ((r["synced"] or {}).get("changed") or {}).get("removed", 0) >= 4,
+           json.dumps(r)[:400])
+        both(f"ingest: after {who} removed a set", ["/api/sets", "/api/jokes/joke:a", "/api/pipeline"] + reads[:3], headers=w)
+    after = counts(port, pw)
+    ok("ingest: the graph tables are as they were before the two sets", {k: v for k, v in after.items() if k != "srcfile"} == {k: v for k, v in base0.items() if k != "srcfile"},
+       f"{base0} -> {after}")
+    ok("ingest: the files the two sets left are the gsync file only", after["srcfile"] == base0["srcfile"] + 1, f"{base0['srcfile']} -> {after['srcfile']}")
+
+
+def python_full_load_demo(port: int, pw: str) -> dict:
+    """What the hosted Python's sync does today when pk-api has written decisions it has not seen (run last: it
+    drops them). Reported, never a problem of pk-api's: it is the Python's own behaviour (journal gotcha)."""
+    n0 = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM decision);")[-1]["result"]
+    dirn = INGEST_ROOMS["rs"][0]
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn).items()], "actor": "import:diff"}, headers=worker_tok)
+    n1 = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM decision);")[-1]["result"]
+    return {"decisions_before": n0, "decisions_after": n1, "synced": r.get("synced")}
+
+
+# ---------------------------------------------------------------- round 6, group B: POST /api/say
+SAY_STABLE = ("kind", "guess", "rule", "overridden", "text")
+
+
+def say_pair(label: str, text_py: str, text_rs: str | None = None, extra: dict | None = None) -> tuple[dict, dict]:
+    """One phrasing said to both servers (the text of the second may differ by a tag): the same status, the same shape,
+    and the same stable answers (the kind, the guess, the rule, the command's parse, what the screen is told next)."""
+    global n_equal
+    extra = extra or {}
+    a = R.call(py, "POST", "/api/say", app, {"text": text_py, **extra})
+    b = R.call(rs, "POST", "/api/say", app, {"text": text_rs or text_py, **extra})
+    bad = []
+    if a[0] != b[0]:
+        bad.append(f"{label}: status python {a[0]} rust {b[0]}: {a[2][:200]!r} / {b[2][:200]!r}")
+    ja, jb = body(a) or {}, body(b) or {}
+    for h in R.HEADERS:
+        if a[1].get(h) != b[1].get(h):
+            bad.append(f"{label}: header {h}: python {a[1].get(h)!r} rust {b[1].get(h)!r}")
+    for p, u, v in R.diff(shape(norm(ja)), shape(norm(jb))):
+        bad.append(f"{label}: shape {p}: python {json.dumps(u)[:120]} rust {json.dumps(v)[:120]}")
+    for k in SAY_STABLE[:4]:
+        if ja.get(k) != jb.get(k):
+            bad.append(f"{label}: {k}: python {ja.get(k)!r} rust {jb.get(k)!r}")
+    ca, cb = ja.get("command") or {}, jb.get("command") or {}
+    for k in ("op", "minutes", "title", "query", "words", "done", "ask", "created", "already", "position"):
+        if ca.get(k) != cb.get(k):
+            bad.append(f"{label}: command.{k}: python {ca.get(k)!r} rust {cb.get(k)!r}")
+    if [x.get("joke_id") for x in ca.get("candidates") or []] != [x.get("joke_id") for x in cb.get("candidates") or []]:
+        bad.append(f"{label}: candidates differ")
+    if (ja.get("saved_to") is None) != (jb.get("saved_to") is None):
+        bad.append(f"{label}: saved_to python {ja.get('saved_to')!r} rust {jb.get('saved_to')!r}")
+    problems.extend(bad)
+    n_equal += not bad
+    return ja, jb
+
+
+def say_phase() -> None:
+    global n_equal
+    reads = ["/api/tonight/screen", "/api/boards", "/api/ask/chats", "/api/decisions?limit=6", "/api/jokes?limit=5000"]
+    both("say: before", reads)
+    # every refusal, to the letter
+    for label, b_, h_ in [
+            ("no text", {}, app), ("blank text", {"text": "   "}, app), ("text not a string", {"text": 5}, app),
+            ("text too long", {"text": "x" * 4001}, app), ("kind not one of three", {"text": "hi", "kind": "poem"}, app),
+            ("kind command, not a command", {"text": "the dentist is a drug dealer", "kind": "command"}, app),
+            ("context not an object", {"text": "hi", "context": "screen"}, app),
+            ("choice that is no bit", {"text": "add the kale bit to tonight", "choice": "joke:nope"}, app),
+            ("choice that is a number", {"text": "add the kale bit to tonight", "choice": 5}, app),
+            ("worker token", {"text": "hi"}, worker_tok), ("no token", {"text": "hi"}, {})]:
+        a_, c_ = R.call(py, "POST", "/api/say", h_, b_), R.call(rs, "POST", "/api/say", h_, b_)
+        got = R.compare(f"say: {label}", a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"say: {label}: the Python refuses it ({a_[0]})", a_[0] in (400, 401, 403), f"{a_[0]} {a_[2][:200]!r}")
+    # a bit (the default), through each server; the same bit's words attach under the existing bit on both
+    ja, jb = say_pair("say: a bit", "Say bit about the cheese grater that grates back (P).", "Say bit about the cheese grater that grates back (R).")
+    ok("say: a bit is a jot, undoable", ja.get("kind") == "bit" and ja["idea"]["ok"] is True and ja["undo"]["POST"] == "/api/undo"
+       and jb["kind"] == "bit" and jb["idea"]["ok"] is True, json.dumps(jb)[:300])
+    both("say: after a bit", reads)
+    say_pair("say: a bit from a screen", "Say bit from the set page about elevators (P).", "Say bit from the set page about elevators (R).",
+             {"context": {"screen": "set", "set_id": "set:x", "junk": 1}})
+    # a question: a conversation and a job for the worker
+    ja, jb = say_pair("say: a question", "What did I write about the parking meter (P)?", "What did I write about the parking meter (R)?")
+    ok("say: a question opens a conversation (201)", ja.get("kind") == "question" and "chat" in ja and jb["kind"] == "question" and "chat" in jb, json.dumps(jb)[:300])
+    both("say: after a question", reads)
+    # the override: his tap on "Not a question? Save as a bit", and the other way round
+    say_pair("say: a question made a bit", "How do I get from the airport to the gate (P)?", "How do I get from the airport to the gate (R)?", {"kind": "bit"})
+    say_pair("say: a bit made a question", "The dentist is a drug dealer and I owe him (P)", "The dentist is a drug dealer and I owe him (R)", {"kind": "question"})
+    both("say: after the overrides", reads)
+    # the commands: a set list, a set list with the weekday for a title, a bit onto tonight (asked, none, chosen)
+    say_pair("say: a new set", "new 7 for friday")
+    say_pair("say: a new set with number words", "make me a tight forty five for the late show")
+    say_pair("say: a new set by weekday", "build me a tight 5")
+    both("say: after new sets", reads)
+    say_pair("say: add, nothing like it", "add the zebra quantum bit to tonight")
+    jokes = (body(R.call(py, "GET", "/api/jokes?limit=40", app)) or {}).get("items") or []
+    if jokes:
+        j0 = jokes[0]
+        words = [w for w in re.findall(r"[a-z0-9']+", (j0.get("title") or "").lower()) if len(w) >= 4][:2]
+        ok("say: the scratch notebook has a bit to add", bool(words), json.dumps(j0)[:200])
+        if words:
+            say_pair("say: add by name", f"add the {' '.join(words)} bit to tonight")
+            say_pair("say: add by choice", "add the zebra quantum bit to tonight", extra={"choice": j0["id"]})
+            say_pair("say: add by choice again (already there or created)", "add the zebra quantum bit to tonight", extra={"choice": j0["id"]})
+    both("say: after the commands", reads + ["/api/boards?include_hidden=1"])
+    # a question from a bit's page names the bit
+    if jokes:
+        say_pair("say: a question about a bit", "Why does this one work (P)?", "Why does this one work (R)?", {"context": {"joke_id": jokes[0]["id"], "screen": "bit"}})
+        say_pair("say: a question about a bit that is not one", "Why does this one work too (P)?", "Why does this one work too (R)?", {"context": {"joke_id": "joke:nope"}})
+    both("say: after the questions", reads)
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -1632,6 +1958,8 @@ def main() -> int:
 
     tmp = Path(tempfile.mkdtemp(prefix="pk-t10-"))
     comedy, data, home = tmp / "comedy", tmp / "data", tmp / "home"
+    global PY_DATA
+    PY_DATA = data
     for d in (data, home, tmp / "cache"):
         d.mkdir()
     R.build_comedy(comedy)
@@ -1771,7 +2099,18 @@ def main() -> int:
         film_phase()
         chats_phase()
         venues_phase()
+        try:
+            ingest_phase(port, pw)
+        except Exception as e:  # noqa: BLE001  the phase's own breakage is a problem to report, not a lost run
+            import traceback
+            problems.append(f"ingest phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            say_phase()
+        except Exception as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"say phase crashed: {traceback.format_exc()[-900:]}")
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
+        report["python_sync_after_pk_api_decisions"] = python_full_load_demo(port, pw)
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
                                       ("POST", "/api/decision", 200), ("POST", "/api/undo", 200), ("POST", "/api/merge", 200),

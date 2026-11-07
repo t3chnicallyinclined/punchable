@@ -51,7 +51,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 30] = [
+pub const OWN_PATHS: [&str; 33] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -82,6 +82,9 @@ pub const OWN_PATHS: [&str; 30] = [
     "/api/ask/chats",
     "/api/venues",
     "/api/venues.geojson",
+    "/api/worker/files",
+    "/api/worker/files/content",
+    "/api/worker/state",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -90,7 +93,7 @@ pub const OWN_PATHS: [&str; 30] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 20] = [
+pub const OWN_PATTERNS: [&str; 21] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -111,12 +114,13 @@ pub const OWN_PATTERNS: [&str; 20] = [
     "/api/worker/jobs/{id}/file",
     "/api/merge/{id}",
     "/api/ask/chats/{id}",
+    "/api/worker/jokes/{id}",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 27] = [
+pub const OWN_WRITE_PATHS: [&str; 33] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -144,6 +148,12 @@ pub const OWN_WRITE_PATHS: [&str; 27] = [
     "/api/import/youtube",
     "/api/upload",
     "/api/ask/chats",
+    "/api/worker/files",
+    "/api/worker/ideas",
+    "/api/worker/decision",
+    "/api/worker/undo",
+    "/api/worker/events",
+    "/api/say",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
@@ -448,6 +458,23 @@ pub fn app(st: AppState) -> Router {
         .route("/api/venues", read_route(&st, routes::venues::venues))
         .route("/api/venues.geojson", read_route(&st, routes::venues::geojson))
         .route("/api/venues/{id}", patch_route(&st, writes::venues::patch))
+        // T10 round 6, group A: the ingest routes of the home worker and gsync (`ingest_api.py`)
+        .route(
+            "/api/worker/files",
+            finish(
+                &st,
+                get(guarded(&st, writes::ingest::list)).post(guarded_write(&st, writes::ingest::put)),
+            ),
+        )
+        .route("/api/worker/files/content", read_route(&st, writes::ingest::content))
+        .route("/api/worker/state", read_route(&st, writes::ingest::state))
+        .route("/api/worker/jokes/{id}", read_route(&st, routes::sets::joke))
+        .route("/api/worker/ideas", write_route(&st, writes::ingest::ideas))
+        .route("/api/worker/decision", write_route(&st, writes::ingest::decision))
+        .route("/api/worker/undo", write_route(&st, writes::ingest::undo))
+        .route("/api/worker/events", write_route(&st, writes::ingest::events))
+        // T10 round 6, group B: say it or ask it
+        .route("/api/say", write_route(&st, writes::say::say))
         // T10 group 6, the cheap half: the one-shot questions and the imports that only queue a job
         .route("/api/ask", write_route(&st, writes::ask::ask))
         .route("/api/riff", write_route(&st, writes::ask::riff))
@@ -478,8 +505,8 @@ pub fn state(config: ApiConfig) -> anyhow::Result<AppState> {
     // the private legal rules, when this process has the file (the hosted pod does not): the generic markers plus his
     let mut config = config;
     config.legal = match std::fs::read_to_string(&config.legal_rules) {
-        Ok(text) => pk_core::legal::Legal::from_rules_json(&text),
-        Err(_) => pk_core::legal::Legal::default(),
+        Ok(text) => pk_core::legal::Legal::from_rules(&text, config.legal_owner.as_deref()),
+        Err(_) => pk_core::legal::Legal::from_rules("", config.legal_owner.as_deref()),
     };
     tracing::info!(markers = config.legal.len(), "legal rules loaded");
     Ok(AppState::new(config, verifier, metrics, http))

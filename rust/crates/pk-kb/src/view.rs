@@ -73,6 +73,23 @@ impl View {
         report: Vec<String>,
         owner_id: &str,
     ) -> Self {
+        let mut v = Self::replayed(meta, nodes, edges, decisions, report, owner_id);
+        v.resolve_merges();
+        v.index();
+        v
+    }
+
+    /// The replay alone: the decisions applied in order, merges not resolved and nothing indexed (the Python's
+    /// `ReplayOnly` in `db/load.py` `sync`, which wants the records as the replay leaves them because the reader
+    /// resolves merges, as with the database).
+    pub fn replayed(
+        meta: &Value,
+        nodes: impl IntoIterator<Item = Rec>,
+        edges: impl IntoIterator<Item = Rec>,
+        decisions: Vec<Decision>,
+        report: Vec<String>,
+        owner_id: &str,
+    ) -> Self {
         let mut graph_meta = Map::new();
         for k in ["version", "generated_at", "runs"] {
             graph_meta.insert(k.to_string(), meta.get(k).cloned().unwrap_or(Value::Null));
@@ -110,8 +127,6 @@ impl View {
         for (i, d) in ds.iter().enumerate() {
             v.apply(i, d);
         }
-        v.resolve_merges();
-        v.index();
         v
     }
 

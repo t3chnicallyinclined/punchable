@@ -1,0 +1,1658 @@
+{
+ "phrases": [
+  {
+   "text": "What's my strongest closer?",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "what is my best bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "whats my last set",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "when did I do the dentist bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "where was that",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "which bit killed",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "who laughed",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "why does the airport bit work",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "how do I get from A to B",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "hows the closer",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "do I have a bit about dogs",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "does the parrot bit work",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "did I try the belt one",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "can you find the kale bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "should I open with the dentist",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "would the landlord bit work",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "is the parrot bit tight",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "are my bits any good",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "was that a good set",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "have I done this one",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "any bit about trains",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "anything about socks",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "any",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "got a bit about cats",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "got",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "find",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "find the dentist bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "look at my closer",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "look",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "list my bits",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "show me my last set",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "pull up the airport bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "give me a closer",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "build me a tight 5",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "make a 10 for the club",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 10,
+    "title": "Club · 10"
+   }
+  },
+  {
+   "text": "tell me about the parrot bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "search for belts",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "remind me what I said about dryers",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "um what's my best bit",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "oh and the dentist bit",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "so uh like the airport",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "well hmm, how do I end",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "ok okay also wait",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "and",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "oh",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "but why",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "like what",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "hey you there",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "yeah",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "um uh",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "The dentist is a drug dealer?",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "What if the dog could talk?",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "  spaced   out   question ?  ",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "?",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "What if the dentist charged by the minute",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "what if",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "imagine a world without socks",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "picture this: a parrot lawyer",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "you know how airports are",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "you know when you lose a sock",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "you know what I hate",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "so my landlord is a ghost",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my dad bought a drone",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my mom thinks I'm a doctor",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my wife says I snore",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my husband hums",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my boyfriend is a raccoon",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my kid ate a crayon",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my kids",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my daughter learned to swear",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my brother",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my sister runs a cult",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my roommate is a mime",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my neighbor's dog",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my neighbour",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my landlord",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my boss is a bot",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my doctor said breathe",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my dentist",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my uber was late",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my therapist",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my cat judges me",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "my dog",
+   "kind": "bit",
+   "rule": "premise",
+   "command": null
+  },
+  {
+   "text": "how are my bits doing",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "my bits",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my best",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "tell me my strongest",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "what about my tight 5",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "my last set was rough",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my 5",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my 12 minutes",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my closer needs work",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my opener",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my notebook",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my stuff",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my weakest",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my jokes",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "my sets",
+   "kind": "question",
+   "rule": "my_material",
+   "command": null
+  },
+  {
+   "text": "new 7 for friday",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "Friday · 7"
+   }
+  },
+  {
+   "text": "new 5",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "make a 10 for the club",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 10,
+    "title": "Club · 10"
+   }
+  },
+  {
+   "text": "build me a tight 5",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "start a quick 15 for the late show",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 15,
+    "title": "Late show · 15"
+   }
+  },
+  {
+   "text": "create another 20",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 20,
+    "title": "Friday · 20"
+   }
+  },
+  {
+   "text": "give me a fresh 8",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 8,
+    "title": "Friday · 8"
+   }
+  },
+  {
+   "text": "set up a 12 minute set",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 12,
+    "title": "Friday · 12"
+   }
+  },
+  {
+   "text": "setup 3",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 3,
+    "title": "Friday · 3"
+   }
+  },
+  {
+   "text": "a new 6 spot",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 6,
+    "title": "Friday · 6"
+   }
+  },
+  {
+   "text": "new 240",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 240,
+    "title": "Friday · 240"
+   }
+  },
+  {
+   "text": "new 241",
+   "kind": "question",
+   "rule": "request",
+   "command": null
+  },
+  {
+   "text": "new 0",
+   "kind": "question",
+   "rule": "request",
+   "command": null
+  },
+  {
+   "text": "new seven for friday",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "Friday · 7"
+   }
+  },
+  {
+   "text": "new forty five",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 45,
+    "title": "Friday · 45"
+   }
+  },
+  {
+   "text": "new forty-five for tuesday",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 45,
+    "title": "Tuesday · 45"
+   }
+  },
+  {
+   "text": "make a clean sixty",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 60,
+    "title": "Friday · 60"
+   }
+  },
+  {
+   "text": "build me a killer ten set list",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 10,
+    "title": "Friday · 10"
+   }
+  },
+  {
+   "text": "make me a solid 7 min set on friday night",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "Friday night · 7"
+   }
+  },
+  {
+   "text": "new 7 for the.",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "The · 7"
+   }
+  },
+  {
+   "text": "new 7 for",
+   "kind": "question",
+   "rule": "request",
+   "command": null
+  },
+  {
+   "text": "new 5.",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "new 5!",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "New 5 For Friday",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "Friday · 5"
+   }
+  },
+  {
+   "text": "new 5 for 'the club'",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 5,
+    "title": "'the club' · 5"
+   }
+  },
+  {
+   "text": "new 10 for THE late show",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 10,
+    "title": "Late show · 10"
+   }
+  },
+  {
+   "text": "new 10 for an open mic",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 10,
+    "title": "Open mic · 10"
+   }
+  },
+  {
+   "text": "new 7 at the cellar",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "Cellar · 7"
+   }
+  },
+  {
+   "text": "new 7 on saturday",
+   "kind": "command",
+   "rule": "command_new_set",
+   "command": {
+    "op": "new_set",
+    "minutes": 7,
+    "title": "Saturday · 7"
+   }
+  },
+  {
+   "text": "add the kale bit to tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "put the dentist bit in tonight's set",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "dentist bit",
+    "words": [
+     "dentist"
+    ]
+   }
+  },
+  {
+   "text": "add parrot to tonight's set list",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "parrot",
+    "words": [
+     "parrot"
+    ]
+   }
+  },
+  {
+   "text": "stick the airport bit into tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "airport bit",
+    "words": [
+     "airport"
+    ]
+   }
+  },
+  {
+   "text": "throw socks onto tonight's setlist",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "socks",
+    "words": [
+     "socks"
+    ]
+   }
+  },
+  {
+   "text": "drop the belt one in my set list for tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "belt one",
+    "words": [
+     "belt"
+    ]
+   }
+  },
+  {
+   "text": "slot the closer in the set",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "closer",
+    "words": [
+     "closer"
+    ]
+   }
+  },
+  {
+   "text": "add in the kale bit to tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "add the kale bit to the setlist",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "add kale to my list",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "add the kale bit",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "add to tonight",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "put it on tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "it",
+    "words": []
+   }
+  },
+  {
+   "text": "add the kale bit to tonight?",
+   "kind": "question",
+   "rule": "question_mark",
+   "command": null
+  },
+  {
+   "text": "add the kale bit to tonight.",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "add the 'kale' bit to tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale' bit",
+    "words": [
+     "kale'"
+    ]
+   }
+  },
+  {
+   "text": "add THE Kale Bit to Tonights set",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "add  the   kale  bit  to  tonight",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "put the dentist bit in tonight’s set",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "dentist bit",
+    "words": [
+     "dentist"
+    ]
+   }
+  },
+  {
+   "text": "add the kale bit to tonights list",
+   "kind": "command",
+   "rule": "command_add_to_tonight",
+   "command": {
+    "op": "add_to_tonight",
+    "query": "kale bit",
+    "words": [
+     "kale"
+    ]
+   }
+  },
+  {
+   "text": "The dentist is a drug dealer",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "I went to the airport and they took my belt",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "Dogs are just small wolves with anxiety",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "",
+   "kind": "bit",
+   "rule": "empty",
+   "command": null
+  },
+  {
+   "text": "   ",
+   "kind": "bit",
+   "rule": "empty",
+   "command": null
+  },
+  {
+   "text": "Okay",
+   "kind": "bit",
+   "rule": "only_fillers",
+   "command": null
+  },
+  {
+   "text": "my",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "new",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "a new",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "build",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "make it work",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "write that down",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "put that in a bit",
+   "kind": "question",
+   "rule": "request",
+   "command": null
+  },
+  {
+   "text": "run",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "sort of",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "I made a 5 minute set for a friend",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "tell my mother nothing",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "get lost",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "look at me now",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Why did the chicken cross the road",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "What a day",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "whatever",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "who cares",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Is this thing on",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "How about that",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Remind me never to fly again",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Give it up for the band",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Show business is hard",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Make America great",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Pull the cord",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Do not go gentle",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Am I the only one",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "Had a dream about a sock",
+   "kind": "question",
+   "rule": "leading_wh_or_aux",
+   "command": null
+  },
+  {
+   "text": "café owners are like that",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "Über driver tonight",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "niño",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "’tis the season",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  },
+  {
+   "text": "it’s a bit about my mother",
+   "kind": "bit",
+   "rule": "default",
+   "command": null
+  }
+ ],
+ "bits": [
+  {
+   "query": "kale bit",
+   "words": [
+    "kale"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "airport",
+   "words": [
+    "airport"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  },
+  {
+   "query": "the airport bit",
+   "words": [
+    "airport"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  },
+  {
+   "query": "parrot lawyer",
+   "words": [
+    "parrot",
+    "lawyer"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:parrot-lawyer",
+     "title": "Parrot lawyer",
+     "short_name": "Parrot lawyer",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:parrot-lawyer",
+     "title": "Parrot lawyer",
+     "short_name": "Parrot lawyer",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  },
+  {
+   "query": "socks",
+   "words": [
+    "socks"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "sock",
+   "words": [
+    "sock"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "dryer",
+   "words": [
+    "dryer"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "nothing like it",
+   "words": [
+    "zebra"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "",
+   "words": [],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "airport bins",
+   "words": [
+    "airport",
+    "bins"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    },
+    {
+     "joke_id": "joke:old-bins",
+     "title": "Old bins version",
+     "short_name": "Old bins version",
+     "score": 0.5,
+     "nights": 0
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  },
+  {
+   "query": "landlord rent",
+   "words": [
+    "landlord",
+    "rent"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:landlord-chat",
+     "title": "Landlord group chat",
+     "short_name": "Landlord group",
+     "score": 0.5,
+     "nights": 1,
+     "sure": false
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:landlord-chat",
+     "title": "Landlord group chat",
+     "short_name": "Landlord group",
+     "score": 0.5,
+     "nights": 1,
+     "sure": false
+    }
+   ]
+  },
+  {
+   "query": "belt",
+   "words": [
+    "belt"
+   ],
+   "rows": [],
+   "rows_cap_1": []
+  },
+  {
+   "query": "bins",
+   "words": [
+    "bin"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 0.3,
+     "nights": 3,
+     "sure": false
+    },
+    {
+     "joke_id": "joke:old-bins",
+     "title": "Old bins version",
+     "short_name": "Old bins version",
+     "score": 0.3,
+     "nights": 0
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 0.3,
+     "nights": 3,
+     "sure": false
+    }
+   ]
+  },
+  {
+   "query": "the",
+   "words": [],
+   "rows": [
+    {
+     "joke_id": "joke:landlord-chat",
+     "title": "Landlord group chat",
+     "short_name": "Landlord group",
+     "score": 0.3,
+     "nights": 1,
+     "sure": false
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:landlord-chat",
+     "title": "Landlord group chat",
+     "short_name": "Landlord group",
+     "score": 0.3,
+     "nights": 1,
+     "sure": false
+    }
+   ]
+  },
+  {
+   "query": "air",
+   "words": [
+    "air"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 0.3,
+     "nights": 3,
+     "sure": false
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 0.3,
+     "nights": 3,
+     "sure": false
+    }
+   ]
+  },
+  {
+   "query": "airp",
+   "words": [
+    "airp"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:airport-bins",
+     "title": "Airport bins",
+     "short_name": "Airport bins",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  },
+  {
+   "query": "parrots",
+   "words": [
+    "parrots"
+   ],
+   "rows": [
+    {
+     "joke_id": "joke:parrot-lawyer",
+     "title": "Parrot lawyer",
+     "short_name": "Parrot lawyer",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ],
+   "rows_cap_1": [
+    {
+     "joke_id": "joke:parrot-lawyer",
+     "title": "Parrot lawyer",
+     "short_name": "Parrot lawyer",
+     "score": 1.0,
+     "nights": 3,
+     "sure": true
+    }
+   ]
+  }
+ ],
+ "weekday": "Friday"
+}

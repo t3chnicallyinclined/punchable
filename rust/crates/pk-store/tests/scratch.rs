@@ -211,7 +211,7 @@ async fn record_looking_strings_stay_strings() {
         "id": "perf:p1", "type": "performance", "set": "set:s1", "start_ms": 1,
         "text": "note: see doc", "name": "2015-02-18", "kind": "bit", "source": "joke:zzz"
     }));
-    let row = NodeRow::from_node(&n, 0).unwrap();
+    let row = NodeRow::from_node(&n, 0.0).unwrap();
     store
         .write(
             "CREATE performance CONTENT $row RETURN id;",
@@ -251,7 +251,7 @@ async fn none_and_null_stay_distinct() {
     };
     // a node: `summary: null` is NULL, `first_seen` absent is NONE
     let n = rec(json!({"id": "joke:n", "type": "joke", "title": "t", "stage": "idea", "summary": null}));
-    let row = NodeRow::from_node(&n, 0).unwrap();
+    let row = NodeRow::from_node(&n, 0.0).unwrap();
     store
         .write(
             "CREATE joke CONTENT $row RETURN id;",

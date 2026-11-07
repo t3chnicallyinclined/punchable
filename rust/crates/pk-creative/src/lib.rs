@@ -25,6 +25,7 @@ pub mod oneshot;
 pub mod punch;
 pub mod pyish;
 pub mod reducers;
+pub mod say;
 pub mod setlist;
 pub mod store;
 pub mod story;

@@ -40,6 +40,9 @@ pub struct ApiConfig {
     /// The court-material rule every stored text goes through (`refuse_legal`): the generic markers until the binary
     /// adds the file's.
     pub legal: pk_core::legal::Legal,
+    /// `PUNCHABLE_OWNER_EMAIL`: the owner the legal rules name when the rules file names none (part of their
+    /// fingerprint, `GET /api/worker/state`).
+    pub legal_owner: Option<String>,
     /// `PK_VEC_SWEEP_S` (default 60): how often the vector sweeper runs; `0` = never (a test pair, a pod that must
     /// not embed).
     pub sweep_every: Option<std::time::Duration>,
@@ -147,6 +150,7 @@ impl ApiConfig {
                     .join("legal_rules.json")
             }),
             legal: pk_core::legal::Legal::default(),
+            legal_owner: env.opt("PUNCHABLE_OWNER_EMAIL").map(str::to_string),
             live_ping: std::time::Duration::from_secs_f64(
                 env.f64("PK_LIVE_PING_S")?.filter(|s| *s > 0.0).unwrap_or(20.0),
             ),

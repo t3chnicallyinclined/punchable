@@ -12,7 +12,7 @@ use surrealdb::types::{Array, Number, Object, RecordId, Value};
 
 use crate::error::{Result, StoreError};
 use crate::ids::{EDGE_TABLES, key_str, node_kind_of_table, node_rid, parse_node_rid, rid_str, table_of};
-use crate::value::{as_i64, as_str, from_db, to_db};
+use crate::value::{as_f64, as_i64, as_str, from_db, to_db};
 
 /// Fields a node row carries that are not part of the KB node.
 pub const DB_ONLY_NODE: [&str; 5] = ["ord", "working", "working_sets", "embedding", "embedded_sha"];
@@ -53,6 +53,21 @@ fn record_id(o: &mut Object, key: &str, what: &str) -> Result<RecordId> {
 fn int(o: &mut Object, key: &str, what: &str) -> Result<i64> {
     let v = o.remove(key).unwrap_or(Value::None);
     as_i64(&v).ok_or_else(|| StoreError::mapping(format!("{what}: '{key}' is not a number: {v:?}")))
+}
+
+/// A number column as `f64` (`ord` is `TYPE number`: integral for a loaded record, fractional for one a sync slotted in).
+fn number(o: &mut Object, key: &str, what: &str) -> Result<f64> {
+    let v = o.remove(key).unwrap_or(Value::None);
+    as_f64(&v).ok_or_else(|| StoreError::mapping(format!("{what}: '{key}' is not a number: {v:?}")))
+}
+
+/// An `ord` as the database value: an integer when it is one (what the loader writes), else a float.
+pub fn ord_value(ord: f64) -> Value {
+    if ord.fract() == 0.0 && ord.abs() < 9.0e15 {
+        Value::Number(Number::Int(ord as i64))
+    } else {
+        Value::Number(Number::Float(ord))
+    }
 }
 
 fn string(o: &mut Object, key: &str, what: &str) -> Result<String> {
@@ -113,8 +128,9 @@ pub struct NodeRow {
     pub kind: NodeKind,
     /// `<table>:<key>`.
     pub id: RecordId,
-    /// The files backend's insertion order.
-    pub ord: i64,
+    /// The files backend's insertion order. A number, not an integer: a record a sync slots between two others
+    /// gets an `ord` between theirs (`db/load.py` `sync`), so reading it back as an integer would put it wrong.
+    pub ord: f64,
     /// Every other field.
     pub fields: Object,
 }
@@ -122,7 +138,7 @@ pub struct NodeRow {
 impl NodeRow {
     /// `node_to_row`: a KB node (`graph.json` shape) at position `ord`. The node's `type` must agree with its id
     /// prefix; a field that collides with a DB-only name is an error.
-    pub fn from_node(n: &Rec, ord: i64) -> Result<Self> {
+    pub fn from_node(n: &Rec, ord: f64) -> Result<Self> {
         let id_s = n.get("id").and_then(Json::as_str).unwrap_or("");
         let id: NodeId = id_s.parse()?;
         let want = id.type_name();
@@ -167,7 +183,7 @@ impl NodeRow {
         let tb = table_of(&id);
         let kind = node_kind_of_table(&tb)
             .ok_or_else(|| StoreError::mapping(format!("node row: '{tb}' is not a node table")))?;
-        let ord = int(&mut o, "ord", &format!("node row {}", rid_str(&id)))?;
+        let ord = number(&mut o, "ord", &format!("node row {}", rid_str(&id)))?;
         Ok(Self {
             kind,
             id,
@@ -180,7 +196,7 @@ impl NodeRow {
     pub fn content(&self) -> Value {
         let mut o = self.fields.clone();
         o.insert("id", Value::RecordId(self.id.clone()));
-        o.insert("ord", self.ord);
+        o.insert("ord", ord_value(self.ord));
         Value::Object(o)
     }
 
@@ -285,8 +301,9 @@ pub struct EdgeRow {
     pub in_: RecordId,
     /// The destination node (`dst`).
     pub out: RecordId,
-    /// The files backend's insertion order.
-    pub ord: i64,
+    /// The files backend's insertion order. A number, not an integer: a record a sync slots between two others
+    /// gets an `ord` between theirs (`db/load.py` `sync`), so reading it back as an integer would put it wrong.
+    pub ord: f64,
     /// The pipeline run that proposed it (`source: "auto:<run>"`), else `NULL`.
     pub run_id: Option<String>,
     /// Every other field.
@@ -295,7 +312,7 @@ pub struct EdgeRow {
 
 impl EdgeRow {
     /// `edge_to_row`: a KB edge at position `ord`. `kind`, `id`, `src` and `dst` are required.
-    pub fn from_edge(e: &Rec, ord: i64) -> Result<Self> {
+    pub fn from_edge(e: &Rec, ord: f64) -> Result<Self> {
         let id_s = e.get("id").and_then(Json::as_str).unwrap_or("");
         let kind_s = e.get("kind").and_then(Json::as_str).unwrap_or("");
         let kind = EdgeKind::parse(kind_s).ok_or_else(|| {
@@ -354,7 +371,7 @@ impl EdgeRow {
         let what = format!("edge row {tb}:{}", key_str(&id.key));
         let in_ = record_id(&mut o, "in", &what)?;
         let out = record_id(&mut o, "out", &what)?;
-        let ord = int(&mut o, "ord", &what)?;
+        let ord = number(&mut o, "ord", &what)?;
         let run_id = opt_string(&mut o, "run_id", &what)?;
         Ok(Self {
             kind,
@@ -378,7 +395,7 @@ impl EdgeRow {
         o.insert("id", Value::RecordId(self.id()));
         o.insert("in", Value::RecordId(self.in_.clone()));
         o.insert("out", Value::RecordId(self.out.clone()));
-        o.insert("ord", self.ord);
+        o.insert("ord", ord_value(self.ord));
         o.insert("run_id", self.run_id.clone().map_or(Value::Null, Value::String));
         Value::Object(o)
     }
@@ -938,12 +955,26 @@ mod tests {
     }
 
     #[test]
+    fn a_fractional_ord_survives_the_round_trip() {
+        // a sync slots a new record between two others at an ord between theirs; read back as an integer it would
+        // tie with its neighbour and the view's order would be a guess
+        let n = rec(json!({"id": "joke:a", "type": "joke", "title": "A"}));
+        for ord in [0.0, 41.0, 41.5, 41.25] {
+            let row = NodeRow::from_node(&n, ord).unwrap();
+            let back = NodeRow::from_record(row.content()).unwrap();
+            assert!((back.ord - ord).abs() < f64::EPSILON, "{ord} came back as {}", back.ord);
+        }
+        assert_eq!(ord_value(3.0), Value::Number(Number::Int(3)));
+        assert_eq!(ord_value(3.5), Value::Number(Number::Float(3.5)));
+    }
+
+    #[test]
     fn node_rows_both_ways() {
         let n = rec(
             json!({"id": "perf:p1", "type": "performance", "set": "set:s1", "start_ms": 1, "text": "x",
             "_by_tristan": true, "note": null}),
         );
-        let row = NodeRow::from_node(&n, 7).unwrap();
+        let row = NodeRow::from_node(&n, 7.0).unwrap();
         assert_eq!(row.table(), "performance");
         assert_eq!(
             row.fields.get("set"),
@@ -954,9 +985,9 @@ mod tests {
         let back = NodeRow::from_record(row.content()).unwrap().into_node();
         assert_eq!(Json::Object(back), Json::Object(n));
         let bad = rec(json!({"id": "perf:p1", "type": "joke"}));
-        assert!(NodeRow::from_node(&bad, 0).is_err());
+        assert!(NodeRow::from_node(&bad, 0.0).is_err());
         let bad = rec(json!({"id": "joke:j", "type": "joke", "ord": 3}));
-        assert!(NodeRow::from_node(&bad, 0).is_err());
+        assert!(NodeRow::from_node(&bad, 0.0).is_err());
     }
 
     #[test]
@@ -965,13 +996,13 @@ mod tests {
             json!({"id": "e:aaaaaaaaaaa1", "kind": "part_of", "src": "unit:m1", "dst": "joke:meters",
             "status": "confirmed", "confidence": 0.9, "source": "auto:r1", "_edited": true}),
         );
-        let row = EdgeRow::from_edge(&e, 3).unwrap();
+        let row = EdgeRow::from_edge(&e, 3.0).unwrap();
         assert_eq!(row.run_id.as_deref(), Some("r1"));
         assert_eq!(rid_str(&row.id()), "part_of:aaaaaaaaaaa1");
         let back = EdgeRow::from_record(row.content()).unwrap().into_edge();
         assert_eq!(Json::Object(back), Json::Object(e));
         let bad = rec(json!({"id": "e:aaaaaaaaaaa1", "kind": "friend", "src": "unit:m1", "dst": "joke:meters"}));
-        assert!(EdgeRow::from_edge(&bad, 0).is_err());
+        assert!(EdgeRow::from_edge(&bad, 0.0).is_err());
     }
 
     #[test]

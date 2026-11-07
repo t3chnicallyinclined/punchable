@@ -1,0 +1,122 @@
+[
+ {
+  "name": "none",
+  "rules_text": "",
+  "owner_env": null,
+  "texts": [
+   "The petitioner walked in.",
+   "The PETITIONER and the respondent walked in.",
+   "golden county, plaintiff",
+   "golden county golden county",
+   "silver county and the silver county clerk",
+   "nothing here",
+   ""
+  ],
+  "canonical": "{\"extra\": [], \"ids\": [], \"kw\": [\"petition\", \"court\", \"cross examination\", \"exhibit\", \"affidavit\", \"deposition\", \"lawsuit\", \"hearing notes\", \"legal\"], \"markers\": [\"supreme court of the state of\", \"court of the state of\", \"appellate division\", \"index no\", \"docket no\", \"file no.\", \"petitioner\", \"respondent\", \"plaintiff\", \"defendant\", \"under penalty of perjury\", \"sworn to before me\", \"order to show cause\", \"affirmation in\"], \"own_kw_only\": [], \"owner\": null, \"parents\": []}",
+  "legal": [
+   false,
+   true,
+   false,
+   false,
+   false,
+   false,
+   false
+  ]
+ },
+ {
+  "name": "owner_from_env",
+  "rules_text": "",
+  "owner_env": "me@example.com",
+  "texts": [
+   "The petitioner walked in.",
+   "The PETITIONER and the respondent walked in.",
+   "golden county, plaintiff",
+   "golden county golden county",
+   "silver county and the silver county clerk",
+   "nothing here",
+   ""
+  ],
+  "canonical": "{\"extra\": [], \"ids\": [], \"kw\": [\"petition\", \"court\", \"cross examination\", \"exhibit\", \"affidavit\", \"deposition\", \"lawsuit\", \"hearing notes\", \"legal\"], \"markers\": [\"supreme court of the state of\", \"court of the state of\", \"appellate division\", \"index no\", \"docket no\", \"file no.\", \"petitioner\", \"respondent\", \"plaintiff\", \"defendant\", \"under penalty of perjury\", \"sworn to before me\", \"order to show cause\", \"affirmation in\"], \"own_kw_only\": [], \"owner\": \"me@example.com\", \"parents\": []}",
+  "legal": [
+   false,
+   true,
+   false,
+   false,
+   false,
+   false,
+   false
+  ]
+ },
+ {
+  "name": "full",
+  "rules_text": "{\"owner\": \"boss@example.com\", \"legal_parents\": [\"folderB\", \"folderA\"], \"legal_folders_extra\": [\"fx\"], \"keywords\": [\"Moot\", \"legal\", \"ZETA\"], \"content_markers\": [\"Golden County\", \"petitioner\", \"Silver County\"], \"legal_ids\": [\"d2\", \"d1\"], \"own_keywords_only_ids\": [\"d9\"]}",
+  "owner_env": "ignored@example.com",
+  "texts": [
+   "The petitioner walked in.",
+   "The PETITIONER and the respondent walked in.",
+   "golden county, plaintiff",
+   "golden county golden county",
+   "silver county and the silver county clerk",
+   "nothing here",
+   ""
+  ],
+  "canonical": "{\"extra\": [\"fx\"], \"ids\": [\"d1\", \"d2\"], \"kw\": [\"petition\", \"court\", \"cross examination\", \"exhibit\", \"affidavit\", \"deposition\", \"lawsuit\", \"hearing notes\", \"legal\", \"moot\", \"zeta\"], \"markers\": [\"supreme court of the state of\", \"court of the state of\", \"appellate division\", \"index no\", \"docket no\", \"file no.\", \"petitioner\", \"respondent\", \"plaintiff\", \"defendant\", \"under penalty of perjury\", \"sworn to before me\", \"order to show cause\", \"affirmation in\", \"golden county\", \"silver county\"], \"own_kw_only\": [\"d9\"], \"owner\": \"boss@example.com\", \"parents\": [\"folderA\", \"folderB\"]}",
+  "legal": [
+   false,
+   true,
+   true,
+   false,
+   false,
+   false,
+   false
+  ]
+ },
+ {
+  "name": "duplicate_own_markers",
+  "rules_text": "{\"content_markers\": [\"Silver County\", \"silver county\"]}",
+  "owner_env": null,
+  "texts": [
+   "The petitioner walked in.",
+   "The PETITIONER and the respondent walked in.",
+   "golden county, plaintiff",
+   "golden county golden county",
+   "silver county and the silver county clerk",
+   "nothing here",
+   ""
+  ],
+  "canonical": "{\"extra\": [], \"ids\": [], \"kw\": [\"petition\", \"court\", \"cross examination\", \"exhibit\", \"affidavit\", \"deposition\", \"lawsuit\", \"hearing notes\", \"legal\"], \"markers\": [\"supreme court of the state of\", \"court of the state of\", \"appellate division\", \"index no\", \"docket no\", \"file no.\", \"petitioner\", \"respondent\", \"plaintiff\", \"defendant\", \"under penalty of perjury\", \"sworn to before me\", \"order to show cause\", \"affirmation in\", \"silver county\", \"silver county\"], \"own_kw_only\": [], \"owner\": null, \"parents\": []}",
+  "legal": [
+   false,
+   true,
+   false,
+   false,
+   true,
+   false,
+   false
+  ]
+ },
+ {
+  "name": "garbage",
+  "rules_text": "this is not json",
+  "owner_env": null,
+  "texts": [
+   "The petitioner walked in.",
+   "The PETITIONER and the respondent walked in.",
+   "golden county, plaintiff",
+   "golden county golden county",
+   "silver county and the silver county clerk",
+   "nothing here",
+   ""
+  ],
+  "canonical": "{\"extra\": [], \"ids\": [], \"kw\": [\"petition\", \"court\", \"cross examination\", \"exhibit\", \"affidavit\", \"deposition\", \"lawsuit\", \"hearing notes\", \"legal\"], \"markers\": [\"supreme court of the state of\", \"court of the state of\", \"appellate division\", \"index no\", \"docket no\", \"file no.\", \"petitioner\", \"respondent\", \"plaintiff\", \"defendant\", \"under penalty of perjury\", \"sworn to before me\", \"order to show cause\", \"affirmation in\"], \"own_kw_only\": [], \"owner\": null, \"parents\": []}",
+  "legal": [
+   false,
+   true,
+   false,
+   false,
+   false,
+   false,
+   false
+  ]
+ }
+]

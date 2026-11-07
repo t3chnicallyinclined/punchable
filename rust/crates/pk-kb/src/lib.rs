@@ -19,6 +19,7 @@ pub mod decision;
 pub mod error;
 pub mod ids;
 pub mod model;
+pub mod overlay;
 pub mod read;
 pub mod view;
 

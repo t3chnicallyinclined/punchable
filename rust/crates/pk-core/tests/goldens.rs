@@ -121,3 +121,35 @@ fn list_and_sorted_set_match_cpython() {
         }
     }
 }
+
+/// `gsync/rules.py` under synthetic rules files (`rust/tools/gen_legal_goldens.py`): the canonical text its
+/// fingerprint hashes, and `content_is_legal` over the probe texts.
+#[test]
+fn legal_rules_match_the_python_module() {
+    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/goldens/legal.json");
+    let cases: Vec<Value> = serde_json::from_str(
+        &std::fs::read_to_string(&p)
+            .unwrap_or_else(|e| panic!("{}: {e} (run python rust/tools/gen_legal_goldens.py)", p.display())),
+    )
+    .expect("golden is JSON");
+    assert!(cases.len() >= 5);
+    for c in &cases {
+        let name = text(&c["name"]);
+        let owner = c["owner_env"].as_str();
+        let l = pk_core::legal::Legal::from_rules(text(&c["rules_text"]), owner);
+        assert_eq!(l.canonical(), text(&c["canonical"]), "{name}: canonical");
+        let want: Vec<bool> = c["legal"]
+            .as_array()
+            .expect("legal")
+            .iter()
+            .map(|b| b.as_bool().unwrap())
+            .collect();
+        let got: Vec<bool> = c["texts"]
+            .as_array()
+            .expect("texts")
+            .iter()
+            .map(|t| l.is_legal(text(t)))
+            .collect();
+        assert_eq!(got, want, "{name}: content_is_legal");
+    }
+}

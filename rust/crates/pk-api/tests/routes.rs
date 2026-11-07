@@ -335,7 +335,6 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         "/api/jokes/a/b/versions",
         "/api/jokes/x/versions/y",
         "/api/worker/jobs/x/file",
-        "/api/worker/files",
     ] {
         let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, post).await.0, StatusCode::NOT_FOUND, "{p} is forwarded");
