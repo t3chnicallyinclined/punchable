@@ -94,10 +94,36 @@ class Said:
         self.data, self.model, self.provider = data, model, "anthropic"
 
 
+def _deterministic_products(MG) -> None:
+    """creative/merge.py takes `m @ m.T` and `M @ v` from the BLAS, whose float32 blocking follows the CPU's cache
+    sizes, so the "usually this close" levels (index.p99) differ in the 9th digit between machines even with the kernel
+    pinned (pin_blas.py): the CI `goldens-current` job saw 3 such numbers. Only for the golden: the unit matrix merge.py
+    stacks is a view whose `@` multiplies in float64 and rounds to float32 (the Rust test compares those levels to
+    float32 precision)."""
+    import types
+
+    import numpy as np
+
+    class F64Product(np.ndarray):
+        def __matmul__(self, other):
+            return (np.asarray(self, dtype=np.float64) @ np.asarray(other, dtype=np.float64)).astype(np.float32)
+
+    class _NP(types.ModuleType):
+        def __getattr__(self, name):
+            return getattr(np, name)
+
+        @staticmethod
+        def stack(*a, **k):
+            return np.stack(*a, **k).view(F64Product)
+
+    MG.np = _NP("numpy")
+
+
 def main():
     from creative import data as D
     from creative import memolink as ML
     from creative import merge as MG
+    _deterministic_products(MG)
     graph, decisions, table = corpus_parts()
     c = D.Corpus(graph, decisions=decisions, vectors=D.Vectors(table=table))
     ix = MG.index(c)

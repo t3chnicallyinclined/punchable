@@ -19,6 +19,11 @@
 #   gcr.io/distroless/cc-debian12:nonroot   the runtime
 # Move a pin only on purpose, with the build log's digest in the deploy log.
 FROM rust:1.99.1-slim-bookworm@sha256:f2c004e3d2d8b547e8cf7ffbc29205385f4e71d23e53e4e383065db5e9f822cd AS build
+# ort-sys links its static ONNX Runtime against libstdc++: the slim image has gcc but no g++, so rust-lld finds no
+# -lstdc++. Build stage only; the runtime image (distroless cc) already carries libstdc++.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends g++ \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY engine/config.hosted.toml engine/config.hosted.toml
 COPY db/schema.surql db/schema_extra.surql db/
