@@ -321,3 +321,77 @@ def test_run_sqlite_uploads_verifies_and_prunes(tmp_path, monkeypatch):
 
 
 _orig_check = B.check_sqlite_gz
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# the export leaves the recordings' rows out (docs/adr/0014)
+# --------------------------------------------------------------------------------------------------------------------
+def _stub_surreal(tables):
+    """A SurrealDB that answers INFO FOR DB with `tables` and every POST /export with a line naming what was asked."""
+    import http.server
+    import json
+    import threading
+
+    seen = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            if self.path.endswith("/sql"):
+                seen.append(("sql", body.decode()))
+                out = json.dumps([{"status": "OK", "result": {"tables": {t: "DEFINE TABLE " + t for t in tables}}}]).encode()
+                ctype = "application/json"
+            elif self.path.endswith("/export"):
+                cfg = json.loads(body)
+                seen.append(("export", cfg))
+                out = ("OPTION IMPORT;\nDEFINE TABLE " + ";\nDEFINE TABLE ".join(cfg["tables"]) + ";\n").encode()
+                ctype = "text/plain"
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, seen
+
+
+def test_export_names_every_table_but_the_uploads_then_their_definitions_alone(tmp_path, monkeypatch):
+    import gzip
+    srv, seen = _stub_surreal(["decision", "joke", "upload", "upload_part", "upload_stage"])
+    try:
+        monkeypatch.setenv("SURREAL_URL", f"http://127.0.0.1:{srv.server_address[1]}")
+        monkeypatch.setenv("SURREAL_USER", "api")
+        monkeypatch.setenv("SURREAL_PASS", "pw-for-the-test")
+        out = str(tmp_path / "d.surql.gz")
+        n = B.export_to_gzip(out)
+    finally:
+        srv.shutdown()
+    assert seen[0][0] == "sql" and "INFO FOR DB" in seen[0][1]
+    assert seen[1] == ("export", {"tables": ["decision", "joke"]}), "the rows of everything else"
+    assert seen[2] == ("export", {"tables": ["upload", "upload_part", "upload_stage"], **B.DEFINITIONS_ONLY}), \
+        "the recordings' table definitions, no rows"
+    text = gzip.open(out, "rb").read().decode()
+    assert len(text) == n
+    assert "DEFINE TABLE decision" in text and "DEFINE TABLE upload_part" in text
+    assert text.count("OPTION IMPORT;") == 1, "an import refuses a second OPTION IMPORT"
+
+
+def test_export_of_a_database_without_the_upload_tables_is_one_request(tmp_path, monkeypatch):
+    srv, seen = _stub_surreal(["decision", "joke"])
+    try:
+        monkeypatch.setenv("SURREAL_URL", f"http://127.0.0.1:{srv.server_address[1]}")
+        monkeypatch.setenv("SURREAL_USER", "api")
+        monkeypatch.setenv("SURREAL_PASS", "pw-for-the-test")
+        B.export_to_gzip(str(tmp_path / "d.surql.gz"))
+    finally:
+        srv.shutdown()
+    assert [k for k, _ in seen] == ["sql", "export"]

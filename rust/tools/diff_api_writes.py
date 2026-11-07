@@ -487,22 +487,41 @@ def raw_call(base: str, method: str, path: str, data: bytes, headers: dict):
         return 0, {}, b""
 
 
-def refused_unread(base: str, path: str, claimed: int) -> int:
-    """The status a server answers to a POST whose Content-Length claims `claimed` bytes and whose body is one byte long
-    (so it can only have been refused from the header)."""
+def refused_unread(base: str, path: str, claimed: int, extra: str = "", detail: bool = False):
+    """The status (and with `detail` the parsed body) a server answers to a POST whose Content-Length claims `claimed`
+    bytes and whose body is one byte long (so it can only have been refused from the header)."""
     import socket
     u = urllib.request.urlparse(base)
     with socket.create_connection((u.hostname, u.port), timeout=30) as s:
         head = (f"POST {path} HTTP/1.1\r\nHost: {u.hostname}:{u.port}\r\nAuthorization: {app['Authorization']}\r\n"
-                f"Content-Type: application/json\r\nContent-Length: {claimed}\r\n\r\n{{")
+                f"{extra or 'Content-Type: application/json' + chr(13) + chr(10)}Content-Length: {claimed}\r\n\r\n{{")
         s.sendall(head.encode())
         buf = b""
-        while b"\r\n" not in buf:
+        while b"\r\n\r\n" not in buf:
             chunk = s.recv(4096)
             if not chunk:
-                return 0
+                break
             buf += chunk
-        return int(buf.split(b" ", 2)[1])
+        if b"\r\n" not in buf:
+            return (0, None) if detail else 0
+        status = int(buf.split(b" ", 2)[1])
+        if not detail:
+            return status
+        head_b, _, rest = buf.partition(b"\r\n\r\n")
+        want = 0
+        for ln in head_b.split(b"\r\n")[1:]:
+            k, _, v = ln.partition(b":")
+            if k.strip().lower() == b"content-length":
+                want = int(v.strip())
+        while len(rest) < want:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            rest += chunk
+        try:
+            return status, json.loads(rest)
+        except ValueError:
+            return status, rest
 
 
 def same_write(label: str, method: str, path: str, b_py, b_rs=None, by_shape: bool = False, headers: dict | None = None) -> None:
@@ -1216,10 +1235,10 @@ def upload_phase(port: int, pw: str) -> None:
     both("upload: the transcriber's fetch refused", ["/api/worker/jobs/job:nope/file", "/api/worker/jobs/job:nope/file?backend=files"], headers=worker_tok)
     st, r = write(rs, "POST", "/api/ask", {"question": "A job that is not an upload?"})
     both("upload: a job that is no upload", [f"/api/worker/jobs/{q(r['job']['id'])}/file"], headers=worker_tok)
-    # a failed result keeps the recording (a queued transcriber kind may end only as a final failure)
+    # a final failure lets go of the recording (ADR 0014: a queued transcriber kind may end only as a final failure)
     keep = len(body(R.call(py, "GET", "/api/inbox", app))["items"])
     st, res = write(rs, "POST", f"/api/worker/jobs/{q(r1['job']['id'])}/result", {"ok": False, "error": "no transcriber"}, headers=worker_tok, want=(200,))
-    ok("upload: a failed result keeps the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep, json.dumps(res)[:200])
+    ok("upload: a failed result lets go of the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep - 1, json.dumps(res)[:200])
     stages = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM upload_stage);")[-1]["result"]
     ok("upload: no staging row is left once every upload is committed, cut short or deleted", stages == 0, str(stages))
     # the transcriber's result: ok deletes the upload (through either server), the other keeps nothing behind
@@ -1496,6 +1515,42 @@ def chats_phase() -> None:
         n_equal += not got
 
 
+def upload_end_phase() -> None:
+    """ADR 0014's lead defaults on both servers: 413 over 64 MiB with the Python's error, a recording's bytes gone with
+    a job he dropped and with a job that failed for good (through the other server than the one that took the upload),
+    kept when a failed result sends the job back to the queue."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set", "X-Filename": "end.m4a"}
+    extra = "Content-Type: audio/mp4\r\nX-Kind: set\r\n"
+    for label, claimed in (("one byte over 64 MiB", 64 * 1024 * 1024 + 1), ("a gigabyte", 1 << 30)):
+        a_, c_ = (refused_unread(base, "/api/upload", claimed, extra, detail=True) for base in (py, rs))
+        ok(f"upload cap: {label} is the same 413 on both", a_ == c_ == (413, {"error": "upload over 64 MiB"}), f"{a_} / {c_}")
+    inbox = lambda: body(R.call(py, "GET", "/api/inbox", app))["items"]  # noqa: E731
+    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
+        st, h, b = post_bytes(base, "/api/upload", (f"drop {who} ").encode() * 80, {**hdr, "X-Title": "Drop " + who})
+        r = json.loads(b)
+        jid, n0 = r["job"]["id"], len(inbox())
+        st, d = write(other, "POST", f"/api/jobs/{q(jid)}/drop", {"reason": "end test"})
+        ok(f"upload end: his drop through the other server ends {who}'s job", d["job"]["status"] == "failed", json.dumps(d)[:200])
+        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok) for b_ in (py, rs)]
+        ok(f"upload end: the dropped job's recording is gone on both servers",
+           all(g[0] == 404 for g in gone) and len(inbox()) == n0 - 1, str([(g[0], g[2][:80]) for g in gone]))
+    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
+        post_bytes(base, "/api/upload", (f"fail {who} ").encode() * 90, {**hdr, "X-Title": "Fail " + who})
+        st, c = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+        jid = c["job"]["id"]
+        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": True}, headers=worker_tok, want=(200,))
+        kept = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
+        ok(f"upload end: a failed result sent back to the queue keeps {who}'s recording", res["job"]["status"] == "queued" and kept == [200, 200], f"{res['job']['status']} {kept}")
+        st, c2 = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+        ok(f"upload end: the same job is handed out again", c2["job"]["id"] == jid, f"{c2['job']['id']} vs {jid}")
+        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": False}, headers=worker_tok, want=(200,))
+        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
+        ok(f"upload end: a job that failed for good lets go of {who}'s recording", res["job"]["status"] == "failed" and gone == [404, 404], f"{res['job']['status']} {gone}")
+    both("upload end: after", ["/api/inbox", "/api/today", "/api/notes"])
+
+
 def venues_same(label: str, path: str) -> None:
     """The same venue read on both servers; `generated_at` is each server's own clock and is the only thing left out."""
     global n_equal
@@ -1712,6 +1767,7 @@ def main() -> int:
         worker_phase()
         enqueue_phase()
         upload_phase(port, pw)
+        upload_end_phase()
         film_phase()
         chats_phase()
         venues_phase()
@@ -1740,7 +1796,7 @@ def main() -> int:
                                       ("POST", "/api/ask", 202), ("POST", "/api/riff", 202), ("POST", "/api/facts", 202),
                                       ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409),
                                       # round 4, group 6a
-                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("GET", "/api/inbox", 200),
+                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("POST", "/api/upload", 413), ("GET", "/api/inbox", 200),
                                       ("GET", "/api/worker/jobs/{id}/file", 200), ("GET", "/api/worker/jobs/{id}/file", 404),
                                       # Film it (build 24)
                                       ("POST", "/api/jokes/{id}/rant", 202), ("POST", "/api/jokes/{id}/hook", 202),

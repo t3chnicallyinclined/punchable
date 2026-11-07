@@ -15,6 +15,7 @@ pub mod creative;
 pub mod display;
 pub mod embed;
 pub mod error;
+pub mod expiry;
 pub mod index;
 pub mod instrument;
 pub mod jokes;
@@ -502,6 +503,12 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
             worker::Lease::embedder(sweep::me(), every),
             every,
         ));
+    }
+    // the recordings nobody collected (docs/adr/0014), when uploads live in the database
+    if st.config().upload_db
+        && let Some(every) = st.config().upload_sweep_every
+    {
+        tokio::spawn(expiry::run(st.clone(), expiry::lease(sweep::me(), every), every));
     }
     let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");

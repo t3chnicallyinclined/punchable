@@ -232,6 +232,8 @@ def main() -> int:
                PUNCHABLE_HOME=str(root / "home"), PK_CACHE_DIR=str(root / "cache"), PK_OWNER_ID="owner",
                PK_DBLOAD_DIR=str(root / "dbload"),
                PYTHONHASHSEED="0", PYTHONUTF8="1")
+    # the one setting a run may ask for: the uploads in the database (docs/adr/0014), on both servers or neither
+    env.update({k: v for k, v in os.environ.items() if k == "PK_UPLOAD_DB"})
     os.environ.clear()
     os.environ.update(env)  # sdb reads PUNCH_SECRETS at import: only the scratch credentials exist from here
     sys.path.insert(0, str(DESK / "db"))

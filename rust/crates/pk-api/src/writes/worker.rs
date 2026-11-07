@@ -157,6 +157,10 @@ pub async fn result(
                     let store = st.store_handle().ok_or_else(super::not_connected)?;
                     store.upload_delete(&name).await.map_err(store_err)?;
                 }
+                // a job that failed for good (not one sent back to the queue) lets go of its recording too (ADR 0014)
+                if !py::truthy(b.get("ok")) && job.get("status").and_then(Value::as_str) == Some("failed") {
+                    super::uploads::release_for_job(&st, &job).await;
+                }
                 Ok(json!({"ok": true, "job": brief(&job)}))
             }
             Written::Skipped(..) => Err(ApiError::internal("StateError", "a result's plan never skips")),

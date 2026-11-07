@@ -221,7 +221,11 @@ pub async fn drop(
             })
         };
         match cr.append_planned("jobs", &by, None, plan).await? {
-            Written::Landed(job) => Ok(json!({"ok": true, "job": brief(job.as_object().map_or(&Map::new(), |m| m))})),
+            Written::Landed(job) => {
+                let job = job.as_object().cloned().unwrap_or_default();
+                super::uploads::release_for_job(&st, &job).await;
+                Ok(json!({"ok": true, "job": brief(&job)}))
+            }
             Written::Skipped(..) => Err(crate::error::ApiError::internal(
                 "StateError",
                 "a drop's plan never skips",

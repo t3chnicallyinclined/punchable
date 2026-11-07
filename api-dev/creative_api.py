@@ -1170,6 +1170,8 @@ class Routes:
             raise HttpError(409, f"job is {j['status']}")
         reason = str(self.b.get("reason") or "dropped by the owner")[:300]
         st["jobs"].append("fail", jid, {"error": reason, "retry": False}, by=self.h.actor(self.b) if hasattr(self.h, "actor") else OWNER_ID)
+        if j["kind"] == "process_set" and self._hosted_upload():   # docs/adr/0014: a dropped job lets go of its recording
+            self._inbox_drop(j)
         return 200, {"ok": True, "job": job_brief(st["jobs"].get(jid))}
 
     # ---------------------------------------------------------------- writes (his actions)
@@ -1596,6 +1598,9 @@ class Routes:
         else:
             st["jobs"].append("fail", jid, {"error": str(self.b.get("error") or "failed")[:2000],
                                             "retry": bool(self.b.get("retry"))}, by="worker")
+            # docs/adr/0014: a job that failed for good (not one sent back to the queue) lets go of its recording
+            if j["kind"] == "process_set" and st["jobs"].get(jid)["status"] == "failed" and self._hosted_upload():
+                self._inbox_drop(j)
         return 200, {"ok": True, "job": job_brief(st["jobs"].get(jid))}
 
     def _upload_name(self, j) -> str | None:
