@@ -636,7 +636,7 @@ async fn a_sync_that_dies_midway_leaves_loading_cleared_at_the_next_start() {
     // 2. a sync killed midway: the flag is up and nobody holds the lease (it lapsed)
     store
         .query(
-            "UPDATE meta:state SET loading = true, sync_owed = false RETURN NONE;",
+            "UPDATE meta:state SET loading = true, loading_by = 'sync', sync_owed = false RETURN NONE;",
             Object::new(),
         )
         .await
@@ -650,4 +650,15 @@ async fn a_sync_that_dies_midway_leaves_loading_cleared_at_the_next_start() {
     assert_eq!(loading_and_owed(&store).await, (Some(false), true), "cleared, and owed");
     // 3. nothing to clear
     assert!(!store.sync_recover().await.unwrap());
+    // 4. a flag a dbload raised (no `loading_by`) is never cleared, whatever the lease says. Red arm: a recovery that does
+    // not look at `loading_by` clears it.
+    store
+        .query(
+            "UPDATE meta:state SET loading = true, loading_by = NONE, sync_owed = false RETURN NONE;",
+            Object::new(),
+        )
+        .await
+        .unwrap();
+    assert!(!store.sync_recover().await.unwrap(), "a dbload's flag survives");
+    assert_eq!(loading_and_owed(&store).await, (Some(true), false));
 }

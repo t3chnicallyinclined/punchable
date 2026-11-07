@@ -299,16 +299,17 @@ impl Store {
         Ok(matches!(v, Value::Bool(true)))
     }
 
-    /// At start: a process killed in the middle of a sync leaves `meta:state.loading` true, and every write answers 503
+    /// At start: a process killed in the middle of a sync leaves `meta:state.loading` true (with `loading_by = 'sync'`; a dbload sets `loading` alone and its flag is never touched here), and every write answers 503
     /// while it is. When nobody holds a live `lease:sync` the flag is cleared (and the sync owed). Returns whether it
     /// was cleared.
     pub async fn sync_recover(&self) -> Result<bool> {
         let v = self
             .last(
                 "IF (SELECT VALUE loading FROM ONLY meta:state) = true \
+                    AND (SELECT VALUE loading_by FROM ONLY meta:state) = 'sync' \
                     AND (!record::exists(lease:sync) OR lease:sync.owner = NONE OR lease:sync.until = NONE \
                          OR lease:sync.until < time::now()) \
-                 { UPDATE meta:state SET loading = false, sync_owed = true, gen += 1 RETURN VALUE id } ELSE { [] };",
+                 { UPDATE meta:state SET loading = false, loading_by = NONE, sync_owed = true, gen += 1 RETURN VALUE id } ELSE { [] };",
                 Object::new(),
             )
             .await?;
@@ -381,7 +382,7 @@ impl Store {
         }
 
         self.write(
-            "UPDATE meta:state SET loading = true, gen += 1 RETURN id;",
+            "UPDATE meta:state SET loading = true, loading_by = 'sync', gen += 1 RETURN id;",
             Object::new(),
             None,
         )
@@ -394,7 +395,7 @@ impl Store {
         // `finally`: the flag comes down whatever happened above
         let down = self
             .query(
-                "UPDATE meta:state SET loading = false, gen += 1 RETURN NONE;",
+                "UPDATE meta:state SET loading = false, loading_by = NONE, gen += 1 RETURN NONE;",
                 Object::new(),
             )
             .await;
