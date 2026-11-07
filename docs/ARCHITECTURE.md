@@ -10,6 +10,20 @@ Reviewed before sign-off by the Punchable expert (product and stack), the iOS de
 expert (§7 tokens and kit); their corrections are folded in and marked **[review]** where they overturned the first
 draft. Tags: **C** read in a file or run; **I** inferred; **U** unknown until measured.
 
+## Where the system is on 2026-11-07 (the target below is mostly reached)
+
+- **pk-api** (Rust) serves punchable.io's API: all reads, all writes, `/api/worker/*`, `/api/live` and the graph sync.
+  It does not yet own the schema (`PK_SCHEMA_OWNER=0`).
+- **pk-worker** (Rust) runs every hosted job kind.
+- **The Python API** remains for: schema ownership, uploads until the R2 cutover, `DELETE /api/me`, the file-mode upload
+  routes pk-api forwards, and dbload. The rest of it is idle. T11 removes it
+  (`docs/design/PLAN-2026-11-07-t11-retire-python.md`).
+- **Recordings** go to a dedicated R2 bucket, streamed through pk-api, with only a pointer row in the database (ADR 0015,
+  supersedes ADR 0014's storage choice).
+- **Monitoring** covers pk-api and pk-worker.
+- **Google Docs sync**: `pk-gsync` (Rust, on the owner's PC) exists but is not switched over yet. The voice-memo
+  transcriber stays Python on the PC.
+
 ## Owner decisions this document needs
 
 1. Sign off on the whole, or say what to change.

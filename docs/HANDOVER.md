@@ -5,6 +5,22 @@ today. It is public-safe: no secrets, no server names, no material. Private oper
 digests and rollbacks, token notes) lives in the owner's private operations repo (its `infra/` deploy log); secrets and private
 settings live in `~/.punchable/` and are never printed or committed.
 
+## State on 2026-11-07 (read this before the older sections below, which predate the Rust cutover)
+
+| Surface | State |
+|---|---|
+| pk-api (Rust) | **live**: answers every read, every write, `/api/worker/*` and the graph sync (T10 done, round 6b `fe0a85c`, live 2026-11-07 13:46 UTC). Racing-undo fix `7543829` is **merged, not deployed** (ships with the next pk-api rollout). |
+| pk-worker (Rust) | **live** (`infra/k8s/35-worker.yaml`; the Python worker manifest is kept at `infra/worker/python/` for rollback). Uses the owner's private court-material rules since T11 round 1 (live 2026-11-07); refuses to start if the rules file is set but unusable. |
+| Python API | still runs: owns the schema (`PK_SCHEMA_OWNER=0` on pk-api), takes uploads until the R2 cutover, answers the few routes pk-api still forwards (`DELETE /api/me` and the file-mode upload routes). T11 retires it: `docs/design/PLAN-2026-11-07-t11-retire-python.md`. |
+| Recordings | moving to their own R2 bucket (ADR 0015, T11 round 2, merged `ab53407`). Cutover **in progress, see journal**. Until it is live, uploads go to the Python as before. |
+| Monitoring | Prometheus scrapes pk-api (job `punchable-api-rs`, alert `PunchableApiRsDown`) since 2026-11-07; the Punchable Grafana dashboard is imported. |
+| Google Docs sync | `pk-gsync` (Rust, T11 round 4) is **merged, not deployed**: the owner's PC still runs the Python gsync task; the switch-over is **waiting on owner** (`rust/crates/pk-gsync/README.md`). |
+| iPhone | TestFlight build 26 (the Rant workspace); owner checks in `docs/design/SPEC-2026-11-06-rant-tab.md` §10 are **waiting on owner**. |
+
+**Worktree rule (2026-11-07):** each agent worktree under `.claude/worktrees/` builds its own `rust/target` (13-33 GB).
+Delete `rust/target`, or the whole worktree, as soon as its branch is merged. If `app/node_modules` in a worktree is a
+junction, unlink it with `cmd /c rmdir` first and never delete recursively through it.
+
 ## What Punchable is
 
 One comic's joke-writing app. It learns **his** voice from **his** material only (notes, Google Docs, taped sets) and

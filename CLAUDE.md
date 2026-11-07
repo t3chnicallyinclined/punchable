@@ -31,6 +31,8 @@ run with `PK_REQUIRE_EXTERNAL=1` to make a missing one fail instead of skip.
   (`docs/design/SPEC-2026-10-31-voice-memos.md`); the audio stays on the phone.
 - Commit with the owner's git identity (from `git log -1 --format='%an <%ae>'`), stage paths explicitly (never
   `git add -A`), end the message with a `Co-Authored-By:` line for the agent that helped. No time estimates in docs.
+- Worktrees: delete `rust/target` (or the whole worktree) once its branch is merged; each costs 13-33 GB. Unlink an
+  `app/node_modules` junction with `cmd /c rmdir` before any recursive delete.
 - Never on the server: `docker run`, `ship.sh test`, touching other namespaces beyond the agreed mounts.
 
 ## Which doc is authoritative
