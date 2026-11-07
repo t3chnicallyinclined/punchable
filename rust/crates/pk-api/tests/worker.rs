@@ -1360,7 +1360,7 @@ async fn an_upload_streams_into_the_bucket_and_the_fetch_streams_it_back() {
     assert_eq!(
         standin.ops().len(),
         1,
-        "only the start-up HEAD: a refused upload sends nothing"
+        "only the start-up listing: a refused upload sends nothing"
     );
     // 17 MiB and a bit: three parts
     let data = pattern(2 * pk_api::recordings::PART + 4321);
@@ -1979,5 +1979,32 @@ async fn a_cancelled_sync_stops_renewing_and_its_flag_is_recovered() {
     assert!(
         !loading().await,
         "the renewal stopped with the sync: the lease lapsed and the round cleared the flag"
+    );
+}
+
+/// At most `UPLOAD_SLOTS` recordings stream at once; the next one is a 503 with a reason (the phone keeps the recording) and
+/// nothing is sent to the bucket. Red arm: without the permit check the upload goes through while all slots are held.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn only_a_few_recordings_stream_at_once_and_the_next_is_told_to_try_again() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_upload_slots", &standin).await;
+    let held: Vec<_> = (0..pk_api::writes::uploads::UPLOAD_SLOTS)
+        .map(|_| st.upload_slots().try_acquire_owned().expect("a free slot"))
+        .collect();
+    let before = standin.ops().len();
+    let (s, r) = upload_with(&st, 900, 900).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
+    assert!(r["error"].as_str().unwrap().contains("too many recordings"), "{r}");
+    assert_eq!((standin.ops().len(), writer.upload_count().await.unwrap()), (before, 0));
+    drop(held);
+    let (s, r) = upload_with(&st, 901, 901).await;
+    assert_eq!(s, StatusCode::OK, "a slot is free again: {r}");
+    // the slot is given back when the upload ends
+    assert_eq!(
+        st.upload_slots().available_permits(),
+        pk_api::writes::uploads::UPLOAD_SLOTS
     );
 }

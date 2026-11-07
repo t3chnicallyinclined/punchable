@@ -2,8 +2,7 @@
 
 Where a set's recording waits for a transcriber. pk-api streams `POST /api/upload` into one R2 bucket, keeps only a small
 pointer row (`upload:<name>`) in the database, and streams the object back on `GET /api/worker/jobs/<id>/file`. Nothing
-here is applied by any script in this repo except the two the SRE runs by hand (`ship.sh recordings-secret` and
-`apply-lifecycle.sh --apply`). The manifest changes are prepared, not applied, in `infra/k8s/prepared/t10-api-rs.yaml`.
+here is applied by any script in this repo except the one the SRE runs by hand (`ship.sh recordings-secret`; the lifecycle rule is the owner's, by hand in the dashboard). The manifest changes are prepared, not applied, in `infra/k8s/prepared/t10-api-rs.yaml`.
 
 ## What the SRE creates (exactly this, nothing more)
 
@@ -27,14 +26,10 @@ here is applied by any script in this repo except the two the SRE runs by hand (
    git), then `infra/ship.sh recordings-secret`. The values go over ssh stdin into `kubectl`, never argv, a file on the host
    or the output. `infra/ship.sh recordings-secret` checks the shapes first (https endpoint on `r2.cloudflarestorage.com`,
    a 32-hex key id, a 64-hex secret).
-4. **The lifecycle rule** in `lifecycle.json`, put on the bucket once with `infra/recordings/apply-lifecycle.sh` (a dry run
-   unless `--apply`). Delete any object older than 8 days; abort any multipart upload left incomplete after 1 day. This needs
-   a bucket **Admin** token, a different one from the pk-api token and thrown away afterwards: the app's token cannot edit a
-   lifecycle on purpose. Alternatively set the same two rules in the Cloudflare dashboard (bucket, Settings, Object lifecycle
-   rules, prefix `rec/`).
+4. **The lifecycle rule**, set by the owner in the Cloudflare dashboard under the owner's own login (R2, the recordings bucket, Settings, Object lifecycle rules): prefix `rec/`, delete objects 8 days after they are created, abort incomplete multipart uploads 1 day after they start. `lifecycle.json` is the same rule as data, for review; `apply-lifecycle.sh` only prints it. No API token is made for this on purpose: R2 cannot scope an admin token to one bucket, so a token that could edit this lifecycle could also reach the backups.
 
 Then, in this order (the cutover steps, plan round 10): Secret, lifecycle rule, `infra/ship.sh rollout api <ref>` of the pk-api
-image built from this change (readiness waits for a `HEAD` on the bucket, so a wrong token or bucket stops the rollout with
+image built from this change (readiness waits for a listing of one object under `rec/`, so a wrong token or bucket stops the rollout with
 the old pod still serving), apply the `punchable-api-rs-upload` and `punchable-api-rs-file` Ingresses and the
 `punchable-api-rs-r2` NetworkPolicy from `infra/k8s/prepared/t10-api-rs.yaml`.
 
@@ -43,7 +38,7 @@ the old pod still serving), apply the `punchable-api-rs-upload` and `punchable-a
 The tests run against a stand-in that verifies the SigV4 signature and R2's multipart rules, not against R2. Before the
 phone uses it: with the Secret in a scratch namespace, upload a file of about 20 MiB (three parts) and one of a few KB
 through pk-api, fetch both back (`GET /api/worker/jobs/<id>/file` with a worker token), compare checksums, drop the jobs and
-check the bucket listing is empty, then upload one more and confirm the lifecycle rule shows in `apply-lifecycle.sh --show`.
+check the bucket listing is empty, then upload one more and confirm the lifecycle rule shows in the dashboard.
 
 ## Settings of pk-api (all optional but the first)
 

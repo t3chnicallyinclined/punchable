@@ -352,3 +352,61 @@ async fn memory_while_a_long_recording_streams_is_a_few_parts_not_the_recording(
         TOTAL >> 20
     );
 }
+
+#[tokio::test]
+async fn the_start_up_check_is_a_listing_of_one_object_and_never_a_bucket_head() {
+    let s = Standin::start(Options::default()).await;
+    let r = Recordings::new(&cfg(&s)).expect("client");
+    r.check().await.expect("a listing is allowed to this token");
+    assert_eq!((s.count("list"), s.count("head")), (1, 0));
+    // red arm: a check that asks with HEAD is refused by this stand-in the way Cloudflare refuses an Object Read & Write token
+    s.plant("rec/one", b"x");
+    s.plant("rec/two", b"x");
+    r.check().await.expect("two objects present: still one listing page");
+    assert_eq!(s.count("list"), 2);
+    s.fail("list", 403, -1);
+    assert!(
+        r.check().await.is_err(),
+        "a token that may not list keeps the pod unready"
+    );
+}
+
+/// A body that runs past its declared length ends the upload at once: the rest is never read, nothing is kept, and a
+/// multipart upload already begun is aborted. Red arm: without the check the whole body is read and stored.
+#[tokio::test]
+async fn a_body_past_its_content_length_is_stopped_as_soon_as_it_passes_it() {
+    let (s, r) = start().await;
+    let polled = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counter = polled.clone();
+    // 40 chunks of 1 MiB offered; the declared size is 10 MiB + 5
+    let body = Box::pin(stream::unfold(0_usize, move |i| {
+        let counter = counter.clone();
+        async move {
+            (i < 40).then(|| {
+                counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                (Ok::<_, io::Error>(Bytes::from(vec![1_u8; 1 << 20])), i + 1)
+            })
+        }
+    }));
+    let e = r
+        .put_stream_within(&new_key(), body, IDLE, 10 * 1024 * 1024 + 5)
+        .await
+        .unwrap_err();
+    assert!(matches!(e, RecError::TooLong), "{e}");
+    assert_eq!(
+        polled.load(std::sync::atomic::Ordering::SeqCst),
+        11,
+        "stopped at the chunk that passed the size"
+    );
+    assert_eq!((s.objects().len(), s.open_uploads(), s.aborted()), (0, 0, 1));
+    // exactly its size is fine
+    let ok = r
+        .put_stream_within(&new_key(), body_of(3 << 20), IDLE, 3 << 20)
+        .await
+        .expect("put");
+    assert_eq!(ok.bytes, 3 << 20);
+}
+
+fn body_of(n: usize) -> impl Stream<Item = Result<Bytes, io::Error>> + Unpin {
+    body(pattern(n), 1 << 20)
+}

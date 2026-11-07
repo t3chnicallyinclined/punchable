@@ -1,6 +1,6 @@
 //! A small S3 server for the recordings tests and the differentials (T11 round 2, docs/adr/0015): path-style, in memory,
 //! one bucket, the calls pk-api makes and nothing else (PUT object, multipart create / part / complete / abort, GET,
-//! DELETE, ListObjectsV2, HEAD bucket). It is a stand-in, not R2: it checks what R2 checks that matters to us (the SigV4
+//! DELETE, ListObjectsV2; a bucket HEAD is refused like an Object Read & Write token's). It is a stand-in, not R2: it checks what R2 checks that matters to us (the SigV4
 //! signature of every presigned URL against its secret, its expiry, the bucket name, R2's multipart rules: every part but
 //! the last at least 5 MiB and all the same size) and can be told to fail a kind of call, to age an object, and to
 //! forget the bytes (`sink`, for the memory measurement). Real R2 is not exercised by it: the SRE's scratch test is.
@@ -426,7 +426,8 @@ async fn handle(State(sh): State<Arc<Shared>>, req: Request) -> Response {
         return error(status, "InternalError");
     }
     match kind {
-        "head" => Response::builder().status(200).body(Body::empty()).expect("response"),
+        // Cloudflare documents read, write and list for an Object Read & Write token, not a bucket HEAD: so is this one
+        "head" => error(403, "AccessDenied"),
         "list" => {
             let prefix = param(&raw_query, "prefix").unwrap_or_default();
             let after = param(&raw_query, "continuation-token").unwrap_or_default();

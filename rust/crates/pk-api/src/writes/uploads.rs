@@ -33,6 +33,8 @@ use crate::state::AppState;
 /// The largest upload: the Python's `MAX_UPLOAD`, 1 GB (docs/adr/0015: ADR 0014's 64 MiB existed only because of the
 /// database disk). Over it, like an empty one, is the Python's 400 `upload missing or over 1 GB`.
 pub const MAX_UPLOAD: i64 = 1024 * 1024 * 1024;
+/// How many recordings may stream at once (each holds up to one 8 MiB part): the fourth waits for none and gets a 503.
+pub const UPLOAD_SLOTS: usize = 3;
 /// How long a body may say nothing before the upload counts as cut short (a phone that lost its signal).
 const BODY_IDLE: std::time::Duration = std::time::Duration::from_secs(60);
 /// `AUDIO_EXT`.
@@ -226,6 +228,7 @@ fn cut_short() -> ApiError {
 fn rec_err(e: &RecError) -> ApiError {
     match e {
         RecError::Cut => cut_short(),
+        RecError::TooLong => ApiError::bad_request("upload was longer than its Content-Length"),
         RecError::Store(_) => {
             tracing::error!(error = %e, "upload: the recording store failed");
             ApiError::unavailable(format!(
@@ -299,8 +302,18 @@ pub async fn upload(
         now.format("%H%M%S"),
         slug(stem_of(&orig))
     );
+    // at most UPLOAD_SLOTS recordings stream at once (each holds a part buffer); the rest are told to try again. The Python
+    // has no such cap, so there is no Python answer to match: a 503 with a reason is what a failing bucket already gives
+    // this route, and the phone treats it as "keep the recording, try later".
+    let permit = st.upload_slots().try_acquire_owned().map_err(|_| {
+        ApiError::unavailable("too many recordings are being uploaded at once; the phone keeps it, try again shortly")
+    })?;
     let meta_headers = headers.clone();
-    let out = detached(async move { stage_and_queue(st, body, n, kind, orig, name, meta_headers).await }).await?;
+    let out = detached(async move {
+        let _permit = permit;
+        stage_and_queue(st, body, n, kind, orig, name, meta_headers).await
+    })
+    .await?;
     Ok(ok(&out))
 }
 
@@ -342,7 +355,10 @@ async fn stage_and_queue(
     let key = new_key();
     // the body goes to the bucket as it arrives; a part at a time is all that is held
     let stream = body.into_data_stream().boxed();
-    let stored = rec.put_stream(&key, stream, BODY_IDLE).await.map_err(|e| rec_err(&e))?;
+    let stored = rec
+        .put_stream_within(&key, stream, BODY_IDLE, u64::try_from(n).unwrap_or(0))
+        .await
+        .map_err(|e| rec_err(&e))?;
     let committed = async {
         if i64::try_from(stored.bytes).ok() != Some(n) {
             // the body ended before its Content-Length: the phone lost signal; nothing may be listed

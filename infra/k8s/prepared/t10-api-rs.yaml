@@ -231,7 +231,7 @@ spec:
           # pointer row (the `upload` table of db/schema_extra.surql, unchanged: the Python image stays a valid rollback);
           # pk-api needs the Secret punchable-r2-recordings and PK_UPLOAD_R2=1 above. DEPLOY ORDER: the SRE makes the bucket, the
           # token, the Secret and the lifecycle rule (infra/recordings/README.md) first, then rolls out pk-api (readiness waits for
-          # a HEAD on the bucket), then applies the upload Ingress at the end of this file. Uploads made by the old Python pod are
+          # a listing of one object under rec/), then applies the upload Ingress at the end of this file. Uploads made by the old Python pod are
           # in its inbox folder and are not listed by pk-api: drain the inbox (the transcriber, or drop the jobs) before the switch.
           # Off (no PK_UPLOAD_R2) pk-api answers POST /api/upload with 503 (so do not apply the upload Ingress then), forwards
           # /api/inbox and the fetch to the Python, and the inbox folder is the home.

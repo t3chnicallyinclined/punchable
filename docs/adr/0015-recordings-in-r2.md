@@ -37,16 +37,16 @@ Retiring the Python (T11) removes the reason for the shared database home, and t
      deleted and its waiting job ends `failed` with the reason, so the app shows it; a claimed one is left alone. The same
      pass sweeps the bucket: an object under `rec/` older than an hour that no pointer row names (an upload whose row never
      got written, a delete that failed) is deleted. It reads rows and the bucket listing, never the bytes.
-   - *the bucket's lifecycle rule* (`infra/recordings/lifecycle.json`, applied by the SRE, never by pk-api): delete any
+   - *the bucket's lifecycle rule* (`infra/recordings/lifecycle.json` as data; set by the owner in the Cloudflare dashboard, never by pk-api and with no API token, since R2 cannot scope an admin token to one bucket): delete any
      object older than 8 days and abort any multipart upload left incomplete after 1 day. This holds even when pk-api is down
      or a row was lost.
 5. **Out of backups.** The bytes are never in SurrealDB, and the backup job never reads this bucket (its token cannot: it is
    scoped to the backup bucket). The pointer rows are small; a restored pointer whose object has gone is handled like an
    expired recording (the fetch answers 404 `the recording is gone ...`, the hourly pass removes the row).
+   **After a restore the bucket sweep deletes every recording object older than an hour:** the backup leaves the `upload` table out (`backup.py` `EXCLUDED_TABLES`), so a restored database has no pointer rows and the sweep sees every object as one no row names. That is right for a restore (the rows are gone, the phone still holds each recording and the app shows the jobs as failed), but it means a restore must not be done while recordings the owner wants are still waiting in the bucket.
 6. **Failure is loud and never leaves half an upload.** R2 unreachable or refusing: `POST /api/upload` answers 503 with a
    reason (a status, never a URL, key or bucket) and the phone still has the recording; a failed or abandoned stream aborts
-   its multipart upload and writes no row; a row that cannot be written deletes the object. At start the pod `HEAD`s the
-   bucket and stays not ready until that answers, so a wrong token or bucket stops the rollout instead of surfacing at the
+   its multipart upload and writes no row; a row that cannot be written deletes the object. At start the pod lists one object under `rec/` (the one call an Object Read & Write token is documented to allow besides read and write; a bucket `HEAD` is not) and stays not ready until that answers, so a wrong token or bucket stops the rollout instead of surfacing at the
    first upload.
 7. **Off unless asked, like ADR 0014.** `PK_UPLOAD_R2=1` turns it on and then `PK_REC_ENDPOINT`, `PK_REC_BUCKET`,
    `PK_REC_ACCESS_KEY_ID` and `PK_REC_SECRET_ACCESS_KEY` are required (`PK_REC_REGION` defaults to `auto`); an endpoint must
@@ -67,7 +67,7 @@ revisit only if streaming through pk-api shows up in its memory or CPU.
   is mounted only in the pk-api Deployment. The backup token and bucket are separate, so neither can read the other.
 - *Bucket policy.* Private, no public access, no custom domain, no CORS, unversioned (a deleted recording is gone), the
   lifecycle rule above. Nothing reads it but pk-api.
-- *Streaming path.* The route needs a signed-in caller (not the worker role). Memory is bounded by one part per upload; an
+- *Streaming path.* The route needs a signed-in caller (not the worker role). Memory is bounded by one part per upload, a part buffer is allocated only when bytes arrive, and at most 3 recordings stream at once (the fourth gets a 503); a body that runs past its Content-Length is stopped at once; an
   upload that stalls is cut after 60 s; the size is checked before the body is read; the object key is made by pk-api
   (`rec/<random>`), never from the phone's file name; a pointer row's key is used only if it starts with `rec/`; the
   presigned URLs hold the signature in their query, so no error or log line is built from a URL (checked by a test that

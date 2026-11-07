@@ -11,7 +11,7 @@
 //!   writes the pointer row, which it does last.
 //! * [`Recordings::get`] streams an object back.
 //! * [`Recordings::delete`] and [`Recordings::list`] serve the release rules and the bucket sweep.
-//! * [`Recordings::check`] is the start-up `HEAD` on the bucket: a wrong token or bucket keeps the pod unready.
+//! * [`Recordings::check`] is the start-up check (a listing of one object under `rec/`, which an Object Read & Write token is documented to allow; a bucket HEAD is not): a wrong token or bucket keeps the pod unready.
 
 use std::io;
 use std::sync::Arc;
@@ -49,6 +49,9 @@ pub enum RecError {
     /// The body being uploaded ended early, failed, or stalled: the phone lost signal. Nothing was kept.
     #[error("upload was cut short")]
     Cut,
+    /// The body ran past its Content-Length. Nothing was kept.
+    #[error("upload was longer than its Content-Length")]
+    TooLong,
 }
 
 fn store(what: &str, why: impl std::fmt::Display) -> RecError {
@@ -171,15 +174,31 @@ impl Recordings {
         self.http.put(url).timeout(REQUEST_TIMEOUT).body(body)
     }
 
+    /// [`Self::put_stream_within`] for a body of unknown length (tests).
+    pub async fn put_stream<S, E>(&self, key: &str, body: S, idle: Duration) -> Result<Stored, RecError>
+    where
+        S: Stream<Item = Result<Bytes, E>> + Unpin,
+    {
+        self.put_stream_within(key, body, idle, u64::MAX).await
+    }
+
     /// Stream `body` into the bucket under `key`. `idle` is how long the body may say nothing before the upload counts
-    /// as cut short. A recording that fits one part is a single PUT; a longer one is a multipart upload, aborted if
-    /// anything fails.
-    pub async fn put_stream<S, E>(&self, key: &str, mut body: S, idle: Duration) -> Result<Stored, RecError>
+    /// as cut short; `declared` is the Content-Length: a body that runs past it ends the upload at once
+    /// ([`RecError::TooLong`]) instead of being read to its end. A recording that fits one part is a single PUT; a
+    /// longer one is a multipart upload, aborted if anything fails. The part buffer is allocated when the first bytes
+    /// arrive, no bigger than `declared` needs.
+    pub async fn put_stream_within<S, E>(
+        &self,
+        key: &str,
+        mut body: S,
+        idle: Duration,
+        declared: u64,
+    ) -> Result<Stored, RecError>
     where
         S: Stream<Item = Result<Bytes, E>> + Unpin,
     {
         let mut multipart: Option<Multipart> = None;
-        match self.fill(key, &mut body, idle, &mut multipart).await {
+        match self.fill(key, &mut body, idle, declared, &mut multipart).await {
             Ok(done) => Ok(done),
             Err(e) => {
                 if let Some(m) = multipart {
@@ -195,12 +214,13 @@ impl Recordings {
         key: &str,
         body: &mut S,
         idle: Duration,
+        declared: u64,
         multipart: &mut Option<Multipart>,
     ) -> Result<Stored, RecError>
     where
         S: Stream<Item = Result<Bytes, E>> + Unpin,
     {
-        let mut buf = BytesMut::with_capacity(PART + (PART >> 3));
+        let mut buf = BytesMut::new();
         let mut total = 0_u64;
         loop {
             let next = tokio::time::timeout(idle, body.next())
@@ -209,6 +229,14 @@ impl Recordings {
             let Some(chunk) = next else { break };
             let chunk = chunk.map_err(|_| RecError::Cut)?;
             total += chunk.len() as u64;
+            if total > declared {
+                return Err(RecError::TooLong);
+            }
+            if buf.capacity() == 0 {
+                // nothing is reserved until data arrives, and then no more than this body can fill
+                let want = usize::try_from(declared.min(PART as u64)).unwrap_or(PART);
+                buf.reserve(want + chunk.len());
+            }
             buf.extend_from_slice(&chunk);
             // a part goes only once more has arrived behind it, so the last part is never empty
             while buf.len() > PART {
@@ -387,12 +415,17 @@ impl Recordings {
         }
     }
 
-    /// `HEAD` on the bucket: it exists and this token may reach it.
+    /// The start-up check: list at most one object under `rec/`. It proves the bucket exists and this token may reach it,
+    /// with the one call (read, write, list) an Object Read & Write token is documented to allow; a bucket `HEAD` is not
+    /// among them.
     pub async fn check(&self) -> Result<(), RecError> {
-        let url = self.bucket.head_bucket(Some(&self.creds)).sign(SIGN_FOR);
+        let mut action = self.bucket.list_objects_v2(Some(&self.creds));
+        action.with_prefix(KEY_PREFIX);
+        action.with_max_keys(1);
+        let url = action.sign(SIGN_FOR);
         self.send(
-            "head",
-            || self.http.head(url.clone()).timeout(Duration::from_secs(10)),
+            "check",
+            || self.http.get(url.clone()).timeout(Duration::from_secs(10)),
             |s| s.is_success(),
         )
         .await?;
