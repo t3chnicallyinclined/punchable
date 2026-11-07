@@ -28,7 +28,7 @@ class FakeRpc:
         if sql.startswith("BEGIN; CREATE upload_part"):
             self.parts.append({"k": vars["k"], "s": vars["s"]})
             self.stage[vars["k"]] = self.stage.get(vars["k"], 0) + 1
-        elif sql.startswith("DELETE upload_part WHERE token = $k"):
+        elif sql.startswith(("DELETE upload_part WHERE token = $k", "BEGIN; DELETE upload_part WHERE token = $k")):
             self.parts = [p for p in self.parts if p["k"] != vars["k"]]
             self.stage.pop(vars["k"], None)
         elif sql.startswith("DELETE type::record('upload_stage'"):
@@ -106,7 +106,7 @@ def test_delete_takes_the_row_first_and_the_parts_of_that_token_only():
     US.delete(r, "x.m4a")
     assert [p["k"] for p in r.parts] == ["t2"]
     row_first = next(i for i, q in enumerate(r.sql) if q.startswith("BEGIN; DELETE type::record('upload'"))
-    parts_after = next(i for i, q in enumerate(r.sql) if q.startswith("DELETE upload_part WHERE token = $k"))
+    parts_after = next(i for i, q in enumerate(r.sql) if "DELETE upload_part WHERE token = $k" in q and "type::record('upload'" not in q)
     assert row_first < parts_after, "the row goes before the bytes"
     US.delete(r, "x.m4a")   # again: nothing there, nothing raised
 
