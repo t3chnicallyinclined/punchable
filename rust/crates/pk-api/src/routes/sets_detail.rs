@@ -158,6 +158,20 @@ pub async fn myset(
     Ok(ok(&body))
 }
 
+/// `GET /api/mysets/match?set=<recording>`: the set a recording lines up with (T10 round 6; the Python's route, matched
+/// before an id).
+pub async fn match_set(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
+    let q = Query::parse(raw.as_deref());
+    let (_, c, items) = corpus_and_items(&st, &q, |s| &s.workingsets).await?;
+    let key = q.get("set").unwrap_or("");
+    let key = key.strip_prefix("set:").unwrap_or(key).to_string();
+    if !c.sets.contains_key(&key) {
+        return Err(ApiError::not_found("no such recording"));
+    }
+    let body = blocking(move || pk_creative::mysets::match_recording(&c, &live_sets(&items), &key)).await?;
+    Ok(ok(&body))
+}
+
 /// `GET /api/mysets/<id>/trim?target_s=300`: "make a 5 from my 10", a suggestion; nothing is written.
 pub async fn trim(State(st): State<AppState>, Path(sid): Path<String>, RawQuery(raw): RawQuery) -> ApiResult<Response> {
     let q = Query::parse(raw.as_deref());

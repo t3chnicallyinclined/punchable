@@ -46,6 +46,12 @@ DEFINE FIELD OVERWRITE extra_sha  ON meta TYPE option<string>;
 DEFINE FIELD OVERWRITE files_rev    ON meta TYPE option<int>;
 DEFINE FIELD OVERWRITE online_first ON meta TYPE option<object> FLEXIBLE;
 DEFINE FIELD OVERWRITE cutover_log  ON meta TYPE option<array<object>> FLEXIBLE;
+-- A sync of the graph tables that failed and has not been made good (pk-api, T10 round 6): the next worker post syncs
+-- again even when its own files changed nothing.
+DEFINE FIELD OVERWRITE sync_owed    ON meta TYPE option<bool>;
+-- Who raised `loading`: 'sync' when pk-api's graph sync did. A dbload sets `loading` alone, so the recovery at start never
+-- clears a flag it did not set.
+DEFINE FIELD OVERWRITE loading_by   ON meta TYPE option<string>;
 
 -- Search over everything (2026-10-28, api-dev/search_api.py). A typed idea lives in joke.summary (no unit) and a
 -- taped set moment in performance.text; neither had an index or a vector, so word search missed the jots and the

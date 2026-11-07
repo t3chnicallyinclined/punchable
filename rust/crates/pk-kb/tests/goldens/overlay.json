@@ -1,0 +1,3147 @@
+[
+ {
+  "name": "nothing",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": null,
+   "inferred": null,
+   "analyses": [],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "index": {
+   "rows": {},
+   "analysis": {},
+   "inferred": null,
+   "id_map": null
+  }
+ },
+ {
+  "name": "inferred",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": null,
+   "inferred": {
+    "doc": {
+     "run_id": "run-7",
+     "generated_at": "2026-10-20",
+     "notes": "synthetic",
+     "nodes": [
+      {
+       "id": "perf:p1",
+       "type": "performance",
+       "ai_note": "kept",
+       "start_ms": 1,
+       "name": "Meters",
+       "status": "x",
+       "empty": null
+      },
+      {
+       "id": "perf:new1",
+       "type": "performance",
+       "set": "set:2025-03-04_cellar",
+       "start_ms": 61500,
+       "end_ms": 91000,
+       "text": "same moment, later start"
+      },
+      {
+       "id": "perf:new2",
+       "type": "performance",
+       "set": "set:2025-03-04_cellar",
+       "start_ms": 500000,
+       "end_ms": 520000,
+       "text": "a new one",
+       "status": "proposed"
+      },
+      {
+       "id": "joke:fresh",
+       "type": "joke",
+       "title": "Fresh",
+       "status": "proposed"
+      },
+      {
+       "id": "",
+       "type": "joke"
+      },
+      {
+       "id": "x:nope"
+      },
+      "junk"
+     ],
+     "jokes": [
+      {
+       "id": "joke:meters",
+       "stage": "working",
+       "stage_confidence": 0.8,
+       "stage_reason": "it kills",
+       "hit_sets": 3,
+       "performances": [
+        {
+         "perf": "perf:p1",
+         "ai_rating": "killed",
+         "rating_basis": "laughs"
+        },
+        {
+         "perf": "perf:new1",
+         "rating": "worked"
+        },
+        {
+         "perf": "perf:p2",
+         "rating": "bogus"
+        },
+        "junk",
+        {
+         "perf": null
+        }
+       ]
+      },
+      {
+       "joke_id": "joke:cat",
+       "inferred_stage": "retired",
+       "confidence": 0.4,
+       "reason": "stale",
+       "hit_sets": true
+      },
+      {
+       "id": "joke:old",
+       "stage": "nonsense",
+       "hit_sets": 2.5
+      },
+      {
+       "id": "unit:m1",
+       "stage": "idea"
+      },
+      {
+       "id": "joke:missing",
+       "stage": "idea"
+      },
+      "junk"
+     ],
+     "edges": [
+      {
+       "id": "e:aaaaaaaaaaa1",
+       "status": "inferred",
+       "confidence": 0.9,
+       "reason": "r",
+       "evidence": [
+        {
+         "node": "perf:p1",
+         "quote": "q"
+        }
+       ],
+       "source": "auto:x",
+       "extra": 1
+      },
+      {
+       "id": "e:bbbbbbbbbbb1",
+       "kind": "performed_as",
+       "src": "perf:new1",
+       "dst": "joke:meters",
+       "confidence": 0.7
+      },
+      {
+       "id": "e:bbbbbbbbbbb2",
+       "kind": "performed_as",
+       "src": "perf:new1",
+       "dst": "joke:fresh"
+      },
+      {
+       "id": "e:bbbbbbbbbbb3",
+       "kind": "custom",
+       "custom_kind": "runner",
+       "src": "joke:cat",
+       "dst": "joke:fresh",
+       "status": "proposed",
+       "source": "own"
+      },
+      {
+       "id": "e:bbbbbbbbbbb4",
+       "kind": "part_of",
+       "src": "joke:cat",
+       "dst": "joke:nowhere"
+      },
+      {
+       "id": "e:bbbbbbbbbbb5",
+       "src": "joke:cat",
+       "dst": "joke:fresh"
+      },
+      {
+       "id": "",
+       "kind": "part_of"
+      },
+      "junk"
+     ]
+    },
+    "source": "real",
+    "path": "kb/v0/inferred.json"
+   },
+   "analyses": [],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "working",
+     "summary": "s",
+     "_ai": {
+      "stage": "working",
+      "from_stage": "testing",
+      "stage_confidence": 0.8,
+      "stage_reason": "it kills",
+      "run_id": "run-7"
+     },
+     "_ai_hit_sets": 3
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "retired",
+     "_ai": {
+      "stage": "retired",
+      "from_stage": "idea",
+      "stage_confidence": 0.4,
+      "stage_reason": "stale",
+      "run_id": "run-7"
+     },
+     "_ai_hit_sets": true
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit",
+     "ai_note": "kept",
+     "name": "Meters",
+     "ai_rating": "worked",
+     "rating_basis": "laughs"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    },
+    {
+     "id": "perf:new2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 500000,
+     "end_ms": 520000,
+     "text": "a new one",
+     "_ai_node": true
+    },
+    {
+     "id": "joke:fresh",
+     "type": "joke",
+     "title": "Fresh",
+     "_ai_node": true
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "inferred",
+     "confidence": 0.9,
+     "reason": "r",
+     "evidence": [
+      {
+       "node": "perf:p1",
+       "quote": "q"
+      }
+     ],
+     "source": "auto:x"
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:9418768d7039",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "confidence": 0.7,
+     "status": "inferred",
+     "source": "auto:run-7"
+    },
+    {
+     "id": "e:b9deae02b7b5",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:fresh",
+     "status": "inferred",
+     "source": "auto:run-7"
+    },
+    {
+     "id": "e:bbbbbbbbbbb3",
+     "kind": "custom",
+     "custom_kind": "runner",
+     "src": "joke:cat",
+     "dst": "joke:fresh",
+     "status": "proposed",
+     "source": "own"
+    }
+   ]
+  },
+  "index": {
+   "rows": {},
+   "analysis": {},
+   "inferred": {
+    "source": "real",
+    "path": "kb/v0/inferred.json",
+    "run_id": "run-7",
+    "generated_at": "2026-10-20",
+    "notes": "synthetic"
+   },
+   "id_map": null
+  }
+ },
+ {
+  "name": "inferred_jokes_as_dict",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": null,
+   "inferred": {
+    "doc": {
+     "run_id": "d",
+     "jokes": {
+      "joke:meters": {
+       "stage": "working"
+      },
+      "joke:cat": "bad"
+     }
+    },
+    "source": "real",
+    "path": "x"
+   },
+   "analyses": [],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "working",
+     "summary": "s",
+     "_ai": {
+      "stage": "working",
+      "from_stage": "testing",
+      "stage_confidence": null,
+      "stage_reason": "",
+      "run_id": "d"
+     }
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "index": {
+   "rows": {},
+   "analysis": {},
+   "inferred": {
+    "source": "real",
+    "path": "x",
+    "run_id": "d",
+    "generated_at": null,
+    "notes": null
+   },
+   "id_map": null
+  }
+ },
+ {
+  "name": "analysis",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": null,
+   "inferred": null,
+   "analyses": [
+    [
+     "20250304_cellar",
+     {
+      "doc": {
+       "run_id": "an-1",
+       "generated_at": "2026-10-21",
+       "summary": {
+        "duration_s": 3600,
+        "best": "joke:meters",
+        "weakest": "joke:old"
+       },
+       "jokes": [
+        {
+         "start_ms": 59000,
+         "end_ms": 91000,
+         "joke_id": "joke:meters",
+         "status": "known",
+         "match_confidence": 0.93,
+         "match_reason": "same words",
+         "ai_rating": "killed",
+         "rating_basis": "big laugh",
+         "punchlines": [
+          {
+           "text": "pronouns",
+           "at_ms": 80000
+          },
+          {
+           "text": "two"
+          }
+         ]
+        },
+        {
+         "start_ms": 119000,
+         "end_ms": 151000,
+         "joke_id": "joke:cat",
+         "status": "crowd_work",
+         "ai_rating": "meh"
+        },
+        {
+         "start_ms": 201000,
+         "end_ms": 229000,
+         "status": "new",
+         "title": "Not in the graph",
+         "transcript": "t",
+         "ai_rating": "died"
+        },
+        {
+         "start_ms": 300500,
+         "joke_id": "joke:old",
+         "match_confidence": 0
+        },
+        {
+         "start_ms": 400000,
+         "end_ms": 410000,
+         "joke_id": "joke:cat",
+         "status": "banter",
+         "title": "chat",
+         "transcript": "hello"
+        },
+        {
+         "start_ms": 420000,
+         "end_ms": 430000,
+         "joke_id": "joke:meters",
+         "title": "Meters again",
+         "punchlines": [
+          {
+           "text": ""
+          },
+          "x"
+         ]
+        },
+        {
+         "start_ms": "440000",
+         "end_ms": 450000,
+         "joke_id": "unit:m1"
+        },
+        {
+         "start_ms": 119500,
+         "end_ms": 150500,
+         "status": "known",
+         "joke_id": "joke:cat"
+        },
+        {
+         "end_ms": 5
+        },
+        "junk"
+       ]
+      },
+      "source": "real",
+      "path": "corpus/sets/20250304_cellar/analysis.json"
+     }
+    ],
+    [
+     "20250510_newroom",
+     {
+      "doc": {
+       "summary": {
+        "duration_s": 1800
+       },
+       "jokes": [
+        {
+         "start_ms": 1000,
+         "end_ms": 9000,
+         "title": "Opener",
+         "transcript": "hi",
+         "ai_rating": "worked"
+        },
+        {
+         "start_ms": 20000,
+         "end_ms": 25000,
+         "joke_id": "joke:meters",
+         "status": "known"
+        }
+       ]
+      },
+      "source": "fixture",
+      "path": "f.json"
+     }
+    ],
+    [
+     "20250101_nometa",
+     {
+      "doc": {
+       "jokes": []
+      },
+      "source": "real",
+      "path": "x"
+     }
+    ]
+   ],
+   "set_meta": {
+    "20250510_newroom": {
+     "title": "New room",
+     "venue_guess": "Basement",
+     "duration": 2400
+    }
+   }
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit",
+     "ai_rating": "killed",
+     "rating_basis": "big laugh",
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work",
+     "ai_rating": "meh",
+     "rating_basis": "",
+     "_ai_kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third",
+     "ai_rating": "died",
+     "rating_basis": "",
+     "_ai_kind": null
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth",
+     "_ai_kind": null
+    },
+    {
+     "id": "set:2025-01-01_nometa",
+     "type": "set",
+     "title": "20250101_nometa",
+     "date": "2025-01-01",
+     "venue": "",
+     "duration_s": 0,
+     "_ai_node": true
+    },
+    {
+     "id": "perf:2025-03-04_cellar@400000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 400000,
+     "end_ms": 410000,
+     "text": "hello",
+     "kind": "banter",
+     "name": "chat",
+     "_ai_node": true,
+     "_ai_kind": "banter"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@420000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 420000,
+     "end_ms": 430000,
+     "text": "",
+     "kind": "bit",
+     "name": "Meters again",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@440000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 440000,
+     "end_ms": 450000,
+     "text": "",
+     "kind": "bit",
+     "name": "",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@119500",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 119500,
+     "end_ms": 150500,
+     "text": "",
+     "kind": "bit",
+     "name": "",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "set:2025-05-10_newroom",
+     "type": "set",
+     "title": "New room",
+     "date": "2025-05-10",
+     "venue": "Basement",
+     "duration_s": 2400,
+     "_ai_node": true
+    },
+    {
+     "id": "perf:2025-05-10_newroom@1000",
+     "type": "performance",
+     "set": "set:2025-05-10_newroom",
+     "start_ms": 1000,
+     "end_ms": 9000,
+     "text": "hi",
+     "kind": "bit",
+     "name": "Opener",
+     "_ai_node": true,
+     "ai_rating": "worked",
+     "rating_basis": "",
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:2025-05-10_newroom@20000",
+     "type": "performance",
+     "set": "set:2025-05-10_newroom",
+     "start_ms": 20000,
+     "end_ms": 25000,
+     "text": "",
+     "kind": "bit",
+     "name": "",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "superseded",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:9418768d7039",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.93,
+     "reason": "same words",
+     "evidence": [
+      {
+       "node": "perf:p1",
+       "quote": "pronouns",
+       "start_ms": 80000
+      }
+     ],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:eb419cd2263a",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:b0623eb65b84",
+     "src": "perf:2025-03-04_cellar@420000",
+     "dst": "joke:meters",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:02a23abd8b1f",
+     "src": "perf:2025-03-04_cellar@119500",
+     "dst": "joke:cat",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:0a47fdae54d7",
+     "src": "perf:2025-05-10_newroom@20000",
+     "dst": "joke:meters",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:analysis"
+    }
+   ]
+  },
+  "index": {
+   "rows": {
+    "set:2025-01-01_nometa": [],
+    "set:2025-03-04_cellar": [
+     [
+      {
+       "start_ms": 59000,
+       "end_ms": 91000,
+       "joke_id": "joke:meters",
+       "status": "known",
+       "match_confidence": 0.93,
+       "match_reason": "same words",
+       "ai_rating": "killed",
+       "rating_basis": "big laugh",
+       "punchlines": [
+        {
+         "text": "pronouns",
+         "at_ms": 80000
+        },
+        {
+         "text": "two"
+        }
+       ]
+      },
+      "perf:p1"
+     ],
+     [
+      {
+       "start_ms": 119000,
+       "end_ms": 151000,
+       "joke_id": "joke:cat",
+       "status": "crowd_work",
+       "ai_rating": "meh"
+      },
+      "perf:p2"
+     ],
+     [
+      {
+       "start_ms": 201000,
+       "end_ms": 229000,
+       "status": "new",
+       "title": "Not in the graph",
+       "transcript": "t",
+       "ai_rating": "died"
+      },
+      "perf:p3"
+     ],
+     [
+      {
+       "start_ms": 300500,
+       "joke_id": "joke:old",
+       "match_confidence": 0
+      },
+      "perf:p4"
+     ],
+     [
+      {
+       "start_ms": 400000,
+       "end_ms": 410000,
+       "joke_id": "joke:cat",
+       "status": "banter",
+       "title": "chat",
+       "transcript": "hello"
+      },
+      "perf:2025-03-04_cellar@400000"
+     ],
+     [
+      {
+       "start_ms": 420000,
+       "end_ms": 430000,
+       "joke_id": "joke:meters",
+       "title": "Meters again",
+       "punchlines": [
+        {
+         "text": ""
+        },
+        "x"
+       ]
+      },
+      "perf:2025-03-04_cellar@420000"
+     ],
+     [
+      {
+       "start_ms": "440000",
+       "end_ms": 450000,
+       "joke_id": "unit:m1"
+      },
+      "perf:2025-03-04_cellar@440000"
+     ],
+     [
+      {
+       "start_ms": 119500,
+       "end_ms": 150500,
+       "status": "known",
+       "joke_id": "joke:cat"
+      },
+      "perf:2025-03-04_cellar@119500"
+     ]
+    ],
+    "set:2025-05-10_newroom": [
+     [
+      {
+       "start_ms": 1000,
+       "end_ms": 9000,
+       "title": "Opener",
+       "transcript": "hi",
+       "ai_rating": "worked"
+      },
+      "perf:2025-05-10_newroom@1000"
+     ],
+     [
+      {
+       "start_ms": 20000,
+       "end_ms": 25000,
+       "joke_id": "joke:meters",
+       "status": "known"
+      },
+      "perf:2025-05-10_newroom@20000"
+     ]
+    ]
+   },
+   "analysis": {
+    "set:2025-01-01_nometa": {
+     "source": "real",
+     "path": "x",
+     "run_id": "analysis",
+     "generated_at": null,
+     "summary": {},
+     "set": "20250101_nometa"
+    },
+    "set:2025-03-04_cellar": {
+     "source": "real",
+     "path": "corpus/sets/20250304_cellar/analysis.json",
+     "run_id": "an-1",
+     "generated_at": "2026-10-21",
+     "summary": {
+      "duration_s": 3600,
+      "best": "joke:meters",
+      "weakest": "joke:old"
+     },
+     "set": "20250304_cellar"
+    },
+    "set:2025-05-10_newroom": {
+     "source": "fixture",
+     "path": "f.json",
+     "run_id": "analysis",
+     "generated_at": null,
+     "summary": {
+      "duration_s": 1800
+     },
+     "set": "20250510_newroom"
+    }
+   },
+   "inferred": null,
+   "id_map": null
+  }
+ },
+ {
+  "name": "both",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": null,
+   "inferred": {
+    "doc": {
+     "run_id": "run-7",
+     "generated_at": "2026-10-20",
+     "notes": "synthetic",
+     "nodes": [
+      {
+       "id": "perf:p1",
+       "type": "performance",
+       "ai_note": "kept",
+       "start_ms": 1,
+       "name": "Meters",
+       "status": "x",
+       "empty": null
+      },
+      {
+       "id": "perf:new1",
+       "type": "performance",
+       "set": "set:2025-03-04_cellar",
+       "start_ms": 61500,
+       "end_ms": 91000,
+       "text": "same moment, later start"
+      },
+      {
+       "id": "perf:new2",
+       "type": "performance",
+       "set": "set:2025-03-04_cellar",
+       "start_ms": 500000,
+       "end_ms": 520000,
+       "text": "a new one",
+       "status": "proposed"
+      },
+      {
+       "id": "joke:fresh",
+       "type": "joke",
+       "title": "Fresh",
+       "status": "proposed"
+      },
+      {
+       "id": "",
+       "type": "joke"
+      },
+      {
+       "id": "x:nope"
+      },
+      "junk"
+     ],
+     "jokes": [
+      {
+       "id": "joke:meters",
+       "stage": "working",
+       "stage_confidence": 0.8,
+       "stage_reason": "it kills",
+       "hit_sets": 3,
+       "performances": [
+        {
+         "perf": "perf:p1",
+         "ai_rating": "killed",
+         "rating_basis": "laughs"
+        },
+        {
+         "perf": "perf:new1",
+         "rating": "worked"
+        },
+        {
+         "perf": "perf:p2",
+         "rating": "bogus"
+        },
+        "junk",
+        {
+         "perf": null
+        }
+       ]
+      },
+      {
+       "joke_id": "joke:cat",
+       "inferred_stage": "retired",
+       "confidence": 0.4,
+       "reason": "stale",
+       "hit_sets": true
+      },
+      {
+       "id": "joke:old",
+       "stage": "nonsense",
+       "hit_sets": 2.5
+      },
+      {
+       "id": "unit:m1",
+       "stage": "idea"
+      },
+      {
+       "id": "joke:missing",
+       "stage": "idea"
+      },
+      "junk"
+     ],
+     "edges": [
+      {
+       "id": "e:aaaaaaaaaaa1",
+       "status": "inferred",
+       "confidence": 0.9,
+       "reason": "r",
+       "evidence": [
+        {
+         "node": "perf:p1",
+         "quote": "q"
+        }
+       ],
+       "source": "auto:x",
+       "extra": 1
+      },
+      {
+       "id": "e:bbbbbbbbbbb1",
+       "kind": "performed_as",
+       "src": "perf:new1",
+       "dst": "joke:meters",
+       "confidence": 0.7
+      },
+      {
+       "id": "e:bbbbbbbbbbb2",
+       "kind": "performed_as",
+       "src": "perf:new1",
+       "dst": "joke:fresh"
+      },
+      {
+       "id": "e:bbbbbbbbbbb3",
+       "kind": "custom",
+       "custom_kind": "runner",
+       "src": "joke:cat",
+       "dst": "joke:fresh",
+       "status": "proposed",
+       "source": "own"
+      },
+      {
+       "id": "e:bbbbbbbbbbb4",
+       "kind": "part_of",
+       "src": "joke:cat",
+       "dst": "joke:nowhere"
+      },
+      {
+       "id": "e:bbbbbbbbbbb5",
+       "src": "joke:cat",
+       "dst": "joke:fresh"
+      },
+      {
+       "id": "",
+       "kind": "part_of"
+      },
+      "junk"
+     ]
+    },
+    "source": "real",
+    "path": "x"
+   },
+   "analyses": [
+    [
+     "20250304_cellar",
+     {
+      "doc": {
+       "run_id": "an-1",
+       "generated_at": "2026-10-21",
+       "summary": {
+        "duration_s": 3600,
+        "best": "joke:meters",
+        "weakest": "joke:old"
+       },
+       "jokes": [
+        {
+         "start_ms": 59000,
+         "end_ms": 91000,
+         "joke_id": "joke:meters",
+         "status": "known",
+         "match_confidence": 0.93,
+         "match_reason": "same words",
+         "ai_rating": "killed",
+         "rating_basis": "big laugh",
+         "punchlines": [
+          {
+           "text": "pronouns",
+           "at_ms": 80000
+          },
+          {
+           "text": "two"
+          }
+         ]
+        },
+        {
+         "start_ms": 119000,
+         "end_ms": 151000,
+         "joke_id": "joke:cat",
+         "status": "crowd_work",
+         "ai_rating": "meh"
+        },
+        {
+         "start_ms": 201000,
+         "end_ms": 229000,
+         "status": "new",
+         "title": "Not in the graph",
+         "transcript": "t",
+         "ai_rating": "died"
+        },
+        {
+         "start_ms": 300500,
+         "joke_id": "joke:old",
+         "match_confidence": 0
+        },
+        {
+         "start_ms": 400000,
+         "end_ms": 410000,
+         "joke_id": "joke:cat",
+         "status": "banter",
+         "title": "chat",
+         "transcript": "hello"
+        },
+        {
+         "start_ms": 420000,
+         "end_ms": 430000,
+         "joke_id": "joke:meters",
+         "title": "Meters again",
+         "punchlines": [
+          {
+           "text": ""
+          },
+          "x"
+         ]
+        },
+        {
+         "start_ms": "440000",
+         "end_ms": 450000,
+         "joke_id": "unit:m1"
+        },
+        {
+         "start_ms": 119500,
+         "end_ms": 150500,
+         "status": "known",
+         "joke_id": "joke:cat"
+        },
+        {
+         "end_ms": 5
+        },
+        "junk"
+       ]
+      },
+      "source": "real",
+      "path": "x"
+     }
+    ]
+   ],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "working",
+     "summary": "s",
+     "_ai": {
+      "stage": "working",
+      "from_stage": "testing",
+      "stage_confidence": 0.8,
+      "stage_reason": "it kills",
+      "run_id": "run-7"
+     },
+     "_ai_hit_sets": 3
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "retired",
+     "_ai": {
+      "stage": "retired",
+      "from_stage": "idea",
+      "stage_confidence": 0.4,
+      "stage_reason": "stale",
+      "run_id": "run-7"
+     },
+     "_ai_hit_sets": true
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit",
+     "ai_note": "kept",
+     "name": "Meters",
+     "ai_rating": "killed",
+     "rating_basis": "big laugh",
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work",
+     "ai_rating": "meh",
+     "rating_basis": "",
+     "_ai_kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third",
+     "ai_rating": "died",
+     "rating_basis": "",
+     "_ai_kind": null
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth",
+     "_ai_kind": null
+    },
+    {
+     "id": "perf:new2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 500000,
+     "end_ms": 520000,
+     "text": "a new one",
+     "_ai_node": true
+    },
+    {
+     "id": "joke:fresh",
+     "type": "joke",
+     "title": "Fresh",
+     "_ai_node": true
+    },
+    {
+     "id": "perf:2025-03-04_cellar@400000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 400000,
+     "end_ms": 410000,
+     "text": "hello",
+     "kind": "banter",
+     "name": "chat",
+     "_ai_node": true,
+     "_ai_kind": "banter"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@420000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 420000,
+     "end_ms": 430000,
+     "text": "",
+     "kind": "bit",
+     "name": "Meters again",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@440000",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 440000,
+     "end_ms": 450000,
+     "text": "",
+     "kind": "bit",
+     "name": "",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:2025-03-04_cellar@119500",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 119500,
+     "end_ms": 150500,
+     "text": "",
+     "kind": "bit",
+     "name": "",
+     "_ai_node": true,
+     "_ai_kind": "bit"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "superseded",
+     "confidence": 0.9,
+     "reason": "r",
+     "evidence": [
+      {
+       "node": "perf:p1",
+       "quote": "q"
+      }
+     ],
+     "source": "auto:x"
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:9418768d7039",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "confidence": 0.93,
+     "status": "inferred",
+     "source": "auto:run-7",
+     "reason": "same words"
+    },
+    {
+     "id": "e:b9deae02b7b5",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:fresh",
+     "status": "superseded",
+     "source": "auto:run-7"
+    },
+    {
+     "id": "e:bbbbbbbbbbb3",
+     "kind": "custom",
+     "custom_kind": "runner",
+     "src": "joke:cat",
+     "dst": "joke:fresh",
+     "status": "proposed",
+     "source": "own"
+    },
+    {
+     "id": "e:eb419cd2263a",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:b0623eb65b84",
+     "src": "perf:2025-03-04_cellar@420000",
+     "dst": "joke:meters",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    },
+    {
+     "id": "e:02a23abd8b1f",
+     "src": "perf:2025-03-04_cellar@119500",
+     "dst": "joke:cat",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:an-1"
+    }
+   ]
+  },
+  "index": {
+   "rows": {
+    "set:2025-03-04_cellar": [
+     [
+      {
+       "start_ms": 59000,
+       "end_ms": 91000,
+       "joke_id": "joke:meters",
+       "status": "known",
+       "match_confidence": 0.93,
+       "match_reason": "same words",
+       "ai_rating": "killed",
+       "rating_basis": "big laugh",
+       "punchlines": [
+        {
+         "text": "pronouns",
+         "at_ms": 80000
+        },
+        {
+         "text": "two"
+        }
+       ]
+      },
+      "perf:p1"
+     ],
+     [
+      {
+       "start_ms": 119000,
+       "end_ms": 151000,
+       "joke_id": "joke:cat",
+       "status": "crowd_work",
+       "ai_rating": "meh"
+      },
+      "perf:p2"
+     ],
+     [
+      {
+       "start_ms": 201000,
+       "end_ms": 229000,
+       "status": "new",
+       "title": "Not in the graph",
+       "transcript": "t",
+       "ai_rating": "died"
+      },
+      "perf:p3"
+     ],
+     [
+      {
+       "start_ms": 300500,
+       "joke_id": "joke:old",
+       "match_confidence": 0
+      },
+      "perf:p4"
+     ],
+     [
+      {
+       "start_ms": 400000,
+       "end_ms": 410000,
+       "joke_id": "joke:cat",
+       "status": "banter",
+       "title": "chat",
+       "transcript": "hello"
+      },
+      "perf:2025-03-04_cellar@400000"
+     ],
+     [
+      {
+       "start_ms": 420000,
+       "end_ms": 430000,
+       "joke_id": "joke:meters",
+       "title": "Meters again",
+       "punchlines": [
+        {
+         "text": ""
+        },
+        "x"
+       ]
+      },
+      "perf:2025-03-04_cellar@420000"
+     ],
+     [
+      {
+       "start_ms": "440000",
+       "end_ms": 450000,
+       "joke_id": "unit:m1"
+      },
+      "perf:2025-03-04_cellar@440000"
+     ],
+     [
+      {
+       "start_ms": 119500,
+       "end_ms": 150500,
+       "status": "known",
+       "joke_id": "joke:cat"
+      },
+      "perf:2025-03-04_cellar@119500"
+     ]
+    ]
+   },
+   "analysis": {
+    "set:2025-03-04_cellar": {
+     "source": "real",
+     "path": "x",
+     "run_id": "an-1",
+     "generated_at": "2026-10-21",
+     "summary": {
+      "duration_s": 3600,
+      "best": "joke:meters",
+      "weakest": "joke:old"
+     },
+     "set": "20250304_cellar"
+    }
+   },
+   "inferred": {
+    "source": "real",
+    "path": "x",
+    "run_id": "run-7",
+    "generated_at": "2026-10-20",
+    "notes": "synthetic"
+   },
+   "id_map": null
+  }
+ },
+ {
+  "name": "id_map",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": {
+    "jokes": {
+     "joke:v0meters": "joke:meters",
+     "joke:v0gone": "joke:vanished"
+    },
+    "units": {
+     "unit:v0m1": "unit:m1"
+    },
+    "edges": {
+     "e:v0edge": "e:v1edge"
+    }
+   },
+   "inferred": {
+    "doc": {
+     "run_id": "r0",
+     "jokes": {
+      "joke:v0meters": {
+       "stage": "working",
+       "performances": []
+      },
+      "joke:zzz": {
+       "stage": "idea"
+      }
+     },
+     "edges": [
+      {
+       "id": "e:v0edge",
+       "kind": "part_of",
+       "src": "unit:v0m1",
+       "dst": "joke:v0meters",
+       "status": "inferred"
+      },
+      {
+       "id": "e:v0edge2",
+       "kind": "part_of",
+       "src": "unit:v0q",
+       "dst": "joke:v0meters"
+      }
+     ]
+    },
+    "source": "real",
+    "path": "x"
+   },
+   "analyses": [
+    [
+     "20250304_cellar",
+     {
+      "doc": {
+       "summary": {
+        "best": "joke:v0meters",
+        "weakest": "joke:v0gone"
+       },
+       "jokes": [
+        {
+         "start_ms": 60000,
+         "end_ms": 90000,
+         "joke_id": "joke:v0meters",
+         "version_unit_id": "unit:v0m1",
+         "similar": [
+          {
+           "joke_id": "joke:v0meters"
+          },
+          {
+           "joke_id": "joke:v0gone"
+          },
+          "x"
+         ],
+         "status": "known"
+        }
+       ]
+      },
+      "source": "real",
+      "path": "x"
+     }
+    ]
+   ],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "working",
+     "summary": "s",
+     "_ai": {
+      "stage": "working",
+      "from_stage": "testing",
+      "stage_confidence": null,
+      "stage_reason": "",
+      "run_id": "r0"
+     }
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit",
+     "_ai_kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "superseded",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "superseded"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:v1edge",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "inferred",
+     "source": "auto:r0"
+    },
+    {
+     "id": "e:9418768d7039",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "kind": "performed_as",
+     "status": "inferred",
+     "confidence": 0.5,
+     "reason": "",
+     "evidence": [],
+     "source": "auto:analysis"
+    }
+   ]
+  },
+  "index": {
+   "rows": {
+    "set:2025-03-04_cellar": [
+     [
+      {
+       "start_ms": 60000,
+       "end_ms": 90000,
+       "joke_id": "joke:meters",
+       "version_unit_id": "unit:m1",
+       "similar": [
+        {
+         "joke_id": "joke:meters"
+        },
+        {
+         "joke_id": "joke:v0gone"
+        },
+        "x"
+       ],
+       "status": "known"
+      },
+      "perf:p1"
+     ]
+    ]
+   },
+   "analysis": {
+    "set:2025-03-04_cellar": {
+     "source": "real",
+     "path": "x",
+     "run_id": "analysis",
+     "generated_at": null,
+     "summary": {
+      "best": "joke:meters",
+      "weakest": "joke:v0gone"
+     },
+     "set": "20250304_cellar"
+    }
+   },
+   "inferred": {
+    "source": "real",
+    "path": "x",
+    "run_id": "r0",
+    "generated_at": null,
+    "notes": null
+   },
+   "id_map": {
+    "applied": 8,
+    "pairs": [
+     "joke:v0meters -> joke:meters",
+     "unit:v0m1 -> unit:m1"
+    ],
+    "unresolved": [
+     "joke:zzz",
+     "unit:v0q",
+     "joke:v0gone"
+    ]
+   }
+  }
+ },
+ {
+  "name": "empty_id_map",
+  "graph": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "files": {
+   "id_map": {},
+   "inferred": {
+    "doc": {
+     "run_id": "e"
+    },
+    "source": "real",
+    "path": "x"
+   },
+   "analyses": [],
+   "set_meta": {}
+  },
+  "merged": {
+   "version": "v1-test",
+   "generated_at": "2026-10-01",
+   "runs": [
+    "r1"
+   ],
+   "nodes": [
+    {
+     "id": "joke:meters",
+     "type": "joke",
+     "title": "Parking meters",
+     "stage": "testing",
+     "summary": "s"
+    },
+    {
+     "id": "joke:cat",
+     "type": "joke",
+     "title": "Dating my cat",
+     "stage": "idea"
+    },
+    {
+     "id": "joke:old",
+     "type": "joke",
+     "title": "Old",
+     "stage": "idea"
+    },
+    {
+     "id": "unit:m1",
+     "type": "unit",
+     "text": "meter text"
+    },
+    {
+     "id": "set:2025-03-04_cellar",
+     "type": "set",
+     "title": "Tuesday",
+     "venue": "The Cellar",
+     "date": "2025-03-04"
+    },
+    {
+     "id": "perf:p1",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "text": "meter",
+     "kind": "bit"
+    },
+    {
+     "id": "perf:p2",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 120000,
+     "end_ms": 150000,
+     "text": "cat",
+     "kind": "crowd_work"
+    },
+    {
+     "id": "perf:p3",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 200000,
+     "end_ms": 230000,
+     "text": "third"
+    },
+    {
+     "id": "perf:p4",
+     "type": "performance",
+     "set": "set:2025-03-04_cellar",
+     "start_ms": 300000,
+     "end_ms": 330000,
+     "text": "fourth"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e:aaaaaaaaaaa1",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:meters",
+     "status": "proposed",
+     "confidence": 0.5
+    },
+    {
+     "id": "e:aaaaaaaaaaa2",
+     "kind": "performed_as",
+     "src": "perf:p1",
+     "dst": "joke:old",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa3",
+     "kind": "performed_as",
+     "src": "perf:p2",
+     "dst": "joke:cat",
+     "status": "confirmed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa4",
+     "kind": "performed_as",
+     "src": "perf:p3",
+     "dst": "joke:cat"
+    },
+    {
+     "id": "e:aaaaaaaaaaa5",
+     "kind": "part_of",
+     "src": "unit:m1",
+     "dst": "joke:meters",
+     "status": "proposed"
+    },
+    {
+     "id": "e:aaaaaaaaaaa6",
+     "kind": "performed_as",
+     "src": "perf:p4",
+     "dst": "joke:old",
+     "status": "proposed"
+    }
+   ]
+  },
+  "index": {
+   "rows": {},
+   "analysis": {},
+   "inferred": {
+    "source": "real",
+    "path": "x",
+    "run_id": "e",
+    "generated_at": null,
+    "notes": null
+   },
+   "id_map": null
+  }
+ }
+]

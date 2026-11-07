@@ -15,6 +15,7 @@ pub mod metrics;
 pub mod search;
 pub mod sets;
 pub mod sets_detail;
+pub mod status;
 pub mod stores;
 pub mod today;
 pub mod venues;

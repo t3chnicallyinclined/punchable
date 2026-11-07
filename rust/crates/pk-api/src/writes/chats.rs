@@ -396,6 +396,37 @@ pub async fn list(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiRes
     Ok(ok(&out))
 }
 
+/// `POST /api/say`'s question: a new conversation about `text` (the bit it was asked from, when the context names one
+/// that exists) and its first turn; the conversation as the app reads it. The caller does not hold the creative lock.
+pub(super) async fn say_question(st: &AppState, text: &str, ctx: Option<&Obj>, by: &str) -> ApiResult<Value> {
+    let _lock = st.creative_lock().lock().await;
+    let cr = Creative::new(st.clone());
+    let n = cr.items(STORE).await?.len();
+    let cid = format!(
+        "chat:{}",
+        sha8_value(&json!({"q": text, "at": pk_core::time::now_iso(), "n": n}))
+    );
+    let title = if py::len(text) <= 60 {
+        text.to_string()
+    } else {
+        format!(
+            "{}\u{2026}",
+            text.chars().take(59).collect::<String>().trim_end_matches(py::isspace)
+        )
+    };
+    let mut data = json!({"title": title});
+    let jk = ctx.and_then(|c| c.get("joke_id")).and_then(Value::as_str);
+    if let Some(j) = jk
+        && corpus(st).await?.is_joke(j)
+    {
+        data["joke"] = json!(j);
+    }
+    cr.append(STORE, "new", &cid, data, by).await?;
+    let q: String = text.chars().take(MAX_Q).collect();
+    ask(st, &cr, &cid, &q).await?;
+    view(st, &cr, &cid).await
+}
+
 /// `POST /api/ask/chats {question, joke?}`: 201 with the new conversation and its first turn.
 pub async fn create(
     State(st): State<AppState>,

@@ -75,13 +75,20 @@ impl Store {
     }
 
     /// The parts of a token and its staging row (an upload cut short, a failed commit).
+    ///
+    /// One transaction, so a write conflict is retried as a whole (`query` retries a `BEGIN ... COMMIT` block); two
+    /// statements apart, the first could not be retried and a concurrent upload's sweep made it a 500.
     pub async fn upload_drop_parts(&self, token: &str) -> Result<()> {
-        self.query(
-            "DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload_stage', $k) RETURN NONE;",
-            vars([("k", Value::String(token.to_string()))]),
-        )
-        .await?;
-        Ok(())
+        retry_conflict(|| async {
+            self.query(
+                "BEGIN; DELETE upload_part WHERE token = $k RETURN NONE; \
+                 DELETE type::record('upload_stage', $k) RETURN NONE; COMMIT;",
+                vars([("k", Value::String(token.to_string()))]),
+            )
+            .await
+            .map(|_| ())
+        })
+        .await
     }
 
     /// Parts of an upload that never committed (or whose row was deleted first): found by their STAGING row, whose
@@ -225,19 +232,94 @@ impl Store {
     /// An upload and its parts: the row first (in the same transaction a stale staging row marks the token for the
     /// sweep), then the bytes, so a crash between the two leaves orphan parts the sweep removes and never an inbox row
     /// with no bytes.
+    ///
+    /// A write conflict with a concurrent upload's sweep is retried a few times, a little longer each, after the
+    /// store's own retries of one transaction ([`retry_conflict`]), so concurrent uploads never answer 500.
     pub async fn upload_delete(&self, name: &str) -> Result<()> {
         if let Some(row) = self.upload_get(name).await? {
-            self.query(
-                "BEGIN; DELETE type::record('upload', $n) RETURN NONE; \
-                 UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
-                vars([
-                    ("k", Value::String(row.token.clone())),
-                    ("n", Value::String(name.to_string())),
-                ]),
-            )
+            retry_conflict(|| async {
+                self.query(
+                    "BEGIN; DELETE type::record('upload', $n) RETURN NONE; \
+                     UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
+                    vars([
+                        ("k", Value::String(row.token.clone())),
+                        ("n", Value::String(name.to_string())),
+                    ]),
+                )
+                .await
+                .map(|_| ())
+            })
             .await?;
             self.upload_drop_parts(&row.token).await?;
         }
         Ok(())
+    }
+}
+
+/// How many times a whole write is asked again after another writer's conflict, and the wait before each (milliseconds).
+const CONFLICT_WAITS: [u64; 4] = [25, 75, 150, 300];
+
+/// Run `f` again, a bounded number of times, while it fails with a write conflict (`SurrealKV`: "can be retried"). Any
+/// other error, and the last conflict, are returned as they are.
+async fn retry_conflict<F, Fut>(f: F) -> Result<()>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    let mut attempt = 0;
+    loop {
+        match f().await {
+            Err(e) if attempt < CONFLICT_WAITS.len() && is_conflict(&e) => {
+                tokio::time::sleep(std::time::Duration::from_millis(CONFLICT_WAITS[attempt])).await;
+                attempt += 1;
+            }
+            other => return other,
+        }
+    }
+}
+
+/// A transaction conflict between two writers (the engine's words differ by backend).
+fn is_conflict(e: &StoreError) -> bool {
+    let text = e.to_string().to_lowercase();
+    text.contains("can be retried") || text.contains("conflict")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn a_conflict_is_asked_again_a_few_times_and_nothing_else_is() {
+        let n = AtomicUsize::new(0);
+        let r = retry_conflict(|| async {
+            if n.fetch_add(1, Ordering::SeqCst) < 2 {
+                Err(StoreError::mapping("Transaction write conflict: can be retried"))
+            } else {
+                Ok(())
+            }
+        })
+        .await;
+        assert!(r.is_ok());
+        assert_eq!(n.load(Ordering::SeqCst), 3);
+        // never ends
+        let n = AtomicUsize::new(0);
+        let r = retry_conflict(|| async {
+            n.fetch_add(1, Ordering::SeqCst);
+            Err(StoreError::mapping("write conflict"))
+        })
+        .await;
+        assert!(r.is_err());
+        assert_eq!(n.load(Ordering::SeqCst), CONFLICT_WAITS.len() + 1);
+        // another error is not retried
+        let n = AtomicUsize::new(0);
+        let r = retry_conflict(|| async {
+            n.fetch_add(1, Ordering::SeqCst);
+            Err(StoreError::mapping("permission denied"))
+        })
+        .await;
+        assert!(r.is_err());
+        assert_eq!(n.load(Ordering::SeqCst), 1);
     }
 }

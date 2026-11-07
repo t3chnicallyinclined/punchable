@@ -300,6 +300,32 @@ pub fn sum(xs: impl IntoIterator<Item = f64>) -> f64 {
     if c != 0.0 && c.is_finite() { f + c } else { f }
 }
 
+/// `a == b` for what `json.loads` gives back: numbers compare by value (`1 == 1.0`), a bool is its integer
+/// (`True == 1`), objects ignore key order, everything else is structural. serde's own `==` tells `1` from `1.0`.
+pub fn eq(a: &Value, b: &Value) -> bool {
+    fn num(v: &Value) -> Option<f64> {
+        match v {
+            Value::Number(n) => n.as_f64(),
+            Value::Bool(b) => Some(f64::from(u8::from(*b))),
+            _ => None,
+        }
+    }
+    match (a, b) {
+        (Value::Null, Value::Null) => true,
+        (Value::String(x), Value::String(y)) => x == y,
+        (Value::Array(x), Value::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(p, q)| eq(p, q)),
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| eq(v, w)))
+        }
+        (Value::Number(x), Value::Number(y)) if x.is_i64() && y.is_i64() => x.as_i64() == y.as_i64(),
+        (Value::Number(x), Value::Number(y)) if x.is_u64() && y.is_u64() => x.as_u64() == y.as_u64(),
+        _ => match (num(a), num(b)) {
+            (Some(x), Some(y)) => x == y,
+            _ => false,
+        },
+    }
+}
+
 /// `len(s)` in code points.
 pub fn len(s: &str) -> usize {
     s.chars().count()
@@ -407,6 +433,20 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn eq_is_pythons_equality_over_json() {
+        assert!(eq(&json!(1), &json!(1.0)));
+        assert!(eq(&json!(true), &json!(1)));
+        assert!(eq(
+            &json!({"a": [1, {"b": 2.0}], "c": null}),
+            &json!({"c": null, "a": [1.0, {"b": 2}]})
+        ));
+        assert!(!eq(&json!(1), &json!("1")));
+        assert!(!eq(&json!({"a": 1}), &json!({"a": 1, "b": 1})));
+        assert!(!eq(&json!([1, 2]), &json!([2, 1])));
+        assert!(!eq(&json!(null), &json!(false)));
+    }
 
     #[test]
     fn dumps_uses_pythons_separators() {

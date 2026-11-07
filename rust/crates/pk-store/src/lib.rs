@@ -32,6 +32,7 @@ pub mod lease;
 pub mod live;
 pub mod schema;
 pub mod store;
+pub mod sync;
 pub mod upload;
 pub mod value;
 pub mod vectors;
@@ -43,6 +44,7 @@ pub use kbmap::{CreativeEvent, DecisionRow, EdgeKind, EdgeRow, Field, MetaState,
 pub use live::{Change, Changes, LIVE_TABLES};
 pub use schema::{CHANGEFEED_TABLES, SCHEMA, SCHEMA_EXTRA, schema_shas};
 pub use store::{Appended, MIN_VERSION, Snapshot, Store, Vars, vars};
+pub use sync::{SyncInput, SyncOutcome};
 pub use value::{from_db, to_db};
 pub use vectors::{PendingRow, VECTOR_TABLES};
 

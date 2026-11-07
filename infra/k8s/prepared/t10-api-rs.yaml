@@ -240,6 +240,26 @@ spec:
           # cache row.
           - { path: /api/venues, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/venues.geojson, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group A): the ingest routes of the home worker and gsync. Small bodies (at most 256 KiB), so
+          # they sit on this Ingress; POST /api/worker/files (up to 24 MiB, and the graph sync after it) is its own
+          # object below. GET /api/worker/files/content and /api/worker/state are reads.
+          - { path: /api/worker/files/content, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/state, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/ideas, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/decision, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/undo, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/events, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group B): say it or ask it (POST only; the Python's 405 for the other methods is forwarded)
+          - { path: /api/say, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group C): the recording match (GET) and a new set (POST /api/mysets is the existing exact path)
+          - { path: /api/mysets/match, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group D): the reads that were the Python's
+          - { path: /api/map, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/connections, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/ai/worker, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/backend, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/notes, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/export, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # the Rant tab (slice 1, Rust only: the Python has no such paths): his topics (GET + POST), a rant drafted
           # from them (POST, a rant_draft job for pk-worker), the bits with a rant cut (GET), Claude on one line of a
           # script (POST, a rant_line job; spec §12.5)
@@ -323,6 +343,13 @@ spec:
           - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 5 (group B): his pin move, rename or reset (PATCH only on the Python too)
           - { path: "/api/venues/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group A): the joke page gsync reads
+          - { path: "/api/worker/jokes/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group C): his set's lock and bridge (PATCH /api/mysets/<id> is the existing regex path)
+          - { path: "/api/mysets/[^/]+/lock$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/mysets/[^/]+/bridge$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 6 (group E): a recording (none on the pod: the answer is "no audio")
+          - { path: "/api/audio/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # the Rant tab: one topic (GET the page; PATCH ranted, delete, undelete, rename, keep, drop, unmark, jot, script) and its material (GET; spec §12.7)
           - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/topics/[^/]+/material$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
@@ -354,6 +381,31 @@ spec:
       http:
         paths:
           - { path: /api/upload, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+---
+# T10 round 6 (group A): GET and POST /api/worker/files. A post takes up to 24 MiB (writes/ingest.rs MAX_FILES_BODY) and
+# ends in the graph sync when it wrote a set's input, which reads and rewrites the changed records: the Python's Ingress
+# gave this route an hour, here ten minutes and a body cap above the server's own (the server answers 400 first).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-api-rs-files
+  namespace: punchable
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - { path: /api/worker/files, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # render-flag: servicemonitor
 # (dropped by infra/render.sh unless PK_SERVICEMONITOR=1: the cluster may have no ServiceMonitor CRD)

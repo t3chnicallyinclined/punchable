@@ -285,7 +285,7 @@ impl Store {
             if truthy_str(o.get("id")).is_none() {
                 continue;
             }
-            let row = NodeRow::from_node(o, ord)?;
+            let row = NodeRow::from_node(o, f64::from(i32::try_from(ord).unwrap_or(i32::MAX)))?;
             ord += 1;
             by_table.entry(row.table()).or_default().push(row.content());
         }
@@ -301,7 +301,7 @@ impl Store {
             if truthy_str(o.get("id")).is_none() {
                 continue;
             }
-            erows.push(EdgeRow::from_edge(o, ord)?.content());
+            erows.push(EdgeRow::from_edge(o, f64::from(i32::try_from(ord).unwrap_or(i32::MAX)))?.content());
             ord += 1;
         }
         let n_edges = erows.len();
@@ -419,12 +419,12 @@ impl Store {
             .into_iter()
             .map(EdgeRow::from_record)
             .collect::<Result<Vec<_>>>()?;
-        edges.sort_by_key(|e| e.ord);
+        edges.sort_by(|a, b| a.ord.total_cmp(&b.ord));
         let mut nodes = rows_of(res.pop().unwrap_or(Value::None))
             .into_iter()
             .map(NodeRow::from_record)
             .collect::<Result<Vec<_>>>()?;
-        nodes.sort_by_key(|n| n.ord);
+        nodes.sort_by(|a, b| a.ord.total_cmp(&b.ord));
         let working = nodes
             .iter()
             .filter(|n| n.kind == pk_kb::NodeKind::Joke)

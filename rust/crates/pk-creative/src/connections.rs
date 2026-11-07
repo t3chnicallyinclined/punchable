@@ -929,6 +929,224 @@ fn items_of<'a>(g: &'a [Value], key: &str) -> &'a [Value] {
         .map_or(&[], Vec::as_slice)
 }
 
+/// `MAX_EDGES_PER_NODE`: the links one bit keeps on the bird's-eye map.
+const MAX_EDGES_PER_NODE: usize = 6;
+
+/// One link of the bird's-eye map: `(a, b, kind)` is its key; the strongest of two is kept.
+struct MapLink {
+    a: String,
+    b: String,
+    kind: &'static str,
+    w: f64,
+    why: String,
+}
+
+/// `notebook.all_map(c, cap, same_idea)`: every bit as a node (the top `cap` by nights, then laughs) and the links
+/// between them, grouped like the per-joke map: next (his segues, done back to back), tags (a line of one bit tagging
+/// another), `same_world` (same premise, a shared persona, the same Insights chunk), callbacks, versions (the merge
+/// judge's same-idea groups, `same_idea`). Names only: no bodies.
+#[allow(clippy::too_many_lines)]
+pub fn all_map(c: &Corpus, cap: usize, same_idea: &[Value]) -> Value {
+    let heat = |j: &str| -> Option<f64> {
+        let vs: Vec<f64> = c.perfs.get(j).into_iter().flatten().filter_map(|p| p.vs_room).collect();
+        (!vs.is_empty()).then(|| round_to(py::sum(vs.iter().copied()) / vs.len() as f64, 2))
+    };
+    // `rows.sort(...)` three times: the last full key is (-nights, -heat, id)
+    let mut rows: Vec<(usize, f64, String, String)> = c
+        .jokes
+        .iter()
+        .map(|j| {
+            let nights: BTreeSet<&str> = c.perfs.get(j).into_iter().flatten().map(|p| p.set.as_str()).collect();
+            let last: String = c
+                .joke(j)
+                .and_then(|n| n.get("last_seen"))
+                .filter(|v| py::truthy(Some(v)))
+                .map(py::str)
+                .unwrap_or_default()
+                .chars()
+                .take(10)
+                .collect();
+            (nights.len(), heat(j).unwrap_or(0.0), last, j.clone())
+        })
+        .collect();
+    rows.sort_by(|x, y| y.0.cmp(&x.0).then(y.1.total_cmp(&x.1)).then_with(|| x.3.cmp(&y.3)));
+    let keep: Vec<&String> = rows.iter().take(cap).map(|r| &r.3).collect();
+    let ks: HashSet<&str> = keep.iter().map(|j| j.as_str()).collect();
+    let mut edges: IndexMap<(String, String, &'static str), MapLink> = IndexMap::new();
+    let mut link = |a: &str, b: &str, kind: &'static str, w: f64, why: String| {
+        if a == b || !ks.contains(a) || !ks.contains(b) {
+            return;
+        }
+        let key = (a.min(b).to_string(), a.max(b).to_string(), kind);
+        if edges.get(&key).is_none_or(|e| w > e.w) {
+            let (lo, hi) = (key.0.clone(), key.1.clone());
+            edges.insert(
+                key,
+                MapLink {
+                    a: lo,
+                    b: hi,
+                    kind,
+                    w: round_to(w, 3),
+                    why,
+                },
+            );
+        }
+    };
+    for e in &c.edges {
+        let (kind, src, dst) = (s(e, "kind"), s(e, "src").unwrap_or(""), s(e, "dst").unwrap_or(""));
+        let conf = e
+            .get("confidence")
+            .filter(|v| py::truthy(Some(v)))
+            .and_then(Value::as_f64)
+            .unwrap_or(0.5);
+        let his = c.source_of(e) == "his";
+        let w = if his { 1.0 } else { conf };
+        match kind {
+            Some("segue") => link(
+                src,
+                dst,
+                "next",
+                w,
+                if his { "Your segue" } else { "Could lead in" }.to_string(),
+            ),
+            Some("same_premise") => link(src, dst, "same_world", w, "Same premise".to_string()),
+            Some("callback_to") => link(src, dst, "callbacks", w, "Calls back".to_string()),
+            Some("tag_of") if src.starts_with("unit:") => {
+                if let Some(owner) = c.unit_joke.get(src).filter(|o| o.as_str() != dst) {
+                    link(owner, dst, "tags", w, "A line of it tags this".to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    for ((a, b), nights) in &c.back_to_back {
+        #[allow(clippy::cast_precision_loss)]
+        let w = (0.55 + 0.15 * nights.len() as f64).min(1.0);
+        link(
+            a,
+            b,
+            "next",
+            w,
+            format!("Done back to back on stage, {}x", nights.len()),
+        );
+    }
+    // a shared persona: each bit links to at most 4 others carrying the same persona label (strongest first)
+    let mut by_persona: IndexMap<String, Vec<(f64, &String)>> = IndexMap::new();
+    for j in &keep {
+        for (l, (w, _)) in c.labels_of(j, Some(&["persona"]), 0.5) {
+            by_persona.entry(l).or_default().push((w, j));
+        }
+    }
+    for (l, members) in &mut by_persona {
+        members.sort_by(|x, y| y.0.total_cmp(&x.0).then_with(|| x.1.cmp(y.1)));
+        let name = c
+            .nodes
+            .get(l)
+            .and_then(|n| n.get("name"))
+            .filter(|v| py::truthy(Some(v)))
+            .map_or_else(|| "persona".to_string(), py::str);
+        for (i, (w, j)) in members.iter().take(40).enumerate() {
+            for (w2, o) in members.iter().skip(i + 1).take(4) {
+                link(
+                    j,
+                    o,
+                    "same_world",
+                    0.4 + 0.3 * w.min(*w2),
+                    format!("Same world: {name}"),
+                );
+            }
+        }
+    }
+    let chunks: &[Value] = c
+        .insights
+        .get("chunks")
+        .and_then(|x| x.get("chunks"))
+        .and_then(Value::as_array)
+        .map_or(&[], Vec::as_slice);
+    for ch in chunks {
+        let ms: Vec<String> = ch
+            .get("jokes")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(|x| c.map_joke(x))
+            .filter(|m| ks.contains(m.as_str()))
+            .take(12)
+            .collect();
+        let name = ch.get("name").map_or_else(|| "None".to_string(), py::str);
+        for (i, j) in ms.iter().enumerate() {
+            for o in ms.iter().skip(i + 1).take(3) {
+                link(j, o, "same_world", 0.35, format!("Same chunk: {name}"));
+            }
+        }
+    }
+    for g in same_idea {
+        let ms: Vec<&str> = g
+            .get("members")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|m| m.get("joke_id").and_then(Value::as_str))
+            .collect();
+        for (i, j) in ms.iter().enumerate() {
+            for o in ms.iter().skip(i + 1) {
+                link(j, o, "versions", 0.9, "Looks like the same idea".to_string());
+            }
+        }
+    }
+    // cap: at most MAX_EDGES_PER_NODE links per bit (strongest kept), then nodes * 4 overall
+    let mut deg: HashMap<&str, usize> = HashMap::new();
+    let mut out_edges: Vec<&MapLink> = Vec::new();
+    let mut all: Vec<&MapLink> = edges.values().collect();
+    all.sort_by(|x, y| {
+        y.w.total_cmp(&x.w)
+            .then_with(|| x.a.cmp(&y.a))
+            .then_with(|| x.b.cmp(&y.b))
+            .then_with(|| x.kind.cmp(y.kind))
+    });
+    for e in all {
+        if deg.get(e.a.as_str()).copied().unwrap_or(0) >= MAX_EDGES_PER_NODE
+            || deg.get(e.b.as_str()).copied().unwrap_or(0) >= MAX_EDGES_PER_NODE
+        {
+            continue;
+        }
+        *deg.entry(e.a.as_str()).or_insert(0) += 1;
+        *deg.entry(e.b.as_str()).or_insert(0) += 1;
+        out_edges.push(e);
+        if out_edges.len() >= keep.len() * 4 {
+            break;
+        }
+    }
+    let nodes: Vec<Value> = rows
+        .iter()
+        .take(cap)
+        .map(|(nights, h, last, j)| {
+            let n = c.joke(j);
+            let title = n.and_then(|n| n.get("title")).filter(|v| py::truthy(Some(v))).map(py::str).unwrap_or_default();
+            json!({"id": j,
+                   "short_name": crate::display::short_name_of(&title, n.and_then(|n| n.get("short_name")).and_then(Value::as_str)),
+                   "title": short_title(Some(&title)), "stage": c.stage(j).0, "nights": nights,
+                   "heat": if *h == 0.0 { Value::Null } else { json!(h) },
+                   "last_seen": if last.is_empty() { Value::Null } else { json!(last) },
+                   "degree": deg.get(j.as_str()).copied().unwrap_or(0)})
+        })
+        .collect();
+    let mut by_kind: Map<String, Value> = ["next", "tags", "same_world", "callbacks", "versions"]
+        .iter()
+        .map(|k| ((*k).to_string(), json!(0)))
+        .collect();
+    for e in &out_edges {
+        if let Some(n) = by_kind.get_mut(e.kind) {
+            *n = json!(n.as_u64().unwrap_or(0) + 1);
+        }
+    }
+    json!({"cap": cap, "nodes": nodes,
+           "edges": out_edges.iter().map(|e| json!({"a": e.a, "b": e.b, "kind": e.kind, "w": e.w, "why": e.why})).collect::<Vec<_>>(),
+           "counts": {"jokes": c.jokes.len(), "nodes": nodes.len(), "edges": out_edges.len(), "by_kind": by_kind},
+           "groups": MAP_GROUPS.iter().map(|(k, t)| json!({"key": k, "title": t})).collect::<Vec<_>>()})
+}
+
 /// `notebook.joke_map(c, jid, cap)`: the joke page as a map, its connections grouped, each with a plain-words reason.
 /// `None` when `jid` is not a joke in the notebook.
 #[allow(clippy::too_many_lines)]

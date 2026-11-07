@@ -265,6 +265,7 @@ fn write_methods(path: &str) -> &'static [&'static str] {
         | "/api/boards/{id}"
         | "/api/workingsets/{id}/try/{id2}"
         | "/api/venues/{id}"
+        | "/api/mysets/{id}"
         | "/api/topics/{id}" => &["PATCH"],
         "/api/ask/chats/{id}" => &["POST", "PATCH"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
@@ -339,7 +340,6 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         "/api/jokes/a/b/versions",
         "/api/jokes/x/versions/y",
         "/api/worker/jobs/x/file",
-        "/api/worker/files",
     ] {
         let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, post).await.0, StatusCode::NOT_FOUND, "{p} is forwarded");
@@ -355,7 +355,6 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         "/api/jokes/a/b",
         "/api/jokes/",
         "/api/boards/b/items",
-        "/api/mysets/match",
         "/api/mysets/s/x",
     ] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
@@ -371,7 +370,7 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         StatusCode::NOT_FOUND,
         "a POST under a moved id path is forwarded"
     );
-    for (m, p) in [("PATCH", "/api/mysets/s"), ("POST", "/api/mysets/match")] {
+    for (m, p) in [("POST", "/api/mysets/match"), ("PUT", "/api/mysets/s")] {
         let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, r).await.0, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
     }
@@ -401,6 +400,31 @@ async fn metrics_are_open_and_count_by_route_pattern() {
     assert!(!text.contains(r#"route="/metrics""#), "the scrape is not app traffic");
 }
 
+/// An owned route that forwards to the Python while its feature is off (`/api/notes`, `/api/export`, `/api/inbox`:
+/// uploads in the database are off) is the Python's latency: this service's metrics never count it (round 6, M2).
+/// Red arm: `instrument` recording without looking at `Uncounted` fails the second assertion.
+#[tokio::test]
+async fn a_route_that_forwards_while_its_feature_is_off_is_not_counted() {
+    let st = state(false);
+    for p in ["/api/notes", "/api/export", "/api/inbox"] {
+        let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "{p} is forwarded (no Python here: its 404)");
+    }
+    let _ = send(&st, get("/api/labels").body(Body::empty()).unwrap()).await;
+    let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
+    let text = String::from_utf8(b).unwrap();
+    assert!(
+        text.contains(r#"route="/api/labels""#),
+        "an answered route is counted: {text}"
+    );
+    for p in ["/api/notes", "/api/export", "/api/inbox"] {
+        assert!(
+            !text.contains(&format!(r#"route="{p}""#)),
+            "{p} was forwarded and must not be counted"
+        );
+    }
+}
+
 /// Every accepted connection has Nagle off: a forwarded answer is streamed in several writes, and with Nagle on a
 /// small write after the first waits for the client's delayed ACK (T9 round 6). Red arm: a bare
 /// `tokio::net::TcpListener::bind` (axum 0.8's default) fails this.
@@ -415,4 +439,46 @@ async fn accepted_connections_have_nagle_off() {
         accepted.nodelay().expect("nodelay"),
         "TCP_NODELAY is off on an accepted connection"
     );
+}
+
+/// `PUNCHABLE_LEGAL_RULES` set and the file unreadable or not rules: the process does not start (a Secret mounted
+/// unreadable once ran on the generic markers alone and logged "legal rules loaded"). Unset: the generic markers only.
+/// Red arm: `load_legal` falling back to the generic markers on an unreadable file fails the first two assertions.
+#[test]
+fn a_required_legal_rules_file_that_cannot_be_used_refuses_the_start() {
+    let dir = std::env::temp_dir().join(format!("pk-legal-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let cfg = |path: Option<&std::path::Path>| {
+        let mut env = vec![
+            ("SURREAL_PASS", "x".to_string()),
+            ("HOME", dir.display().to_string()),
+            ("PK_AUTH", "0".to_string()),
+            ("PK_ALLOW_NO_AUTH", "1".to_string()),
+            ("HOST", "127.0.0.1".to_string()),
+            ("PUBLIC_URL", "https://punchable.io/".to_string()),
+        ];
+        if let Some(p) = path {
+            env.push(("PUNCHABLE_LEGAL_RULES", p.display().to_string()));
+        }
+        ApiConfig::from_env(&Env::from_map(env)).expect("config")
+    };
+    let missing = dir.join("nope.json");
+    let err = pk_api::load_legal(&cfg(Some(&missing)))
+        .expect_err("a missing required file")
+        .to_string();
+    assert!(err.contains("nope.json"), "the error names the path: {err}");
+    let bad = dir.join("bad.json");
+    std::fs::write(&bad, "this is not json").unwrap();
+    assert!(pk_api::load_legal(&cfg(Some(&bad))).is_err(), "unparseable");
+    let list = dir.join("list.json");
+    std::fs::write(&list, "[1]").unwrap();
+    assert!(pk_api::load_legal(&cfg(Some(&list))).is_err(), "not an object");
+    let good = dir.join("good.json");
+    std::fs::write(&good, r#"{"content_markers": ["Golden County"]}"#).unwrap();
+    let l = pk_api::load_legal(&cfg(Some(&good))).expect("a good file");
+    assert_eq!(l.len(), pk_core::legal::GENERIC_MARKERS.len() + 1);
+    // unset: no file anywhere, the generic markers
+    let l = pk_api::load_legal(&cfg(None)).expect("unset is fine");
+    assert_eq!(l.len(), pk_core::legal::GENERIC_MARKERS.len());
+    let _ = std::fs::remove_dir_all(&dir);
 }

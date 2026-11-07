@@ -81,6 +81,9 @@ pub async fn idea_result(st: &AppState, hidden: bool, b: &Map<String, Value>, by
         raw_reason
     };
     let owner = st.config().owner_id.clone();
+    // the jot's vector (db/embedder.py: a passage vector) is computed while the decision is built and appended: it needs
+    // the text only. None when the model cannot run, then only an unmistakable word match can attach.
+    let embed = tokio::spawn(embed_jot(st.clone(), text.to_string()));
     let req = json!({"target": "node", "action": "add",
                      "after": {"type": "joke", "title": title, "stage": "idea", "summary": text}});
     // where the words came from (a taped moment): added to the line after the builder validated the request, the
@@ -95,6 +98,7 @@ pub async fn idea_result(st: &AppState, hidden: bool, b: &Map<String, Value>, by
             })
             .collect()
     });
+    let t_decide = std::time::Instant::now();
     let (d, idx, line) = {
         let _kb = st.kb_lock().lock().await;
         let kb = Kb::new(st.clone(), hidden);
@@ -112,6 +116,11 @@ pub async fn idea_result(st: &AppState, hidden: bool, b: &Map<String, Value>, by
             .await?;
         (d, idx, line)
     };
+    tracing::debug!(
+        step = "view+decide",
+        ms = t_decide.elapsed().as_secs_f64() * 1000.0,
+        "jot"
+    );
     let id = line.id().unwrap_or("").to_string();
     let mut out = json!({"ok": true, "indexes": [idx], "id": id, "decisions": [Value::Object(line.0)]});
     // a jot that is clearly an existing bit attaches to it (merge_api; undoable)
@@ -123,7 +132,14 @@ pub async fn idea_result(st: &AppState, hidden: bool, b: &Map<String, Value>, by
         "app".to_string()
     };
     let cr = Creative::new(st.clone());
-    let attach = after_idea(st, &cr, &d, &id, text, &src).await;
+    let vec = embed.await.ok().flatten();
+    let t_place = std::time::Instant::now();
+    let attach = after_idea(st, &cr, &d, &id, text, &src, vec).await;
+    tracing::debug!(
+        step = "match+attach",
+        ms = t_place.elapsed().as_secs_f64() * 1000.0,
+        "jot"
+    );
     let into = attach
         .as_object()
         .and_then(|a| a.get("into"))
@@ -143,43 +159,64 @@ pub async fn idea_result(st: &AppState, hidden: bool, b: &Map<String, Value>, by
             .unwrap_or(Value::Null);
         // hosted: no model in this process, so his typed idea gets its vector from the worker (job `embed`, one
         // pending at a time); the idea is saved either way
+        let t_q = std::time::Instant::now();
         if let Err(e) = super::jobs::enqueue_followup(&cr, "embed", &owner).await {
             tracing::warn!("embed job not queued: {e}");
         }
+        tracing::debug!(step = "enqueue", ms = t_q.elapsed().as_secs_f64() * 1000.0, "jot");
     }
     Ok(out)
+}
+
+/// The jot's passage vector, or none when the model cannot run (logged).
+async fn embed_jot(st: AppState, text: String) -> Option<Vec<f32>> {
+    let t = std::time::Instant::now();
+    let e = st.model().get().await?;
+    let v = match st.model().vector(e, text, false).await {
+        Ok(v) => Some(v),
+        Err(e) => {
+            tracing::warn!("no vector for the jot ({e}); words only");
+            None
+        }
+    };
+    tracing::debug!(step = "embed", ms = t.elapsed().as_secs_f64() * 1000.0, "jot");
+    v
 }
 
 /// `merge_api.after_idea`: place the new idea when it is clearly one existing bit (`merge.match_text` over the
 /// merge index last built, "the corpus as it was a moment ago": the new idea has no units yet, so a notebook a
 /// generation old places it the same; with the jot's own vector when the model is here). Never fails: a failure
 /// leaves a new idea, with the error in the answer.
-pub async fn after_idea(st: &AppState, cr: &Creative, d: &Arc<Data>, jid: &str, text: &str, src: &str) -> Value {
-    match place(st, cr, d, jid, text, src).await {
+pub async fn after_idea(
+    st: &AppState,
+    cr: &Creative,
+    d: &Arc<Data>,
+    jid: &str,
+    text: &str,
+    src: &str,
+    vec: Option<Vec<f32>>,
+) -> Value {
+    match place(st, cr, d, jid, text, src, vec).await {
         Ok(v) => v,
         Err(e) => json!({"decision": "new", "error": e.msg}),
     }
 }
 
-async fn place(st: &AppState, cr: &Creative, d: &Arc<Data>, jid: &str, text: &str, src: &str) -> ApiResult<Value> {
+async fn place(
+    st: &AppState,
+    cr: &Creative,
+    d: &Arc<Data>,
+    jid: &str,
+    text: &str,
+    src: &str,
+    vec: Option<Vec<f32>>,
+) -> ApiResult<Value> {
     let ix = if let Some(ix) = st.last_merge_index(d.state.generation, MERGE_INDEX_LAG) {
         ix
     } else {
         let ix = d.merge_index(st).await?;
         st.set_last_merge_index(d.state.generation, &ix);
         ix
-    };
-    // the jot's vector (db/embedder.py: a passage vector); none when the model cannot run, then only an
-    // unmistakable word match can attach
-    let vec = match st.model().get().await {
-        Some(e) => match st.model().vector(e, text.to_string(), false).await {
-            Ok(v) => Some(v),
-            Err(e) => {
-                tracing::warn!("no vector for the jot ({e}); words only");
-                None
-            }
-        },
-        None => None,
     };
     let exclude: HashSet<String> = HashSet::from([jid.to_string()]);
     let owned = text.to_string();

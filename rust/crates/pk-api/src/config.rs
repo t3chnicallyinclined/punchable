@@ -37,9 +37,14 @@ pub struct ApiConfig {
     /// The private legal rules file (`PUNCHABLE_LEGAL_RULES`, else `~/.punchable/legal_rules.json`); the binary reads
     /// it into [`ApiConfig::legal`]. Hosted, the Secret punchable-legal-rules is mounted there, as for the Python API.
     pub legal_rules: PathBuf,
+    /// `PUNCHABLE_LEGAL_RULES` was set: the file is required, and a process that cannot read it does not start.
+    pub legal_rules_required: bool,
     /// The court-material rule every stored text goes through (`refuse_legal`): the generic markers until the binary
     /// adds the file's.
     pub legal: pk_core::legal::Legal,
+    /// `PUNCHABLE_OWNER_EMAIL`: the owner the legal rules name when the rules file names none (part of their
+    /// fingerprint, `GET /api/worker/state`).
+    pub legal_owner: Option<String>,
     /// `PK_VEC_SWEEP_S` (default 60): how often the vector sweeper runs; `0` = never (a test pair, a pod that must
     /// not embed).
     pub sweep_every: Option<std::time::Duration>,
@@ -140,6 +145,7 @@ impl ApiConfig {
             store: pk_store::Config::from_env(env, None, Some(&ns), Some(&db))?,
             build_sha: env.opt("PK_BUILD_SHA").unwrap_or("").to_string(),
             embedder: crate::embed::Choice::from_env(env)?,
+            legal_rules_required: env.opt("PUNCHABLE_LEGAL_RULES").is_some_and(|v| !v.is_empty()),
             legal_rules: env.path("PUNCHABLE_LEGAL_RULES").unwrap_or_else(|| {
                 env.path("PUNCHABLE_HOME")
                     .or_else(|| env.home().map(|h| h.join(".punchable")))
@@ -147,6 +153,7 @@ impl ApiConfig {
                     .join("legal_rules.json")
             }),
             legal: pk_core::legal::Legal::default(),
+            legal_owner: env.opt("PUNCHABLE_OWNER_EMAIL").map(str::to_string),
             live_ping: std::time::Duration::from_secs_f64(
                 env.f64("PK_LIVE_PING_S")?.filter(|s| *s > 0.0).unwrap_or(20.0),
             ),

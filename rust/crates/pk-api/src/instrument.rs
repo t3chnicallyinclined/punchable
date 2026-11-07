@@ -37,7 +37,10 @@ pub async fn instrument(State(st): State<AppState>, req: Request, next: Next) ->
     let secs = t.elapsed().as_secs_f64();
     drop(flight);
     let status = r.status().as_u16();
-    m.record(&method, &path, i64::from(status), secs);
+    // an owned route that forwards to the Python (its feature is off) is the Python's latency, not ours
+    if r.extensions().get::<crate::proxy::Uncounted>().is_none() {
+        m.record(&method, &path, i64::from(status), secs);
+    }
     tracing::debug!(
         method = %method,
         route = %pk_obs::route_pattern(&path),

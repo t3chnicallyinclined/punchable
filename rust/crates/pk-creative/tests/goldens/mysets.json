@@ -1,0 +1,809 @@
+{
+ "sets": [
+  {
+   "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+   "title": "night-2023-08-14_FakeSet0003",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "note": "v1: night-2023-08-14_FakeSet0003",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:laundromat",
+       "title": "Laundromat dating",
+       "target_s": 50,
+       "target_basis": "tape (1 night)"
+      },
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer",
+       "title": "Parrot lawyer",
+       "target_s": 40,
+       "target_basis": "tape (3 nights)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:night-2024-03-01-fakeset0001-e2987f7b",
+   "title": "night-2024-03-01_FakeSet0001",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:01+00:00",
+   "updated_at": "2026-10-29T12:00:01+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:01+00:00",
+     "note": "v1: night-2024-03-01_FakeSet0001",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer",
+       "title": "Parrot lawyer",
+       "target_s": 40,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:landlord-chat",
+       "title": "Landlord group chat (the building)",
+       "target_s": 40,
+       "target_basis": "tape (1 night)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:night-2024-04-12-fakeset0002-9ed8ef3b",
+   "title": "night-2024-04-12_FakeSet0002",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:02+00:00",
+   "updated_at": "2026-10-29T12:00:02+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:02+00:00",
+     "note": "v1: night-2024-04-12_FakeSet0002",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:parrot-lawyer",
+       "title": "Parrot lawyer",
+       "target_s": 40,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:gym-mirror",
+       "title": "Gym mirror",
+       "target_s": 30,
+       "target_basis": "tape (1 night)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:disjoint-f1c1f2ca",
+   "title": "disjoint",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:03+00:00",
+   "updated_at": "2026-10-29T12:00:03+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:03+00:00",
+     "note": "v1: disjoint",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:old-bins",
+       "title": "Old bins version",
+       "target_s": 30,
+       "target_basis": "default 0:30 (no text)"
+      },
+      {
+       "joke_id": "joke:tsa-poem",
+       "title": "TSA poem (written)",
+       "target_s": 5,
+       "target_basis": "estimate from 13 written words at 157 wpm"
+      },
+      {
+       "joke_id": "joke:carousel-idea",
+       "title": "Baggage carousel",
+       "target_s": 30,
+       "target_basis": "default 0:30 (no text)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:one-f1e8935e",
+   "title": "one",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:04+00:00",
+   "updated_at": "2026-10-29T12:00:04+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:04+00:00",
+     "note": "v1: one",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:reversed-4115ecf4",
+   "title": "reversed",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:05+00:00",
+   "updated_at": "2026-10-29T12:00:05+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:05+00:00",
+     "note": "v1: reversed",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:parrot-lawyer",
+       "title": "Parrot lawyer",
+       "target_s": 40,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:laundromat",
+       "title": "Laundromat dating",
+       "target_s": 50,
+       "target_basis": "tape (1 night)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:empty-acb4431b",
+   "title": "empty",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:06+00:00",
+   "updated_at": "2026-10-29T12:00:06+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": false,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:06+00:00",
+     "note": "v1: empty",
+     "target_s": 600,
+     "bits": [],
+     "by": "owner"
+    }
+   ]
+  },
+  {
+   "id": "ws:gone",
+   "title": "night-2023-08-14_FakeSet0003",
+   "storyboard_id": null,
+   "by": "owner",
+   "source": "his",
+   "created_at": "2026-10-29T12:00:00+00:00",
+   "updated_at": "2026-10-29T12:00:00+00:00",
+   "current": 1,
+   "locks": {},
+   "deleted": true,
+   "versions": [
+    {
+     "v": 1,
+     "created_at": "2026-10-29T12:00:00+00:00",
+     "note": "v1: night-2023-08-14_FakeSet0003",
+     "target_s": 600,
+     "bits": [
+      {
+       "joke_id": "joke:laundromat",
+       "title": "Laundromat dating",
+       "target_s": 50,
+       "target_basis": "tape (1 night)"
+      },
+      {
+       "joke_id": "joke:airport-bins",
+       "title": "Airport bins (security)",
+       "target_s": 45,
+       "target_basis": "tape (3 nights)"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer",
+       "title": "Parrot lawyer",
+       "target_s": 40,
+       "target_basis": "tape (3 nights)"
+      }
+     ],
+     "by": "owner"
+    }
+   ]
+  }
+ ],
+ "matches": {
+  "2023-08-14_FakeSet0003": {
+   "set_key": "2023-08-14_FakeSet0003",
+   "date": "2023-08-14",
+   "performed": 3,
+   "match": {
+    "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+    "title": "night-2023-08-14_FakeSet0003",
+    "score": 1.0,
+    "shared": 3,
+    "planned": 3,
+    "how": "closest",
+    "words": "Lined up with night-2023-08-14_FakeSet0003: 3 of its 3 bits"
+   },
+   "candidates": [
+    {
+     "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+     "title": "night-2023-08-14_FakeSet0003",
+     "score": 1.0,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:reversed-4115ecf4",
+     "title": "reversed",
+     "score": 0.867,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:night-2024-03-01-fakeset0001-e2987f7b",
+     "title": "night-2024-03-01_FakeSet0001",
+     "score": 0.667,
+     "shared": 2,
+     "planned": 3
+    }
+   ]
+  },
+  "2024-03-01_FakeSet0001": {
+   "set_key": "2024-03-01_FakeSet0001",
+   "date": "2024-03-01",
+   "performed": 3,
+   "match": {
+    "id": "ws:night-2024-03-01-fakeset0001-e2987f7b",
+    "title": "night-2024-03-01_FakeSet0001",
+    "score": 1.0,
+    "shared": 3,
+    "planned": 3,
+    "how": "closest",
+    "words": "Lined up with night-2024-03-01_FakeSet0001: 3 of its 3 bits"
+   },
+   "candidates": [
+    {
+     "id": "ws:night-2024-03-01-fakeset0001-e2987f7b",
+     "title": "night-2024-03-01_FakeSet0001",
+     "score": 1.0,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+     "title": "night-2023-08-14_FakeSet0003",
+     "score": 0.667,
+     "shared": 2,
+     "planned": 3
+    },
+    {
+     "id": "ws:night-2024-04-12-fakeset0002-9ed8ef3b",
+     "title": "night-2024-04-12_FakeSet0002",
+     "score": 0.6,
+     "shared": 2,
+     "planned": 3
+    }
+   ]
+  },
+  "2024-04-12_FakeSet0002": {
+   "set_key": "2024-04-12_FakeSet0002",
+   "date": "2024-04-12",
+   "performed": 3,
+   "match": {
+    "id": "ws:night-2024-04-12-fakeset0002-9ed8ef3b",
+    "title": "night-2024-04-12_FakeSet0002",
+    "score": 1.0,
+    "shared": 3,
+    "planned": 3,
+    "how": "closest",
+    "words": "Lined up with night-2024-04-12_FakeSet0002: 3 of its 3 bits"
+   },
+   "candidates": [
+    {
+     "id": "ws:night-2024-04-12-fakeset0002-9ed8ef3b",
+     "title": "night-2024-04-12_FakeSet0002",
+     "score": 1.0,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:reversed-4115ecf4",
+     "title": "reversed",
+     "score": 0.667,
+     "shared": 2,
+     "planned": 3
+    },
+    {
+     "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+     "title": "night-2023-08-14_FakeSet0003",
+     "score": 0.6,
+     "shared": 2,
+     "planned": 3
+    }
+   ]
+  }
+ },
+ "pick": {
+  "key": "2023-08-14_FakeSet0003",
+  "id": "ws:empty-acb4431b",
+  "result": {
+   "set_key": "2023-08-14_FakeSet0003",
+   "date": "2023-08-14",
+   "performed": 3,
+   "match": {
+    "id": "ws:empty-acb4431b",
+    "title": "empty",
+    "score": 0.0,
+    "shared": 0,
+    "planned": 0,
+    "how": "his pick",
+    "words": "Lined up with empty: 0 of its 0 bits"
+   },
+   "candidates": [
+    {
+     "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+     "title": "night-2023-08-14_FakeSet0003",
+     "score": 1.0,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:reversed-4115ecf4",
+     "title": "reversed",
+     "score": 0.867,
+     "shared": 3,
+     "planned": 3
+    },
+    {
+     "id": "ws:night-2024-03-01-fakeset0001-e2987f7b",
+     "title": "night-2024-03-01_FakeSet0001",
+     "score": 0.667,
+     "shared": 2,
+     "planned": 3
+    }
+   ]
+  }
+ },
+ "missing": {
+  "set_key": "no-such-set",
+  "date": null,
+  "performed": 0,
+  "match": null,
+  "candidates": [
+   {
+    "id": "ws:disjoint-f1c1f2ca",
+    "title": "disjoint",
+    "score": 0.0,
+    "shared": 0,
+    "planned": 3
+   },
+   {
+    "id": "ws:empty-acb4431b",
+    "title": "empty",
+    "score": 0.0,
+    "shared": 0,
+    "planned": 0
+   },
+   {
+    "id": "ws:night-2023-08-14-fakeset0003-e172dc93",
+    "title": "night-2023-08-14_FakeSet0003",
+    "score": 0.0,
+    "shared": 0,
+    "planned": 3
+   }
+  ]
+ },
+ "notes": [
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "new": [
+    "joke:airport-bins",
+    "joke:laundromat",
+    "joke:landlord-chat"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Swapped Parrot lawyer for Laundromat dating"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "new": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Added Landlord group chat"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "new": [
+    "joke:airport-bins",
+    "joke:landlord-chat"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Cut Parrot lawyer"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat",
+    "joke:laundromat"
+   ],
+   "new": [
+    "joke:laundromat",
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Moved Laundromat dating to #1"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat",
+    "joke:laundromat"
+   ],
+   "new": [
+    "joke:landlord-chat",
+    "joke:laundromat",
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Moved Parrot lawyer to #4"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "new": [
+    "joke:landlord-chat",
+    "joke:parrot-lawyer",
+    "joke:airport-bins"
+   ],
+   "old_t": 300,
+   "new_t": 420,
+   "note": "Moved Landlord group chat to #1; Length 7 min (was 5 min)"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "new": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "No change"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "new": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "old_t": 450,
+   "new_t": 600,
+   "note": "Length 10 min (was 7.5 min)"
+  },
+  {
+   "old": [],
+   "new": [
+    "joke:airport-bins"
+   ],
+   "old_t": 300,
+   "new_t": 300,
+   "note": "Added Airport bins"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "new": [],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Cut Airport bins, Parrot lawyer, Landlord group chat"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "new": [
+    "joke:parrot-lawyer",
+    "joke:airport-bins",
+    "joke:laundromat",
+    "joke:gym-mirror"
+   ],
+   "old_t": 600,
+   "new_t": 900,
+   "note": "Added Laundromat dating, Gym mirror; Cut Landlord group chat; Moved Parrot lawyer to #1; Length 15 min (was 10 min)"
+  },
+  {
+   "old": [
+    "joke:airport-bins",
+    "joke:missing"
+   ],
+   "new": [
+    "joke:missing",
+    "joke:airport-bins"
+   ],
+   "old_t": 600,
+   "new_t": 600,
+   "note": "Moved joke:missing to #1"
+  }
+ ],
+ "creates": [
+  {
+   "title": "Friday late show",
+   "target_s": 900,
+   "ids": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer",
+    "joke:landlord-chat"
+   ],
+   "note": "v1: a new set",
+   "storyboard_id": null,
+   "n_items": 0,
+   "op": "promote",
+   "id": "ws:friday-late-show-0ce29d6b",
+   "data": {
+    "title": "Friday late show",
+    "storyboard_id": null,
+    "bits": [
+     {
+      "joke_id": "joke:airport-bins",
+      "title": "Airport bins (security)",
+      "target_s": 45,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:parrot-lawyer",
+      "title": "Parrot lawyer",
+      "target_s": 40,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:landlord-chat",
+      "title": "Landlord group chat (the building)",
+      "target_s": 40,
+      "target_basis": "tape (1 night)"
+     }
+    ],
+    "target_s": 900,
+    "note": "v1: a new set"
+   }
+  },
+  {
+   "title": "A title with  spaces & marks!",
+   "target_s": 300,
+   "ids": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "note": null,
+   "storyboard_id": null,
+   "n_items": 4,
+   "op": "promote",
+   "id": "ws:a-title-with-spaces-marks-0f001dd0",
+   "data": {
+    "title": "A title with  spaces & marks!",
+    "storyboard_id": null,
+    "bits": [
+     {
+      "joke_id": "joke:airport-bins",
+      "title": "Airport bins (security)",
+      "target_s": 45,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:parrot-lawyer",
+      "title": "Parrot lawyer",
+      "target_s": 40,
+      "target_basis": "tape (3 nights)"
+     }
+    ],
+    "target_s": 300,
+    "note": "v1: a new set"
+   }
+  },
+  {
+   "title": "From a board",
+   "target_s": 600,
+   "ids": [
+    "joke:airport-bins",
+    "joke:parrot-lawyer"
+   ],
+   "note": "v1: made from the board 'X'",
+   "storyboard_id": "sb:x-1",
+   "n_items": 2,
+   "op": "promote",
+   "id": "ws:from-a-board-783cfccd",
+   "data": {
+    "title": "From a board",
+    "storyboard_id": "sb:x-1",
+    "bits": [
+     {
+      "joke_id": "joke:airport-bins",
+      "title": "Airport bins (security)",
+      "target_s": 45,
+      "target_basis": "tape (3 nights)"
+     },
+     {
+      "joke_id": "joke:parrot-lawyer",
+      "title": "Parrot lawyer",
+      "target_s": 40,
+      "target_basis": "tape (3 nights)"
+     }
+    ],
+    "target_s": 600,
+    "note": "v1: made from the board 'X'"
+   }
+  },
+  {
+   "title": "Empty",
+   "target_s": 420,
+   "ids": [],
+   "note": null,
+   "storyboard_id": null,
+   "n_items": 1,
+   "op": "promote",
+   "id": "ws:empty-384ffe57",
+   "data": {
+    "title": "Empty",
+    "storyboard_id": null,
+    "bits": [],
+    "target_s": 420,
+    "note": "v1: a new set"
+   }
+  },
+  {
+   "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "target_s": 600,
+   "ids": [
+    "joke:airport-bins"
+   ],
+   "note": "",
+   "storyboard_id": null,
+   "n_items": 7,
+   "op": "promote",
+   "id": "ws:xxxxxxxxxxxxxxxxxxxxxxxxxxxx-04ef0671",
+   "data": {
+    "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "storyboard_id": null,
+    "bits": [
+     {
+      "joke_id": "joke:airport-bins",
+      "title": "Airport bins (security)",
+      "target_s": 45,
+      "target_basis": "tape (3 nights)"
+     }
+    ],
+    "target_s": 600,
+    "note": "v1: a new set"
+   }
+  }
+ ],
+ "keys": [
+  "2023-08-14_FakeSet0003",
+  "2024-03-01_FakeSet0001",
+  "2024-04-12_FakeSet0002"
+ ]
+}

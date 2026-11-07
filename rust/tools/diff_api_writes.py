@@ -69,7 +69,7 @@ problems: list[str] = []
 n_equal = 0
 
 # ---------------------------------------------------------------- volatile parts of a write's answer
-VOLATILE_KEYS = {"ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
+VOLATILE_KEYS = {"s", "exported_at", "ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
@@ -1637,6 +1637,549 @@ def venues_phase() -> None:
     venues_same("venues: after the refusals", "/api/venues")
 
 
+# ---------------------------------------------------------------- round 6, group A: the ingest routes
+INGEST_ROOMS = {"rs": ("20990101_rsroom", "set:2099-01-01_rsroom"), "py": ("20990202_pyroom", "set:2099-02-02_pyroom")}
+
+
+def room_docs(dirname: str, ws: bool = False) -> dict:
+    """The three files of a new set (meta, analysis, laughs). `ws` re-serialises the analysis with other whitespace:
+    the same document under another hash, so the post triggers a sync that must find nothing to change."""
+    meta = {"title": "Ingest room", "venue_guess": "Basement", "duration": 600}
+    analysis = {"run_id": "ingest-diff", "generated_at": "2026-11-07", "summary": {"duration_s": 600, "best": "joke:a"},
+                "jokes": [{"idx": 0, "start_ms": 1000, "end_ms": 9000, "joke_id": "joke:a", "status": "known", "match_confidence": 0.9,
+                           "match_reason": "same words", "ai_rating": "killed", "rating_basis": "big laugh",
+                           "punchlines": [{"text": "the punch", "at_ms": 5000}]},
+                          {"idx": 1, "start_ms": 20000, "end_ms": 30000, "title": "New thing", "transcript": "some fresh lines", "status": "new"},
+                          {"idx": 2, "start_ms": 40000, "end_ms": 45000, "status": "crowd_work", "title": "chat"}]}
+    laughs = {"run": "r1", "window_s": 600, "laughs": [{"id": "l1", "start_ms": 2000, "end_ms": 3000, "strength": 0.8, "bars": 3,
+                                                       "kind": "laugh", "confidence": 0.9, "segment": "s1", "detail": {"x": 1}},
+                                                      {"start_ms": 22000, "end_ms": 23500, "strength": 0.5, "extra_key": "kept"},
+                                                      "not a laugh"]}
+    base = f"corpus/sets/{dirname}/"
+    return {base + "meta.json": json.dumps(meta), base + "analysis.json": json.dumps(analysis, indent=2 if ws else None),
+            base + "laughs_auto.json": json.dumps(laughs)}
+
+
+def side_rows(port: int, pw: str, dirname: str, sid: str) -> str:
+    """The side tables of one set, with its names made the same, as text."""
+    out = R.surreal_sql(port, pw, "SELECT * FROM analysis ORDER BY ord; SELECT * FROM laugh_run; SELECT * FROM laugh ORDER BY set, ord;")
+    keep = [[x for x in r["result"] if dirname in json.dumps(x) or sid[4:] in json.dumps(x)] for r in out]
+    for rows in keep:
+        for x in rows:
+            if "meta" in x:
+                x.pop("ord", None)
+    text = json.dumps(keep, sort_keys=True).replace(dirname, "DIR").replace(sid[4:], "SID")
+    # the Python records the pod's absolute folder as the analysis file's path; here it is the srcfile path
+    return re.sub(r'"path": "[^"]*corpus[\\/]+sets[\\/]+DIR[\\/]+analysis.json"', '"path": "P"', text)
+
+
+def settle(paths: list[str], secs: float = 30.0) -> None:
+    """Wait (polling) until the Python's answers to `paths` equal pk-api's: its pod copies the rows pk-api wrote on its
+    next poll (PK_BOOT_POLL_S, 15 s), so a read right after a write may still be the old copy. Up to `secs`."""
+    end = time.time() + secs
+    while time.time() < end:
+        if all(R.call(py, "GET", p_, app)[2] == R.call(rs, "GET", p_, app)[2] for p_ in paths):
+            return
+        time.sleep(1)
+
+
+PY_DATA: Path | None = None
+
+
+def refresh_py_decisions(port: int, pw: str) -> None:
+    """The Python pod's decisions.jsonl cache made current. Its sync compares the database's decision rows with that file
+    and, when the database has more (every line pk-api wrote since the pod booted), does a FULL load from its files,
+    which drops them (journal: gotcha 2026-11-07). A pod that has just booted has a current file: so has this."""
+    sys.path.insert(0, str(ROOT / "db"))
+    from kbmap import row_to_decision  # noqa: PLC0415
+    rows = R.surreal_sql(port, pw, "SELECT * FROM decision ORDER BY seq;")[-1]["result"]
+    lines = "".join(json.dumps(row_to_decision(x), ensure_ascii=False, separators=(",", ":")) + chr(10) for x in rows)
+    (PY_DATA / "comedy" / "kb" / "v0" / "decisions.jsonl").write_text(lines, encoding="utf-8", newline=chr(10))
+
+
+def counts(port: int, pw: str) -> dict:
+    out = R.surreal_sql(port, pw, "RETURN {joke: count(SELECT id FROM joke), unit: count(SELECT id FROM unit), set: count(SELECT id FROM set), "
+                                  "performance: count(SELECT id FROM performance), performed_as: count(SELECT id FROM performed_as), "
+                                  "analysis: count(SELECT id FROM analysis), laugh_run: count(SELECT id FROM laugh_run), "
+                                  "laugh: count(SELECT id FROM laugh), srcfile: count(SELECT id FROM srcfile)};")
+    return out[-1]["result"]
+
+
+def ingest_phase(port: int, pw: str) -> None:
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    w = worker_tok
+    # 1. the reads, before anything: the file list, one file, the worker's state, a joke page
+    reads = ["/api/worker/files", "/api/worker/files?prefix=corpus/sets/", "/api/worker/files?prefix=nothing-here/",
+             "/api/worker/files/content?path=kb/v0/inferred.json", "/api/worker/files/content?path=nope.json",
+             "/api/worker/files/content?path=../x", "/api/worker/files/content", "/api/worker/state",
+             "/api/worker/jokes/joke:a", "/api/worker/jokes/joke:nope", "/api/worker/jokes/joke:a?backend=x"]
+    both("ingest: before any post", reads, headers=w)
+    for p_ in ("/api/worker/files", "/api/worker/state", "/api/worker/jokes/joke:a"):
+        for h_ in (app, {}):
+            got = R.compare(f"ingest: {p_} without the worker token ({'app' if h_ else 'none'})", R.call(py, "GET", p_, h_), R.call(rs, "GET", p_, h_))
+            problems.extend(got)
+            n_equal += not got
+    # 2. every refusal, to the letter (a refusal writes nothing)
+    text = "Petitioner and respondent filed this under penalty of perjury."
+    big = json.dumps({"k": "x" * (8 * 1024 * 1024 + 10)})
+    dirn, sid = INGEST_ROOMS["rs"]
+    d1 = f"corpus/sets/{dirn}/"
+    refuse = [
+        ("no actor", "/api/worker/files", {"files": []}),
+        ("a bad actor", "/api/worker/files", {"files": [], "actor": "gsync"}),
+        ("the comic as actor", "/api/worker/files", {"files": [], "actor": "owner"}),
+        ("files not a list", "/api/worker/files", {"files": {"a": 1}, "actor": "import:diff"}),
+        ("remove not a list", "/api/worker/files", {"remove": "x", "actor": "import:diff"}),
+        ("too many", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{}"}] * 501, "actor": "import:diff"}),
+        ("a file that is not an object", "/api/worker/files", {"files": ["x"], "actor": "import:diff"}),
+        ("a file with no text", "/api/worker/files", {"files": [{"path": f"{d1}meta.json"}], "actor": "import:diff"}),
+        ("a path outside the list", "/api/worker/files", {"files": [{"path": "kb/v0/decisions.jsonl", "text": "x"}], "actor": "import:diff"}),
+        ("a path with ..", "/api/worker/files", {"files": [{"path": "corpus/sets/../x.json", "text": "{}"}], "actor": "import:diff"}),
+        ("a path that is a number", "/api/worker/files", {"files": [{"path": 5, "text": "{}"}], "actor": "import:diff"}),
+        ("a path with no key", "/api/worker/files", {"files": [{"text": "{}"}], "actor": "import:diff"}),
+        ("json that is not json", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{nope"}], "actor": "import:diff"}),
+        ("a wrong sha256", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": "{}", "sha256": "0" * 64}], "actor": "import:diff"}),
+        ("a file over 8 MB", "/api/worker/files", {"files": [{"path": f"{d1}meta.json", "text": big}], "actor": "import:diff"}),
+        ("court material", "/api/worker/files", {"files": [{"path": "kb/gsync/runs.jsonl", "text": text}], "actor": "import:diff"}),
+        ("a remove outside the list", "/api/worker/files", {"remove": ["kb/v0/graph.json"], "actor": "import:diff"}),
+        ("a remove that is a number", "/api/worker/files", {"remove": [7], "actor": "import:diff"}),
+        ("an idea of court material", "/api/worker/ideas", {"text": text, "actor": "import:diff"}),
+        ("an idea with no actor", "/api/worker/ideas", {"text": "no actor"}),
+        ("an idea with no text", "/api/worker/ideas", {"actor": "import:diff"}),
+        ("a decision of court material", "/api/worker/decision", {"target": "node", "action": "add", "after": {"type": "joke", "title": text}, "actor": "import:diff"}),
+        ("a decision with a bad id", "/api/worker/decision", {"target": "node", "id": "bad id!", "action": "edit", "after": {}, "actor": "import:diff"}),
+        ("a decision with no actor", "/api/worker/decision", {"target": "node", "id": "joke:a", "action": "edit", "after": {"stage": "idea"}}),
+        ("a decision on nothing", "/api/worker/decision", {"target": "node", "id": "joke:nope", "action": "edit", "after": {"stage": "idea"}, "actor": "import:diff"}),
+        ("an undo with no indexes", "/api/worker/undo", {"actor": "import:diff"}),
+        ("an undo with indexes not ints", "/api/worker/undo", {"indexes": ["x"], "actor": "import:diff"}),
+        ("an undo of nothing", "/api/worker/undo", {"indexes": [99999], "actor": "import:diff"}),
+        ("an undo with no actor", "/api/worker/undo", {"indexes": [0]}),
+        ("an event from an import", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {}, "actor": "import:diff"}),
+        ("an event with no actor", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12"}),
+        ("an event with a bad id", "/api/worker/events", {"store": "merges", "op": "attach", "id": "x", "data": {}, "actor": "ai:diff"}),
+        ("an event with data that is a list", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": [1], "actor": "ai:diff"}),
+        ("an event of court material", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {"text": text}, "actor": "ai:diff"}),
+        ("an attach with nothing to attach", "/api/worker/events", {"store": "merges", "op": "attach", "id": "at:abcdef12", "data": {}, "actor": "ai:diff"}),
+        ("a detach of nothing", "/api/worker/events", {"store": "merges", "op": "detach", "id": "at:abcdef12", "actor": "ai:diff"}),
+    ]
+    for label, path_, b_ in refuse:
+        a_, c_ = R.call(py, "POST", path_, w, b_), R.call(rs, "POST", path_, w, b_)
+        got = R.compare(f"ingest: {label}", a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"ingest: {label}: the Python refuses it or says already ({a_[0]})", a_[0] in (400, 403, 404, 409, 413, 422) or (label == "a detach of nothing" and a_[0] == 200), f"{a_[0]} {a_[2][:200]!r}")
+    # the store/op message names a Python set, whose order is the process's: only the status is compared
+    for label, b_ in (("a store that is not merges", {"store": "x", "op": "attach", "id": "at:abcdef12", "actor": "ai:diff"}),
+                      ("an op that is not attach or detach", {"store": "merges", "op": "dismiss", "id": "at:abcdef12", "actor": "ai:diff"})):
+        a_, c_ = R.call(py, "POST", "/api/worker/events", w, b_), R.call(rs, "POST", "/api/worker/events", w, b_)
+        ok(f"ingest: {label}: 400 on both", a_[0] == 400 and c_[0] == 400, f"{a_[0]} / {c_[0]}")
+    for label, path_, b_, h_ in (("the app's token", "/api/worker/ideas", {"text": "x", "actor": "import:diff"}, app),
+                                 ("no token", "/api/worker/files", {"files": []}, {})):
+        got = R.compare(f"ingest: {label}", R.call(py, "POST", path_, h_, b_), R.call(rs, "POST", path_, h_, b_))
+        problems.extend(got)
+        n_equal += not got
+    both("ingest: after the refusals", ["/api/worker/files", "/api/worker/state"], headers=w)
+    # 3. a new set through pk-api, then a re-post of the same analysis (another hash) through the Python: the rows
+    #    pk-api wrote are exactly what the Python's own sync computes, so it finds nothing to change
+    base0 = counts(port, pw)
+    synced = {}
+    st, r = write(rs, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn).items()], "actor": "import:diff"}, headers=w)
+    synced["rs"] = r.get("synced") or {}
+    ok("ingest: a set posted through pk-api is written, three files and a sync", r["ok"] is True and len(r["written"]) == 3 and r["unchanged"] == 0
+       and synced["rs"].get("mode") == "sync" and synced["rs"]["changed"]["nodes"] >= 4 and synced["rs"]["changed"]["edges"] >= 1, json.dumps(r)[:400])
+    settle(["/api/jokes?limit=5000", "/api/sets"])
+    both("ingest: after a set via pk-api", reads + ["/api/sets", f"/api/sets/{q(sid)}/analysis", f"/api/sets/{q(sid)}/review",
+                                                     "/api/jokes/joke:a", "/api/pipeline", "/api/meta", "/api/today"], headers=w)
+    both("ingest: the app's reads after a set via pk-api", ["/api/sets", f"/api/sets/{q(sid)}/analysis", "/api/jokes?limit=5000", "/api/jokes/joke:a"])
+    side_a = side_rows(port, pw, dirn, sid)
+    ok("ingest: pk-api wrote the set's side tables (analysis, laugh_run, laugh)", side_a.count("DIR") >= 2, side_a[:300])
+    refresh_py_decisions(port, pw)
+    snap = lambda: {str(x["id"]): x for t_ in ("performance", "set", "joke", "performed_as") for x in R.surreal_sql(port, pw, f"SELECT * OMIT embedding FROM {t_};")[-1]["result"]}  # noqa: E731
+    before_rows = snap()
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn, ws=True).items()], "actor": "import:diff"}, headers=w)
+    ch = (r.get("synced") or {}).get("changed")
+    after_rows = snap()
+    moved = {k: (before_rows.get(k), after_rows.get(k)) for k in set(before_rows) | set(after_rows) if before_rows.get(k) != after_rows.get(k) and "working" not in k}
+    if moved:
+        problems.append("ingest: rows the Python's sync rewrote: " + json.dumps({k: [v[0], v[1]] for k, v in list(moved.items())[:2]}, default=str)[:1500])
+    ok("ingest: the Python's sync of the same set finds nothing to change in what pk-api wrote",
+       r["written"] == [f"corpus/sets/{dirn}/analysis.json"] and r["unchanged"] == 2 and ch == {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}, json.dumps(r)[:400])
+    side_b = side_rows(port, pw, dirn, sid)
+    ok("ingest: the Python's sync rewrote the side tables as pk-api had", side_b == side_a, "".join(f"[{i}] {a_[i:i+160]!r} vs {b_[i:i+160]!r}" for a_, b_ in [(side_a, side_b)] for i in [next((j for j in range(min(len(a_), len(b_))) if a_[j] != b_[j]), 0)]))
+    # 4. the same set through the Python under other names, then pk-api re-posts it: the converse
+    dirp, sidp = INGEST_ROOMS["py"]
+    refresh_py_decisions(port, pw)
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp).items()], "actor": "import:diff"}, headers=w)
+    synced["py"] = r.get("synced") or {}
+    ok("ingest: a set posted through the Python is written the same way", len(r["written"]) == 3 and synced["py"].get("mode") == "sync", json.dumps(r)[:400])
+    perfs = lambda d_: sorted(x["id"].replace(d_[:8], "D") if isinstance(x["id"], str) else str(x["id"]) for x in R.surreal_sql(port, pw, f"SELECT id FROM performance WHERE string::contains(<string>id, '{d_[:8]}');")[-1]["result"])  # noqa: E731
+    ok("ingest: the two servers changed the same number of records for the same set",
+       synced["rs"].get("changed") == synced["py"].get("changed"),
+       f"pk-api {synced['rs'].get('changed')} vs Python {synced['py'].get('changed')}; perfs {perfs(dirn)} / {perfs(dirp)}")
+    ok("ingest: the two servers wrote the same side tables for the same set", side_rows(port, pw, dirp, sidp) == side_a)
+    both("ingest: after a set via the Python", ["/api/sets", f"/api/sets/{q(sidp)}/analysis", f"/api/sets/{q(sidp)}/review", "/api/jokes/joke:a", "/api/pipeline"], headers=w)
+    st, r = write(rs, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirp, ws=True).items()], "actor": "import:diff"}, headers=w)
+    ch = (r.get("synced") or {}).get("changed")
+    ok("ingest: pk-api's sync of the same set finds nothing to change in what the Python wrote",
+       r["written"] == [f"corpus/sets/{dirp}/analysis.json"] and ch == {"nodes": 0, "edges": 0, "removed": 0, "decisions": 0}, json.dumps(r)[:400])
+    ok("ingest: pk-api rewrote the side tables as the Python had", side_rows(port, pw, dirp, sidp) == side_a)
+    # 5. a file that is not a set input: written, no sync; the same file again is unchanged; the list shows both
+    gs = {"files": [{"path": "kb/gsync/runs.jsonl", "text": '{"run": 1}\n'}], "actor": "import:gsync"}
+    st, r = write(rs, "POST", "/api/worker/files", gs, headers=w)
+    ok("ingest: a gsync file is written and not synced", r["written"] == ["kb/gsync/runs.jsonl"] and r["synced"] is None, json.dumps(r))
+    st, r = write(py, "POST", "/api/worker/files", gs, headers=w)
+    ok("ingest: the same file again is unchanged on the other server", r["written"] == [] and r["unchanged"] == 1 and r["synced"] is None, json.dumps(r))
+    both("ingest: after a gsync file", ["/api/worker/files?prefix=kb/gsync/", "/api/worker/files/content?path=kb/gsync/runs.jsonl",
+                                        "/api/worker/files/content?path=kb%5Cgsync%5Cruns.jsonl", "/api/worker/state"], headers=w)
+    # 6. an idea from an import through each server, a decision through one, its undo through the other
+    shapes = []
+    jid = ""
+    ideas_posted = 0
+    for base, who in ((rs, "pk-api"), (py, "python")):
+        st, r = write(base, "POST", "/api/worker/ideas", {"text": f"An imported idea about the {who} cat (I).", "actor": "import:memo"}, headers=w)
+        shapes.append(shape(norm(r)))
+        ok(f"ingest: an idea via {who} is a new bit by the import", r["ok"] is True and r["decisions"][0]["by"] == "import:memo"
+           and r["decisions"][0]["after"]["stage"] == "idea", json.dumps(r)[:300])
+        both(f"ingest: after an idea via {who}", ["/api/jokes?limit=5000", "/api/decisions?limit=5", "/api/today"])
+        jid = r["id"]
+        ideas_posted += 1
+    ok("ingest: the two answers to an idea have the same shape", shapes[0] == shapes[1], json.dumps(shapes)[:300])
+    jobs = R.surreal_sql(port, pw, "SELECT VALUE line FROM creative_event WHERE store = 'jobs' ORDER BY seq;")[-1]["result"]
+    ok("ingest: an imported memo idea queued its embed and memolink jobs", any('"embed"' in x for x in jobs) and any('"memolink"' in x for x in jobs), str(len(jobs)))
+    st, r = write(py, "POST", "/api/worker/decision", {"target": "node", "id": jid, "action": "edit", "after": {"stage": "to_try"}, "reason": "  by the worker  ", "actor": "ai:diff"}, headers=w)
+    didx = r["indexes"][0]
+    ok("ingest: a decision via the Python is by the actor", r["decisions"][0]["by"] == "ai:diff" and r["decisions"][0]["after"] == {"stage": "to_try"}, json.dumps(r)[:300])
+    both("ingest: after a decision via the Python", ["/api/jokes?limit=5000", f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    st, r = write(rs, "POST", "/api/worker/decision", {"target": "node", "id": jid, "action": "edit", "after": {"stage": "testing"}, "actor": "ai:diff"}, headers=w)
+    ok("ingest: a decision via pk-api is by the actor", r["decisions"][0]["by"] == "ai:diff", json.dumps(r)[:300])
+    both("ingest: after a decision via pk-api", [f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    st, r = write(rs, "POST", "/api/worker/undo", {"indexes": [didx + 1, didx], "actor": "ai:diff"}, headers=w)
+    ok("ingest: an undo of two lines via pk-api", len(r["indexes"]) == 2, json.dumps(r)[:300])
+    both("ingest: after an undo via pk-api", [f"/api/jokes/{q(jid)}", "/api/decisions?limit=5"])
+    same_write("ingest: an undo of an undone line", "POST", "/api/worker/undo", {"indexes": [didx], "actor": "ai:diff"}, headers=w)
+    # 7. the merges store: an attach via pk-api, again (already), a detach via the Python, an attach of the same id (refused)
+    ev = {"store": "merges", "op": "attach", "id": "at:diff0001", "actor": "ai:diff",
+          "data": {"joke": jid, "into": "joke:b", "text": "an attached note", "date": "2026-11-07", "score": 0.9, "reasons": ["same words"], "source": "memo"}}
+    st, r = write(rs, "POST", "/api/worker/events", ev, headers=w)
+    ok("ingest: an attach via pk-api carries the record", r["ok"] is True and r["record"]["status"] == "attached" and "snapshot" not in r["record"], json.dumps(r)[:300])
+    both("ingest: after an attach via pk-api", ["/api/merge/history?joke=joke:b", "/api/merge/at:diff0001", "/api/jokes/joke:b"])
+    same_write("ingest: the same attach again", "POST", "/api/worker/events", ev, headers=w)
+    st, r = write(py, "POST", "/api/worker/events", {**ev, "op": "detach", "data": {}}, headers=w)
+    ok("ingest: a detach via the Python", r["ok"] is True and r["record"]["status"] == "detached", json.dumps(r)[:300])
+    both("ingest: after a detach via the Python", ["/api/merge/history?joke=joke:b", "/api/merge/at:diff0001"])
+    same_write("ingest: the same detach again", "POST", "/api/worker/events", {**ev, "op": "detach", "data": {}}, headers=w)
+    same_write("ingest: an attach of an id that was detached", "POST", "/api/worker/events", ev, headers=w)
+    # 8. both sets away: removed through the other server each, the tables as they were
+    # pk-api removes both: the Python's sync answers 500 (EmptyWrite) when a removed set's edges went with its nodes
+    for base, who, d_ in ((rs, "pk-api", dirn), (rs, "pk-api", dirp)):
+        paths = list(room_docs(d_))
+        refresh_py_decisions(port, pw)
+        st, r = write(base, "POST", "/api/worker/files", {"remove": paths + [f"corpus/sets/{d_}/transcript.json"], "actor": "import:diff"}, headers=w)
+        ok(f"ingest: {who} removes the set ({d_}) the other server wrote", sorted(r["removed"]) == sorted(paths) and ((r["synced"] or {}).get("changed") or {}).get("removed", 0) >= 4,
+           json.dumps(r)[:400])
+        both(f"ingest: after {who} removed a set", ["/api/sets", "/api/jokes/joke:a", "/api/pipeline"] + reads[:3], headers=w)
+    after = counts(port, pw)
+    ok("ingest: the graph tables are as they were before the two sets", {k: v for k, v in after.items() if k not in ("srcfile", "joke")} == {k: v for k, v in base0.items() if k not in ("srcfile", "joke")}
+       and after["joke"] == base0["joke"] + ideas_posted,
+       f"{base0} -> {after}")
+    ok("ingest: the files the two sets left are the gsync file only", after["srcfile"] == base0["srcfile"] + 1, f"{base0['srcfile']} -> {after['srcfile']}")
+
+
+def python_full_load_demo(port: int, pw: str) -> dict:
+    """What the hosted Python's sync does today when pk-api has written decisions it has not seen (run last: it
+    drops them). Reported, never a problem of pk-api's: it is the Python's own behaviour (journal gotcha)."""
+    n0 = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM decision);")[-1]["result"]
+    dirn = INGEST_ROOMS["rs"][0]
+    st, r = write(py, "POST", "/api/worker/files", {"files": [{"path": k, "text": v} for k, v in room_docs(dirn).items()], "actor": "import:diff"}, headers=worker_tok)
+    n1 = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM decision);")[-1]["result"]
+    return {"decisions_before": n0, "decisions_after": n1, "synced": r.get("synced")}
+
+
+# ---------------------------------------------------------------- round 6, group B: POST /api/say
+SAY_STABLE = ("kind", "guess", "rule", "overridden", "text")
+
+
+def say_pair(label: str, text_py: str, text_rs: str | None = None, extra: dict | None = None) -> tuple[dict, dict]:
+    """One phrasing said to both servers (the text of the second may differ by a tag): the same status, the same shape,
+    and the same stable answers (the kind, the guess, the rule, the command's parse, what the screen is told next)."""
+    global n_equal
+    extra = extra or {}
+    a = R.call(py, "POST", "/api/say", app, {"text": text_py, **extra})
+    b = R.call(rs, "POST", "/api/say", app, {"text": text_rs or text_py, **extra})
+    bad = []
+    if a[0] != b[0]:
+        bad.append(f"{label}: status python {a[0]} rust {b[0]}: {a[2][:200]!r} / {b[2][:200]!r}")
+    ja, jb = body(a) or {}, body(b) or {}
+    for h in R.HEADERS:
+        if a[1].get(h) != b[1].get(h):
+            bad.append(f"{label}: header {h}: python {a[1].get(h)!r} rust {b[1].get(h)!r}")
+    for p, u, v in R.diff(shape(norm(ja)), shape(norm(jb))):
+        bad.append(f"{label}: shape {p}: python {json.dumps(u)[:120]} rust {json.dumps(v)[:120]}")
+    for k in SAY_STABLE[:4]:
+        if ja.get(k) != jb.get(k):
+            bad.append(f"{label}: {k}: python {ja.get(k)!r} rust {jb.get(k)!r}")
+    ca, cb = ja.get("command") or {}, jb.get("command") or {}
+    for k in ("op", "minutes", "title", "query", "words", "done", "ask", "created", "already", "position"):
+        if ca.get(k) != cb.get(k):
+            bad.append(f"{label}: command.{k}: python {ca.get(k)!r} rust {cb.get(k)!r}")
+    if [x.get("joke_id") for x in ca.get("candidates") or []] != [x.get("joke_id") for x in cb.get("candidates") or []]:
+        bad.append(f"{label}: candidates differ")
+    if (ja.get("saved_to") is None) != (jb.get("saved_to") is None):
+        bad.append(f"{label}: saved_to python {ja.get('saved_to')!r} rust {jb.get('saved_to')!r}")
+    problems.extend(bad)
+    n_equal += not bad
+    return ja, jb
+
+
+def say_phase() -> None:
+    global n_equal
+    settle(["/api/sets", "/api/jokes?limit=5000", "/api/tonight/screen"])
+    reads = ["/api/tonight/screen", "/api/boards", "/api/ask/chats", "/api/decisions?limit=6", "/api/jokes?limit=5000"]
+    both("say: before", reads)
+    # every refusal, to the letter
+    for label, b_, h_ in [
+            ("no text", {}, app), ("blank text", {"text": "   "}, app), ("text not a string", {"text": 5}, app),
+            ("text too long", {"text": "x" * 4001}, app), ("kind not one of three", {"text": "hi", "kind": "poem"}, app),
+            ("kind command, not a command", {"text": "the dentist is a drug dealer", "kind": "command"}, app),
+            ("context not an object", {"text": "hi", "context": "screen"}, app),
+            ("choice that is no bit", {"text": "add the kale bit to tonight", "choice": "joke:nope"}, app),
+            ("choice that is a number", {"text": "add the kale bit to tonight", "choice": 5}, app),
+            ("worker token", {"text": "hi"}, worker_tok), ("no token", {"text": "hi"}, {})]:
+        a_, c_ = R.call(py, "POST", "/api/say", h_, b_), R.call(rs, "POST", "/api/say", h_, b_)
+        got = R.compare(f"say: {label}", a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"say: {label}: the Python refuses it ({a_[0]})", a_[0] in (400, 401, 403), f"{a_[0]} {a_[2][:200]!r}")
+    # a bit (the default), through each server; the same bit's words attach under the existing bit on both
+    ja, jb = say_pair("say: a bit", "Say bit about the cheese grater that grates back (P).", "Say bit about the cheese grater that grates back (R).")
+    ok("say: a bit is a jot, undoable", ja.get("kind") == "bit" and ja["idea"]["ok"] is True and ja["undo"]["POST"] == "/api/undo"
+       and jb["kind"] == "bit" and jb["idea"]["ok"] is True, json.dumps(jb)[:300])
+    both("say: after a bit", reads)
+    say_pair("say: a bit from a screen", "Say bit from the set page about elevators (P).", "Say bit from the set page about elevators (R).",
+             {"context": {"screen": "set", "set_id": "set:x", "junk": 1}})
+    # a question: a conversation and a job for the worker
+    ja, jb = say_pair("say: a question", "What did I write about the parking meter (P)?", "What did I write about the parking meter (R)?")
+    ok("say: a question opens a conversation (201)", ja.get("kind") == "question" and "chat" in ja and jb["kind"] == "question" and "chat" in jb, json.dumps(jb)[:300])
+    both("say: after a question", reads)
+    # the override: his tap on "Not a question? Save as a bit", and the other way round
+    say_pair("say: a question made a bit", "How do I get from the airport to the gate (P)?", "How do I get from the airport to the gate (R)?", {"kind": "bit"})
+    say_pair("say: a bit made a question", "The dentist is a drug dealer and I owe him (P)", "The dentist is a drug dealer and I owe him (R)", {"kind": "question"})
+    both("say: after the overrides", reads)
+    # the commands: a set list, a set list with the weekday for a title, a bit onto tonight (asked, none, chosen)
+    say_pair("say: a new set", "new 7 for friday")
+    say_pair("say: a new set with number words", "make me a tight forty five for the late show")
+    say_pair("say: a new set by weekday", "build me a tight 5")
+    both("say: after new sets", reads)
+    say_pair("say: add, nothing like it", "add the zebra quantum bit to tonight")
+    jokes = (body(R.call(py, "GET", "/api/jokes?limit=40", app)) or {}).get("items") or []
+    if jokes:
+        j0 = jokes[0]
+        words = [w for w in re.findall(r"[a-z0-9']+", (j0.get("title") or "").lower()) if len(w) >= 4][:2]
+        ok("say: the scratch notebook has a bit to add", bool(words), json.dumps(j0)[:200])
+        if words:
+            say_pair("say: add by name", f"add the {' '.join(words)} bit to tonight")
+            say_pair("say: add by choice", "add the zebra quantum bit to tonight", extra={"choice": j0["id"]})
+            say_pair("say: add by choice again (already there or created)", "add the zebra quantum bit to tonight", extra={"choice": j0["id"]})
+    both("say: after the commands", reads + ["/api/boards?include_hidden=1"])
+    # a question from a bit's page names the bit
+    if jokes:
+        say_pair("say: a question about a bit", "Why does this one work (P)?", "Why does this one work (R)?", {"context": {"joke_id": jokes[0]["id"], "screen": "bit"}})
+        say_pair("say: a question about a bit that is not one", "Why does this one work too (P)?", "Why does this one work too (R)?", {"context": {"joke_id": "joke:nope"}})
+    both("say: after the questions", reads)
+
+
+# ---------------------------------------------------------------- round 6, group C: his sets, the writes
+def mysets_phase() -> None:
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    jokes = [x["id"] for x in (body(R.call(py, "GET", "/api/jokes?limit=40", app)) or {}).get("items") or []]
+    ok("mysets: the scratch notebook has four bits", len(jokes) >= 4, str(len(jokes)))
+    j = jokes[:4]
+    keys = [s["id"] for s in (body(R.call(py, "GET", "/api/sets", app)) or {}).get("sets") or []]
+    boards = [b_["id"] for b_ in (body(R.call(py, "GET", "/api/boards", app)) or {}).get("boards") or []]
+    both("mysets: before", ["/api/mysets", "/api/mysets/match", "/api/mysets/match?set=nope", "/api/mysets/match?backend=x"])
+    both("mysets: the recording match", [f"/api/mysets/match?set={q(k)}" for k in keys[:4]] + [f"/api/mysets/match?set={q(k[4:])}" for k in keys[:2]])
+
+    def pair(label, method, path_of, b_py, b_rs=None, want=(200,), headers=None):
+        """The same request to both servers on each one's own set; the answers equal after normalisation."""
+        global n_equal
+        a = R.call(py, method, path_of(py), headers or app, b_py)
+        b = R.call(rs, method, path_of(rs), headers or app, b_rs if b_rs is not None else b_py)
+        bad = []
+        if a[0] != b[0] or a[0] not in want:
+            bad.append(f"{label}: status python {a[0]} rust {b[0]} (want {want}): {a[2][:200]!r} / {b[2][:200]!r}")
+        for h in R.HEADERS:
+            if a[1].get(h) != b[1].get(h):
+                bad.append(f"{label}: header {h}: python {a[1].get(h)!r} rust {b[1].get(h)!r}")
+        # `tapes` of the answer is left out: two sets made of the same bits tie for a recording, the tie goes to the lower
+        # id, and the two answers are about two different sets. The same tie is checked below on the SAME set, read
+        # through both servers.
+        drop = lambda d_: {k: v for k, v in d_.items() if k != "tapes"} if isinstance(d_, dict) else d_  # noqa: E731
+        for p, u, v in R.diff(norm(drop(body(a))), norm(drop(body(b)))):
+            bad.append(f"{label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}")
+        problems.extend(bad)
+        n_equal += not bad
+        both(f"mysets: {label}: each set read through both servers", [f"/api/mysets/{q(i_)}" for i_ in mine.values()])
+        return body(a), body(b)
+
+    mine = {}
+    # a new set, three ways: bits, a board, another set trimmed
+    a, b = pair("mysets: a new set", "POST", lambda s: "/api/mysets", {"title": "Diff set (P)", "target_s": 600, "joke_ids": j[:3]},
+                {"title": "Diff set (R)", "target_s": 600, "joke_ids": j[:3]}, want=(201,))
+    mine[py], mine[rs] = a["set"]["id"], b["set"]["id"]
+    ok("mysets: the new set has its title", b["set"]["title"].startswith("Diff set"), json.dumps(b)[:300])
+    if boards:
+        pair("mysets: a new set from a board", "POST", lambda s: "/api/mysets", {"board_id": boards[0], "title": "From board (P)"}, {"board_id": boards[0], "title": "From board (R)"}, want=(201,))
+        pair("mysets: a new set from a board, its own title", "POST", lambda s: "/api/mysets", {"board_id": boards[0]}, want=(201,))
+    pair("mysets: a new set from another set", "POST", lambda s: "/api/mysets", {"from_set": mine[py], "target_s": 300, "title": "Trimmed (P)"},
+         {"from_set": mine[rs], "target_s": 300, "title": "Trimmed (R)"}, want=(201,))
+    pair("mysets: a new set from another set, the bits given", "POST", lambda s: "/api/mysets", {"from_set": mine[py], "target_s": 300, "joke_ids": j[:1]},
+         {"from_set": mine[rs], "target_s": 300, "joke_ids": j[:1]}, want=(201,))
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        both(f"mysets: after a set via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", f"/api/mysets/{q(mine[base])}/trim?target_s=300", "/api/today"])
+    # the changes: a rename, a reorder with a note, a swap with the note written for him, a length, a lock and an unlock
+    pair("mysets: a rename", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"title": "  Renamed (P)  "}, {"title": "  Renamed (R)  "})
+    pair("mysets: the same name again", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"title": "Renamed (P)"}, {"title": "Renamed (R)"})
+    pair("mysets: a reorder with his note", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[0], j[1]], "note": "  v2: the closer first  "})
+    pair("mysets: a swap, the note written for him", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[3], j[1]]})
+    pair("mysets: an addition and a length", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[3], j[1], j[0]], "target_s": 900})
+    pair("mysets: a cut", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[3], j[0]]})
+    pair("mysets: the length alone", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"target_s": 420})
+    pair("mysets: nothing changed", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"target_s": 420, "title": "Renamed (P)"}, {"target_s": 420, "title": "Renamed (R)"})
+    pair("mysets: a lock", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3]})
+    pair("mysets: the same lock again", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3]})
+    pair("mysets: an unlock", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3], "unlock": True})
+    pair("mysets: a bridge queued", "POST", lambda s: f"/api/mysets/{q(mine[s])}/bridge", {"from": j[3], "to": j[0]}, want=(200, 202))
+    pair("mysets: the same bridge again", "POST", lambda s: f"/api/mysets/{q(mine[s])}/bridge", {"from": j[3], "to": j[0]}, want=(200, 202))
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        both(f"mysets: after the changes via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", f"/api/mysets/{q(mine[base])}/trim?target_s=300", "/api/today"])
+    # the refusals to the letter (each writes nothing)
+    ws0 = mine[py]
+    for label, method, path_, b_ in [
+            ("no body", "POST", "/api/mysets", {}), ("no title", "POST", "/api/mysets", {"target_s": 600}),
+            ("a title that is a number", "POST", "/api/mysets", {"title": 5, "target_s": 600}),
+            ("a long title", "POST", "/api/mysets", {"title": "t" * 201, "target_s": 600}),
+            ("a length under a minute", "POST", "/api/mysets", {"title": "x", "target_s": 30}),
+            ("a length over four hours", "POST", "/api/mysets", {"title": "x", "target_s": 99999}),
+            ("a length as text", "POST", "/api/mysets", {"title": "x", "target_s": "600"}),
+            ("bits that are not a list", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": "joke:a"}),
+            ("a bit that is not one", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": ["joke:nope"]}),
+            ("a bit twice", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": [j[0], j[0]]}),
+            ("a board that is not one", "POST", "/api/mysets", {"board_id": "sb:nope"}),
+            ("a board that is a number", "POST", "/api/mysets", {"board_id": 5}),
+            ("a set that is not one", "POST", "/api/mysets", {"from_set": "ws:nope", "target_s": 300}),
+            ("a set to trim with no length", "POST", "/api/mysets", {"from_set": ws0}),
+            ("a set that is not there", "PATCH", "/api/mysets/ws:nope", {"title": "x"}),
+            ("a patch with nothing", "PATCH", f"/api/mysets/{q(ws0)}", {}),
+            ("a patch with a blank title", "PATCH", f"/api/mysets/{q(ws0)}", {"title": "  "}),
+            ("a patch with a null title", "PATCH", f"/api/mysets/{q(ws0)}", {"title": None}),
+            ("a patch with a null length", "PATCH", f"/api/mysets/{q(ws0)}", {"target_s": None}),
+            ("a patch with a note that is a number", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": [j[1]], "note": 5}),
+            ("a patch with a blank note", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": [j[1]], "note": "  "}),
+            ("a patch with bits that are not there", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": ["joke:nope"]}),
+            ("a lock on a bit not in the set", "POST", f"/api/mysets/{q(ws0)}/lock", {"joke_id": j[2]}),
+            ("a lock with no bit", "POST", f"/api/mysets/{q(ws0)}/lock", {}),
+            ("a lock on no set", "POST", "/api/mysets/ws:nope/lock", {"joke_id": j[0]}),
+            ("a bridge of bits not in the set", "POST", f"/api/mysets/{q(ws0)}/bridge", {"from": j[2], "to": j[1]}),
+            ("a bridge with no bits", "POST", f"/api/mysets/{q(ws0)}/bridge", {}),
+            ("a bridge on no set", "POST", "/api/mysets/ws:nope/bridge", {"from": j[0], "to": j[1]})]:
+        same_write(f"mysets: {label}", method, path_, b_)
+    for label, p_ in (("a recording that is not one", "/api/mysets/match?set=nope"), ("no recording named", "/api/mysets/match")):
+        got = R.compare(f"mysets: {label}", R.call(py, "GET", p_, app), R.call(rs, "GET", p_, app))
+        problems.extend(got)
+        n_equal += not got
+    for label, method, p_, b_, h_ in (("the worker token on a create", "POST", "/api/mysets", {"title": "x", "target_s": 600}, worker_tok),
+                                      ("no token on a patch", "PATCH", f"/api/mysets/{q(ws0)}", {"title": "x"}, {}),
+                                      ("a put", "PUT", f"/api/mysets/{q(ws0)}", {"title": "x"}, app)):
+        got = R.compare(f"mysets: {label}", R.call(py, method, p_, h_, b_), R.call(rs, method, p_, h_, b_))
+        problems.extend(got)
+        n_equal += not got
+    # a delete through each, the list as it was
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        st_, r_ = write(base, "PATCH", f"/api/mysets/{q(mine[base])}", {"delete": True})
+        ok(f"mysets: a delete via {who}", r_ == {"deleted": mine[base]}, json.dumps(r_))
+        both(f"mysets: after a delete via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", "/api/today"])
+
+
+# ---------------------------------------------------------------- round 6, group D: the reads that were the Python's
+def status_phase() -> None:
+    global n_equal
+    w = worker_tok
+
+    def gsync(files: dict, remove: list | None = None) -> None:
+        # through the Python: it writes its pod's copy of the file too (it refreshes from the rows only every poll)
+        write(py, "POST", "/api/worker/files", {"files": [{"path": p, "text": t} for p, t in files.items()],
+                                                  "remove": remove or [], "actor": "import:gsync"}, headers=w)
+
+    maps = ["/api/map", "/api/map?cap=1", "/api/map?cap=3", "/api/map?cap=400", "/api/map?cap=2000", "/api/map?cap=0", "/api/map?cap=x",
+            "/api/map?cap=2001", "/api/map?cap=-1", "/api/map?cap=", "/api/map?backend=x"]
+    both("status: the map", maps)
+    both("status: the rest", ["/api/connections", "/api/connections?backend=x", "/api/ai/worker", "/api/ai/worker?backend=x", "/api/notes", "/api/notes?backend=x"])
+    # Settings > Connections follows gsync's own files
+    gsync({"kb/gsync/map.json": json.dumps({"docs": {"a": {"origin": "gdocs"}, "b": {"origin": "app"}, "c": {"origin": "other"},
+                                                      "d": {"origin": "gdocs", "hidden": True}, "e": "x"}, "boards": {"x": {}, "y": {}}})})
+    both("status: connections, a map and no runs", ["/api/connections"])
+    now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+    old = "2020-01-01T00:00:00Z"
+    cases = [("a run that went well", [{"ts": now, "ts_end": now, "mode": "watch", "errors": []}]),
+             ("a dry run beside it", [{"ts": now, "mode": "watch"}, {"ts": now, "dry_run": True, "errors": ["x"]}]),
+             ("a run with errors", [{"ts": now, "mode": "watch"}, {"ts": now, "ts_end": now, "errors": ["a", "b"]}]),
+             ("a run long ago", [{"ts": old, "ts_end": old, "mode": "watch", "errors": []}]),
+             ("the api was down", [{"ts": now, "mode": "watch"}, {"ts": now, "mode": "api_down", "errors": []}]),
+             ("a torn last line", [{"ts": now, "mode": "watch"}]),
+             ("a stamp with no zone", [{"ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), "mode": "once"}]),
+             ("a stamp that is not one", [{"ts": "yesterday", "mode": "once"}]),
+             ("no stamp", [{"mode": "once"}])]
+    for label, runs in cases:
+        text = "".join(json.dumps(r) + chr(10) for r in runs) + ('{"ts": "tor' if "torn" in label else "")
+        gsync({"kb/gsync/runs.jsonl": text})
+        both(f"status: connections, {label}", ["/api/connections"])
+    gsync({"kb/gsync/conflicts.jsonl": '{"a": 1}' + chr(10) + chr(10) + '{"b": 2}' + chr(10)})
+    both("status: connections, two conflicts", ["/api/connections"])
+    gsync({}, remove=["kb/gsync/map.json", "kb/gsync/runs.jsonl", "kb/gsync/conflicts.jsonl"])
+    both("status: connections, gsync's files gone", ["/api/connections"])
+    # what answers: the Python's own status is its processes; the app reads `primary`
+    a_, c_ = R.call(py, "GET", "/api/backend", app), R.call(rs, "GET", "/api/backend", app)
+    ja, jc = body(a_) or {}, body(c_) or {}
+    ok("status: /api/backend, the same status and headers", a_[0] == c_[0] == 200 and all(a_[1].get(h) == c_[1].get(h) for h in R.HEADERS), f"{a_[0]} / {c_[0]}")
+    ok("status: /api/backend, the same primary and this_request", all(ja.get(k) == jc.get(k) == "surreal" for k in ("primary", "this_request")), json.dumps(jc)[:200])
+    ok("status: /api/backend names the surreal backend with the same counts",
+       set(jc.get("backends") or {}) == {"surreal"} and (jc["backends"]["surreal"].get("counts") == ja["backends"]["surreal"].get("counts")),
+       f"{(jc.get('backends') or {}).get('surreal', {}).get('counts')} vs {(ja.get('backends') or {}).get('surreal', {}).get('counts')}")
+    got = R.compare("status: /api/backend with no token", R.call(py, "GET", "/api/backend", {}), R.call(rs, "GET", "/api/backend", {}))
+    problems.extend(got)
+    n_equal += not got
+
+
+# ---------------------------------------------------------------- round 6, group E: the export and the recordings
+def export_phase() -> None:
+    global n_equal
+    for label, p_, h_ in [("the export", "/api/export", app), ("the export, hidden too", "/api/export?include_hidden=1", app),
+                          ("the export, a backend that is not here", "/api/export?backend=x", app),
+                          ("the export with no token", "/api/export", {}), ("the export with the worker's token", "/api/export", worker_tok),
+                          ("a recording", "/api/audio/set:nope", app), ("a recording, wav", "/api/audio/set:nope?fmt=wav", app),
+                          ("a recording of a set that is there", "/api/audio/" + quote(INGEST_ROOMS["rs"][1], safe=""), app),
+                          ("a recording with a bad id", "/api/audio/bad%20id%21", app), ("a recording with a long id", "/api/audio/" + "x" * 301, app),
+                          ("a recording with no token", "/api/audio/set:nope", {}), ("a recording, a backend that is not here", "/api/audio/set:nope?backend=x", app)]:
+        a_, c_ = R.call(py, "GET", p_, h_), R.call(rs, "GET", p_, h_)
+        bad = []
+        if a_[0] != c_[0]:
+            bad.append(f"export: {label}: status python {a_[0]} rust {c_[0]}: {a_[2][:160]!r} / {c_[2][:160]!r}")
+        for h in R.HEADERS + ("content-disposition",):
+            if a_[1].get(h) != c_[1].get(h):
+                bad.append(f"export: {label}: header {h}: python {a_[1].get(h)!r} rust {c_[1].get(h)!r}")
+        for p, u, v in R.diff(norm(body(a_)), norm(body(c_))):
+            bad.append(f"export: {label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}")
+        problems.extend(bad)
+        n_equal += not bad
+        if p_ == "/api/export" and a_[0] == 200:
+            j_ = body(a_)
+            ok("export: it carries decisions, sets, ideas, the inbox and the four creative logs",
+               j_["format"] == "punchable-export/1" and len(j_["decisions"]) > 10 and len(j_["sets"]) >= 1
+               and set(j_["creative"]) == {"storyboards", "workingsets", "venues", "account"}, json.dumps(list(j_))[:200])
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -1649,11 +2192,14 @@ def main() -> int:
 
     tmp = Path(tempfile.mkdtemp(prefix="pk-t10-"))
     comedy, data, home = tmp / "comedy", tmp / "data", tmp / "home"
+    global PY_DATA
+    PY_DATA = data
     for d in (data, home, tmp / "cache"):
         d.mkdir()
     R.build_comedy(comedy)
     R.write_vectors(tmp / "cache" / "kb", R.make_graph())
     judge = R.write_judge(comedy, tmp / "cache" / "kb")
+    (home / "no-rules.json").write_text("{}", encoding="utf-8")  # pk-api refuses to start when the named file is missing
     port = R.free_port()
     pw = secrets.token_hex(16)
     env = {**os.environ, "PUNCHABLE_HOME": str(home), "COMEDY_DIR": str(comedy), "PUNCH_COMEDY": str(comedy),
@@ -1788,7 +2334,33 @@ def main() -> int:
         film_phase()
         chats_phase()
         venues_phase()
+        try:
+            ingest_phase(port, pw)
+        except (Exception, SystemExit) as e:  # noqa: BLE001  the phase's own breakage is a problem to report, not a lost run
+            import traceback
+            problems.append(f"ingest phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            say_phase()
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"say phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            mysets_phase()
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"mysets_phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            status_phase()
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"status_phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            export_phase()
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"export_phase crashed: {traceback.format_exc()[-900:]}")
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
+        report["python_sync_after_pk_api_decisions"] = python_full_load_demo(port, pw)
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
                                       ("POST", "/api/decision", 200), ("POST", "/api/undo", 200), ("POST", "/api/merge", 200),
