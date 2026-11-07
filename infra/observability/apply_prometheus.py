@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.request
@@ -81,13 +82,30 @@ def rule_groups() -> dict:
     return {"groups": rules[0]["spec"]["groups"]}
 
 
+def job_blocks() -> tuple[str, dict[str, str]]:
+    """JOBS split into its comment header and one text block per job, keyed by job name, in order."""
+    parts = re.split(r"(?m)^(?=  - job_name: ')", JOBS.strip("\n"))
+    blocks = {}
+    for p in parts[1:]:
+        m = re.match(r"  - job_name: '([^']+)'", p)
+        blocks[m.group(1)] = p.rstrip("\n")
+    return parts[0].rstrip("\n"), blocks
+
+
 def merged_prometheus_yml(prom: str) -> tuple[str, list[str]]:
     changed = []
-    if "job_name: 'punchable-api'" not in prom:
+    head, blocks = job_blocks()
+    # each job on its own: a config that already has the older jobs still gets a newer one (2026-11-07: the check was
+    # for 'punchable-api' alone, so punchable-api-rs was never added to a live config that had the first two)
+    missing = [n for n in blocks if f"job_name: '{n}'" not in prom]
+    if missing:
         if "scrape_configs:" not in prom:
             raise SystemExit("REFUSING: no scrape_configs in prometheus.yml")
-        prom = prom.rstrip("\n") + "\n" + JOBS
-        changed.append("scrape jobs punchable-api, punchable-worker")
+        add = [blocks[n] for n in missing]
+        if len(missing) == len(blocks):
+            add.insert(0, head)
+        prom = prom.rstrip("\n") + "\n" + "\n".join(add) + "\n"
+        changed.append("scrape jobs " + ", ".join(missing))
     if RULES_KEY not in prom:
         if "rule_files:" in prom:
             # append to the existing list: `rule_files:` is a top-level key followed by `  - path` lines or a flow list

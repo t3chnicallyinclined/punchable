@@ -137,6 +137,18 @@ def test_pk_api_is_scraped_and_alerted_beside_the_python():
         sys.path.pop(0)
     jobs = {j["job_name"]: j for j in yaml.safe_load(ap.JOBS)}
     assert set(jobs) == {"punchable-api", "punchable-api-rs", "punchable-worker"}
+    # merging adds each MISSING job: a live config made before pk-api had the other two (2026-11-07)
+    head, blocks = ap.job_blocks()
+    old = ("global: {}\nscrape_configs:\n  - job_name: 'other'\n    static_configs: [{targets: ['x:1']}]\n"
+           + head + "\n" + blocks["punchable-api"] + "\n" + blocks["punchable-worker"] + "\n")
+    merged, changed = ap.merged_prometheus_yml(old)
+    got = [j["job_name"] for j in yaml.safe_load(merged)["scrape_configs"]]
+    assert sorted(got) == ["other", "punchable-api", "punchable-api-rs", "punchable-worker"], got
+    assert changed[0] == "scrape jobs punchable-api-rs", changed
+    again, changed2 = ap.merged_prometheus_yml(merged)
+    assert again == merged and not any(c.startswith("scrape jobs") for c in changed2)
+    fresh, _ = ap.merged_prometheus_yml("scrape_configs:\n  - job_name: 'other'\n    static_configs: [{targets: ['x:1']}]\n")
+    assert sorted(j["job_name"] for j in yaml.safe_load(fresh)["scrape_configs"]) == sorted(["other", *jobs])
     def keep(job):
         [r] = [r for r in jobs[job]["relabel_configs"] if r.get("action") == "keep"]
         return r["regex"]
