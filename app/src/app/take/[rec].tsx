@@ -2,7 +2,7 @@
 // the system player (expo-video, nativeControls, the original aspect: HIG/playing-video). While the take is still in
 // Documents (its words on their way) it plays here; once the words exist the .mov has left Documents and the one copy
 // is in Photos, so this screen offers Photos instead (the row says "in Photos"). Web: one line.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRecordings, uriOf } from '@/lib/recordings';
@@ -24,8 +24,8 @@ export default function TakeScreen() {
   const recs = useRecordings();
   const r = useMemo(() => recs.find((x) => x.id === recId && x.kind === 'film') || null, [recs, recId]);
   const [vid, setVid] = useState<VideoModule | null | undefined>(undefined);
-  const player = useRef<any>(null);
-  const [on, setOn] = useState(false);
+  // the native player is held in state (render reads it, so it is not a ref); it is made and released by the effect
+  const [player, setPlayer] = useState<any>(null);
   const uri = r && !r.video_gone ? uriOf(r) : null;
   const leave = () => (router.canGoBack() ? router.back() : router.navigate('/bits' as any));
 
@@ -37,18 +37,19 @@ export default function TakeScreen() {
   }, []);
   useEffect(() => {
     if (!vid || !uri) return;
+    let pl: any = null;
     try {
-      const pl = vid.createVideoPlayer(uri);
-      player.current = pl;
-      setOn(true);
+      pl = vid.createVideoPlayer(uri);
       pl.play();
     } catch {
-      setOn(false);
+      pl = null;
     }
+    // a native resource made here and released below: the state follows it (an external system, the effect's job)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPlayer(pl);
     return () => {
-      setOn(false);
-      try { player.current?.release?.(); } catch {}
-      player.current = null;
+      setPlayer(null);
+      try { pl?.release?.(); } catch {}
     };
   }, [vid, uri]);
 
@@ -69,9 +70,9 @@ export default function TakeScreen() {
           </>
         ) : vid === null ? (
           <T v="mut">Not in this build yet.</T>
-        ) : VideoView && on && player.current ? (
+        ) : VideoView && player ? (
           <View style={{ height: '100%', aspectRatio: 9 / 16, maxWidth: '100%', borderRadius: 16, overflow: 'hidden', backgroundColor: C.surface2 }}>
-            <VideoView player={player.current} style={{ flex: 1 }} nativeControls contentFit="contain" />
+            <VideoView player={player} style={{ flex: 1 }} nativeControls contentFit="contain" />
           </View>
         ) : (
           <T v="mut">Opening…</T>
