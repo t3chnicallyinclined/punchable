@@ -2106,8 +2106,8 @@ def status_phase() -> None:
         both(f"status: connections, {label}", ["/api/connections"])
     gsync({"kb/gsync/conflicts.jsonl": '{"a": 1}' + chr(10) + chr(10) + '{"b": 2}' + chr(10)})
     both("status: connections, two conflicts", ["/api/connections"])
-    gsync({"kb/gsync/map.json": "not json"})
-    both("status: connections, a map that is not json", ["/api/connections"])
+    gsync({"kb/gsync/map.json": "[1, 2]"})
+    both("status: connections, a map that is not an object", ["/api/connections"])
     gsync({}, remove=["kb/gsync/map.json", "kb/gsync/runs.jsonl", "kb/gsync/conflicts.jsonl"])
     both("status: connections, gsync's files gone", ["/api/connections"])
     # what answers: the Python's own status is its processes; the app reads `primary`
@@ -2306,27 +2306,27 @@ def main() -> int:
         venues_phase()
         try:
             ingest_phase(port, pw)
-        except Exception as e:  # noqa: BLE001  the phase's own breakage is a problem to report, not a lost run
+        except (Exception, SystemExit) as e:  # noqa: BLE001  the phase's own breakage is a problem to report, not a lost run
             import traceback
             problems.append(f"ingest phase crashed: {traceback.format_exc()[-900:]}")
         try:
             say_phase()
-        except Exception as e:  # noqa: BLE001
+        except (Exception, SystemExit) as e:  # noqa: BLE001
             import traceback
             problems.append(f"say phase crashed: {traceback.format_exc()[-900:]}")
         try:
             mysets_phase()
-        except Exception as e:  # noqa: BLE001
+        except (Exception, SystemExit) as e:  # noqa: BLE001
             import traceback
             problems.append(f"mysets_phase crashed: {traceback.format_exc()[-900:]}")
         try:
             status_phase()
-        except Exception as e:  # noqa: BLE001
+        except (Exception, SystemExit) as e:  # noqa: BLE001
             import traceback
             problems.append(f"status_phase crashed: {traceback.format_exc()[-900:]}")
         try:
             export_phase()
-        except Exception as e:  # noqa: BLE001
+        except (Exception, SystemExit) as e:  # noqa: BLE001
             import traceback
             problems.append(f"export_phase crashed: {traceback.format_exc()[-900:]}")
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
