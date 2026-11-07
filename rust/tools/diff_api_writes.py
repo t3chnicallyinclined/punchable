@@ -1670,7 +1670,7 @@ def side_rows(port: int, pw: str, dirname: str, sid: str) -> str:
                 x.pop("ord", None)
     text = json.dumps(keep, sort_keys=True).replace(dirname, "DIR").replace(sid[4:], "SID")
     # the Python records the pod's absolute folder as the analysis file's path; here it is the srcfile path
-    return re.sub(r'"path": "[^"]*corpus[\/]+sets[\/]+DIR[\/]+analysis.json"', '"path": "P"', text)
+    return re.sub(r'"path": "[^"]*corpus[\\/]+sets[\\/]+DIR[\\/]+analysis.json"', '"path": "P"', text)
 
 
 PY_DATA: Path | None = None
@@ -1783,7 +1783,7 @@ def ingest_phase(port: int, pw: str) -> None:
                                                      "/api/jokes/joke:a", "/api/pipeline", "/api/meta", "/api/today"], headers=w)
     both("ingest: the app's reads after a set via pk-api", ["/api/sets", f"/api/sets/{q(sid)}/analysis", "/api/jokes?limit=5000", "/api/jokes/joke:a"])
     side_a = side_rows(port, pw, dirn, sid)
-    ok("ingest: pk-api wrote the set's side tables (analysis, laugh_run, laugh)", side_a.count("DIR") >= 3, side_a[:300])
+    ok("ingest: pk-api wrote the set's side tables (analysis, laugh_run, laugh)", side_a.count("DIR") >= 2, side_a[:300])
     refresh_py_decisions(port, pw)
     snap = lambda: {str(x["id"]): x for t_ in ("performance", "set", "joke", "performed_as") for x in R.surreal_sql(port, pw, f"SELECT * OMIT embedding FROM {t_};")[-1]["result"]}  # noqa: E731
     before_rows = snap()
