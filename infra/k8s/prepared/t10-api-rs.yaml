@@ -91,9 +91,11 @@ spec:
             capabilities: { drop: ["ALL"] }
           # the model once loaded adds its weights and runtime (measured in the T9 round-6 row of
           # docs/RUST_WORKSTREAM.md); the T15 measurement sets the request
+          # 2026-11-07: OOM-killed at 512Mi right after ONNX Runtime loaded bge-small on the first search (the server,
+          # exit 137 at 05:34:38Z); with the model and the vector sweeper the server peak is above 512Mi (T15)
           resources:
             requests: { cpu: 50m, memory: 64Mi }
-            limits: { cpu: "1", memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
           readinessProbe:
             httpGet: { path: "/api/health?ready=1", port: 8080 }
             periodSeconds: 3
