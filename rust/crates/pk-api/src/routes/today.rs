@@ -35,7 +35,7 @@ pub async fn today(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiRe
     let tx = super::sets::transcripts(&st, &d, dirs).await?;
     let ws = latest_ws(&st).await;
     // the uploads waiting (`len(inbox_list(kb))`): rows in the database since group 6a
-    let inbox = match st.store_handle().filter(|_| st.config().upload_db) {
+    let inbox = match st.store_handle().filter(|_| st.config().uploads.is_some()) {
         Some(store) => store.upload_count().await.map_err(crate::writes::store_err)?,
         None => 0,
     };

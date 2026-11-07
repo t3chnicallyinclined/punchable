@@ -260,7 +260,7 @@ pub async fn backend(State(st): State<AppState>, RawQuery(raw): RawQuery) -> Api
 /// logs and settings). Audio is not in it (it is on his phone). Read from the database: the same file the Python made
 /// from its pod's copies. With the uploads still the Python pod's folder, the inbox is its, so the request is too.
 pub async fn export(State(st): State<AppState>, req: axum::extract::Request) -> ApiResult<Response> {
-    if !st.config().upload_db {
+    if st.config().uploads.is_none() {
         return Ok(crate::proxy::forward(State(st), req).await);
     }
     let q = Query::parse(req.uri().query());

@@ -388,3 +388,32 @@ def test_prepared_policies_admit_the_worker_to_pk_api(tmp_path):
     assert {"podSelector": {"matchLabels": {"app": "punchable-worker"}}} in peers
     w = next(d for d in ds if d["metadata"]["name"] == "punchable-worker-to-api-rs")
     assert w["spec"]["egress"][0]["to"] == [{"podSelector": {"matchLabels": {"app": "punchable-api-rs"}}}]
+
+
+def test_prepared_recordings_in_r2_read_their_token_from_a_secret_and_reach_only_the_public_443(tmp_path):
+    """docs/adr/0015: pk-api's R2 settings are a Secret by reference (no value, no bucket name in the file), the pod does not
+    start without it, the Python Deployment is not told to keep uploads in the database, the fetch of a recording is not
+    buffered by nginx, and pk-api may reach R2 on 443 of the public internet only."""
+    r = _render(tmp_path, PREPARED, "", RS_IMG)
+    assert r.returncode == 0, r.stderr
+    ds = [d for d in yaml.safe_load_all(r.stdout) if d]
+    dep = next(d for d in ds if d["kind"] == "Deployment" and d["metadata"]["name"] == "punchable-api-rs")
+    c = dep["spec"]["template"]["spec"]["containers"][0]
+    env = {e["name"]: e.get("value") for e in c["env"]}
+    assert env["PK_UPLOAD_R2"] == "1"
+    assert not any(k.startswith("PK_REC_") or k == "PK_UPLOAD_DB" for k in env), "the bucket and the token are never in this file"
+    sec = [e["secretRef"] for e in c["envFrom"] if e.get("secretRef", {}).get("name") == "punchable-r2-recordings"]
+    assert sec and not sec[0].get("optional"), "the Secret is required: a rollout before it exists must stop"
+    ing = {d["metadata"]["name"]: d for d in ds if d["kind"] == "Ingress"}
+    paths = lambda n: [p["path"] for rule in ing[n]["spec"]["rules"] for p in rule["http"]["paths"]]  # noqa: E731
+    fetch = "/api/worker/jobs/[^/]+/file$"
+    assert fetch in paths("punchable-api-rs-file") and fetch not in paths("punchable-api-rs-ids")
+    ann = ing["punchable-api-rs-file"]["metadata"]["annotations"]
+    assert ann["nginx.ingress.kubernetes.io/proxy-buffering"] == "off"
+    assert ing["punchable-api-rs-upload"]["metadata"]["annotations"]["nginx.ingress.kubernetes.io/proxy-body-size"] == "1g"
+    pol = next(d for d in ds if d["kind"] == "NetworkPolicy" and d["metadata"]["name"] == "punchable-api-rs-r2")
+    assert pol["spec"]["podSelector"] == {"matchLabels": {"app": "punchable-api-rs"}} and pol["spec"]["policyTypes"] == ["Egress"]
+    (rule,) = pol["spec"]["egress"]
+    assert rule["ports"] == [{"protocol": "TCP", "port": 443}]
+    block = rule["to"][0]["ipBlock"]
+    assert block["cidr"] == "0.0.0.0/0" and {"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"} <= set(block["except"])

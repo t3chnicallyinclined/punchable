@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # From the dev machine: send the COMMITTED tree to the server and run one step there (infra/deploy.sh lists them).
 #   infra/ship.sh test | base | google-idp | keycloak | keycloak-ingress | build api|web|worker | rollout api|web|worker [ref]
-#                 | dbload [--check] | ingress | status | backup-secret | backup | backup-now | backup-list
+#                 | dbload [--check] | ingress | status | backup-secret | recordings-secret | backup | backup-now | backup-list
 #                 | legal-rules | cutover [--undo] | keycloak-theme [--dry-run]   (mounts the login theme: RESTARTS the shared Keycloak) | ai-secret | worker-secret
 #                 | observability | bugsink-secret | bugsink | sentry-secret   (infra/OBSERVABILITY.md)
 #   sentry-secret sends the SENTRY_DSN= line of ~/.punchable/secrets.env over ssh STDIN into the Secret punchable-sentry
 #   (the API's and the worker's crash reports -> the self-hosted Bugsink). bugsink-secret sends the optional BUGSINK_SUPERUSER= line
 #   (email:password for Bugsink's first user) the same way; the SECRET_KEY is generated on the server.
+#   recordings-secret does the same with the PK_REC_* lines of ~/.punchable/r2-recordings.env (a token scoped to the
+#   RECORDINGS bucket only, never the backup token) into the Secret punchable-r2-recordings (docs/adr/0015,
+#   infra/recordings/README.md).
 #   backup-secret sends the R2_* lines of ~/.punchable/r2.env (a token scoped to the backup bucket) over ssh STDIN into
 #   the Secret punchable-r2-backup (deploy.sh backup-secret). Never in argv, git, logs or the screen.
 #   ai-secret sends the ANTHROPIC_API_KEY= line of ~/.punchable/secrets.env over ssh STDIN into the Secret
@@ -88,6 +91,19 @@ if [ "$STEP" = backup-secret ]; then
   grep -qE '^R2_SECRET_ACCESS_KEY=[0-9a-f]{64}\s*$' "$F" || { echo "!! R2_SECRET_ACCESS_KEY missing or not 64 hex in $F"; exit 1; }
   grep -E '^R2_(ENDPOINT|BUCKET|ACCESS_KEY_ID|SECRET_ACCESS_KEY)=' "$F" | tr -d '\r' \
     | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh backup-secret"
+  exit $?
+fi
+if [ "$STEP" = recordings-secret ]; then
+  # the RECORDINGS bucket's token (docs/adr/0015, infra/recordings/README.md): its own file, never the backup token
+  F="${R2_RECORDINGS_ENV:-$HOME/.punchable/r2-recordings.env}"
+  [ -f "$F" ] || { echo "!! $F not found (PK_REC_ENDPOINT, PK_REC_BUCKET, PK_REC_ACCESS_KEY_ID, PK_REC_SECRET_ACCESS_KEY)"; exit 1; }
+  grep -qE '^PK_REC_ENDPOINT=https://[0-9a-f]{32}\.r2\.cloudflarestorage\.com/?\s*$' "$F" \
+    || { echo "!! PK_REC_ENDPOINT missing or not https://<account id>.r2.cloudflarestorage.com in $F"; exit 1; }
+  grep -qE '^PK_REC_BUCKET=[a-z0-9][a-z0-9-]{1,61}[a-z0-9]\s*$' "$F" || { echo "!! PK_REC_BUCKET missing or not a bucket name in $F"; exit 1; }
+  grep -qE '^PK_REC_ACCESS_KEY_ID=[0-9a-f]{32}\s*$' "$F" || { echo "!! PK_REC_ACCESS_KEY_ID missing or not 32 hex in $F"; exit 1; }
+  grep -qE '^PK_REC_SECRET_ACCESS_KEY=[0-9a-f]{64}\s*$' "$F" || { echo "!! PK_REC_SECRET_ACCESS_KEY missing or not 64 hex in $F"; exit 1; }
+  grep -E '^PK_REC_(ENDPOINT|BUCKET|ACCESS_KEY_ID|SECRET_ACCESS_KEY)=' "$F" | tr -d '\r' \
+    | ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh recordings-secret"
   exit $?
 fi
 if [ "$STEP" = dbload ]; then

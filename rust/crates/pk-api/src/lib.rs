@@ -23,6 +23,7 @@ pub mod live;
 pub mod pages;
 pub mod proxy;
 pub mod query;
+pub mod recordings;
 pub mod routes;
 pub mod search;
 pub mod setlists;
@@ -617,11 +618,13 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
             every,
         ));
     }
-    // the recordings nobody collected (docs/adr/0014), when uploads live in the database
-    if st.config().upload_db
-        && let Some(every) = st.config().upload_sweep_every
-    {
-        tokio::spawn(expiry::run(st.clone(), expiry::lease(sweep::me(), every), every));
+    // recordings in R2 (docs/adr/0015): the bucket is checked until it answers (readiness waits for it), and the
+    // recordings nobody collected are deleted by the hourly pass
+    if st.config().uploads.is_some() {
+        tokio::spawn(recordings::probe(st.clone()));
+        if let Some(every) = st.config().upload_sweep_every {
+            tokio::spawn(expiry::run(st.clone(), expiry::lease(sweep::me(), every), every));
+        }
     }
     let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");

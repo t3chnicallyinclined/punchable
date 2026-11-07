@@ -24,6 +24,10 @@ use serde_json::{Value, json};
 use tokio_tungstenite::tungstenite::Message;
 use tower::ServiceExt;
 
+#[path = "support/s3_standin.rs"]
+mod s3_standin;
+use s3_standin::{Options, Standin};
+
 struct Scratch(Child);
 
 impl Drop for Scratch {
@@ -121,14 +125,32 @@ async fn setup_with(env: &Env, port: u16, db: &str, auth: bool) -> (Store, AppSt
     setup_full(env, port, db, auth, &[]).await
 }
 
+/// [`setup`] with recordings in R2 (docs/adr/0015) on, against the stand-in `s`.
+async fn setup_uploads(env: &Env, port: u16, db: &str, s: &Standin) -> (Store, AppState) {
+    setup_uploads_with(env, port, db, s, &[]).await
+}
+
+async fn setup_uploads_with(env: &Env, port: u16, db: &str, s: &Standin, more: &[(&str, &str)]) -> (Store, AppState) {
+    let (writer, st) = setup_uploads_raw(env, port, db, s, more).await;
+    assert!(st.check_recordings().await, "the stand-in answers the start-up check");
+    (writer, st)
+}
+
+/// [`setup_uploads_with`] without the start-up check.
+async fn setup_uploads_raw(env: &Env, port: u16, db: &str, s: &Standin, more: &[(&str, &str)]) -> (Store, AppState) {
+    let mut extra = vec![
+        ("PK_UPLOAD_R2", "1"),
+        ("PK_REC_ENDPOINT", s.endpoint.as_str()),
+        ("PK_REC_BUCKET", s.bucket.as_str()),
+        ("PK_REC_ACCESS_KEY_ID", s.key_id.as_str()),
+        ("PK_REC_SECRET_ACCESS_KEY", s.secret.as_str()),
+    ];
+    extra.extend_from_slice(more);
+    setup_full(env, port, db, false, &extra).await
+}
+
 /// [`setup_with`] and more settings for the API (`PK_LIVE_PING_S`, ...).
-async fn setup_full(
-    env: &Env,
-    port: u16,
-    db: &str,
-    auth: bool,
-    extra: &[(&'static str, &'static str)],
-) -> (Store, AppState) {
+async fn setup_full(env: &Env, port: u16, db: &str, auth: bool, extra: &[(&str, &str)]) -> (Store, AppState) {
     let cfg = Config::scratch(env, port, "punchable_test", db).expect("config");
     let writer = Store::connect(cfg.clone()).await.expect("connect");
     assert!(writer.apply_schema(false).await.expect("schema"));
@@ -162,7 +184,6 @@ async fn setup_full(
         ("PK_OWNER_ID", "owner"),
         ("PK_EMBEDDER", "hash"),
         ("PK_VEC_SWEEP_S", "0"),
-        ("PK_UPLOAD_DB", "1"),
     ];
     pairs.extend(extra.iter().copied());
     if auth {
@@ -594,30 +615,24 @@ async fn claim_race(engine: &str, db: &str) {
     );
 }
 
+/// The pointer row (docs/adr/0015): made last, naming the object; a taken name gets the next suffix; the rows list
+/// newest first; the keys the bucket sweep must not delete; a delete gives the row back so its object can go too.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn an_upload_is_rows_both_servers_read_and_a_taken_name_gets_the_next_suffix() {
+async fn a_pointer_row_names_the_object_and_a_taken_name_gets_the_next_suffix() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
     let (writer, _st) = setup(&env, port, "t_upload").await;
     let meta = json!({"kind": "set", "title": "Late show", "marks_ms": [1, 2]});
-    let a: Vec<u8> = (0..2_500_000_u32).map(|i| (i % 251) as u8).collect();
-    for (seq, part) in a.chunks(pk_store::upload::PART).enumerate() {
-        writer
-            .upload_put_part("tok-a", i64::try_from(seq).unwrap(), part.to_vec())
-            .await
-            .unwrap();
-    }
     let name = "2026-11-06_punchable-set_101010_take.m4a";
     assert_eq!(
         writer
-            .upload_commit(name, "tok-a", &meta, i64::try_from(a.len()).unwrap(), 3)
+            .upload_commit(name, "rec/aaa", &meta, 2_500_000, 1)
             .await
             .unwrap(),
         name
     );
-    writer.upload_put_part("tok-b", 0, vec![7; 5]).await.unwrap();
-    let second = writer.upload_commit(name, "tok-b", &meta, 5, 1).await.unwrap();
+    let second = writer.upload_commit(name, "rec/bbb", &meta, 5, 1).await.unwrap();
     assert_eq!(
         second, "2026-11-06_punchable-set_101010_take-2.m4a",
         "the name is reserved by the unique record id"
@@ -631,65 +646,34 @@ async fn an_upload_is_rows_both_servers_read_and_a_taken_name_gets_the_next_suff
     assert_eq!(writer.upload_count().await.unwrap(), 2);
     let row = writer.upload_get(name).await.unwrap().unwrap();
     assert_eq!(
-        (row.bytes, row.parts, row.meta["title"].clone()),
-        (2_500_000, 3, json!("Late show"))
+        (row.bytes, row.parts, row.key.as_str(), row.meta["title"].clone()),
+        (2_500_000, 1, "rec/aaa", json!("Late show"))
     );
-    let mut back = Vec::new();
-    for seq in 0..row.parts {
-        back.extend(writer.upload_part(&row.token, seq).await.unwrap().unwrap());
-    }
-    assert_eq!(back, a, "the bytes come back whole, in order");
-    assert!(writer.upload_part(&row.token, 9).await.unwrap().is_none());
-    // a commit counts the parts: a recording with a part missing is never listed
-    writer.upload_put_part("tok-short", 0, vec![1]).await.unwrap();
-    let e = writer
-        .upload_commit("short.m4a", "tok-short", &meta, 2, 2)
-        .await
-        .unwrap_err();
-    assert!(e.to_string().contains("2 parts expected"), "{e}");
-    assert!(writer.upload_get("short.m4a").await.unwrap().is_none());
-    // the sweep reads the staging rows, not the megabyte rows: a young upload in flight stays, one whose newest
-    // part is an hour old goes with its staging row, and a committed one only loses a stale staging row
-    writer.upload_put_part("tok-orphan", 0, vec![1]).await.unwrap();
-    writer.upload_sweep_orphans().await.unwrap();
+    let mut keys = writer.upload_keys().await.unwrap();
+    keys.sort();
+    assert_eq!(keys, ["rec/aaa", "rec/bbb"], "what the bucket sweep must not delete");
+    assert_eq!(writer.upload_names_before(1.0).await.unwrap(), Vec::<String>::new());
+    assert_eq!(writer.upload_names_before(f64::MAX).await.unwrap().len(), 2);
+    let gone = writer.upload_delete(name).await.unwrap().expect("the row comes back");
+    assert_eq!(gone.key, "rec/aaa", "so its object can be deleted");
+    assert!(writer.upload_get(name).await.unwrap().is_none());
     assert!(
-        writer.upload_part("tok-orphan", 0).await.unwrap().is_some(),
-        "a young part stays"
+        writer.upload_get(&second).await.unwrap().is_some(),
+        "another upload stays"
     );
-    writer
-        .query(
-            "UPDATE type::record('upload_stage', 'tok-orphan') SET t = 1.0; UPDATE type::record('upload_stage', 'tok-short') SET t = 1.0; \
-             UPSERT type::record('upload_stage', $kept) SET t = 1.0, n = 3;",
-            vars([("kept", to_db(&json!(row.token)))]),
+    assert!(
+        writer.upload_delete("never-there.m4a").await.unwrap().is_none(),
+        "deleting what is not there is not an error"
+    );
+    // nothing writes the database's old homes any more
+    let left = writer
+        .last(
+            "RETURN count(SELECT id FROM upload_part) + count(SELECT id FROM upload_stage);",
+            vars([]),
         )
         .await
         .unwrap();
-    writer.upload_sweep_orphans().await.unwrap();
-    assert!(
-        writer.upload_part("tok-orphan", 0).await.unwrap().is_none(),
-        "an old orphan goes"
-    );
-    assert!(writer.upload_part("tok-short", 0).await.unwrap().is_none());
-    assert!(
-        writer.upload_part(&row.token, 0).await.unwrap().is_some(),
-        "a committed upload keeps its bytes when only its staging row is old"
-    );
-    let left = writer
-        .last("RETURN count(SELECT id FROM upload_stage);", vars([]))
-        .await
-        .unwrap();
-    assert_eq!(pk_store::from_db(left), json!(0), "no staging row is left");
-    writer.upload_delete(name).await.unwrap();
-    assert!(writer.upload_get(name).await.unwrap().is_none());
-    assert!(
-        writer.upload_part(&row.token, 0).await.unwrap().is_none(),
-        "its parts went with it"
-    );
-    assert!(
-        writer.upload_part("tok-b", 0).await.unwrap().is_some(),
-        "another upload's parts stay"
-    );
-    writer.upload_delete("never-there.m4a").await.unwrap();
+    assert_eq!(pk_store::from_db(left), json!(0));
 }
 
 /// The next text message within `secs`, parsed.
@@ -1323,7 +1307,7 @@ async fn upload_with(st: &AppState, n: usize, claimed: usize) -> (StatusCode, Va
         .header(header::CONTENT_TYPE, "audio/mp4")
         .header(header::CONTENT_LENGTH, claimed)
         .header("X-Kind", "set")
-        .header("X-Filename", "late-show.m4a")
+        .header("X-Filename", format!("late-show-{claimed}.m4a"))
         .body(Body::from(vec![7_u8; n]))
         .unwrap();
     let r = app(st.clone()).oneshot(req).await.expect("infallible");
@@ -1332,35 +1316,251 @@ async fn upload_with(st: &AppState, n: usize, claimed: usize) -> (StatusCode, Va
     (parts.status, serde_json::from_slice(&b).unwrap_or(Value::Null))
 }
 
-/// ADR 0014's lead defaults: an upload over 64 MiB is a 413 (an empty one a 400); the bytes go when the job is
-/// dropped and when it fails for good (not when it goes back to the queue); and after a week the expiry pass deletes
-/// the recording nobody claimed, failing its job with the reason, leaves one that was claimed and takes a stray.
+/// `GET /api/worker/jobs/<id>/file`: status and bytes.
+async fn fetch_file(st: &AppState, job: &str) -> (StatusCode, Vec<u8>, header::HeaderMap) {
+    let req = Request::builder()
+        .method("GET")
+        .uri(format!("/api/worker/jobs/{job}/file"))
+        .body(Body::empty())
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    let (parts, body) = r.into_parts();
+    let b = axum::body::to_bytes(body, 64 << 20).await;
+    (parts.status, b.map(|b| b.to_vec()).unwrap_or_default(), parts.headers)
+}
+
+/// A pattern of `n` bytes that a part boundary cannot hide a shift in.
+fn pattern(n: usize) -> Vec<u8> {
+    (0..n).map(|i| ((i * 31 + 7) % 251) as u8).collect()
+}
+
+/// docs/adr/0015: the streamed upload. The bytes are one object in the bucket and the database holds a pointer row; a
+/// recording of a part and a bit is a multipart upload; the answer is the Python's; the transcriber's fetch streams the
+/// bytes back whole with the Python's headers; the same recording twice is one job and one object; a body cut short
+/// leaves no object, no row and no open multipart upload; and the caps and refusals are the Python's file mode's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[allow(clippy::many_single_char_names)] // a status and a body per call, as every test here
+async fn an_upload_streams_into_the_bucket_and_the_fetch_streams_it_back() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_upload_stream", &standin).await;
+    // the Python's refusals, from Content-Length before a byte is read
+    let (s, r) = upload_with(&st, 10, 1024 * 1024 * 1024 + 1).await;
+    assert_eq!(
+        (s, r["error"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("upload missing or over 1 GB"))
+    );
+    let (s, r) = upload_with(&st, 0, 0).await;
+    assert_eq!(
+        (s, r["error"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("upload missing or over 1 GB"))
+    );
+    assert_eq!(
+        standin.ops().len(),
+        1,
+        "only the start-up listing: a refused upload sends nothing"
+    );
+    // 17 MiB and a bit: three parts
+    let data = pattern(2 * pk_api::recordings::PART + 4321);
+    let (s, r) = upload_with_bytes(&st, &data, data.len()).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(
+        (r["status"].as_str(), r["bytes"].as_u64(), r["kind"].as_str()),
+        (Some("queued"), Some(data.len() as u64), Some("set"))
+    );
+    assert_eq!(r["job"]["kind"], "process_set");
+    assert_eq!(r["waiting_for"], "transcriber");
+    let (file, job) = (
+        r["file"].as_str().unwrap().to_string(),
+        r["job"]["id"].as_str().unwrap().to_string(),
+    );
+    assert_eq!(
+        (standin.count("start"), standin.count("part"), standin.completed()),
+        (1, 3, 1)
+    );
+    let row = writer.upload_get(&file).await.unwrap().expect("the pointer row");
+    assert_eq!((row.bytes, row.parts), (i64::try_from(data.len()).unwrap(), 3));
+    assert!(row.key.starts_with("rec/"), "the pointer names the object");
+    assert_eq!(standin.objects(), vec![(row.key.clone(), data.len())]);
+    assert_eq!(standin.bytes(&row.key).unwrap(), data, "the object is the recording");
+    assert_eq!(standin.refused(), 0, "every signature the stand-in checked was good");
+    let tables = writer
+        .last(
+            "RETURN count(SELECT id FROM upload_part) + count(SELECT id FROM upload_stage);",
+            vars([]),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        pk_store::from_db(tables),
+        json!(0),
+        "no byte and no staging row in the database"
+    );
+    // the inbox lists it, the transcriber gets it whole
+    let (s, inbox) = call(&st, "GET", "/api/inbox", None).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(inbox["items"][0]["file"], file.as_str());
+    assert_eq!(inbox["items"][0]["bytes"], data.len());
+    let (s, got, h) = fetch_file(&st, &job).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(got, data, "the fetch streams the bytes back whole");
+    assert_eq!(h[header::CONTENT_TYPE], "application/octet-stream");
+    assert_eq!(h[header::CONTENT_LENGTH], data.len().to_string().as_str());
+    assert_eq!(h[header::CACHE_CONTROL], "no-store");
+    // a job that is no upload, and one that is gone from the bucket
+    let (s, _, _) = fetch_file(&st, "job:nope").await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    standin.fail("get", 404, 1);
+    let (s, _, _) = fetch_file(&st, &job).await;
+    assert_eq!(
+        s,
+        StatusCode::NOT_FOUND,
+        "the object is gone: the fetch is a 404, not a hang"
+    );
+    // the same recording twice within two minutes: one job, one object
+    let same = pattern(5000);
+    let (_, a) = upload_with_bytes(&st, &same, same.len()).await;
+    let objects = standin.objects().len();
+    let (s, b) = upload_with_bytes(&st, &same, same.len()).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!((b["duplicate"].as_bool(), &b["file"]), (Some(true), &a["file"]));
+    assert_eq!(b["job"]["id"], a["job"]["id"]);
+    assert_eq!(standin.objects().len(), objects, "a duplicate leaves no object behind");
+    assert_eq!(writer.upload_count().await.unwrap(), 2);
+    // a body that ends before its Content-Length: no row, no object, no open multipart upload
+    let before = (standin.objects().len(), standin.aborted());
+    let (s, r) = upload_with(&st, 3 * 1024 * 1024, 20 * 1024 * 1024).await;
+    assert_eq!(
+        (s, r["error"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("upload was cut short"))
+    );
+    assert_eq!(writer.upload_count().await.unwrap(), 2);
+    assert_eq!(standin.objects().len(), before.0, "nothing stored");
+    assert_eq!(standin.open_uploads(), 0);
+    // ... and one that fails after a part has gone is aborted
+    let mut pieces: Vec<Result<axum::body::Bytes, std::io::Error>> = pattern(pk_api::recordings::PART + 100)
+        .chunks(1 << 20)
+        .map(|c| Ok(axum::body::Bytes::copy_from_slice(c)))
+        .collect();
+    pieces.push(Err(std::io::Error::other("the phone lost its signal")));
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/upload")
+        .header(header::CONTENT_TYPE, "audio/mp4")
+        .header(header::CONTENT_LENGTH, 40 * 1024 * 1024)
+        .header("X-Kind", "set")
+        .body(Body::from_stream(futures::stream::iter(pieces)))
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        (standin.open_uploads(), standin.aborted()),
+        (0, before.1 + 1),
+        "the multipart upload was aborted"
+    );
+    assert_eq!(standin.objects().len(), before.0);
+    assert_eq!(writer.upload_count().await.unwrap(), 2, "nothing was listed");
+}
+
+/// `upload_with` for given bytes.
+async fn upload_with_bytes(st: &AppState, data: &[u8], claimed: usize) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/upload")
+        .header(header::CONTENT_TYPE, "audio/mp4")
+        .header(header::CONTENT_LENGTH, claimed)
+        .header("X-Kind", "set")
+        .header("X-Filename", format!("late-show-{claimed}.m4a"))
+        .header("X-Duration-S", "61.5")
+        .body(Body::from(data.to_vec()))
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    let (parts, body) = r.into_parts();
+    let b = axum::body::to_bytes(body, 1 << 20).await.expect("body");
+    (parts.status, serde_json::from_slice(&b).unwrap_or(Value::Null))
+}
+
+/// A bucket that fails answers 503 with a reason and keeps nothing; the phone still has the recording. A start-up check
+/// that fails keeps readiness down; once the bucket answers it comes up.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_failing_bucket_is_a_503_with_a_reason_and_keeps_readiness_down() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_upload_down", &standin).await;
+    standin.fail("put", 500, -1);
+    let (s, r) = upload_with(&st, 2000, 2000).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
+    let why = r["error"].as_str().unwrap();
+    assert!(why.contains("the phone keeps it") && why.contains("500"), "{why}");
+    for private in [
+        standin.endpoint.as_str(),
+        standin.bucket.as_str(),
+        standin.key_id.as_str(),
+        "X-Amz",
+    ] {
+        assert!(!why.contains(private), "the reason leaks {private:?}: {why}");
+    }
+    assert_eq!(writer.upload_count().await.unwrap(), 0);
+    assert_eq!(standin.objects().len(), 0);
+    standin.heal();
+    let (s, _) = upload_with(&st, 2001, 2001).await;
+    assert_eq!(
+        s,
+        StatusCode::OK,
+        "the bucket is back: the phone's next try goes through"
+    );
+    // readiness: a wrong token keeps the pod unready
+    let health = |st: &AppState| {
+        let st = st.clone();
+        async move {
+            let req = Request::builder()
+                .uri("/api/health?ready=1")
+                .body(Body::empty())
+                .unwrap();
+            let r = app(st).oneshot(req).await.expect("infallible");
+            r.status()
+        }
+    };
+    assert_eq!(health(&st).await, StatusCode::OK);
+    let (_w, bad) = setup_uploads_raw(
+        &env,
+        port,
+        "t_upload_down_bad",
+        &standin,
+        &[("PK_REC_SECRET_ACCESS_KEY", "wrong")],
+    )
+    .await;
+    assert!(!bad.recordings_ready(), "not ready before the check has passed");
+    assert!(!bad.check_recordings().await, "a wrong token: the start-up check fails");
+    assert_eq!(
+        health(&bad).await,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "so the rollout stops"
+    );
+}
+
+/// docs/adr/0014's lead defaults, kept by 0015: the recording goes when the job is dropped and when it fails for good
+/// (not when it goes back to the queue); and after a week the expiry pass deletes the recording nobody claimed (pointer
+/// row and object), failing its job with the reason, leaves one that was claimed and takes a stray. The bucket sweep
+/// then deletes an object no row names, but only once it is an hour old.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[allow(clippy::many_single_char_names)] // a status and a body per call, as every test here
 async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
-    let (writer, st) = setup(&env, port, "t_upload_end").await;
-    let (s, r) = upload_with(&st, 10, 64 * 1024 * 1024 + 1).await;
-    assert_eq!(
-        (s, r["error"].as_str()),
-        (StatusCode::PAYLOAD_TOO_LARGE, Some("upload over 64 MiB"))
-    );
-    let (s, r) = upload_with(&st, 0, 0).await;
-    assert_eq!(
-        (s, r["error"].as_str()),
-        (StatusCode::BAD_REQUEST, Some("upload missing"))
-    );
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_upload_end", &standin).await;
     let (s, r) = upload_with(&st, 1000, 1000).await;
     assert_eq!(s, StatusCode::OK, "{r}");
-    assert_eq!(
-        writer.upload_count().await.unwrap(),
-        1,
-        "an upload at the cap's side of the line is kept"
-    );
+    assert_eq!(writer.upload_count().await.unwrap(), 1);
+    assert_eq!(standin.objects().len(), 1);
 
-    // his drop of the queued job takes its recording with it
+    // his drop of the queued job takes its recording with it: the row and the object
     let (file_a, job_a) = (
         r["file"].as_str().unwrap().to_string(),
         r["job"]["id"].as_str().unwrap().to_string(),
@@ -1371,6 +1571,7 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         writer.upload_get(&file_a).await.unwrap().is_none(),
         "the dropped job's recording is gone"
     );
+    assert!(standin.objects().is_empty(), "and so is its object");
 
     // a job that fails for good takes it; one sent back to the queue keeps it
     let claim = json!({"kinds": ["process_set"], "worker": "w1"});
@@ -1388,7 +1589,7 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
     .await;
     assert_eq!(s, StatusCode::OK);
     assert!(
-        writer.upload_get(&file_b).await.unwrap().is_some(),
+        writer.upload_get(&file_b).await.unwrap().is_some() && standin.objects().len() == 1,
         "a retry keeps the recording"
     );
     let (_, c) = call(&st, "POST", "/api/worker/claim", Some(claim.clone())).await;
@@ -1406,9 +1607,53 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         "{r}"
     );
     assert!(
-        writer.upload_get(&file_b).await.unwrap().is_none(),
+        writer.upload_get(&file_b).await.unwrap().is_none() && standin.objects().is_empty(),
         "a job that failed for good lets go"
     );
+
+    // a job that is done lets go as well
+    let (_, r) = upload_with(&st, 2500, 2500).await;
+    let file_d = r["file"].as_str().unwrap().to_string();
+    let (_, c) = call(&st, "POST", "/api/worker/claim", Some(claim.clone())).await;
+    let job_d = c["job"]["id"].as_str().unwrap().to_string();
+    let (s, r) = call(
+        &st,
+        "POST",
+        &format!("/api/worker/jobs/{job_d}/result"),
+        Some(json!({"ok": true, "result": {"sets": 1}})),
+    )
+    .await;
+    assert_eq!((s, r["job"]["status"].as_str()), (StatusCode::OK, Some("done")), "{r}");
+    assert!(writer.upload_get(&file_d).await.unwrap().is_none() && standin.objects().is_empty());
+
+    // a delete the bucket refuses does not undo the job's end: the row is gone, the object is left for the sweep
+    let (_, r) = upload_with(&st, 2600, 2600).await;
+    let job_e = r["job"]["id"].as_str().unwrap().to_string();
+    standin.fail("delete", 500, -1);
+    let (s, d) = call(&st, "POST", &format!("/api/jobs/{job_e}/drop"), Some(json!({}))).await;
+    assert_eq!(
+        s,
+        StatusCode::OK,
+        "the drop is answered though the object could not be deleted: {d} (upload said {r})"
+    );
+    assert_eq!((writer.upload_count().await.unwrap(), standin.objects().len()), (0, 1));
+    standin.heal();
+    let left = standin.objects()[0].0.clone();
+    assert_eq!(
+        pk_api::expiry::sweep_bucket(&st, pk_api::worker::unix_now())
+            .await
+            .unwrap(),
+        0,
+        "an object an hour from old is not an orphan yet"
+    );
+    assert_eq!(
+        pk_api::expiry::sweep_bucket(&st, pk_api::worker::unix_now() + 2.0 * 3600.0)
+            .await
+            .unwrap(),
+        1,
+        "the sweep deletes the object no row names"
+    );
+    assert!(standin.objects().is_empty(), "{left} went");
 
     // after a week: one waiting, one claimed, one with no job at all, and one too young
     let (_, r) = upload_with(&st, 3000, 3000).await;
@@ -1424,9 +1669,9 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
     } else {
         (names[1].clone(), names[0].clone())
     };
-    writer.upload_put_part("tok-stray", 0, vec![1; 5]).await.unwrap();
+    standin.plant("rec/stray-object", b"12345");
     writer
-        .upload_commit("stray.m4a", "tok-stray", &json!({"kind": "set"}), 5, 1)
+        .upload_commit("stray.m4a", "rec/stray-object", &json!({"kind": "set"}), 5, 1)
         .await
         .unwrap();
     assert_eq!(
@@ -1448,6 +1693,12 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         writer.upload_get(&claimed_file).await.unwrap().is_some(),
         "a claimed recording is left alone"
     );
+    assert_eq!(
+        standin.objects().len(),
+        1,
+        "only the claimed one's object is left: the others' objects went with their rows"
+    );
+    assert!(standin.bytes("rec/stray-object").is_none());
     let jobs = pk_api::writes::Creative::new(st.clone()).items("jobs").await.unwrap();
     // (an earlier job of this test may carry the same file name, made in the same second: look at all of them)
     assert!(
@@ -1462,6 +1713,10 @@ async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
         0,
         "a second pass finds nothing new"
     );
+    // the sweep never deletes an object a row names, however old
+    standin.age(&standin.objects()[0].0, 30.0 * 86_400.0);
+    assert_eq!(pk_api::expiry::sweep_bucket(&st, week_on).await.unwrap(), 0);
+    assert_eq!(standin.objects().len(), 1);
 }
 
 async fn set_extra_sha(writer: &Store, sha: &str) {
@@ -1482,7 +1737,8 @@ async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
-    let (writer, st) = setup_full(&env, port, "t_upload_schema", false, &[("PK_SCHEMA_OWNER", "0")]).await;
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads_with(&env, port, "t_upload_schema", &standin, &[("PK_SCHEMA_OWNER", "0")]).await;
     st.check_schema().await;
     assert!(st.schema_extra_current(), "setup applied this build's schema");
     let (s, _) = upload_with(&st, 500, 500).await;
@@ -1490,6 +1746,7 @@ async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
     set_extra_sha(&writer, "another-build").await;
     st.check_schema().await;
     assert!(!st.schema_extra_current());
+    let objects = standin.objects().len();
     let (s, r) = upload_with(&st, 501, 501).await;
     assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
     assert!(
@@ -1497,6 +1754,7 @@ async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
         "{r}"
     );
     assert_eq!(writer.upload_count().await.unwrap(), 1, "nothing was written");
+    assert_eq!(standin.objects().len(), objects, "and no byte was sent to the bucket");
     set_extra_sha(&writer, &pk_store::schema_shas().1).await;
     st.check_schema().await;
     let (s, r) = upload_with(&st, 502, 502).await;
@@ -1510,10 +1768,11 @@ async fn the_schema_owner_applies_the_tables_again_when_the_sha_differs() {
     let Some((_srv, env, port)) = scratch().await else {
         return;
     };
-    let (writer, st) = setup(&env, port, "t_schema_owner").await;
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_schema_owner", &standin).await;
     writer
         .write(
-            "REMOVE TABLE upload_stage; UPDATE meta:state SET extra_sha = 'an-older-build' RETURN id;",
+            "REMOVE TABLE upload; UPDATE meta:state SET extra_sha = 'an-older-build' RETURN id;",
             vars([]),
             None,
         )
@@ -1524,6 +1783,11 @@ async fn the_schema_owner_applies_the_tables_again_when_the_sha_differs() {
         s,
         StatusCode::INTERNAL_SERVER_ERROR,
         "the table is gone: the write has nowhere to go"
+    );
+    assert_eq!(
+        standin.objects().len(),
+        0,
+        "and the object that was stored is deleted again"
     );
     st.check_schema().await;
     assert!(
@@ -1715,5 +1979,32 @@ async fn a_cancelled_sync_stops_renewing_and_its_flag_is_recovered() {
     assert!(
         !loading().await,
         "the renewal stopped with the sync: the lease lapsed and the round cleared the flag"
+    );
+}
+
+/// At most `UPLOAD_SLOTS` recordings stream at once; the next one is a 503 with a reason (the phone keeps the recording) and
+/// nothing is sent to the bucket. Red arm: without the permit check the upload goes through while all slots are held.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn only_a_few_recordings_stream_at_once_and_the_next_is_told_to_try_again() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let standin = Standin::start(Options::default()).await;
+    let (writer, st) = setup_uploads(&env, port, "t_upload_slots", &standin).await;
+    let held: Vec<_> = (0..pk_api::writes::uploads::UPLOAD_SLOTS)
+        .map(|_| st.upload_slots().try_acquire_owned().expect("a free slot"))
+        .collect();
+    let before = standin.ops().len();
+    let (s, r) = upload_with(&st, 900, 900).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
+    assert!(r["error"].as_str().unwrap().contains("too many recordings"), "{r}");
+    assert_eq!((standin.ops().len(), writer.upload_count().await.unwrap()), (before, 0));
+    drop(held);
+    let (s, r) = upload_with(&st, 901, 901).await;
+    assert_eq!(s, StatusCode::OK, "a slot is free again: {r}");
+    // the slot is given back when the upload ends
+    assert_eq!(
+        st.upload_slots().available_permits(),
+        pk_api::writes::uploads::UPLOAD_SLOTS
     );
 }

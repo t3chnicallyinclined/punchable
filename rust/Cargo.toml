@@ -95,6 +95,11 @@ html-escape = "0.2"
 # pk-fts (T8 `ask`): SQLite FTS5 compiled from the amalgamation, so `bm25()` and the porter tokenizer are the ones the
 # Python's sqlite3 runs; 0.41 builds on the pinned 1.93.1 toolchain (MSRV 1.89)
 rusqlite = { version = "0.41", default-features = false, features = ["bundled"] }
+# pk-api (T11 round 2, docs/adr/0015): recordings in R2. rusty-s3 signs and parses the S3 requests (sans-IO; the bytes go over
+# the reqwest client pk-api already has); its aws-lc-rs backend is the crypto jsonwebtoken and surrealdb already build,
+# so no second stack (default features would add RustCrypto). `bytes` is the buffer type of axum, hyper and reqwest.
+rusty-s3 = { version = "0.11", default-features = false, features = ["full", "aws-lc-rs"] }
+bytes = "1"
 # tests
 insta ={ version = "1", features = ["json"] }
 proptest = "1"

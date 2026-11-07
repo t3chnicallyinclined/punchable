@@ -1,6 +1,6 @@
 # ADR 0014: uploads in the database
 
-Date: 2026-11-06. Status: **Accepted (lead defaults, owner may flip)** on 2026-11-06 (T10 round 5, group D): the three
+Date: 2026-11-06. Status: **Partly superseded by [ADR 0015](0015-recordings-in-r2.md) on 2026-11-07**: the recordings wait in R2, not in the database; the retention, the "never half an upload" rule and the exclusion from backups carry over, the 64 MiB cap and the `upload_part` home do not. Was: **Accepted (lead defaults, owner may flip)** on 2026-11-06 (T10 round 5, group D): the three
 defaults below are implemented and proven. `PK_UPLOAD_DB` is still off by default on both servers; the deploy of the
 Rust API turns it on, on both Deployments, once the Python's `emptyDir` inbox goes away with the Python.
 

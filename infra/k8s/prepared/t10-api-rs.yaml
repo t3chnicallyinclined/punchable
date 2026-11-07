@@ -85,10 +85,20 @@ spec:
             # the court-material rules every stored text goes through, the same file and Secret as the Python API
             # (30-api.yaml); without it only the generic markers apply (round-6 review M1, 2026-11-07)
             - { name: PUNCHABLE_LEGAL_RULES, value: /etc/punchable/legal/legal_rules.json }
+            # recordings in R2 (docs/adr/0015, T11 round 2): POST /api/upload streams the phone's recording into the recordings
+            # bucket and keeps a pointer row; the worker's fetch streams it back. The bucket's endpoint, name and token
+            # (PK_REC_ENDPOINT, PK_REC_BUCKET, PK_REC_ACCESS_KEY_ID, PK_REC_SECRET_ACCESS_KEY) come from the Secret
+            # punchable-r2-recordings below, never from this file. Off (unset), POST /api/upload answers 503 and the inbox and
+            # the fetch are forwarded to the Python. The Python Deployment must NOT set PK_UPLOAD_DB: its inbox stays its folder.
+            - { name: PK_UPLOAD_R2, value: "1" }
           envFrom:
             # SURREAL_API_USER / SURREAL_API_PASS (database EDITOR, never root) and SENTRY_DSN: the same Secrets
             - secretRef: { name: punchable-api }
             - secretRef: { name: punchable-sentry, optional: true }
+            # the recordings bucket and its token (docs/adr/0015): NOT optional. Without the Secret the pod does not start, so a
+            # rollout of this file before the SRE has made it stops at CreateContainerConfigError with the old pod still serving
+            # (maxUnavailable 0). Keys: PK_REC_ENDPOINT PK_REC_BUCKET PK_REC_ACCESS_KEY_ID PK_REC_SECRET_ACCESS_KEY
+            - secretRef: { name: punchable-r2-recordings }
             # PK_APP_FLAGS, when it is set for the Python, must be set here too (/api/health answers it)
           securityContext:
             allowPrivilegeEscalation: false
@@ -216,16 +226,15 @@ spec:
           # T10 round 4 (group 6a): the inbox and the voice memos (GET only on the Python too). /api/memos is an exact
           # path; the memo pages are regex paths below. POST /api/upload is in its own Ingress at the end of this file
           # (a recording streams through: 1 GB, no request buffering, a long timeout, none of which this one has).
-          # DEPLOY ORDER: the Python image first (an upload is `upload` / `upload_part` rows for both servers, the
-          # `upload` tables come from db/schema_extra.surql which the Python applies at its start; pk-api runs with
-          # PK_SCHEMA_OWNER=0 until T11 retires the Python, because an owner pk-api re-applies ITS copy whenever the stored
-          # sha differs and would roll back a newer schema the Python just applied), then pk-api. Uploads made by the old Python pod are in its inbox
-          # folder and are not listed by the new code: drain the inbox (the transcriber, or drop the jobs) before the
-          # Python image changes.
-          # UPLOADS IN THE DATABASE ARE OFF BY DEFAULT (docs/adr/0014, accepted on the lead's defaults 2026-11-06: 64 MiB cap
-          # with a 413, bytes deleted on a drop / a final failure / a done job / after 7 days unclaimed, rows left out of the
-          # nightly export): the deploy sets PK_UPLOAD_DB=1 on BOTH Deployments. Off, pk-api answers POST /api/upload with 503 (so do not apply the upload Ingress at the
-          # end of this file), forwards /api/inbox and the transcriber's fetch to the Python, and the inbox folder is the home.
+          # RECORDINGS IN R2 (docs/adr/0015, T11 round 2; replaces ADR 0014's database home): POST /api/upload, the inbox, the notes
+          # and the transcriber's fetch are pk-api's. A recording is one object in the recordings bucket and a small `upload:<name>`
+          # pointer row (the `upload` table of db/schema_extra.surql, unchanged: the Python image stays a valid rollback);
+          # pk-api needs the Secret punchable-r2-recordings and PK_UPLOAD_R2=1 above. DEPLOY ORDER: the SRE makes the bucket, the
+          # token, the Secret and the lifecycle rule (infra/recordings/README.md) first, then rolls out pk-api (readiness waits for
+          # a listing of one object under rec/), then applies the upload Ingress at the end of this file. Uploads made by the old Python pod are
+          # in its inbox folder and are not listed by pk-api: drain the inbox (the transcriber, or drop the jobs) before the switch.
+          # Off (no PK_UPLOAD_R2) pk-api answers POST /api/upload with 503 (so do not apply the upload Ingress then), forwards
+          # /api/inbox and the fetch to the Python, and the inbox folder is the home.
           - { path: /api/inbox, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/memos, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 4 (group 6b): what was folded into a bit (GET only on the Python too). One merge record is the
@@ -333,11 +342,10 @@ spec:
           - { path: "/api/worker/jobs/[^/]+/result$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 3 (group 6): his drop of a queued job (POST only on the Python too)
           - { path: "/api/jobs/[^/]+/drop$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
-          # T10 round 4 (group 6a): a memo, its audio (always the 404 the Python gives: no audio is in the database),
-          # and the transcriber's fetch of an upload (GET only on the Python too)
+          # T10 round 4 (group 6a): a memo and its audio (always the 404 the Python gives: no audio is in the database); the
+          # transcriber's fetch of an upload (GET only on the Python too) is in its own Ingress at the end of this file
           - { path: "/api/memos/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/memos/[^/]+/audio$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
-          - { path: "/api/worker/jobs/[^/]+/file$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/merge/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 5 (group A): one conversation (GET settles it, POST asks a follow-up, PATCH renames or hides it)
           - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
@@ -354,11 +362,11 @@ spec:
           - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/topics/[^/]+/material$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
-# T10 round 4 (group 6a): POST /api/upload, the phone's recording (at most 64 MiB with the database as its home, ADR 0014;
-# the servers answer 413 from Content-Length, so nginx's limit stays above it and the app gets the JSON error). The Python's own
+# T10 round 4 (group 6a), T11 round 2: POST /api/upload, the phone's recording (at most 1 GiB, the Python's cap; pk-api
+# answers 400 `upload missing or over 1 GB` from Content-Length, so nginx's limit sits at the same 1g). The Python's own
 # Ingress (50-ingress.yaml) carries these annotations for it; the others here do not, so the upload is its own object:
-# no body-size cap beyond 1 GB, the body streams through (pk-api writes it to the database a megabyte at a time), and a
-# slow phone link gets an hour.
+# the body streams through unbuffered (pk-api sends it to the recordings bucket 8 MiB at a time), and a slow phone link gets
+# an hour.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -381,6 +389,33 @@ spec:
       http:
         paths:
           - { path: /api/upload, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+---
+# T11 round 2: GET /api/worker/jobs/<id>/file, the transcriber's fetch of a recording (docs/adr/0015): pk-api streams the
+# object from the recordings bucket, up to 1 GiB. Its own object (moved out of -ids, whose annotations suit small JSON): nginx
+# must not buffer the response to a temp file (proxy-buffering off), and a slow reader gets an hour. use-regex is on for
+# the host already (the -ids Ingress); this path is anchored to one id segment.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punchable-api-rs-file
+  namespace: punchable
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-connections: "25"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts: [__PK_DOMAIN__]
+      secretName: punchable-tls
+  rules:
+    - host: __PK_DOMAIN__
+      http:
+        paths:
+          - { path: "/api/worker/jobs/[^/]+/file$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 6 (group A): GET and POST /api/worker/files. A post takes up to 24 MiB (writes/ingest.rs MAX_FILES_BODY) and
 # ends in the graph sync when it wrote a set's input, which reads and rewrites the changed records: the Python's Ingress
@@ -457,6 +492,29 @@ spec:
           podSelector: { matchLabels: { app: keycloak } }
       ports:
         - { protocol: TCP, port: 8080 }
+---
+# T11 round 2 (docs/adr/0015): pk-api reaches the recordings bucket (R2) on TCP 443, the public internet only, never the
+# cluster's private ranges: the backup job's rule (10-networkpolicy.yaml `punchable-backup`). Policies are a union, so this
+# adds to the pk-api policy above and changes nothing else. DNS is allowed by the namespace's dns-egress policy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-api-rs-r2, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-api-rs } }
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+              - 100.64.0.0/10
+      ports:
+        - { protocol: TCP, port: 443 }
 ---
 # the three counterparts: SurrealDB, the Python API (the fallback) and Bugsink accept pk-api
 apiVersion: networking.k8s.io/v1

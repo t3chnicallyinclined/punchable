@@ -84,6 +84,12 @@ struct Inner {
     sweep: crate::sweep::Status,
     /// Whether the database's stored `extra_sha` is the one this build compiled in ([`AppState::check_schema`]).
     schema_extra_ok: std::sync::atomic::AtomicBool,
+    /// The recordings bucket, when uploads are on (docs/adr/0015); `None` when they are off or the client could not be built.
+    recordings: Option<crate::recordings::Recordings>,
+    /// Whether the recordings bucket answered its start-up check (always true with uploads off): readiness waits for it.
+    recordings_ok: std::sync::atomic::AtomicBool,
+    /// Permits for recordings streaming at once ([`crate::writes::uploads::UPLOAD_SLOTS`]).
+    upload_slots: Arc<tokio::sync::Semaphore>,
 }
 
 /// The judge's pairs as parsed, with the sha of the row they came from.
@@ -134,6 +140,17 @@ pub const BUILD_RETRY: Duration = Duration::from_secs(5);
 impl AppState {
     /// A state with no database yet (`connect` or the supervisor supplies it).
     pub fn new(config: ApiConfig, verifier: Option<Verifier>, metrics: ApiMetrics, http: reqwest::Client) -> Self {
+        let recordings = config
+            .uploads
+            .as_ref()
+            .and_then(|c| match crate::recordings::Recordings::new(c) {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    tracing::error!(error = %e, "recordings: the bucket client could not be built; uploads answer 503");
+                    None
+                }
+            });
+        let recordings_ok = std::sync::atomic::AtomicBool::new(config.uploads.is_none());
         let model = crate::embed::Model::new(config.embedder.clone());
         Self(Arc::new(Inner {
             model,
@@ -170,6 +187,9 @@ impl AppState {
             live: crate::live::LiveHub::new(),
             sweep: crate::sweep::Status::default(),
             schema_extra_ok: std::sync::atomic::AtomicBool::new(true),
+            recordings,
+            recordings_ok,
+            upload_slots: Arc::new(tokio::sync::Semaphore::new(crate::writes::uploads::UPLOAD_SLOTS)),
         }))
     }
 
@@ -242,6 +262,38 @@ impl AppState {
             }
             return;
         }
+    }
+
+    /// The permits a streaming upload holds (tests take them all to see the cap).
+    pub fn upload_slots(&self) -> Arc<tokio::sync::Semaphore> {
+        Arc::clone(&self.0.upload_slots)
+    }
+
+    /// The recordings bucket; `None` with uploads off.
+    pub fn recordings(&self) -> Option<&crate::recordings::Recordings> {
+        self.0.recordings.as_ref()
+    }
+
+    /// Whether the recordings bucket has answered its start-up check (true with uploads off). The pod is not ready before.
+    pub fn recordings_ready(&self) -> bool {
+        self.0.recordings_ok.load(Ordering::SeqCst)
+    }
+
+    /// Ask the bucket once whether it exists and this token may reach it; remember the answer. A wrong token or bucket
+    /// keeps the pod unready, so the rollout stops before traffic moves (docs/adr/0015). Returns the answer.
+    pub async fn check_recordings(&self) -> bool {
+        let Some(r) = self.recordings() else {
+            return self.recordings_ready();
+        };
+        let ok = match r.check().await {
+            Ok(()) => true,
+            Err(e) => {
+                tracing::warn!("recordings: the bucket check failed: {e}");
+                false
+            }
+        };
+        self.0.recordings_ok.store(ok, Ordering::SeqCst);
+        ok
     }
 
     /// The settings.

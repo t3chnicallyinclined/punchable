@@ -1,4 +1,4 @@
-# Architecture decision records
+| [0015](0015-recordings-in-r2.md) | recordings in R2, not in the database (`PK_UPLOAD_R2`) |# Architecture decision records
 
 One file per decision, a few lines each: context, decision, consequences. A new decision gets the next number; a
 reversed one is marked superseded and points at its replacement. The standing decisions were seeded on 2026-10-29
@@ -19,4 +19,5 @@ from `docs/HANDOVER.md`, `docs/RUST.md` and `docs/design/HIG.md`.
 | [0011](0011-worker-speaks-http-only.md) | the worker speaks HTTP only |
 | [0012](0012-transcriber-kinds-stay-off-the-server.md) | the transcriber kinds stay off the server |
 | [0013](0013-fork-the-upstream-engine.md) | fork the upstream engine as `pk-engine`; one verbatim gate |
-| [0014](0014-uploads-in-the-database.md) | uploads in the database (**Proposed**; off by default, `PK_UPLOAD_DB`) |
+| [0014](0014-uploads-in-the-database.md) | uploads in the database (**partly superseded by 0015**) |
+| [0015](0015-recordings-in-r2.md) | recordings in R2, not in the database (`PK_UPLOAD_R2`) |

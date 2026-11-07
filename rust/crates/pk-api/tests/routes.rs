@@ -152,10 +152,10 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
     assert_eq!(s, StatusCode::NOT_FOUND);
 }
 
-/// Uploads in the database are off unless `PK_UPLOAD_DB=1` (docs/adr/0014): a moved `/api/upload` refuses loudly, and
+/// Recordings in R2 are off unless `PK_UPLOAD_R2=1` (docs/adr/0015): a moved `/api/upload` refuses loudly, and
 /// the inbox is the Python's (forwarded; with no Python configured here the answer is its 404).
 #[tokio::test]
-async fn upload_is_refused_while_uploads_in_the_database_are_off() {
+async fn upload_is_refused_while_recordings_in_r2_are_off() {
     let st = state(false);
     let req = Request::builder()
         .method("POST")
@@ -165,7 +165,7 @@ async fn upload_is_refused_while_uploads_in_the_database_are_off() {
         .unwrap();
     let (s, _, b) = send(&st, req).await;
     assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE);
-    assert!(error_of(&b).contains("PK_UPLOAD_DB"), "{}", error_of(&b));
+    assert!(error_of(&b).contains("PK_UPLOAD_R2"), "{}", error_of(&b));
     let (s, _, b) = send(&st, get("/api/inbox").body(Body::empty()).unwrap()).await;
     assert_eq!(
         (s, error_of(&b).as_str()),
