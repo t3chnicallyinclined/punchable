@@ -71,6 +71,31 @@ pub async fn search(State(st): State<AppState>, RawQuery(raw): RawQuery) -> ApiR
     Ok(ok(&search_payload(&idx, &raw, &qs, usize::try_from(lim).unwrap_or(1))))
 }
 
+/// What sounds like a bit: its newest text's neighbours (with the model), or a word search on its first words.
+pub async fn like_of(st: &AppState, v: &pk_kb::View, jid: &str, lim: i64, hidden: bool) -> Result<Like, ApiError> {
+    let text = newest_text(v, jid);
+    if text.is_empty() {
+        return Ok(Like::default());
+    }
+    let limit = usize::try_from(lim).unwrap_or(1);
+    if let Some(e) = st.model().get().await {
+        let vec = st
+            .model()
+            .vector(e, text.clone(), false)
+            .await
+            .map_err(|e| ApiError::internal("EmbedError", e))?;
+        let [units, jokes, perfs] = search::similar_rows(&*store(st)?, &vec, lim, hidden)
+            .await
+            .map_err(|e| ApiError::internal("StoreError", e))?;
+        Ok(like_vectors(v, jid, text, units, jokes, perfs, limit))
+    } else {
+        let raw = search_all(&*store(st)?, None, &first_words(&text), lim.saturating_mul(2), hidden)
+            .await
+            .map_err(|e| ApiError::internal("StoreError", e))?;
+        Ok(like_words(v, jid, text, raw, limit))
+    }
+}
+
 /// `GET /api/jokes/<id>/similar[?limit=8]`.
 pub async fn similar(
     State(st): State<AppState>,
@@ -85,28 +110,7 @@ pub async fn similar(
         return Err(ApiError::not_found("no such joke"));
     }
     let hidden = q.include_hidden();
-    let text = newest_text(&v, &jid);
-    let like = async {
-        if text.is_empty() {
-            return Ok::<_, ApiError>(Like::default());
-        }
-        if let Some(e) = st.model().get().await {
-            let vec = st
-                .model()
-                .vector(e, text.clone(), false)
-                .await
-                .map_err(|e| ApiError::internal("EmbedError", e))?;
-            let [units, jokes, perfs] = search::similar_rows(&*store(&st)?, &vec, lim, hidden)
-                .await
-                .map_err(|e| ApiError::internal("StoreError", e))?;
-            Ok(like_vectors(&v, &jid, text.clone(), units, jokes, perfs, limit))
-        } else {
-            let raw = search_all(&*store(&st)?, None, &first_words(&text), lim.saturating_mul(2), hidden)
-                .await
-                .map_err(|e| ApiError::internal("StoreError", e))?;
-            Ok(like_words(&v, &jid, text.clone(), raw, limit))
-        }
-    };
+    let like = like_of(&st, &v, &jid, lim, hidden);
     let (idx, like) = tokio::join!(d.index(hidden), like);
     let (idx, like) = (idx?, like?);
     Ok(ok(&similar_payload(&idx, performed(&v, &jid), &like, limit)))

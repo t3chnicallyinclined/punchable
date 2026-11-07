@@ -13,6 +13,7 @@ pub mod jobs;
 pub mod learned;
 pub mod merges;
 pub mod profile;
+pub mod script;
 pub mod story;
 pub mod suggestions;
 pub mod topics;
@@ -27,7 +28,7 @@ use crate::store::{Items, Reducer};
 use pk_core::py;
 
 /// The store names, as the API and the `creative_event` mirror key them.
-pub const STORES: [&str; 11] = [
+pub const STORES: [&str; 12] = [
     "storyboards",
     "workingsets",
     "venues",
@@ -39,6 +40,7 @@ pub const STORES: [&str; 11] = [
     "suggestions",
     "profile",
     "topics",
+    "script",
 ];
 
 /// The reducer for a store name (`creative_api.APPLY` after every route module registered). `owner_id` is the
@@ -56,6 +58,7 @@ pub fn for_store(name: &str, owner_id: &str) -> Option<Box<dyn Reducer + Send + 
         "suggestions" => Box::new(suggestions::Suggestions),
         "profile" => Box::new(profile::Profile),
         "topics" => Box::new(topics::Topics),
+        "script" => Box::new(script::Script),
         _ => return None,
     })
 }

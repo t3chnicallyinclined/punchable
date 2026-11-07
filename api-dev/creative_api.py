@@ -45,7 +45,7 @@ from creative.util import mmss, now_iso  # noqa: E402
 OWNER_ID = os.environ.get("PK_OWNER_ID", "owner")  # the actor id on your own edits (`by`); PK_OWNER_ID
 
 JOB_KINDS = ("bridge", "punchup", "ask", "process_set", "import_youtube", "facts", "riff", "ask_chat", "embed", "memolink",
-             "set_text", "rant", "hook", "rant_draft")  # rant_draft: the Rant tab's Write a rant (pk-worker only, R7)
+             "set_text", "rant", "hook", "rant_draft", "rant_line")  # rant_draft, rant_line: the Rant tab (pk-worker only, R7)
 # Kinds that need the recording (whisper, the laugh detector, yt-dlp). Since 2026-10-27 no worker runs them: the PC
 # is retired and transcription happens on the phone (a separate build). A queued job of these kinds is honest about
 # it: `waiting_for: "transcriber"`, persisted (derived from the kind on every replay), shown by the app.

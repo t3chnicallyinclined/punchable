@@ -12,7 +12,7 @@ use pk_core::py;
 use pk_core::text::head;
 
 /// Every job kind the queue accepts (`JOB_KINDS`), in the Python's order (it is printed in a refusal).
-pub const JOB_KINDS: [&str; 14] = [
+pub const JOB_KINDS: [&str; 15] = [
     "bridge",
     "punchup",
     "ask",
@@ -27,6 +27,7 @@ pub const JOB_KINDS: [&str; 14] = [
     "rant",
     "hook",
     "rant_draft",
+    "rant_line",
 ];
 /// Kinds that need the recording; no hosted worker runs them (`TRANSCRIBER_KINDS`).
 pub const TRANSCRIBER_KINDS: [&str; 2] = ["process_set", "import_youtube"];

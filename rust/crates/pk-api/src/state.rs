@@ -63,6 +63,7 @@ struct Inner {
     vectors: crate::creative::VectorCache,
     attached: crate::creative::Attached,
     stores: crate::creative::Stores,
+    topic_found: crate::writes::topic::TopicFound,
     model: crate::embed::Model,
     /// The knowledge-base writes of this process run one at a time (`kb.lock` in the Python): a write validates
     /// against the current view, then appends; two of them interleaved could both pass validation against the same
@@ -159,6 +160,7 @@ impl AppState {
             vectors: crate::creative::VectorCache::default(),
             attached: crate::creative::Attached::default(),
             stores: crate::creative::Stores::default(),
+            topic_found: crate::writes::topic::TopicFound::default(),
             draining: std::sync::atomic::AtomicBool::new(false),
             drain: tokio::sync::watch::channel(false).0,
             kb_lock: tokio::sync::Mutex::new(()),
@@ -309,6 +311,11 @@ impl AppState {
     }
 
     /// The creative stores the reads replay, each with its last replay.
+    pub fn topic_found(&self) -> &crate::writes::topic::TopicFound {
+        &self.0.topic_found
+    }
+
+    /// The creative stores (replayed from their lines).
     pub fn stores(&self) -> &crate::creative::Stores {
         &self.0.stores
     }

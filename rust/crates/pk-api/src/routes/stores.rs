@@ -88,6 +88,9 @@ pub async fn not_a_joke(State(st): State<AppState>, RawQuery(raw): RawQuery) -> 
     // `kb.view()`: this request's view (hidden bits are not in it unless asked), no Bits-list rows
     let (d, view) = super::prepare_view(&st, &q).await?;
     let kept = items_of(&st, |s| &s.suggestions).await?;
+    // a jot on a topic is not also "to sort" (the Rant tab, spec §12.7), the same rule as `/api/tonight/screen`'s count
+    let topics = items_of(&st, |s| &s.topics).await?;
+    let held = pk_creative::reducers::topics::held_jots(&topics);
     let judge = super::creative::judge_text(&st, &d).await;
     let judged: Value = judge
         .as_deref()
@@ -104,7 +107,7 @@ pub async fn not_a_joke(State(st): State<AppState>, RawQuery(raw): RawQuery) -> 
             let Some((jid, j)) = jid.and_then(|j| view.nodes.get(j).map(|n| (j, n))) else {
                 continue;
             };
-            if j.get("type").and_then(Value::as_str) != Some("joke") || kept.contains_key(jid) {
+            if j.get("type").and_then(Value::as_str) != Some("joke") || kept.contains_key(jid) || held.contains(jid) {
                 continue;
             }
             let text = collapse(j.get("summary").and_then(Value::as_str).unwrap_or(""));

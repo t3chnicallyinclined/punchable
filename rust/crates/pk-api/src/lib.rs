@@ -92,7 +92,7 @@ pub const OWN_PATHS: [&str; 32] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 20] = [
+pub const OWN_PATTERNS: [&str; 22] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -113,12 +113,15 @@ pub const OWN_PATTERNS: [&str; 20] = [
     "/api/worker/jobs/{id}/file",
     "/api/merge/{id}",
     "/api/ask/chats/{id}",
+    // the Rant tab's creative space (spec §12.7)
+    "/api/topics/{id}",
+    "/api/topics/{id}/material",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 29] = [
+pub const OWN_WRITE_PATHS: [&str; 30] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -148,6 +151,8 @@ pub const OWN_WRITE_PATHS: [&str; 29] = [
     "/api/ask/chats",
     "/api/topics",
     "/api/rant/draft",
+    // the Rant tab's script (spec §12.7)
+    "/api/rant/line",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
@@ -467,7 +472,19 @@ pub fn app(st: AppState) -> Router {
                 get(guarded(&st, writes::rant::topics)).post(guarded_write(&st, writes::rant::add_topic)),
             ),
         )
-        .route("/api/topics/{id}", patch_route(&st, writes::rant::patch_topic))
+        // the creative space (spec §12.7): the topic as a page, its search and Find more, Claude on a line
+        .route(
+            "/api/topics/{id}",
+            finish(
+                &st,
+                get(guarded(&st, writes::topic::page)).patch(guarded_write(&st, writes::rant::patch_topic)),
+            ),
+        )
+        .route(
+            "/api/topics/{id}/material",
+            read_route(&st, writes::topic::material_route),
+        )
+        .route("/api/rant/line", write_route(&st, writes::rant::line))
         .route("/api/rant/draft", write_route(&st, writes::rant::draft))
         .route("/api/rants", read_route(&st, writes::rant::rants));
     #[cfg(feature = "diagnostics")]

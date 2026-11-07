@@ -139,6 +139,94 @@ pub async fn search_all(
     })
 }
 
+/// The close hits of `q`, for a topic's Found (`docs/design/SPEC-2026-11-06-rant-tab.md` §12.7; Rust only): the rows
+/// whose words matched (`None`), best first, then the rows whose vector is under `close`, nearest first, each bit or
+/// moment once. The fused `search_all` answers neither question: a score there is a rank, and a vector leg always
+/// returns its limit, which is why a count of its hits only ever said the cap.
+pub async fn close_hits(
+    store: &Store,
+    qvec: Option<&[f32]>,
+    q: &str,
+    limit: usize,
+    close: f64,
+    v: &View,
+    include_hidden: bool,
+) -> pk_store::Result<Vec<(String, Option<f64>)>> {
+    let k = limit.saturating_mul(3).clamp(20, 200);
+    let hid = if include_hidden { "" } else { " AND hidden != true" };
+    let mut sql = format!(
+        "SELECT id, search::score(1) AS score FROM unit WHERE text @1@ $q{hid} ORDER BY score DESC LIMIT {k};\
+         SELECT id, search::score(1) AS score FROM joke WHERE title @1@ $q{hid} ORDER BY score DESC LIMIT {k};\
+         SELECT id, search::score(1) AS score FROM joke WHERE summary @1@ $q{hid} ORDER BY score DESC LIMIT {k};\
+         SELECT id, search::score(1) AS score FROM performance WHERE text @1@ $q ORDER BY score DESC LIMIT {k};"
+    );
+    let mut vars = vec![("q", to_db(&json!(q)))];
+    if let Some(vec) = qvec {
+        let _ = write!(
+            sql,
+            "SELECT id, vector::distance::knn() AS d FROM unit WHERE embedding <|{k},{EF}|> $qvec{hid} ORDER BY d;\
+             SELECT id, vector::distance::knn() AS d FROM joke WHERE embedding <|{k},{EF}|> $qvec{hid} ORDER BY d;\
+             SELECT id, vector::distance::knn() AS d FROM performance WHERE embedding <|{k},{EF}|> $qvec ORDER BY d;"
+        );
+        vars.push(("qvec", to_db(&db_vector(vec))));
+    }
+    let res: Vec<Vec<Value>> = store
+        .query(&sql, pk_store::vars(vars))
+        .await?
+        .into_iter()
+        .map(|x| rows(Some(from_db(x))))
+        .collect();
+    let (words, near) = res.split_at(res.len().min(4));
+    let words: Vec<String> = words
+        .iter()
+        .flat_map(|legs| pairs(legs.clone(), "score"))
+        .map(|(id, _)| id)
+        .collect();
+    let near: Vec<(String, Value)> = near.iter().flat_map(|legs| pairs(legs.clone(), "d")).collect();
+    Ok(rank_close(words, near, close, v, limit))
+}
+
+/// [`close_hits`]' ranking: a unit folds into its bit, ids not in this view go, the word matches lead in the order they
+/// came, then the vector rows under `close`, nearest first (a bit at its nearest); at most `limit`.
+pub fn rank_close(
+    words: Vec<String>,
+    near: Vec<(String, Value)>,
+    close: f64,
+    v: &View,
+    limit: usize,
+) -> Vec<(String, Option<f64>)> {
+    let fold = |id: &str| -> Option<String> {
+        let j = if id.starts_with("unit:") {
+            v.unit_joke.get(id)?.as_str()
+        } else {
+            id
+        };
+        v.nodes.contains_key(j).then(|| j.to_string())
+    };
+    let mut seen = HashSet::new();
+    let mut out: Vec<(String, Option<f64>)> = Vec::new();
+    for id in words {
+        if let Some(j) = fold(&id)
+            && seen.insert(j.clone())
+        {
+            out.push((j, None));
+        }
+    }
+    let mut near: Vec<(String, f64)> = near
+        .into_iter()
+        .filter_map(|(id, d)| Some((fold(&id)?, d.as_f64()?)))
+        .filter(|(_, d)| d.is_finite() && *d < close)
+        .collect();
+    near.sort_by(|a, b| a.1.total_cmp(&b.1));
+    for (j, d) in near {
+        if seen.insert(j.clone()) {
+            out.push((j, Some(d)));
+        }
+    }
+    out.truncate(limit);
+    out
+}
+
 /// `similar`'s one round trip: the unit, joke and performance rows near a passage vector.
 pub async fn similar_rows(
     store: &Store,
@@ -550,6 +638,35 @@ mod tests {
             {"id": "e:4", "src": "perf:p", "dst": "joke:a", "kind": "performed_as", "status": "proposed"},
             {"id": "e:5", "src": "perf:q", "dst": "joke:b", "kind": "performed_as", "status": "rejected"}
         ]})
+    }
+
+    #[test]
+    fn close_is_a_word_match_or_a_near_meaning_and_never_the_cap() {
+        let v = view(&graph());
+        let words = vec!["unit:a2".to_string(), "joke:a".to_string(), "joke:gone".to_string()];
+        let near = vec![
+            ("joke:b".to_string(), json!(0.31)),
+            ("perf:q".to_string(), json!(0.55)),
+            ("perf:p".to_string(), json!(0.12)),
+            ("unit:a1".to_string(), json!(0.05)),
+        ];
+        let got = rank_close(words.clone(), near.clone(), 0.4, &v, 60);
+        assert_eq!(
+            got,
+            [
+                ("joke:a".to_string(), None),
+                ("perf:p".to_string(), Some(0.12)),
+                ("joke:b".to_string(), Some(0.31))
+            ],
+            "a unit folds into its bit once, the far moment and the unknown id go, the words lead"
+        );
+        assert_eq!(
+            rank_close(words.clone(), near.clone(), 0.4, &v, 2).len(),
+            2,
+            "at most the limit"
+        );
+        // the red arm: with no closeness rule every vector row counts, which is the old "12 bits" (the cap)
+        assert_eq!(rank_close(words, near, f64::INFINITY, &v, 60).len(), 4);
     }
 
     #[test]

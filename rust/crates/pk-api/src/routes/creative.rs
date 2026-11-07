@@ -3,6 +3,7 @@
 //! `creative_event` lines, read on every request (creative writes do not move the generation; `Replayed` keeps the last
 //! replay while the lines stay the same), over this generation's notebook where it needs one.
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::extract::{RawQuery, State};
@@ -96,7 +97,7 @@ pub(super) fn flagged(v: &Map<String, Value>) -> bool {
 
 /// How many "not a joke?" suggestions are waiting (`len(suggest_api.items(cr, kb))`): the memos the triage judge
 /// flagged (`kb/creative/suggest_judge.json`) whose idea is a joke in this request's view and not one he kept.
-fn to_sort(judge: Option<&str>, kept: &Items, idx: &AppIndex) -> usize {
+fn to_sort(judge: Option<&str>, kept: &Items, held: &HashSet<&str>, idx: &AppIndex) -> usize {
     let judged: Value = judge.and_then(|t| serde_json::from_str(t).ok()).unwrap_or(Value::Null);
     let Some(items) = judged.get("items").and_then(Value::as_object) else {
         return 0;
@@ -112,6 +113,7 @@ fn to_sort(judge: Option<&str>, kept: &Items, idx: &AppIndex) -> usize {
                 .get(*j)
                 .is_some_and(|n| n.get("type").and_then(Value::as_str) == Some("joke"))
                 && !kept.contains_key(*j)
+                && !held.contains(*j)
         })
         .count()
 }
@@ -171,12 +173,13 @@ pub async fn tonight_screen(State(st): State<AppState>, RawQuery(raw): RawQuery)
             tokio::try_join!(
                 items_of(&me, |s| &s.storyboards),
                 items_of(&me, |s| &s.suggestions),
-                worker_status(&me)
+                worker_status(&me),
+                items_of(&me, |s| &s.topics)
             )
         })
         .await?;
     let (idx, c) = tokio::try_join!(d.index(q.include_hidden()), d.corpus(&st))?;
-    let (boards, kept, worker) = super::finish(stores).await??;
+    let (boards, kept, worker, topics) = super::finish(stores).await??;
     let judge = judge_text(&st, &d).await;
     // `time.strftime` on the Python pod: its local day
     let now = chrono::Local::now();
@@ -197,7 +200,7 @@ pub async fn tonight_screen(State(st): State<AppState>, RawQuery(raw): RawQuery)
         }
         qs.push("What's my strongest closer right now?".to_string());
         qs.push(never_tried(&c));
-        json!({"date": date, "weekday": weekday, "board": board, "to_sort": to_sort(judge.as_deref(), &kept, &idx),
+        json!({"date": date, "weekday": weekday, "board": board, "to_sort": to_sort(judge.as_deref(), &kept, &pk_creative::reducers::topics::held_jots(&topics), &idx),
                "latest_set": latest_set, "questions": qs, "worker": worker,
                "counts": {"bits": c.jokes.len(), "sets": c.sets.len()}})
     })

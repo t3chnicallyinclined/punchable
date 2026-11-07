@@ -12,6 +12,7 @@ pub mod memolink;
 pub mod punchup;
 pub mod rant;
 pub mod rant_draft;
+pub mod rant_line;
 pub mod riff;
 pub mod set_text;
 
@@ -59,6 +60,8 @@ pub enum Kind {
     Hook,
     /// The Rant tab's "Write a rant": a rant drafted from a topic and the sources he ticked (Rust only, R7).
     RantDraft,
+    /// The Rant tab's script: three versions of one line (Rust only, R7).
+    RantLine,
 }
 
 /// The kinds that need audio; a hosted worker never asks for them and hands one back if given it.
@@ -81,7 +84,7 @@ impl Kind {
     /// Kinds only this worker has (the Rant tab, `docs/design/SPEC-2026-11-06-rant-tab.md` R7: new server work is
     /// written once, in Rust). Claimed after the Python's kinds, so the differential's claim bodies are the Python's
     /// with these appended.
-    pub const RUST_ONLY: [Kind; 1] = [Kind::RantDraft];
+    pub const RUST_ONLY: [Kind; 2] = [Kind::RantDraft, Kind::RantLine];
 
     /// The wire name.
     pub fn name(self) -> &'static str {
@@ -98,6 +101,7 @@ impl Kind {
             Kind::Rant => "rant",
             Kind::Hook => "hook",
             Kind::RantDraft => "rant_draft",
+            Kind::RantLine => "rant_line",
         }
     }
 
@@ -124,7 +128,8 @@ impl Kind {
             | Kind::Ask
             | Kind::Rant
             | Kind::Hook
-            | Kind::RantDraft => true,
+            | Kind::RantDraft
+            | Kind::RantLine => true,
         }
     }
 
@@ -139,7 +144,13 @@ impl Kind {
     pub fn reads_notebook(self) -> bool {
         match self {
             Kind::Riff | Kind::Punchup | Kind::Bridge | Kind::Embed | Kind::Memolink | Kind::Ask => true,
-            Kind::AskChat | Kind::Facts | Kind::SetText | Kind::Rant | Kind::Hook | Kind::RantDraft => false,
+            Kind::AskChat
+            | Kind::Facts
+            | Kind::SetText
+            | Kind::Rant
+            | Kind::Hook
+            | Kind::RantDraft
+            | Kind::RantLine => false,
         }
     }
 
@@ -158,6 +169,7 @@ impl Kind {
             Kind::Rant => "ai:rant",
             Kind::Hook => "ai:hook",
             Kind::RantDraft => "ai:rant_draft",
+            Kind::RantLine => "ai:rant_line",
         }
     }
 
@@ -357,6 +369,7 @@ pub async fn dispatch(kind: Kind, ctx: Ctx<'_>, input: Value) -> Result<Done, Jo
         Kind::Rant => run_typed::<rant::Rant>(ctx, input).await,
         Kind::Hook => run_typed::<rant::Hook>(ctx, input).await,
         Kind::RantDraft => run_typed::<rant_draft::RantDraft>(ctx, input).await,
+        Kind::RantLine => run_typed::<rant_line::RantLine>(ctx, input).await,
     }
 }
 
@@ -394,7 +407,8 @@ mod tests {
                 "set_text",
                 "rant",
                 "hook",
-                "rant_draft"
+                "rant_draft",
+                "rant_line"
             ]
         );
         let all: Vec<&str> = Kind::claimable(true).into_iter().map(Kind::name).collect();
@@ -412,11 +426,13 @@ mod tests {
                 "embed",
                 "memolink",
                 "ask",
-                "rant_draft"
+                "rant_draft",
+                "rant_line"
             ],
-            "the Python's eleven in its order, then the Rust-only kind"
+            "the Python's eleven in its order, then the Rust-only kinds"
         );
         assert_eq!(Kind::parse("rant_draft"), Some(Kind::RantDraft));
+        assert_eq!(Kind::parse("rant_line"), Some(Kind::RantLine));
         assert!(Kind::Ask.reads_notebook() && !Kind::Ask.builds_corpus() && Kind::Riff.builds_corpus());
         assert_eq!(Kind::parse("memolink"), Some(Kind::Memolink));
         assert_eq!(Kind::parse("process_set"), None);
