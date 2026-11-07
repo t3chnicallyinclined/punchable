@@ -52,6 +52,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        # the legal-rules Secret is mounted 0440: group 10001 must own it or pk-api cannot read it (as 30-api.yaml)
+        fsGroup: 10001
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: api
