@@ -434,7 +434,7 @@ def db_records(r: sdb.Rpc):
 
 def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path, fixtures: Path | None,
          id_map: Path | None, version: str = "?", reason: str = "", force_full: bool = False,
-         allow_moved: bool = False) -> dict:
+         allow_moved: bool = False, decisions_from_db: bool = False) -> dict:
     """Bring the DB up to date with the files by writing only what changed (new pipeline output, a new
     analysis.json, decision lines appended by another writer). Falls back to load() when it can't be incremental.
 
@@ -453,6 +453,10 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
             pass
 
     def full(why):
+        if decisions_from_db:
+            # hosted: a full load replays this pod's file cache over the decision table, and pk-api writes decisions
+            # the cache never sees; refuse rather than drop them (a real reload is the dbload pod's job)
+            raise RuntimeError(f"hosted sync needs a full load ({why}); refused, run the dbload pod instead")
         log(f"sync: full load ({why})")
         return load(r, ns=ns, db=db, graph=graph, kbdir=kbdir, corpus=corpus, fixtures=fixtures, id_map=id_map,
                     version=version, reason=reason)
@@ -469,8 +473,14 @@ def sync(r: sdb.Rpc, *, ns: str, db: str, graph: Path, kbdir: Path, corpus: Path
     t0 = time.perf_counter()
     g = json.load(open(graph, encoding="utf-8"))
     merged, index = AI.build_overlay(g, AI.AIFiles(kbdir, corpus, fixtures, id_map))
-    decs, bad = read_decisions(kbdir / "decisions.jsonl")
     nodes_db, edges_db, dec_rows = db_records(r)
+    if decisions_from_db:
+        # hosted: the database is the canonical decision log and another writer (pk-api) appends to it without
+        # touching this pod's file cache; reading the stale file here would force a full load that rebuilds the
+        # decision table from the file and drops every decision pk-api wrote (round-6 finding, 2026-11-07)
+        decs, bad = [row_to_decision(x) for x in dec_rows], 0
+    else:
+        decs, bad = read_decisions(kbdir / "decisions.jsonl")
     n_db = len(dec_rows)
     if n_db > len(decs) or [row_to_decision(x) for x in dec_rows] != decs[:n_db]:
         return full("the DB's decisions are not a prefix of decisions.jsonl")
