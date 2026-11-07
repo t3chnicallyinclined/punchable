@@ -245,7 +245,7 @@ def main() -> int:
                PK_DBLOAD_DIR=str(root / "dbload"),
                PYTHONHASHSEED="0", PYTHONUTF8="1")
     # the one setting a run may ask for: the uploads in the database (docs/adr/0014), on both servers or neither
-    env.update({k: v for k, v in os.environ.items() if k == "PK_UPLOAD_DB"})
+    env.update({k: v for k, v in os.environ.items() if k in ("PK_UPLOAD_DB", "PK_SCRATCH_EDGES", "PK_SCRATCH_LAUGHS")})
     os.environ.clear()
     os.environ.update(env)  # sdb reads PUNCH_SECRETS at import: only the scratch credentials exist from here
     sys.path.insert(0, str(DESK / "db"))

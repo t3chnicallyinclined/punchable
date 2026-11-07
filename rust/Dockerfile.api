@@ -62,7 +62,7 @@ ENV PK_BUILD_SHA=$PK_BUILD_SHA \
     MALLOC_MMAP_THRESHOLD_=65536
 # glibc's malloc: one arena, and anything over 64 KiB straight from the OS and back to it when freed. Without these the
 # graph sync's bursts (T10 round 6b: tools/load/sync_mem.py) stayed resident in per-thread arenas, 594 MiB after one
-# sync on production data. Measured on glibc 2.43 at a quarter of that data: 157 -> 88 MiB after a sync, 500 -> 279 MiB
+# sync on production data. Measured on glibc 2.43 at production size: 501 -> 237 MiB after a sync, 973 -> 514 MiB
 # peak with the model loaded.
 USER 10001:10001
 # the API and its /metrics on one port (the manifest's containerPort)
