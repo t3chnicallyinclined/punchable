@@ -47,6 +47,13 @@ def test_rust_worker_deployment_is_live():
     refs = {s["secretRef"]["name"]: s["secretRef"].get("optional", False) for s in c["envFrom"]}
     assert refs == {"punchable-worker": False, "punchable-anthropic": False, "punchable-sentry": True}
     assert "ANTHROPIC" not in str(c["env"])
+    # the private court-material rules, as the API mounts them: optional 0440 Secret, readable through fsGroup 10001,
+    # and the variable set so the worker refuses to start without a usable file (round 1 of T11)
+    assert env["PUNCHABLE_LEGAL_RULES"] == "/etc/punchable/legal/legal_rules.json"
+    assert spec["template"]["spec"]["securityContext"]["fsGroup"] == 10001
+    [vol] = [v for v in spec["template"]["spec"]["volumes"] if v["name"] == "legal"]
+    assert vol["secret"] == {"secretName": "punchable-legal-rules", "optional": True, "defaultMode": 0o440}
+    assert {"name": "legal", "mountPath": "/etc/punchable/legal", "readOnly": True} in c["volumeMounts"]
 
 
 def test_worker_deployment():

@@ -122,8 +122,44 @@ def test_prometheusrule_alerts_are_routable_and_built_on_emitted_metrics():
                 assert base in emitted, f"{r['alert']} names {m}, which nothing emits"
     for want in ("PunchableApiDown", "PunchableApiHighErrorRate", "PunchableApiHighLatency", "PunchableWorkerHeartbeatStale",
                  "PunchableAiBudgetPaused", "PunchableJobsWaitingForTranscriber", "PunchableSurrealDbRestarted",
-                 "PunchableBackupFailed", "PunchableBackupMissed", "PunchableCertificateExpiringSoon"):
+                 "PunchableBackupFailed", "PunchableBackupMissed", "PunchableCertificateExpiringSoon", "PunchableApiRsDown"):
         assert want in names, want
+
+
+def test_pk_api_is_scraped_and_alerted_beside_the_python():
+    """T11 round 1: the scrape config in force (apply_prometheus.py, the cluster has no ServiceMonitor CRD) keeps the
+    Python's pod label AND pk-api's, as separate jobs, so one `up` never hides the other; both have a down alert and a
+    Grafana tile. The Python's job and alert are untouched (it is still live)."""
+    sys.path.insert(0, str(ROOT / "infra" / "observability"))
+    try:
+        import apply_prometheus as ap
+    finally:
+        sys.path.pop(0)
+    jobs = {j["job_name"]: j for j in yaml.safe_load(ap.JOBS)}
+    assert set(jobs) == {"punchable-api", "punchable-api-rs", "punchable-worker"}
+    def keep(job):
+        [r] = [r for r in jobs[job]["relabel_configs"] if r.get("action") == "keep"]
+        return r["regex"]
+    def port(job):
+        [r] = [r for r in jobs[job]["relabel_configs"] if r.get("target_label") == "__address__"]
+        return r["replacement"]
+    assert (keep("punchable-api"), port("punchable-api")) == ("punchable-api", "${1}:8080")
+    assert (keep("punchable-api-rs"), port("punchable-api-rs")) == ("punchable-api-rs", "${1}:8080")
+    assert (keep("punchable-worker"), port("punchable-worker")) == ("punchable-worker", "${1}:9100")
+    # the keep regexes are anchored by Prometheus: no job's regex matches another's pod label
+    labels = {"punchable-api", "punchable-api-rs", "punchable-worker"}
+    for job in jobs:
+        assert {l for l in labels if re.fullmatch(keep(job), l)} == {keep(job)}, job
+    [pr] = by_kind("PrometheusRule")
+    rules = {r["alert"]: r for g in pr["spec"]["groups"] for r in g["rules"]}
+    assert rules["PunchableApiRsDown"]["expr"] == 'up{job="punchable-api-rs"} == 0'
+    assert rules["PunchableApiRsDown"]["for"] == "2m" and rules["PunchableApiRsDown"]["labels"]["severity"] == "critical"
+    assert rules["PunchableApiDown"]["expr"] == 'up{job="punchable-api"} == 0'
+    dash = json.loads((ROOT / "infra" / "grafana" / "punchable.json").read_text(encoding="utf-8"))
+    exprs = [t["expr"] for p in dash["panels"] for t in p.get("targets", [])]
+    assert 'max(up{job="punchable-api-rs"}) or vector(0)' in exprs and 'max(up{job="punchable-api"}) or vector(0)' in exprs
+    stats = [p["gridPos"] for p in dash["panels"] if p["gridPos"]["y"] == 1]
+    assert sum(g["w"] for g in stats) == 24 and len({g["x"] for g in stats}) == len(stats)
 
 
 def test_api_down_rule_matches_two_minutes_and_latency_ten():

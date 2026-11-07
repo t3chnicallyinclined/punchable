@@ -20,15 +20,22 @@
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
     },
     {
-      "id": 102, "type": "stat", "title": "API up", "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 102, "type": "stat", "title": "Python API up", "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 3, "x": 4, "y": 1 },
       "targets": [{ "refId": "A", "expr": "max(up{job=\"punchable-api\"}) or vector(0)", "instant": true }],
       "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
     },
     {
+      "id": 107, "type": "stat", "title": "pk-api up", "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 3, "x": 7, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "max(up{job=\"punchable-api-rs\"}) or vector(0)", "instant": true }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
       "id": 103, "type": "stat", "title": "Worker up", "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 10, "y": 1 },
       "targets": [{ "refId": "A", "expr": "max(up{job=\"punchable-worker\"}) or vector(0)", "instant": true }],
       "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
@@ -36,7 +43,7 @@
     {
       "id": 104, "type": "stat", "title": "Live clients", "datasource": "Prometheus",
       "description": "Open /api/live WebSockets: phones and browser tabs in front right now.",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 13, "y": 1 },
       "targets": [{ "refId": "A", "expr": "sum(pk_live_clients) or vector(0)", "instant": true }],
       "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } },
       "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }

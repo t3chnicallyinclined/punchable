@@ -68,6 +68,11 @@ spec:
             - { name: PK_WORKSPACE, value: /tmp/pk-worker }
             - { name: PK_HEARTBEAT_FILE, value: /tmp/pk-worker/heartbeat }
             - { name: PK_AI_SPEND_FILE, value: /tmp/pk-worker/ai_spend.json }
+            # the court-material rules: the same Secret and file as the API (30-api.yaml, prepared/t10-api-rs.yaml). The
+            # variable is set, so the worker REFUSES TO START if the file cannot be read or is not rules (CrashLoop,
+            # not the generic markers). Make the Secret first: infra/ship.sh legal-rules. The volume is optional so
+            # the pod still schedules; the refusal is the worker's.
+            - { name: PUNCHABLE_LEGAL_RULES, value: /etc/punchable/legal/legal_rules.json }
             # the cost guard (engine/budget.py): USD per UTC day across every job kind; over it, jobs stay queued
             # with the reason shown in the app. Owner's call; 2.00 is the default.
             - { name: PK_AI_DAILY_USD, value: "2.00" }
@@ -104,10 +109,13 @@ spec:
             failureThreshold: 3
           volumeMounts:
             - { name: tmp, mountPath: /tmp }
+            - { name: legal, mountPath: /etc/punchable/legal, readOnly: true }
       volumes:
         - name: tmp
           # the heartbeat and the day's spend ledger (the Rust worker mirrors the notebook in memory, not here)
           emptyDir: { sizeLimit: 2Gi }
+        - name: legal
+          secret: { secretName: punchable-legal-rules, optional: true, defaultMode: 0440 }
 ---
 # The worker's metrics for Prometheus (the ServiceMonitor in 60-observability.yaml selects app=punchable-worker).
 apiVersion: v1
