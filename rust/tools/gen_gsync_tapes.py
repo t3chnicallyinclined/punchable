@@ -562,7 +562,31 @@ def build_root(sc: Scenario) -> Path:
     return root
 
 
+def stable_hashes(steps: list) -> None:
+    """A posted file whose text names the fake server (a run's error with its URL) was hashed with this recording's
+    random port, so its hash would differ on every run. Hash it with port 0 instead, in the post and in every later
+    listing of the stored files. The Rust replay hashes such texts again with its own port (tests/differential.rs
+    `replace_base`), so the recorded value only has to be the same each time."""
+    named: dict[str, str] = {}
+    for step in steps:
+        for ex in step["exchanges"]:
+            if ex["path"] != "/api/worker/files":
+                continue
+            if ex["method"] == "POST":
+                for f in (ex["body"] or {}).get("files", []):
+                    if "{BASE}" in f["text"]:
+                        named[f["path"]] = f["sha256"] = hashlib.sha256(
+                            f["text"].replace("{BASE}", "http://127.0.0.1:0").encode("utf-8")).hexdigest()
+                    else:
+                        named.pop(f["path"], None)
+            else:
+                for f in ex["resp"].get("json", {}).get("files", []):
+                    if f["path"] in named:
+                        f["sha256"] = named[f["path"]]
+
+
 def finish(sc: Scenario, root: Path, initial: dict) -> dict:
+    stable_hashes(sc.steps)
     return {"name": sc.name, "env": {k: v for k, v in sc.env.items()}, "files": initial, "steps": sc.steps}
 
 

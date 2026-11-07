@@ -1,0 +1,2476 @@
+{
+ "name": "dry_run",
+ "env": {},
+ "files": {
+  "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+  "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+  "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+  "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+  "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+  "ws/comedy/corpus/gdocs/.keep": "",
+  "ws/comedy/corpus/gdocs/2026-09-01_old-bit__corpus01.md": "---\nsource: gdoc\ndoc_id: corpus-doc-0001\ntitle: \"Old bit\"\nmodified: 2026-09-01T10:00:00.000Z\n---\nold text\n"
+ },
+ "steps": [
+  {
+   "argv": [
+    "run",
+    "--dry-run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-1",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes/startPageToken",
+     "query": {
+      "alt": [
+       "json"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "startPageToken": "2"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'me' in owners and mimeType='application/vnd.google-apps.document' and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-dry-000000000000",
+         "name": "Dry run bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-dry-legal-0000000",
+         "name": "Petition x",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/sample-folder-punchable-0000000000",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "sample-folder-punchable-0000000000",
+       "name": "Punchable",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "root0"
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/root0",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "root0",
+       "name": "My Drive",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words\r\nmore words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿words\r\nmore words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {
+        "sb:dry": {
+         "id": "sb:dry",
+         "title": "Dry set",
+         "by": "owner",
+         "joke_ids": [
+          "joke:an-app-idea"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_kind' and value='voice_memos' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'sample-folder-punchable-0000000000' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-1",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-dry-000000000000",
+         "name": "Dry run bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-dry-legal-0000000",
+         "name": "Petition x",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [bootstrap DRY RUN] adopt 5, board 1, gone 1, memo_folder_create 1, new 1, push_new 1, seed_corpus 1, skip_legal 1\n   {\"op\": \"adopt\", \"doc\": \"sample-board-doc-robot-vacuum-000000000000\", \"kind\": \"board\"}\n   {\"op\": \"adopt\", \"doc\": \"sample-ai-draft-doc-0000000000000000000000\", \"kind\": \"ai_draft\"}\n   {\"op\": \"adopt\", \"doc\": \"sample-mixed-doc-00000000000000000000000000\", \"joke\": \"joke:good-data-the-soup-label\", \"kind\": \"mixed\"}\n   {\"op\": \"adopt\", \"doc\": \"sample-adopted-doc-1-000000000000000000000\", \"joke\": \"joke:robot-guesses-the-next-word\", \"kind\": \"joke\"}\n   {\"op\": \"adopt\", \"doc\": \"sample-adopted-doc-2-000000000000000000000\", \"joke\": \"joke:the-room-finishes-the-sentence\", \"kind\": \"joke\"}\n   {\"op\": \"seed_corpus\", \"n\": 1}\n   {\"op\": \"new\", \"doc\": \"doc-dry-000000000000\", \"title\": \"Dry run bit\"}\n   {\"op\": \"skip_legal\", \"doc\": \"doc-dry-legal-0000000\", \"why\": \"kw\"}\n   {\"op\": \"gone\", \"doc\": \"corpus-doc-0001\"}\n   {\"op\": \"push_new\", \"joke\": \"joke:an-app-idea\", \"title\": \"An app idea\"}\n   {\"op\": \"board\", \"board\": \"sb:dry\"}\n   {\"op\": \"memo_folder_create\"}\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/corpus/gdocs/2026-09-01_old-bit__corpus01.md": "---\nsource: gdoc\ndoc_id: corpus-doc-0001\ntitle: \"Old bit\"\nmodified: 2026-09-01T10:00:00.000Z\n---\nold text\n"
+   },
+   "note": "dry bootstrap: reads only",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-2",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/gsync/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes/startPageToken",
+     "query": {
+      "alt": [
+       "json"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "startPageToken": "2"
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/files",
+     "query": {
+      "prefix": [
+       "kb/"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'me' in owners and mimeType='application/vnd.google-apps.document' and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-dry-000000000000",
+         "name": "Dry run bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-dry-legal-0000000",
+         "name": "Petition x",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/sample-folder-punchable-0000000000",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "sample-folder-punchable-0000000000",
+       "name": "Punchable",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "root0"
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/root0",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "root0",
+       "name": "My Drive",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿words\r\nmore words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿words\r\nmore words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 1,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/ideas",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "text": "words\nmore words",
+      "title": "Dry run bit",
+      "from": {
+       "gdoc_id": "doc-dry-000000000000",
+       "title": "Dry run bit",
+       "modified": "2026-10-20T10:00:00.000Z",
+       "note": "Google Doc: Dry run bit"
+      },
+      "reason": "[gdocs] new Google Doc 'Dry run bit' (doc-dry-000000000000, modified 2026-10-20T10:00:00.000Z)",
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true,
+       "id": "joke:dry-run-bit",
+       "indexes": [
+        1
+       ],
+       "attach": null
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 2,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:dry-run-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Dry run bit",
+           "summary": "words\nmore words"
+          },
+          "reason": "[gdocs] new Google Doc 'Dry run bit' (doc-dry-000000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_joke' and value='joke:an-app-idea' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/upload/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ],
+      "uploadType": [
+       "multipart"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": "multipart/related",
+     "range": null,
+     "body": {
+      "meta": {
+       "name": "An app idea",
+       "mimeType": "application/vnd.google-apps.document",
+       "appProperties": {
+        "punchable_kind": "joke",
+        "punchable_joke": "joke:an-app-idea",
+        "punchable": "1"
+       },
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ]
+      },
+      "media": "app words"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "new0001xxxxxxxx",
+       "name": "An app idea",
+       "mimeType": "application/vnd.google-apps.document",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "joke",
+        "punchable_joke": "joke:an-app-idea",
+        "punchable": "1"
+       },
+       "modifiedTime": "2026-10-20T10:00:00.000Z"
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/new0001xxxxxxxx/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿app words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:dry-run-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Dry run bit",
+        "summary": "words\nmore words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {
+        "sb:dry": {
+         "id": "sb:dry",
+         "title": "Dry set",
+         "by": "owner",
+         "joke_ids": [
+          "joke:an-app-idea"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 2,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:dry-run-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Dry run bit",
+           "summary": "words\nmore words"
+          },
+          "reason": "[gdocs] new Google Doc 'Dry run bit' (doc-dry-000000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/upload/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ],
+      "uploadType": [
+       "multipart"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": "multipart/related",
+     "range": null,
+     "body": {
+      "meta": {
+       "name": "Dry set (board)",
+       "mimeType": "application/vnd.google-apps.document",
+       "appProperties": {
+        "punchable_kind": "board",
+        "punchable_board": "sb:dry",
+        "punchable": "1"
+       },
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ]
+      },
+      "media": "Dry set (board)\n\nGENERATED BY PUNCHABLE from your storyboard. This doc is rewritten whenever the board changes, so edit the board in the app, not here. Every bit's text below is yours, verbatim; nothing here is AI-written.\nBoard last changed: None\n\n1. An app idea\napp words\nDoc: https://{GDOCS_HOST}/document/d/new0001xxxxxxxx/edit\n"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "new0002xxxxxxxx",
+       "name": "Dry set (board)",
+       "mimeType": "application/vnd.google-apps.document",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "board",
+        "punchable_board": "sb:dry",
+        "punchable": "1"
+       },
+       "modifiedTime": "2026-10-20T10:00:00.000Z"
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/new0002xxxxxxxx/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿Dry set (board)\r\n\r\nGENERATED BY PUNCHABLE from your storyboard. This doc is rewritten whenever the board changes, so edit the board in the app, not here. Every bit's text below is yours, verbatim; nothing here is AI-written.\r\nBoard last changed: None\r\n\r\n1. An app idea\r\napp words\r\nDoc: https://{GDOCS_HOST}/document/d/new0001xxxxxxxx/edit\r\n"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties)"
+      ],
+      "pageSize": [
+       "1"
+      ],
+      "q": [
+       "appProperties has { key='punchable_kind' and value='voice_memos' } and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'sample-folder-punchable-0000000000' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": [
+        {
+         "id": "doc-dry-000000000000",
+         "name": "Dry run bit",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "doc-dry-legal-0000000",
+         "name": "Petition x",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "modifiedTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {}
+        },
+        {
+         "id": "new0001xxxxxxxx",
+         "name": "An app idea",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {
+          "punchable_kind": "joke",
+          "punchable_joke": "joke:an-app-idea",
+          "punchable": "1"
+         },
+         "modifiedTime": "2026-10-20T10:00:00.000Z"
+        },
+        {
+         "id": "new0002xxxxxxxx",
+         "name": "Dry set (board)",
+         "mimeType": "application/vnd.google-apps.document",
+         "parents": [
+          "sample-folder-punchable-0000000000"
+         ],
+         "owners": [
+          {
+           "emailAddress": "owner@example.com"
+          }
+         ],
+         "createdTime": "2026-10-20T10:00:00.000Z",
+         "version": "1",
+         "trashed": false,
+         "appProperties": {
+          "punchable_kind": "board",
+          "punchable_board": "sb:dry",
+          "punchable": "1"
+         },
+         "modifiedTime": "2026-10-20T10:00:00.000Z"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "POST",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "name": "Voice memos",
+      "mimeType": "application/vnd.google-apps.folder",
+      "appProperties": {
+       "punchable_kind": "voice_memos",
+       "punchable": "1"
+      },
+      "parents": [
+       "sample-folder-punchable-0000000000"
+      ]
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0003xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0003xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-2",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "POST",
+     "path": "/api/worker/files",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": "application/json",
+     "range": null,
+     "body": {
+      "files": [
+       {
+        "path": "kb/gsync/map.json",
+        "text": "{\n \"boards\": {\n  \"sb:dry\": {\n   \"doc_hash\": \"34da33bf289475ed\",\n   \"doc_id\": \"new0002xxxxxxxx\",\n   \"hash\": \"34da33bf289475ed\",\n   \"version\": \"1\"\n  },\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"2\",\n \"docs\": {\n  \"corpus-doc-0001\": {\n   \"doc_hash\": null,\n   \"file\": \"corpus/gdocs/2026-09-01_old-bit__corpus01.md\",\n   \"gone_at\": \"2026-10-26T12:00:00+00:00\",\n   \"hidden\": true,\n   \"jokes\": [],\n   \"modified\": \"2026-09-01T10:00:00.000Z\",\n   \"origin\": \"corpus\",\n   \"title\": \"Old bit\",\n   \"version\": null\n  },\n  \"doc-dry-000000000000\": {\n   \"app_hash\": \"2a848a70f9d66ea6\",\n   \"doc_hash\": \"2a848a70f9d66ea6\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n   \"joke_id\": \"joke:dry-run-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Dry run bit\",\n   \"version\": \"1\"\n  },\n  \"new0001xxxxxxxx\": {\n   \"app_hash\": \"ef12d137f3b1ef15\",\n   \"doc_hash\": \"ef12d137f3b1ef15\",\n   \"joke_id\": \"joke:an-app-idea\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app idea\",\n   \"version\": \"1\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"board\": \"sb:dry\",\n   \"origin\": \"board\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {\n  \"doc-dry-legal-0000000\": \"kw:petition\"\n },\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+        "sha256": "a58de1ed753ff966b90bbe86f591e683ccb28019bb149fa0a080c4b5a2485619"
+       },
+       {
+        "path": "kb/gsync/memos.json",
+        "text": "{\n \"folder_id\": \"fold0003xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+        "sha256": "8b7d92bed072c0014024c7eb5171481120505f95bbc06ab1803ccd07470c9fbc"
+       },
+       {
+        "path": "kb/gsync/units.json",
+        "text": "[\n {\n  \"doc_id\": \"doc-dry-000000000000\",\n  \"doc_title\": \"Dry run bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Dry run bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-dry--00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 1,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\\nmore words\"\n }\n]",
+        "sha256": "159f4bc58b4ddf35d5e1787783c275ee1d4b784cb36ca240167b3312a0d40ab1"
+       },
+       {
+        "path": "kb/gsync/runs.jsonl",
+        "text": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":1},{\"op\":\"new\",\"doc\":\"doc-dry-000000000000\",\"joke\":\"joke:dry-run-bit\",\"indexes\":[1],\"title\":\"Dry run bit\"},{\"op\":\"skip_legal\",\"doc\":\"doc-dry-legal-0000000\",\"why\":\"kw\"},{\"op\":\"gone\",\"doc\":\"corpus-doc-0001\"},{\"op\":\"push_new\",\"joke\":\"joke:an-app-idea\",\"doc\":\"new0001xxxxxxxx\",\"title\":\"An app idea\"},{\"op\":\"board\",\"board\":\"sb:dry\",\"doc\":\"new0002xxxxxxxx\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0003xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"skip_legal\":1,\"gone\":1,\"push_new\":1,\"board\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":15,\"exports\":4,\"writes\":3,\"backoffs\":0,\"downloads\":0},\"api_calls\":11,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+        "sha256": "093b9e207700c8ae13649220ab3c0b7250ae5954512837bfa8a8c154ba349f4e"
+       }
+      ],
+      "actor": "import:gsync"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "written": [
+        "kb/gsync/map.json",
+        "kb/gsync/memos.json",
+        "kb/gsync/units.json",
+        "kb/gsync/runs.jsonl"
+       ]
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [bootstrap] adopt 5, board 1, gone 1, memo_folder_create 1, new 1, push_new 1, seed_corpus 1, skip_legal 1\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/corpus/gdocs/2026-09-01_old-bit__corpus01.md": "---\nsource: gdoc\ndoc_id: corpus-doc-0001\ntitle: \"Old bit\"\nmodified: 2026-09-01T10:00:00.000Z\n---\nold text\n",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:dry\": {\n   \"doc_hash\": \"34da33bf289475ed\",\n   \"doc_id\": \"new0002xxxxxxxx\",\n   \"hash\": \"34da33bf289475ed\",\n   \"version\": \"1\"\n  },\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"2\",\n \"docs\": {\n  \"corpus-doc-0001\": {\n   \"doc_hash\": null,\n   \"file\": \"corpus/gdocs/2026-09-01_old-bit__corpus01.md\",\n   \"gone_at\": \"2026-10-26T12:00:00+00:00\",\n   \"hidden\": true,\n   \"jokes\": [],\n   \"modified\": \"2026-09-01T10:00:00.000Z\",\n   \"origin\": \"corpus\",\n   \"title\": \"Old bit\",\n   \"version\": null\n  },\n  \"doc-dry-000000000000\": {\n   \"app_hash\": \"2a848a70f9d66ea6\",\n   \"doc_hash\": \"2a848a70f9d66ea6\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n   \"joke_id\": \"joke:dry-run-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Dry run bit\",\n   \"version\": \"1\"\n  },\n  \"new0001xxxxxxxx\": {\n   \"app_hash\": \"ef12d137f3b1ef15\",\n   \"doc_hash\": \"ef12d137f3b1ef15\",\n   \"joke_id\": \"joke:an-app-idea\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app idea\",\n   \"version\": \"1\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"board\": \"sb:dry\",\n   \"origin\": \"board\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {\n  \"doc-dry-legal-0000000\": \"kw:petition\"\n },\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0003xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md": "---\nsource: gdoc\ndoc_id: doc-dry-000000000000\ntitle: \"Dry run bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-dry-000000000000/edit\n---\nwords\nmore words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":1},{\"op\":\"new\",\"doc\":\"doc-dry-000000000000\",\"joke\":\"joke:dry-run-bit\",\"indexes\":[1],\"title\":\"Dry run bit\"},{\"op\":\"skip_legal\",\"doc\":\"doc-dry-legal-0000000\",\"why\":\"kw\"},{\"op\":\"gone\",\"doc\":\"corpus-doc-0001\"},{\"op\":\"push_new\",\"joke\":\"joke:an-app-idea\",\"doc\":\"new0001xxxxxxxx\",\"title\":\"An app idea\"},{\"op\":\"board\",\"board\":\"sb:dry\",\"doc\":\"new0002xxxxxxxx\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0003xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"skip_legal\":1,\"gone\":1,\"push_new\":1,\"board\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":15,\"exports\":4,\"writes\":3,\"backoffs\":0,\"downloads\":0},\"api_calls\":11,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-dry-000000000000\",\n  \"doc_title\": \"Dry run bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Dry run bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-dry--00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 1,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\\nmore words\"\n }\n]"
+   },
+   "note": "real bootstrap",
+   "stderr_has_traceback": false
+  },
+  {
+   "argv": [
+    "run",
+    "--dry-run"
+   ],
+   "now": "2026-10-26T12:00:00+00:00",
+   "free_mb": 50000,
+   "before": {
+    "write": {},
+    "delete": []
+   },
+   "exchanges": [
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/google/token",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "refresh_token",
+      "client_id": "fake-client-id",
+      "client_secret": "fake-client-secret",
+      "refresh_token": "fake-google-refresh-0"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-g-access-3",
+       "expires_in": 3599,
+       "token_type": "Bearer"
+      }
+     }
+    },
+    {
+     "svc": "auth",
+     "method": "POST",
+     "path": "/wtoken",
+     "query": {},
+     "auth": null,
+     "ctype": "application/x-www-form-urlencoded",
+     "range": null,
+     "body": {
+      "grant_type": "client_credentials",
+      "client_id": "pk-worker",
+      "client_secret": "fake-worker-secret"
+     },
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "access_token": "fake-worker-access",
+       "expires_in": 300
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/health",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "ok": true
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/changes",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,newStartPageToken,changes(fileId,removed,time,file(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties))"
+      ],
+      "includeRemoved": [
+       "true"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "pageToken": [
+       "2"
+      ],
+      "restrictToMyDrive": [
+       "true"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "changes": [
+        {
+         "fileId": "new0001xxxxxxxx",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "new0001xxxxxxxx",
+          "name": "An app idea",
+          "mimeType": "application/vnd.google-apps.document",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "version": "1",
+          "trashed": false,
+          "appProperties": {
+           "punchable_kind": "joke",
+           "punchable_joke": "joke:an-app-idea",
+           "punchable": "1"
+          },
+          "modifiedTime": "2026-10-20T10:00:00.000Z"
+         }
+        },
+        {
+         "fileId": "new0002xxxxxxxx",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "new0002xxxxxxxx",
+          "name": "Dry set (board)",
+          "mimeType": "application/vnd.google-apps.document",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "version": "1",
+          "trashed": false,
+          "appProperties": {
+           "punchable_kind": "board",
+           "punchable_board": "sb:dry",
+           "punchable": "1"
+          },
+          "modifiedTime": "2026-10-20T10:00:00.000Z"
+         }
+        },
+        {
+         "fileId": "fold0003xxxxxxxx",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "fold0003xxxxxxxx",
+          "name": "Voice memos",
+          "mimeType": "application/vnd.google-apps.folder",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "version": "1",
+          "trashed": false,
+          "appProperties": {
+           "punchable_kind": "voice_memos",
+           "punchable": "1"
+          }
+         }
+        },
+        {
+         "fileId": "doc-dry-000000000000",
+         "removed": false,
+         "time": "2026-10-26T09:00:00.000Z",
+         "file": {
+          "id": "doc-dry-000000000000",
+          "name": "Dry run bit",
+          "mimeType": "application/vnd.google-apps.document",
+          "parents": [
+           "sample-folder-punchable-0000000000"
+          ],
+          "owners": [
+           {
+            "emailAddress": "owner@example.com"
+           }
+          ],
+          "createdTime": "2026-10-20T10:00:00.000Z",
+          "modifiedTime": "2026-10-26T09:00:00.000Z",
+          "version": "2",
+          "trashed": false,
+          "appProperties": {}
+         }
+        }
+       ],
+       "newStartPageToken": "6"
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/plain"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/plain",
+      "extra": {},
+      "text": "﻿edited words"
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/doc-dry-000000000000/export",
+     "query": {
+      "mimeType": [
+       "text/markdown"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "text/markdown",
+      "extra": {},
+      "text": "﻿edited words"
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:dry-run-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Dry run bit",
+        "summary": "words\nmore words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:dry-run-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Dry run bit",
+           "summary": "words\nmore words"
+          },
+          "reason": "[gdocs] new Google Doc 'Dry run bit' (doc-dry-000000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "2"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:second-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Second app idea",
+           "summary": "more app words"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:second-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Second app idea",
+        "summary": "more app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:dry-run-bit",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "Dry run bit",
+        "summary": "words\nmore words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "storyboards"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {
+        "sb:dry": {
+         "id": "sb:dry",
+         "title": "Dry set",
+         "by": "owner",
+         "joke_ids": [
+          "joke:an-app-idea"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "0"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:an-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "An app idea",
+           "summary": "app words"
+          },
+          "reason": "saved from review"
+         }
+        },
+        {
+         "decision": {
+          "ts": "t",
+          "by": "import:gsync",
+          "target": "node",
+          "id": "joke:dry-run-bit",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Dry run bit",
+           "summary": "words\nmore words"
+          },
+          "reason": "[gdocs] new Google Doc 'Dry run bit' (doc-dry-000000000000, modified 2026-10-20T10:00:00.000Z)"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/decisions",
+     "query": {
+      "after": [
+       "2"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "total": 3,
+       "lines": [
+        {
+         "decision": {
+          "ts": "t",
+          "by": "owner",
+          "target": "node",
+          "id": "joke:second-app-idea",
+          "action": "add",
+          "after": {
+           "type": "joke",
+           "title": "Second app idea",
+           "summary": "more app words"
+          },
+          "reason": "saved from review"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/jokes/joke:an-app-idea",
+     "query": {},
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "joke": {
+        "title": "An app idea",
+        "summary": "app words",
+        "stage": "idea",
+        "hidden": false,
+        "lead_unit": null
+       },
+       "versions": [],
+       "yours": true
+      }
+     }
+    },
+    {
+     "svc": "pk",
+     "method": "GET",
+     "path": "/api/worker/creative",
+     "query": {
+      "snapshot": [
+       "1"
+      ],
+      "store": [
+       "merges"
+      ]
+     },
+     "auth": "Bearer fake-worker-access",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "items": {}
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files/fold0003xxxxxxxx",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "id": "fold0003xxxxxxxx",
+       "name": "Voice memos",
+       "mimeType": "application/vnd.google-apps.folder",
+       "parents": [
+        "sample-folder-punchable-0000000000"
+       ],
+       "owners": [
+        {
+         "emailAddress": "owner@example.com"
+        }
+       ],
+       "createdTime": "2026-10-20T10:00:00.000Z",
+       "version": "1",
+       "trashed": false,
+       "appProperties": {
+        "punchable_kind": "voice_memos",
+        "punchable": "1"
+       }
+      }
+     }
+    },
+    {
+     "svc": "drive",
+     "method": "GET",
+     "path": "/drive/v3/files",
+     "query": {
+      "alt": [
+       "json"
+      ],
+      "fields": [
+       "nextPageToken,files(id,name,mimeType,trashed,parents,owners(emailAddress),createdTime,modifiedTime,version,appProperties,size,md5Checksum,fileExtension)"
+      ],
+      "pageSize": [
+       "1000"
+      ],
+      "q": [
+       "'fold0003xxxxxxxx' in parents and trashed=false"
+      ],
+      "spaces": [
+       "drive"
+      ]
+     },
+     "auth": "Bearer fake-g-access-3",
+     "ctype": null,
+     "range": null,
+     "body": null,
+     "resp": {
+      "status": 200,
+      "ctype": "application/json",
+      "extra": {},
+      "json": {
+       "files": []
+      }
+     }
+    }
+   ],
+   "exit": 0,
+   "stdout": "gs-20261026-120000 [pull DRY RUN] edit 1, push_new 1\n   {\"op\": \"edit\", \"doc\": \"doc-dry-000000000000\", \"joke\": \"joke:dry-run-bit\"}\n   {\"op\": \"push_new\", \"joke\": \"joke:second-app-idea\", \"title\": \"Second app idea\"}\n",
+   "after": {
+    "home/google-oauth.env": "GOOGLE_CLIENT_ID=fake-client-id\nGOOGLE_CLIENT_SECRET=fake-client-secret\n",
+    "home/google_token.json": "{\"refresh_token\": \"fake-google-refresh-0\", \"source\": \"keycloak-broker\", \"kc_checked_at\": 1793015900}",
+    "home/keycloak_gsync_token.json": "{\"refresh_token\": \"fake-kc-refresh-0\", \"issuer\": \"x\", \"client_id\": \"pk-gsync\", \"saved_at\": 1}",
+    "home/legal_rules.json": "{\"owner\": \"owner@example.com\", \"legal_parents\": [\"sample-legal-folder-000000000000000\"], \"keywords\": [\"sample person\"], \"content_markers\": [], \"legal_ids\": [\"sample-denylisted-doc-0000000000000000000000\"]}",
+    "home/secrets.env": "PK_WORKER_SECRET=fake-worker-secret\n",
+    "ws/comedy/corpus/gdocs/.keep": "",
+    "ws/comedy/corpus/gdocs/2026-09-01_old-bit__corpus01.md": "---\nsource: gdoc\ndoc_id: corpus-doc-0001\ntitle: \"Old bit\"\nmodified: 2026-09-01T10:00:00.000Z\n---\nold text\n",
+    "ws/comedy/kb/gsync/map.json": "{\n \"boards\": {\n  \"sb:dry\": {\n   \"doc_hash\": \"34da33bf289475ed\",\n   \"doc_id\": \"new0002xxxxxxxx\",\n   \"hash\": \"34da33bf289475ed\",\n   \"version\": \"1\"\n  },\n  \"sb:robot-vacuum-104b6cc0\": {\n   \"adopted\": true,\n   \"doc_id\": \"sample-board-doc-robot-vacuum-000000000000\",\n   \"hash\": null,\n   \"version\": null\n  }\n },\n \"bootstrapped_at\": \"2026-10-26T12:00:00+00:00\",\n \"changes_token\": \"2\",\n \"docs\": {\n  \"corpus-doc-0001\": {\n   \"doc_hash\": null,\n   \"file\": \"corpus/gdocs/2026-09-01_old-bit__corpus01.md\",\n   \"gone_at\": \"2026-10-26T12:00:00+00:00\",\n   \"hidden\": true,\n   \"jokes\": [],\n   \"modified\": \"2026-09-01T10:00:00.000Z\",\n   \"origin\": \"corpus\",\n   \"title\": \"Old bit\",\n   \"version\": null\n  },\n  \"doc-dry-000000000000\": {\n   \"app_hash\": \"2a848a70f9d66ea6\",\n   \"doc_hash\": \"2a848a70f9d66ea6\",\n   \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n   \"joke_id\": \"joke:dry-run-bit\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"gdocs\",\n   \"title\": \"Dry run bit\",\n   \"version\": \"1\"\n  },\n  \"new0001xxxxxxxx\": {\n   \"app_hash\": \"ef12d137f3b1ef15\",\n   \"doc_hash\": \"ef12d137f3b1ef15\",\n   \"joke_id\": \"joke:an-app-idea\",\n   \"modified\": \"2026-10-20T10:00:00.000Z\",\n   \"origin\": \"app\",\n   \"title\": \"An app idea\",\n   \"version\": \"1\"\n  },\n  \"new0002xxxxxxxx\": {\n   \"board\": \"sb:dry\",\n   \"origin\": \"board\"\n  },\n  \"sample-adopted-doc-1-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:robot-guesses-the-next-word\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-adopted-doc-2-000000000000000000000\": {\n   \"adopted\": true,\n   \"app_hash\": null,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:the-room-finishes-the-sentence\",\n   \"origin\": \"app\",\n   \"version\": null\n  },\n  \"sample-ai-draft-doc-0000000000000000000000\": {\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": null,\n   \"origin\": \"ai_draft\",\n   \"source\": \"ai_draft\",\n   \"title\": \"AI explained step by step (DRAFT walk-through for the AI chunk)\",\n   \"version\": null\n  },\n  \"sample-board-doc-robot-vacuum-000000000000\": {\n   \"board\": \"sb:robot-vacuum-104b6cc0\",\n   \"origin\": \"board\"\n  },\n  \"sample-mixed-doc-00000000000000000000000000\": {\n   \"app_hash\": null,\n   \"contains_drafts\": true,\n   \"doc_hash\": null,\n   \"joke_id\": \"joke:good-data-the-soup-label\",\n   \"origin\": \"mixed\",\n   \"source\": \"mixed\",\n   \"version\": null\n  }\n },\n \"excluded\": {\n  \"doc-dry-legal-0000000\": \"kw:petition\"\n },\n \"folder_id\": \"sample-folder-punchable-0000000000\",\n \"folders\": {\n  \"root0\": [],\n  \"sample-folder-punchable-0000000000\": [\n   \"root0\"\n  ]\n },\n \"merges\": {},\n \"pending\": {},\n \"skipped\": {},\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/memos.json": "{\n \"folder_id\": \"fold0003xxxxxxxx\",\n \"items\": {},\n \"paused\": null,\n \"processor\": {},\n \"updated_at\": \"2026-10-26T12:00:00+00:00\",\n \"version\": 1\n}",
+    "ws/comedy/kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md": "---\nsource: gdoc\ndoc_id: doc-dry-000000000000\ntitle: \"Dry run bit\"\ncreated: 2026-10-20T10:00:00.000Z\nmodified: 2026-10-20T10:00:00.000Z\nurl: https://{GDOCS_HOST}/document/d/doc-dry-000000000000/edit\n---\nwords\nmore words",
+    "ws/comedy/kb/gsync/runs.jsonl": "{\"run_id\":\"gs-20261026-120000\",\"ts\":\"2026-10-26T12:00:00+00:00\",\"dry_run\":false,\"mode\":\"bootstrap\",\"actions\":[{\"op\":\"adopt\",\"doc\":\"sample-board-doc-robot-vacuum-000000000000\",\"kind\":\"board\"},{\"op\":\"adopt\",\"doc\":\"sample-ai-draft-doc-0000000000000000000000\",\"kind\":\"ai_draft\"},{\"op\":\"adopt\",\"doc\":\"sample-mixed-doc-00000000000000000000000000\",\"joke\":\"joke:good-data-the-soup-label\",\"kind\":\"mixed\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-1-000000000000000000000\",\"joke\":\"joke:robot-guesses-the-next-word\",\"kind\":\"joke\"},{\"op\":\"adopt\",\"doc\":\"sample-adopted-doc-2-000000000000000000000\",\"joke\":\"joke:the-room-finishes-the-sentence\",\"kind\":\"joke\"},{\"op\":\"seed_corpus\",\"n\":1},{\"op\":\"new\",\"doc\":\"doc-dry-000000000000\",\"joke\":\"joke:dry-run-bit\",\"indexes\":[1],\"title\":\"Dry run bit\"},{\"op\":\"skip_legal\",\"doc\":\"doc-dry-legal-0000000\",\"why\":\"kw\"},{\"op\":\"gone\",\"doc\":\"corpus-doc-0001\"},{\"op\":\"push_new\",\"joke\":\"joke:an-app-idea\",\"doc\":\"new0001xxxxxxxx\",\"title\":\"An app idea\"},{\"op\":\"board\",\"board\":\"sb:dry\",\"doc\":\"new0002xxxxxxxx\"},{\"op\":\"memo_folder_create\",\"doc\":\"fold0003xxxxxxxx\"}],\"counts\":{\"adopt\":5,\"seed_corpus\":1,\"new\":1,\"skip_legal\":1,\"gone\":1,\"push_new\":1,\"board\":1,\"memo_folder_create\":1},\"errors\":[],\"drive\":{\"calls\":15,\"exports\":4,\"writes\":3,\"backoffs\":0,\"downloads\":0},\"api_calls\":11,\"ts_end\":\"2026-10-26T12:00:00+00:00\"}\n",
+    "ws/comedy/kb/gsync/units.json": "[\n {\n  \"doc_id\": \"doc-dry-000000000000\",\n  \"doc_title\": \"Dry run bit\",\n  \"created\": \"2026-10-20T10:00:00.000Z\",\n  \"modified\": \"2026-10-20T10:00:00.000Z\",\n  \"file\": \"kb/gsync/mirror/2026-10-20_dry-run-bit__doc-dry-.md\",\n  \"kind\": \"note\",\n  \"parent_hint\": \"Dry run bit\",\n  \"topics\": [],\n  \"devices\": [],\n  \"structures\": [],\n  \"form\": null,\n  \"attitude\": null,\n  \"confidence\": 0.4,\n  \"needs_look\": true,\n  \"source\": \"gsync\",\n  \"unit_id\": \"doc-dry--00\",\n  \"locator\": {\n   \"para_start\": 0,\n   \"para_end\": 1,\n   \"para_rule\": \"non-blank lines of fileContent, 0-based, inclusive\"\n  },\n  \"text\": \"words\\nmore words\"\n }\n]"
+   },
+   "note": "dry pull: reads only",
+   "stderr_has_traceback": false
+  }
+ ]
+}
