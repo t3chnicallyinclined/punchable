@@ -261,7 +261,11 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
 /// on it is forwarded.
 fn write_methods(path: &str) -> &'static [&'static str] {
     match path {
-        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" | "/api/venues/{id}" => &["PATCH"],
+        "/api/settings"
+        | "/api/boards/{id}"
+        | "/api/workingsets/{id}/try/{id2}"
+        | "/api/venues/{id}"
+        | "/api/mysets/{id}" => &["PATCH"],
         "/api/ask/chats/{id}" => &["POST", "PATCH"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],
@@ -350,7 +354,6 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         "/api/jokes/a/b",
         "/api/jokes/",
         "/api/boards/b/items",
-        "/api/mysets/match",
         "/api/mysets/s/x",
     ] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
@@ -366,7 +369,7 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         StatusCode::NOT_FOUND,
         "a POST under a moved id path is forwarded"
     );
-    for (m, p) in [("PATCH", "/api/mysets/s"), ("POST", "/api/mysets/match")] {
+    for (m, p) in [("POST", "/api/mysets/match"), ("PUT", "/api/mysets/s")] {
         let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
         assert_eq!(send(&st, r).await.0, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
     }

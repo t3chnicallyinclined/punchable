@@ -69,7 +69,7 @@ problems: list[str] = []
 n_equal = 0
 
 # ---------------------------------------------------------------- volatile parts of a write's answer
-VOLATILE_KEYS = {"s", "ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
+VOLATILE_KEYS = {"s", "exported_at", "ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
@@ -1946,6 +1946,194 @@ def say_phase() -> None:
     both("say: after the questions", reads)
 
 
+# ---------------------------------------------------------------- round 6, group C: his sets, the writes
+def mysets_phase() -> None:
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    jokes = [x["id"] for x in (body(R.call(py, "GET", "/api/jokes?limit=40", app)) or {}).get("items") or []]
+    ok("mysets: the scratch notebook has four bits", len(jokes) >= 4, str(len(jokes)))
+    j = jokes[:4]
+    keys = [s["id"] for s in (body(R.call(py, "GET", "/api/sets", app)) or {}).get("sets") or []]
+    boards = [b_["id"] for b_ in (body(R.call(py, "GET", "/api/boards", app)) or {}).get("boards") or []]
+    both("mysets: before", ["/api/mysets", "/api/mysets/match", "/api/mysets/match?set=nope", "/api/mysets/match?backend=x"])
+    both("mysets: the recording match", [f"/api/mysets/match?set={q(k)}" for k in keys[:4]] + [f"/api/mysets/match?set={q(k[4:])}" for k in keys[:2]])
+
+    def pair(label, method, path_of, b_py, b_rs=None, want=(200,), headers=None):
+        """The same request to both servers on each one's own set; the answers equal after normalisation."""
+        global n_equal
+        a = R.call(py, method, path_of(py), headers or app, b_py)
+        b = R.call(rs, method, path_of(rs), headers or app, b_rs if b_rs is not None else b_py)
+        bad = []
+        if a[0] != b[0] or a[0] not in want:
+            bad.append(f"{label}: status python {a[0]} rust {b[0]} (want {want}): {a[2][:200]!r} / {b[2][:200]!r}")
+        for h in R.HEADERS:
+            if a[1].get(h) != b[1].get(h):
+                bad.append(f"{label}: header {h}: python {a[1].get(h)!r} rust {b[1].get(h)!r}")
+        for p, u, v in R.diff(norm(body(a)), norm(body(b))):
+            bad.append(f"{label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}")
+        problems.extend(bad)
+        n_equal += not bad
+        return body(a), body(b)
+
+    mine = {}
+    # a new set, three ways: bits, a board, another set trimmed
+    a, b = pair("mysets: a new set", "POST", lambda s: "/api/mysets", {"title": "Diff set (P)", "target_s": 600, "joke_ids": j[:3]},
+                {"title": "Diff set (R)", "target_s": 600, "joke_ids": j[:3]}, want=(201,))
+    mine[py], mine[rs] = a["id"], b["id"]
+    ok("mysets: the new set has its bits and its note", len(a["versions"] if "versions" in a else [1]) >= 1 and b.get("title", "").startswith("Diff set"), json.dumps(b)[:300])
+    if boards:
+        pair("mysets: a new set from a board", "POST", lambda s: "/api/mysets", {"board_id": boards[0], "title": "From board (P)"}, {"board_id": boards[0], "title": "From board (R)"}, want=(201,))
+        pair("mysets: a new set from a board, its own title", "POST", lambda s: "/api/mysets", {"board_id": boards[0]}, want=(201,))
+    pair("mysets: a new set from another set", "POST", lambda s: "/api/mysets", {"from_set": mine[py], "target_s": 300, "title": "Trimmed (P)"},
+         {"from_set": mine[rs], "target_s": 300, "title": "Trimmed (R)"}, want=(201,))
+    pair("mysets: a new set from another set, the bits given", "POST", lambda s: "/api/mysets", {"from_set": mine[py], "target_s": 300, "joke_ids": j[:1]},
+         {"from_set": mine[rs], "target_s": 300, "joke_ids": j[:1]}, want=(201,))
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        both(f"mysets: after a set via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", f"/api/mysets/{q(mine[base])}/trim?target_s=300", "/api/today"])
+    # the changes: a rename, a reorder with a note, a swap with the note written for him, a length, a lock and an unlock
+    pair("mysets: a rename", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"title": "  Renamed (P)  "}, {"title": "  Renamed (R)  "})
+    pair("mysets: the same name again", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"title": "Renamed (P)"}, {"title": "Renamed (R)"})
+    pair("mysets: a reorder with his note", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[0], j[1]], "note": "  v2: the closer first  "})
+    pair("mysets: a swap, the note written for him", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[3], j[1]]})
+    pair("mysets: an addition and a length", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[2], j[3], j[1], j[0]], "target_s": 900})
+    pair("mysets: a cut", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"joke_ids": [j[3], j[0]]})
+    pair("mysets: the length alone", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"target_s": 420})
+    pair("mysets: nothing changed", "PATCH", lambda s: f"/api/mysets/{q(mine[s])}", {"target_s": 420, "title": "Renamed (P)"}, {"target_s": 420, "title": "Renamed (R)"})
+    pair("mysets: a lock", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3]})
+    pair("mysets: the same lock again", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3]})
+    pair("mysets: an unlock", "POST", lambda s: f"/api/mysets/{q(mine[s])}/lock", {"joke_id": j[3], "unlock": True})
+    pair("mysets: a bridge queued", "POST", lambda s: f"/api/mysets/{q(mine[s])}/bridge", {"from": j[3], "to": j[0]}, want=(200, 202))
+    pair("mysets: the same bridge again", "POST", lambda s: f"/api/mysets/{q(mine[s])}/bridge", {"from": j[3], "to": j[0]}, want=(200, 202))
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        both(f"mysets: after the changes via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", f"/api/mysets/{q(mine[base])}/trim?target_s=300", "/api/today"])
+    # the refusals to the letter (each writes nothing)
+    ws0 = mine[py]
+    for label, method, path_, b_ in [
+            ("no body", "POST", "/api/mysets", {}), ("no title", "POST", "/api/mysets", {"target_s": 600}),
+            ("a title that is a number", "POST", "/api/mysets", {"title": 5, "target_s": 600}),
+            ("a long title", "POST", "/api/mysets", {"title": "t" * 201, "target_s": 600}),
+            ("a length under a minute", "POST", "/api/mysets", {"title": "x", "target_s": 30}),
+            ("a length over four hours", "POST", "/api/mysets", {"title": "x", "target_s": 99999}),
+            ("a length as text", "POST", "/api/mysets", {"title": "x", "target_s": "600"}),
+            ("bits that are not a list", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": "joke:a"}),
+            ("a bit that is not one", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": ["joke:nope"]}),
+            ("a bit twice", "POST", "/api/mysets", {"title": "x", "target_s": 600, "joke_ids": [j[0], j[0]]}),
+            ("a board that is not one", "POST", "/api/mysets", {"board_id": "sb:nope"}),
+            ("a board that is a number", "POST", "/api/mysets", {"board_id": 5}),
+            ("a set that is not one", "POST", "/api/mysets", {"from_set": "ws:nope", "target_s": 300}),
+            ("a set to trim with no length", "POST", "/api/mysets", {"from_set": ws0}),
+            ("a set that is not there", "PATCH", "/api/mysets/ws:nope", {"title": "x"}),
+            ("a patch with nothing", "PATCH", f"/api/mysets/{q(ws0)}", {}),
+            ("a patch with a blank title", "PATCH", f"/api/mysets/{q(ws0)}", {"title": "  "}),
+            ("a patch with a null title", "PATCH", f"/api/mysets/{q(ws0)}", {"title": None}),
+            ("a patch with a null length", "PATCH", f"/api/mysets/{q(ws0)}", {"target_s": None}),
+            ("a patch with a note that is a number", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": [j[1]], "note": 5}),
+            ("a patch with a blank note", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": [j[1]], "note": "  "}),
+            ("a patch with bits that are not there", "PATCH", f"/api/mysets/{q(ws0)}", {"joke_ids": ["joke:nope"]}),
+            ("a lock on a bit not in the set", "POST", f"/api/mysets/{q(ws0)}/lock", {"joke_id": j[2]}),
+            ("a lock with no bit", "POST", f"/api/mysets/{q(ws0)}/lock", {}),
+            ("a lock on no set", "POST", "/api/mysets/ws:nope/lock", {"joke_id": j[0]}),
+            ("a bridge of bits not in the set", "POST", f"/api/mysets/{q(ws0)}/bridge", {"from": j[2], "to": j[1]}),
+            ("a bridge with no bits", "POST", f"/api/mysets/{q(ws0)}/bridge", {}),
+            ("a bridge on no set", "POST", "/api/mysets/ws:nope/bridge", {"from": j[0], "to": j[1]})]:
+        same_write(f"mysets: {label}", method, path_, b_)
+    for label, p_ in (("a recording that is not one", "/api/mysets/match?set=nope"), ("no recording named", "/api/mysets/match")):
+        got = R.compare(f"mysets: {label}", R.call(py, "GET", p_, app), R.call(rs, "GET", p_, app))
+        problems.extend(got)
+        n_equal += not got
+    for label, method, p_, b_, h_ in (("the worker token on a create", "POST", "/api/mysets", {"title": "x", "target_s": 600}, worker_tok),
+                                      ("no token on a patch", "PATCH", f"/api/mysets/{q(ws0)}", {"title": "x"}, {}),
+                                      ("a put", "PUT", f"/api/mysets/{q(ws0)}", {"title": "x"}, app)):
+        got = R.compare(f"mysets: {label}", R.call(py, method, p_, h_, b_), R.call(rs, method, p_, h_, b_))
+        problems.extend(got)
+        n_equal += not got
+    # a delete through each, the list as it was
+    for base, who in ((py, "Python"), (rs, "pk-api")):
+        st_, r_ = write(base, "PATCH", f"/api/mysets/{q(mine[base])}", {"delete": True})
+        ok(f"mysets: a delete via {who}", r_ == {"deleted": mine[base]}, json.dumps(r_))
+        both(f"mysets: after a delete via {who}", ["/api/mysets", f"/api/mysets/{q(mine[base])}", "/api/today"])
+
+
+# ---------------------------------------------------------------- round 6, group D: the reads that were the Python's
+def status_phase() -> None:
+    global n_equal
+    w = worker_tok
+
+    def gsync(files: dict, remove: list | None = None) -> None:
+        # through the Python: it writes its pod's copy of the file too (it refreshes from the rows only every poll)
+        write(py, "POST", "/api/worker/files", {"files": [{"path": p, "text": t} for p, t in files.items()],
+                                                  "remove": remove or [], "actor": "import:gsync"}, headers=w)
+
+    maps = ["/api/map", "/api/map?cap=1", "/api/map?cap=3", "/api/map?cap=400", "/api/map?cap=2000", "/api/map?cap=0", "/api/map?cap=x",
+            "/api/map?cap=2001", "/api/map?cap=-1", "/api/map?cap=", "/api/map?backend=x"]
+    both("status: the map", maps)
+    both("status: the rest", ["/api/connections", "/api/connections?backend=x", "/api/ai/worker", "/api/ai/worker?backend=x", "/api/notes", "/api/notes?backend=x"])
+    # Settings > Connections follows gsync's own files
+    gsync({"kb/gsync/map.json": json.dumps({"docs": {"a": {"origin": "gdocs"}, "b": {"origin": "app"}, "c": {"origin": "other"},
+                                                      "d": {"origin": "gdocs", "hidden": True}, "e": "x"}, "boards": {"x": {}, "y": {}}})})
+    both("status: connections, a map and no runs", ["/api/connections"])
+    now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+    old = "2020-01-01T00:00:00Z"
+    cases = [("a run that went well", [{"ts": now, "ts_end": now, "mode": "watch", "errors": []}]),
+             ("a dry run beside it", [{"ts": now, "mode": "watch"}, {"ts": now, "dry_run": True, "errors": ["x"]}]),
+             ("a run with errors", [{"ts": now, "mode": "watch"}, {"ts": now, "ts_end": now, "errors": ["a", "b"]}]),
+             ("a run long ago", [{"ts": old, "ts_end": old, "mode": "watch", "errors": []}]),
+             ("the api was down", [{"ts": now, "mode": "watch"}, {"ts": now, "mode": "api_down", "errors": []}]),
+             ("a torn last line", [{"ts": now, "mode": "watch"}]),
+             ("a stamp with no zone", [{"ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), "mode": "once"}]),
+             ("a stamp that is not one", [{"ts": "yesterday", "mode": "once"}]),
+             ("no stamp", [{"mode": "once"}])]
+    for label, runs in cases:
+        text = "".join(json.dumps(r) + chr(10) for r in runs) + ('{"ts": "tor' if "torn" in label else "")
+        gsync({"kb/gsync/runs.jsonl": text})
+        both(f"status: connections, {label}", ["/api/connections"])
+    gsync({"kb/gsync/conflicts.jsonl": '{"a": 1}' + chr(10) + chr(10) + '{"b": 2}' + chr(10)})
+    both("status: connections, two conflicts", ["/api/connections"])
+    gsync({"kb/gsync/map.json": "not json"})
+    both("status: connections, a map that is not json", ["/api/connections"])
+    gsync({}, remove=["kb/gsync/map.json", "kb/gsync/runs.jsonl", "kb/gsync/conflicts.jsonl"])
+    both("status: connections, gsync's files gone", ["/api/connections"])
+    # what answers: the Python's own status is its processes; the app reads `primary`
+    a_, c_ = R.call(py, "GET", "/api/backend", app), R.call(rs, "GET", "/api/backend", app)
+    ja, jc = body(a_) or {}, body(c_) or {}
+    ok("status: /api/backend, the same status and headers", a_[0] == c_[0] == 200 and all(a_[1].get(h) == c_[1].get(h) for h in R.HEADERS), f"{a_[0]} / {c_[0]}")
+    ok("status: /api/backend, the same primary and this_request", all(ja.get(k) == jc.get(k) == "surreal" for k in ("primary", "this_request")), json.dumps(jc)[:200])
+    ok("status: /api/backend names the surreal backend with the same counts",
+       set(jc.get("backends") or {}) == {"surreal"} and (jc["backends"]["surreal"].get("counts") == ja["backends"]["surreal"].get("counts")),
+       f"{(jc.get('backends') or {}).get('surreal', {}).get('counts')} vs {(ja.get('backends') or {}).get('surreal', {}).get('counts')}")
+    got = R.compare("status: /api/backend with no token", R.call(py, "GET", "/api/backend", {}), R.call(rs, "GET", "/api/backend", {}))
+    problems.extend(got)
+    n_equal += not got
+
+
+# ---------------------------------------------------------------- round 6, group E: the export and the recordings
+def export_phase() -> None:
+    global n_equal
+    for label, p_, h_ in [("the export", "/api/export", app), ("the export, hidden too", "/api/export?include_hidden=1", app),
+                          ("the export, a backend that is not here", "/api/export?backend=x", app),
+                          ("the export with no token", "/api/export", {}), ("the export with the worker's token", "/api/export", worker_tok),
+                          ("a recording", "/api/audio/set:nope", app), ("a recording, wav", "/api/audio/set:nope?fmt=wav", app),
+                          ("a recording of a set that is there", "/api/audio/" + quote(INGEST_ROOMS["rs"][1], safe=""), app),
+                          ("a recording with a bad id", "/api/audio/bad%20id%21", app), ("a recording with a long id", "/api/audio/" + "x" * 301, app),
+                          ("a recording with no token", "/api/audio/set:nope", {}), ("a recording, a backend that is not here", "/api/audio/set:nope?backend=x", app)]:
+        a_, c_ = R.call(py, "GET", p_, h_), R.call(rs, "GET", p_, h_)
+        bad = []
+        if a_[0] != c_[0]:
+            bad.append(f"export: {label}: status python {a_[0]} rust {c_[0]}: {a_[2][:160]!r} / {c_[2][:160]!r}")
+        for h in R.HEADERS + ("content-disposition",):
+            if a_[1].get(h) != c_[1].get(h):
+                bad.append(f"export: {label}: header {h}: python {a_[1].get(h)!r} rust {c_[1].get(h)!r}")
+        for p, u, v in R.diff(norm(body(a_)), norm(body(c_))):
+            bad.append(f"export: {label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}")
+        problems.extend(bad)
+        n_equal += not bad
+        if p_ == "/api/export" and a_[0] == 200:
+            j_ = body(a_)
+            ok("export: it carries decisions, sets, ideas, the inbox and the four creative logs",
+               j_["format"] == "punchable-export/1" and len(j_["decisions"]) > 10 and len(j_["sets"]) >= 1
+               and set(j_["creative"]) == {"storyboards", "workingsets", "venues", "account"}, json.dumps(list(j_))[:200])
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -2109,6 +2297,21 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001
             import traceback
             problems.append(f"say phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            mysets_phase()
+        except Exception as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"mysets_phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            status_phase()
+        except Exception as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"status_phase crashed: {traceback.format_exc()[-900:]}")
+        try:
+            export_phase()
+        except Exception as e:  # noqa: BLE001
+            import traceback
+            problems.append(f"export_phase crashed: {traceback.format_exc()[-900:]}")
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         report["python_sync_after_pk_api_decisions"] = python_full_load_demo(port, pw)
         mtext = R.call(rs, "GET", "/metrics")[2].decode()

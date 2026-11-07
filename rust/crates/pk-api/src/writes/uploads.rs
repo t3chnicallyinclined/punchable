@@ -441,6 +441,24 @@ pub async fn inbox(State(st): State<AppState>, req: axum::extract::Request) -> A
     Ok(ok(&json!({"items": rows.iter().map(inbox_row).collect::<Vec<_>>()})))
 }
 
+/// `GET /api/notes`: the uploads that are notes (the inbox's `kind` is `note`), newest first.
+pub async fn notes(State(st): State<AppState>, req: axum::extract::Request) -> ApiResult<Response> {
+    if !st.config().upload_db {
+        return Ok(crate::proxy::forward(State(st), req).await);
+    }
+    let q = Query::parse(req.uri().query());
+    st.require_loaded()?;
+    crate::routes::pick(&q)?;
+    let store = st.store_handle().ok_or_else(not_connected)?;
+    let rows = store.upload_rows().await.map_err(store_err)?;
+    let items: Vec<Value> = rows
+        .iter()
+        .map(inbox_row)
+        .filter(|r| r.get("kind").and_then(Value::as_str) == Some("note"))
+        .collect();
+    Ok(ok(&json!({"items": items})))
+}
+
 /// A job that will not run again lets go of its recording (ADR 0014): the bytes of a `process_set` job that was
 /// dropped, or that failed for good, are deleted. A failed delete is logged and left to the expiry sweep: the job's
 /// own end has already been written and the caller must answer it.

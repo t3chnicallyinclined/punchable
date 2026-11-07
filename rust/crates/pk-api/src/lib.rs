@@ -51,7 +51,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 33] = [
+pub const OWN_PATHS: [&str; 40] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -85,6 +85,13 @@ pub const OWN_PATHS: [&str; 33] = [
     "/api/worker/files",
     "/api/worker/files/content",
     "/api/worker/state",
+    "/api/mysets/match",
+    "/api/map",
+    "/api/connections",
+    "/api/ai/worker",
+    "/api/backend",
+    "/api/notes",
+    "/api/export",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -93,7 +100,7 @@ pub const OWN_PATHS: [&str; 33] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 21] = [
+pub const OWN_PATTERNS: [&str; 22] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -115,12 +122,13 @@ pub const OWN_PATTERNS: [&str; 21] = [
     "/api/merge/{id}",
     "/api/ask/chats/{id}",
     "/api/worker/jokes/{id}",
+    "/api/audio/{id}",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 33] = [
+pub const OWN_WRITE_PATHS: [&str; 34] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -154,11 +162,12 @@ pub const OWN_WRITE_PATHS: [&str; 33] = [
     "/api/worker/undo",
     "/api/worker/events",
     "/api/say",
+    "/api/mysets",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 16] = [
+pub const OWN_WRITE_PATTERNS: [&str; 19] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -175,6 +184,9 @@ pub const OWN_WRITE_PATTERNS: [&str; 16] = [
     "/api/jobs/{id}/drop",
     "/api/ask/chats/{id}",
     "/api/venues/{id}",
+    "/api/mysets/{id}",
+    "/api/mysets/{id}/lock",
+    "/api/mysets/{id}/bridge",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -292,7 +304,13 @@ pub fn app(st: AppState) -> Router {
                 get(guarded(&st, routes::creative::boards)).post(guarded_write(&st, writes::boards::create)),
             ),
         )
-        .route("/api/mysets", read_route(&st, routes::creative::mysets))
+        .route(
+            "/api/mysets",
+            finish(
+                &st,
+                get(guarded(&st, routes::creative::mysets)).post(guarded_write(&st, writes::mysets::create)),
+            ),
+        )
         .route("/api/tonight/screen", read_route(&st, routes::creative::tonight_screen))
         .route(
             "/api/boards/{id}",
@@ -306,8 +324,24 @@ pub fn app(st: AppState) -> Router {
             read_route(&st, routes::sets_detail::board_build),
         )
         // `/api/mysets/match` is the Python's (`mysets_api` matches it before an id): never read as a set id here
-        .route("/api/mysets/match", axum::routing::any(proxy::forward))
-        .route("/api/mysets/{id}", read_route(&st, routes::sets_detail::myset))
+        .route("/api/mysets/match", read_route(&st, routes::sets_detail::match_set))
+        // T10 round 6, group D: the reads that were the Python's
+        .route("/api/map", read_route(&st, routes::status::map_all))
+        .route("/api/connections", read_route(&st, routes::status::connections))
+        .route("/api/ai/worker", read_route(&st, routes::status::ai_worker))
+        .route("/api/backend", read_route(&st, routes::status::backend))
+        .route("/api/notes", read_route(&st, writes::uploads::notes))
+        .route("/api/export", read_route(&st, routes::status::export))
+        .route("/api/audio/{id}", read_route(&st, routes::status::audio))
+        .route(
+            "/api/mysets/{id}",
+            finish(
+                &st,
+                get(guarded(&st, routes::sets_detail::myset)).patch(guarded_write(&st, writes::mysets::patch)),
+            ),
+        )
+        .route("/api/mysets/{id}/lock", write_route(&st, writes::mysets::lock))
+        .route("/api/mysets/{id}/bridge", write_route(&st, writes::mysets::bridge))
         .route("/api/mysets/{id}/trim", read_route(&st, routes::sets_detail::trim))
         .route(
             "/api/jokes/{id}/connections",

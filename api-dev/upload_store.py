@@ -32,9 +32,25 @@ def put_part(rpc, token: str, seq: int, data: bytes) -> None:
               {"k": token, "s": seq, "t": time.time(), "d": data})
 
 
+CONFLICT_WAITS = (0.025, 0.075, 0.15, 0.3)
+
+
+def _retrying(fn) -> None:
+    """Run `fn` again, a bounded number of times, while it fails with a write conflict ("can be retried": SurrealKV, two
+    uploads sweeping the same staging rows). Another error, and the last conflict, are raised as they are."""
+    for wait in CONFLICT_WAITS + (None,):
+        try:
+            return fn()
+        except RuntimeError as e:  # sdb.SurrealError
+            if wait is None or "can be retried" not in str(e):
+                raise
+            time.sleep(wait)
+
+
 def drop_parts(rpc, token: str) -> None:
-    rpc.query("DELETE upload_part WHERE token = $k RETURN NONE; DELETE type::record('upload_stage', $k) RETURN NONE;",
-              {"k": token})
+    """One transaction, so a write conflict is retried as a whole (sdb.Rpc.query retries a BEGIN ... COMMIT block)."""
+    _retrying(lambda: rpc.query("BEGIN; DELETE upload_part WHERE token = $k RETURN NONE; "
+                                "DELETE type::record('upload_stage', $k) RETURN NONE; COMMIT;", {"k": token}))
 
 
 def sweep_orphans(rpc) -> None:
@@ -97,7 +113,7 @@ def delete(rpc, name: str) -> None:
     row = get(rpc, name)
     if row is None:
         return
-    rpc.query("BEGIN; DELETE type::record('upload', $n) RETURN NONE; "
-              "UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
-              {"k": row["token"], "n": name})
+    _retrying(lambda: rpc.query("BEGIN; DELETE type::record('upload', $n) RETURN NONE; "
+                                "UPSERT type::record('upload_stage', $k) SET t = 0.0, n = 0 RETURN id; COMMIT;",
+                                {"k": row["token"], "n": name}))
     drop_parts(rpc, row["token"])

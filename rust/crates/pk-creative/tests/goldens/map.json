@@ -1,0 +1,890 @@
+{
+ "cases": [
+  {
+   "cap": 1,
+   "same_idea": null,
+   "map": {
+    "cap": 1,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 0
+     }
+    ],
+    "edges": [],
+    "counts": {
+     "jokes": 8,
+     "nodes": 1,
+     "edges": 0,
+     "by_kind": {
+      "next": 0,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 0
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 1,
+   "same_idea": [
+    {
+     "members": [
+      {
+       "joke_id": "joke:airport-bins"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer"
+      },
+      {
+       "joke_id": "joke:landlord-chat"
+      }
+     ]
+    },
+    {
+     "members": [
+      {
+       "joke_id": "joke:carousel-idea"
+      },
+      {
+       "joke_id": "joke:airport-bins"
+      }
+     ]
+    },
+    {
+     "members": []
+    }
+   ],
+   "map": {
+    "cap": 1,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 0
+     }
+    ],
+    "edges": [],
+    "counts": {
+     "jokes": 8,
+     "nodes": 1,
+     "edges": 0,
+     "by_kind": {
+      "next": 0,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 0
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 2,
+   "same_idea": null,
+   "map": {
+    "cap": 2,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 1
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 2,
+     "edges": 1,
+     "by_kind": {
+      "next": 1,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 0
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 2,
+   "same_idea": [
+    {
+     "members": [
+      {
+       "joke_id": "joke:airport-bins"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer"
+      },
+      {
+       "joke_id": "joke:landlord-chat"
+      }
+     ]
+    },
+    {
+     "members": [
+      {
+       "joke_id": "joke:carousel-idea"
+      },
+      {
+       "joke_id": "joke:airport-bins"
+      }
+     ]
+    },
+    {
+     "members": []
+    }
+   ],
+   "map": {
+    "cap": 2,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 2
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 2
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 2,
+     "edges": 2,
+     "by_kind": {
+      "next": 1,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 1
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 3,
+   "same_idea": null,
+   "map": {
+    "cap": 3,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 2
+     },
+     {
+      "id": "joke:laundromat",
+      "short_name": "Laundromat dating",
+      "title": "Laundromat dating",
+      "stage": "working",
+      "nights": 1,
+      "heat": 2.4,
+      "last_seen": null,
+      "degree": 1
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:laundromat",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 3,
+     "edges": 2,
+     "by_kind": {
+      "next": 2,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 0
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 3,
+   "same_idea": [
+    {
+     "members": [
+      {
+       "joke_id": "joke:airport-bins"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer"
+      },
+      {
+       "joke_id": "joke:landlord-chat"
+      }
+     ]
+    },
+    {
+     "members": [
+      {
+       "joke_id": "joke:carousel-idea"
+      },
+      {
+       "joke_id": "joke:airport-bins"
+      }
+     ]
+    },
+    {
+     "members": []
+    }
+   ],
+   "map": {
+    "cap": 3,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 2
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 3
+     },
+     {
+      "id": "joke:laundromat",
+      "short_name": "Laundromat dating",
+      "title": "Laundromat dating",
+      "stage": "working",
+      "nights": 1,
+      "heat": 2.4,
+      "last_seen": null,
+      "degree": 1
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:laundromat",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 3,
+     "edges": 3,
+     "by_kind": {
+      "next": 2,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 1
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 400,
+   "same_idea": null,
+   "map": {
+    "cap": 400,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 3
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 2
+     },
+     {
+      "id": "joke:laundromat",
+      "short_name": "Laundromat dating",
+      "title": "Laundromat dating",
+      "stage": "working",
+      "nights": 1,
+      "heat": 2.4,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:gym-mirror",
+      "short_name": "Gym",
+      "title": "Gym mirror",
+      "stage": null,
+      "nights": 1,
+      "heat": 0.9,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:landlord-chat",
+      "short_name": "Landlord group",
+      "title": "Landlord group chat",
+      "stage": "working",
+      "nights": 1,
+      "heat": 0.2,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:carousel-idea",
+      "short_name": "Baggage carousel",
+      "title": "Baggage carousel",
+      "stage": null,
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 0
+     },
+     {
+      "id": "joke:old-bins",
+      "short_name": "Old bins version",
+      "title": "Old bins version",
+      "stage": null,
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 0
+     },
+     {
+      "id": "joke:tsa-poem",
+      "short_name": "TSA poem",
+      "title": "TSA poem",
+      "stage": "polished",
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 0
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:gym-mirror",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:laundromat",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     },
+     {
+      "a": "joke:landlord-chat",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 8,
+     "edges": 4,
+     "by_kind": {
+      "next": 4,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 0
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  },
+  {
+   "cap": 400,
+   "same_idea": [
+    {
+     "members": [
+      {
+       "joke_id": "joke:airport-bins"
+      },
+      {
+       "joke_id": "joke:parrot-lawyer"
+      },
+      {
+       "joke_id": "joke:landlord-chat"
+      }
+     ]
+    },
+    {
+     "members": [
+      {
+       "joke_id": "joke:carousel-idea"
+      },
+      {
+       "joke_id": "joke:airport-bins"
+      }
+     ]
+    },
+    {
+     "members": []
+    }
+   ],
+   "map": {
+    "cap": 400,
+    "nodes": [
+     {
+      "id": "joke:parrot-lawyer",
+      "short_name": "Parrot lawyer",
+      "title": "Parrot lawyer",
+      "stage": "polished",
+      "nights": 3,
+      "heat": 1.4,
+      "last_seen": null,
+      "degree": 5
+     },
+     {
+      "id": "joke:airport-bins",
+      "short_name": "Airport bins",
+      "title": "Airport bins",
+      "stage": "working",
+      "nights": 3,
+      "heat": 1.23,
+      "last_seen": null,
+      "degree": 5
+     },
+     {
+      "id": "joke:laundromat",
+      "short_name": "Laundromat dating",
+      "title": "Laundromat dating",
+      "stage": "working",
+      "nights": 1,
+      "heat": 2.4,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:gym-mirror",
+      "short_name": "Gym",
+      "title": "Gym mirror",
+      "stage": null,
+      "nights": 1,
+      "heat": 0.9,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:landlord-chat",
+      "short_name": "Landlord group",
+      "title": "Landlord group chat",
+      "stage": "working",
+      "nights": 1,
+      "heat": 0.2,
+      "last_seen": null,
+      "degree": 3
+     },
+     {
+      "id": "joke:carousel-idea",
+      "short_name": "Baggage carousel",
+      "title": "Baggage carousel",
+      "stage": null,
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 1
+     },
+     {
+      "id": "joke:old-bins",
+      "short_name": "Old bins version",
+      "title": "Old bins version",
+      "stage": null,
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 0
+     },
+     {
+      "id": "joke:tsa-poem",
+      "short_name": "TSA poem",
+      "title": "TSA poem",
+      "stage": "polished",
+      "nights": 0,
+      "heat": null,
+      "last_seen": null,
+      "degree": 0
+     }
+    ],
+    "edges": [
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:gym-mirror",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 1.0,
+      "why": "Your segue"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:carousel-idea",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:landlord-chat",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:parrot-lawyer",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     },
+     {
+      "a": "joke:landlord-chat",
+      "b": "joke:parrot-lawyer",
+      "kind": "versions",
+      "w": 0.9,
+      "why": "Looks like the same idea"
+     },
+     {
+      "a": "joke:airport-bins",
+      "b": "joke:laundromat",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     },
+     {
+      "a": "joke:landlord-chat",
+      "b": "joke:parrot-lawyer",
+      "kind": "next",
+      "w": 0.7,
+      "why": "Done back to back on stage, 1x"
+     }
+    ],
+    "counts": {
+     "jokes": 8,
+     "nodes": 8,
+     "edges": 8,
+     "by_kind": {
+      "next": 4,
+      "tags": 0,
+      "same_world": 0,
+      "callbacks": 0,
+      "versions": 4
+     }
+    },
+    "groups": [
+     {
+      "key": "next",
+      "title": "Could come next"
+     },
+     {
+      "key": "tags",
+      "title": "Could tag it"
+     },
+     {
+      "key": "same_world",
+      "title": "Same world"
+     },
+     {
+      "key": "callbacks",
+      "title": "Callbacks"
+     },
+     {
+      "key": "versions",
+      "title": "Older versions"
+     }
+    ]
+   }
+  }
+ ]
+}

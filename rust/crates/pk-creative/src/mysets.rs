@@ -956,6 +956,135 @@ pub fn view(story: &Story<'_>, c: &Corpus, ws: &Obj, sets: &[&Obj], owner: &str)
     })
 }
 
+/// `match_recording(c, sets, set_key)`: the set a recording most resembles. His own pick at import
+/// (`align_working_set` in the recording's `meta.json`, from the app's `X-Align-Working-Set`) wins over the score.
+pub fn match_recording(c: &Corpus, sets: &[&Obj], key: &str) -> Value {
+    let perf = performed_in(c, key);
+    let mut ranked: Vec<(f64, usize, String, Value)> = sets
+        .iter()
+        .filter(|w| !py::truthy(w.get("deleted")))
+        .map(|w| {
+            let ids = ids_of(w);
+            let (sc, n) = match_score(&ids, &perf);
+            let id = w.get("id").map(py::str).unwrap_or_default();
+            let row = json!({"id": id, "title": w.get("title").cloned().unwrap_or(Value::Null), "score": sc,
+                             "shared": n, "planned": ids.len()});
+            (sc, n, id, row)
+        })
+        .collect();
+    ranked.sort_by(|a, b| b.0.total_cmp(&a.0).then(b.1.cmp(&a.1)).then_with(|| a.2.cmp(&b.2)));
+    let pick = meta_pick(c, key);
+    let mut chosen = pick
+        .as_deref()
+        .and_then(|p| ranked.iter().find(|r| r.2 == p))
+        .map(|r| (r.3.clone(), "his pick"));
+    if chosen.is_none()
+        && let Some(r) = ranked.first().filter(|r| r.0 >= MATCH_MIN)
+    {
+        chosen = Some((r.3.clone(), "closest"));
+    }
+    let date = c.sets.get(key).map_or(Value::Null, |s| json!(s.date));
+    let mut out = json!({"set_key": key, "date": date, "performed": perf.len(), "match": null,
+                         "candidates": ranked.iter().take(3).map(|r| r.3.clone()).collect::<Vec<_>>()});
+    if let Some((mut m, how)) = chosen {
+        let title = m.get("title").map(py::str).unwrap_or_default();
+        let (shared, planned) = (py::str(&m["shared"]), py::str(&m["planned"]));
+        m["how"] = json!(how);
+        m["words"] = json!(format!("Lined up with {title}: {shared} of its {planned} bits"));
+        out["match"] = m;
+    }
+    out
+}
+
+/// `change_note(c, old, new, old_t, new_t)`: what changed, in words, for the version history.
+pub fn change_note(c: &Corpus, old: &[String], new: &[String], old_t: i64, new_t: i64) -> String {
+    let t = |j: &str| short_title(Some(&c.title(j)));
+    let mut parts: Vec<String> = Vec::new();
+    let mut added: Vec<&String> = new.iter().filter(|j| !old.contains(j)).collect();
+    let mut gone: Vec<&String> = old.iter().filter(|j| !new.contains(j)).collect();
+    if added.len() == 1
+        && gone.len() == 1
+        && new.iter().position(|x| x == added[0]) == old.iter().position(|x| x == gone[0])
+    {
+        parts.push(format!("Swapped {} for {}", t(gone[0]), t(added[0])));
+        added.clear();
+        gone.clear();
+    }
+    if !added.is_empty() {
+        parts.push(format!(
+            "Added {}",
+            added.iter().map(|j| t(j)).collect::<Vec<_>>().join(", ")
+        ));
+    }
+    if !gone.is_empty() {
+        parts.push(format!(
+            "Cut {}",
+            gone.iter().map(|j| t(j)).collect::<Vec<_>>().join(", ")
+        ));
+    }
+    let kept_old: Vec<&String> = old.iter().filter(|j| new.contains(j)).collect();
+    let kept_new: Vec<&String> = new.iter().filter(|j| old.contains(j)).collect();
+    if kept_old != kept_new {
+        let at = |xs: &[&String], j: &String| xs.iter().position(|x| *x == j).unwrap_or(0);
+        let moved: Vec<&String> = kept_new
+            .iter()
+            .copied()
+            .filter(|j| at(&kept_new, j) != at(&kept_old, j))
+            .collect();
+        // the one bit that moved the furthest is the one he dragged (ties: the larger id)
+        let far = moved.iter().copied().max_by(|a, b| {
+            let d = |j: &String| at(&kept_new, j).abs_diff(at(&kept_old, j));
+            d(a).cmp(&d(b)).then_with(|| a.cmp(b))
+        });
+        if let Some(j) = far {
+            let place = new.iter().position(|x| x == j).unwrap_or(0) + 1;
+            parts.push(format!("Moved {} to #{place}", t(j)));
+        }
+    }
+    if old_t != new_t {
+        #[expect(clippy::cast_precision_loss, reason = "seconds of a set")]
+        parts.push(format!(
+            "Length {} (was {})",
+            length_words(new_t as f64),
+            length_words(old_t as f64)
+        ));
+    }
+    if parts.is_empty() {
+        "No change".to_string()
+    } else {
+        parts.join("; ")
+    }
+}
+
+/// `create(c, store, title, target_s, joke_ids, note, storyboard_id)`: the `promote` event of a new set, as
+/// `(id, data)`; `n_items` is how many sets the store has (the id hashes it).
+pub fn create_event(
+    c: &Corpus,
+    n_items: usize,
+    title: &str,
+    target_s: i64,
+    ids: &[String],
+    note: Option<&str>,
+    storyboard_id: Option<&str>,
+) -> (String, Value) {
+    let bits: Vec<Value> = ids
+        .iter()
+        .map(|j| {
+            let (d, basis) = c.duration(j);
+            json!({"joke_id": j, "title": c.title(j), "target_s": ((d / 5.0).round_ties_even() * 5.0) as i64,
+                   "target_basis": basis})
+        })
+        .collect();
+    let id = format!(
+        "ws:{}-{}",
+        crate::util::slug(title, 28),
+        crate::merge::sha8_value(&json!([title, "", n_items, ids]))
+    );
+    let data = json!({"title": title, "storyboard_id": storyboard_id, "bits": bits, "target_s": target_s,
+                      "note": note.filter(|n| !n.is_empty()).unwrap_or("v1: a new set")});
+    (id, data)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
