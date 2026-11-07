@@ -34,14 +34,25 @@ MANIFEST = os.path.join(HERE, "..", "k8s", "60-observability.yaml")
 KUBECTL = os.environ.get("PK_KUBECTL", "microk8s kubectl").split()
 
 JOBS = """
-  # Punchable (infra/observability/apply_prometheus.py). The API serves /metrics on 8080, the worker on 9100; both
-  # are reachable only from this namespace (punchable's NetworkPolicies admit `observability`).
+  # Punchable (infra/observability/apply_prometheus.py). The Python API and pk-api (the Rust API, pod label
+  # app=punchable-api-rs, same port) serve /metrics on 8080, the worker (either one) on 9100; all are reachable only
+  # from this namespace (punchable's NetworkPolicies admit `observability`). Two API jobs so each one's `up` stands
+  # alone: PunchableApiDown watches the Python, PunchableApiRsDown watches pk-api.
   - job_name: 'punchable-api'
     kubernetes_sd_configs:
       - role: pod
         namespaces: { names: [punchable] }
     relabel_configs:
       - { source_labels: [__meta_kubernetes_pod_label_app], action: keep, regex: punchable-api }
+      - { source_labels: [__meta_kubernetes_pod_ip], target_label: __address__, replacement: '${1}:8080' }
+      - { source_labels: [__meta_kubernetes_namespace], target_label: namespace }
+      - { source_labels: [__meta_kubernetes_pod_name], target_label: pod }
+  - job_name: 'punchable-api-rs'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: { names: [punchable] }
+    relabel_configs:
+      - { source_labels: [__meta_kubernetes_pod_label_app], action: keep, regex: punchable-api-rs }
       - { source_labels: [__meta_kubernetes_pod_ip], target_label: __address__, replacement: '${1}:8080' }
       - { source_labels: [__meta_kubernetes_namespace], target_label: namespace }
       - { source_labels: [__meta_kubernetes_pod_name], target_label: pod }

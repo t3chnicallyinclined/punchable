@@ -71,8 +71,10 @@ pub struct WorkerConfig {
     pub jobs: usize,
     /// How the prompts name him.
     pub names: Names,
-    /// The private legal rules file, if the pod has one (it does not today).
+    /// The private legal rules file (the hosted pod mounts it; see `legal_rules_required`).
     pub legal_rules: PathBuf,
+    /// `PUNCHABLE_LEGAL_RULES` was set: the file is required, and the worker does not start without it.
+    pub legal_rules_required: bool,
     /// The spend ledger.
     pub spend_file: PathBuf,
     /// `PK_BUILD_SHA` (`dev` when unset).
@@ -162,6 +164,7 @@ impl WorkerConfig {
         };
         let idle =
             Duration::try_from_secs_f64(args.idle).map_err(|_| invalid("--idle", "must be a number of seconds"))?;
+        let legal_rules_required = env.opt("PUNCHABLE_LEGAL_RULES").is_some_and(|v| !v.is_empty());
         let legal_rules = env.path("PUNCHABLE_LEGAL_RULES").unwrap_or_else(|| {
             env.path("PUNCHABLE_HOME")
                 .or_else(|| env.home().map(|h| h.join(".punchable")))
@@ -191,6 +194,7 @@ impl WorkerConfig {
             jobs,
             names: Names::new(env.opt("PK_COMIC_NAME"), env.opt("PK_COMIC_FIRST")),
             legal_rules,
+            legal_rules_required,
             spend_file: env
                 .path("PK_AI_SPEND_FILE")
                 .unwrap_or_else(|| workspace.join("ai_spend.json")),

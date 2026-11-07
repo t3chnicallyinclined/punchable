@@ -13,7 +13,6 @@ use pk_core::Env;
 use pk_llm::{Budget, LlmConfig, Router};
 use pk_obs::{ObsConfig, WorkerMetrics};
 use pk_worker::kinds::Pages;
-use pk_worker::legal::Legal;
 use pk_worker::{Parts, RunArgs, SERVICE, VERSION, Worker, WorkerConfig, heartbeat, metrics_server};
 use tokio_util::sync::CancellationToken;
 
@@ -170,8 +169,7 @@ fn run(args: &RunArgs) -> anyhow::Result<ExitCode> {
     );
     let budget = Arc::new(Budget::from_config(&lc.budget));
     let router = Router::hosted(llm_cfg, &lc, None)?;
-    let legal =
-        std::fs::read_to_string(&cfg.legal_rules).map_or_else(|_| Legal::default(), |t| Legal::from_rules_json(&t));
+    let legal = pk_worker::legal::load(&cfg.legal_rules, cfg.legal_rules_required)?;
     let metrics = Arc::new(WorkerMetrics::new(VERSION, &pk_obs::sha12(&cfg.build_sha))?);
     let api = pk_worker::api::ApiClient::new(&cfg.api, cfg.creds.clone())?;
     // the embedding kinds' model: loaded by the first embed / memolink job, then shared; a model that will not load
