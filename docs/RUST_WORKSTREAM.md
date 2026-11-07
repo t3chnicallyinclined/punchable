@@ -84,8 +84,8 @@ prints the image id and the archive's sha256. The deploy path, written without h
    `PK_IMAGE_REF_RS=...`) and apply the output with the cluster tooling. `infra/render.sh <file> [image_ref
    [image_ref_rs]]` refuses a manifest with any `__NAME__` placeholder left, so a pk-api manifest cannot ship
    `__IMAGE_REF_RS__`. The ServiceMonitor in that file is rendered only with `PK_SERVICEMONITOR=1` (the cluster needs
-   the Prometheus Operator CRD). The worker swap renders `infra/worker/rust/35-worker.yaml` with the worker image's
-   digest as `image_ref`.
+   the Prometheus Operator CRD). The worker swap rendered the Rust worker manifest (now `infra/k8s/35-worker.yaml`, LIVE 2026-11-07; the Python
+   one kept at `infra/worker/python/35-worker.yaml` for rollback) with the worker image's digest as `image_ref`.
 5. The worker's API base URL is one setting: `PK_WORKER_API` in `infra/config.env` fills `__PK_WORKER_API__` in both
    worker manifests (default `http://punchable-api`, the Python Service). The cutover sets
    `PK_WORKER_API=http://punchable-api-rs` and re-renders the worker; the NetworkPolicies in the prepared file already

@@ -423,8 +423,9 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    later Asks 0.29 s vs 1.88 s; idle 13 vs 37 MiB working set; the first Ask after a NEW pod embeds every source
    (5,085 on a production-size synthetic notebook: about 2 minutes on one CPU, measured for the Rust one, INFERRED for the
    Python one on the pod's 1-CPU limit); a container
-   restart reads them back from the emptyDir. **Ready for the swap, which is the owner's call**: image (bases pinned
-   by digest) and manifest prepared (`rust/Dockerfile.worker`, `infra/worker/rust/35-worker.yaml`), not applied;
+   restart reads them back from the emptyDir. **Swapped LIVE 2026-11-07 (owner's go 2026-11-06)**: image (bases pinned
+   by digest) from CI's worker-image artifact, manifest now `infra/k8s/35-worker.yaml` (the Python one kept at
+   `infra/worker/python/35-worker.yaml` for rollback);
    the runbook (build off the node, swap commit, `pk-worker crash-test` into Bugsink, the spend-ledger reset note,
    rollback) is in the T8 row of `docs/RUST_WORKSTREAM.md`. Gate: `cd rust && PK_REQUIRE_EXTERNAL=1 PK_BGE_DIR=<model
    dir> cargo xtask gate` (the model: `python tools/kb/fetch_bge.py --dest <dir>`; `surreal` 3.3.4 at
