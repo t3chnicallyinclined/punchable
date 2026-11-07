@@ -39,8 +39,9 @@ spec:
           env:
             # worker/metrics.py: pk_worker_* and pk_ai_* on :9100/metrics (0 = off)
             - { name: PK_METRICS_PORT, value: "9100" }
-            # the API inside the cluster (Service punchable-api, port 80 -> the pod's 8080); never the public hostname
-            - { name: PK_API, value: "http://punchable-api" }
+            # the API inside the cluster (infra/config.env PK_WORKER_API, default Service punchable-api; the Rust cutover sets
+            # punchable-api-rs, the one place that flips); never the public hostname
+            - { name: PK_API, value: "__PK_WORKER_API__" }
             # the token comes from the public issuer so `iss` matches what the API checks (OIDC_ISSUER in 30-api.yaml)
             - { name: PK_TOKEN_URL, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__/protocol/openid-connect/token" }
             - { name: PK_WORKER_CLIENT_ID, value: pk-worker }

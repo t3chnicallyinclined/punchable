@@ -7,6 +7,8 @@ The Rust test builds its Corpus from the same files and compares as parsed value
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import json
 import os
 import sys

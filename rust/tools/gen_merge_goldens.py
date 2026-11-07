@@ -9,6 +9,8 @@ product in the Python and is compared to float32 precision. Nothing here is anyo
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import hashlib
 import json
 import os

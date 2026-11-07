@@ -64,7 +64,11 @@ sentry = { version = "0.42", default-features = false, features = ["backtrace", 
 jsonschema = { version = "0.33", default-features = false }
 toml = "0.9"
 # pk-embed: ort rc.15 wraps ONNX Runtime 1.31; default features download pyke's prebuilt binaries at build time
-ort = { version = "=2.0.0-rc.15", features = ["ndarray"] }
+# default-features = false drops tls-native (ort-sys's build script downloads with ureq -> native-tls -> openssl-sys, which
+# needs libssl-dev + pkg-config in the image's build stage); tls-rustls downloads over rustls (no OpenSSL anywhere in the
+# tree, as the images' header says). The rest is the default set of rc.15 (std, ndarray, tracing, download-binaries,
+# copy-dylibs, api-31).
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
 # pk-embed: the same release as the Python wheel the goldens were made with (tokenizers==0.22.1)
 tokenizers = { version = "=0.22.1", default-features = false, features = ["onig"] }
 ndarray = "0.17"

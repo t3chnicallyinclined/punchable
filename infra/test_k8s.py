@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -28,7 +29,8 @@ K8S = ROOT / "infra" / "k8s"
 SAMPLE = {"__PK_DOMAIN__": "example.com", "__PK_AUTH_HOST__": "auth.example.com", "__PK_MAIL_FROM__": "no-reply@example.com",
           "__PK_NS__": "punchable", "__PK_KC_NS__": "keycloak", "__PK_REALM__": "punchable", "__PK_ORIGIN_IP__": "203.0.113.10",
           "__PK_OWNER_ID__": "owner", "__PK_COMIC_NAME__": "the comic", "__PK_COMIC_FIRST__": "the comic",
-          "__IMAGE_REF__": "localhost:32000/punchable-x@sha256:" + "0" * 64}
+          "__IMAGE_REF__": "localhost:32000/punchable-x@sha256:" + "0" * 64,
+          "__IMAGE_REF_RS__": "localhost:32000/punchable-api-rs@sha256:" + "1" * 64, "__PK_WORKER_API__": "http://punchable-api"}
 
 sys.path.insert(0, str(ROOT / "api-dev"))
 sys.path.insert(0, str(ROOT))
@@ -38,7 +40,7 @@ def render(path: Path) -> str:
     s = path.read_text(encoding="utf-8")
     for k, v in SAMPLE.items():
         s = s.replace(k, v)
-    assert not re.search(r"__(PK_[A-Z_]+|IMAGE_REF)__", s), f"{path.name}: unrendered placeholder"
+    assert not re.search(r"__[A-Z][A-Z0-9_]*__", s), f"{path.name}: unrendered placeholder"
     return s
 
 
@@ -269,3 +271,72 @@ def test_deploy_and_ship_know_the_new_steps():
         for f in ("deploy.sh", "ship.sh"):
             r = subprocess.run(["bash", "-n", str(ROOT / "infra" / f)], capture_output=True, text=True)
             assert r.returncode == 0, (f, r.stderr)
+
+
+# ---- infra/render.sh itself (run for real, with the example config) --------------------------------------------------
+import shutil
+
+
+def _render(tmp_path, file, *args, env=None):
+    d = tmp_path / "infra"
+    d.mkdir(exist_ok=True)
+    shutil.copy(ROOT / "infra" / "render.sh", d / "render.sh")
+    shutil.copy(ROOT / "infra" / "config.env.example", d / "config.env")
+    e = {k: v for k, v in os.environ.items() if not k.startswith("PK_")}
+    e.update(env or {})
+    return subprocess.run(["bash", (d / "render.sh").as_posix(), Path(file).as_posix(), *args], capture_output=True, text=True, env=e)
+
+
+PREPARED = ROOT / "infra" / "k8s" / "prepared" / "t10-api-rs.yaml"
+RS_IMG = "localhost:32000/punchable-api-rs@sha256:" + "2" * 64
+
+
+def test_render_fills_image_ref_rs_from_argument_or_env(tmp_path):
+    r = _render(tmp_path, PREPARED, "", RS_IMG)
+    assert r.returncode == 0, r.stderr
+    assert f"image: {RS_IMG}" in r.stdout
+    r = _render(tmp_path, PREPARED, env={"PK_IMAGE_REF_RS": RS_IMG})
+    assert r.returncode == 0, r.stderr
+    assert f"image: {RS_IMG}" in r.stdout
+
+
+def test_render_refuses_a_leftover_image_ref_rs_red_arm(tmp_path):
+    r = _render(tmp_path, PREPARED)
+    assert r.returncode == 1 and "__IMAGE_REF_RS__" in r.stderr and r.stdout == ""
+
+
+def test_render_refuses_any_unknown_placeholder(tmp_path):
+    f = tmp_path / "x.yaml"
+    f.write_text("a: __SOMETHING_NEW__\nb: __init__\n", encoding="utf-8")
+    r = _render(tmp_path, f)
+    assert r.returncode == 1 and "__SOMETHING_NEW__" in r.stderr and "__init__" not in r.stderr
+
+
+def test_servicemonitor_is_off_unless_asked(tmp_path):
+    off = _render(tmp_path, PREPARED, "", RS_IMG)
+    on = _render(tmp_path, PREPARED, "", RS_IMG, env={"PK_SERVICEMONITOR": "1"})
+    kinds = lambda out: [d["kind"] for d in yaml.safe_load_all(out) if d]
+    assert "ServiceMonitor" not in kinds(off.stdout)
+    assert kinds(on.stdout).count("ServiceMonitor") == 1
+    assert len(kinds(off.stdout)) == len(kinds(on.stdout)) - 1
+
+
+def test_worker_api_url_is_one_setting_for_both_workers(tmp_path):
+    for f in (K8S / "35-worker.yaml", ROOT / "infra" / "worker" / "rust" / "35-worker.yaml"):
+        assert "__PK_WORKER_API__" in f.read_text(encoding="utf-8")
+        for env, want in (({}, "http://punchable-api"), ({"PK_WORKER_API": "http://punchable-api-rs"}, "http://punchable-api-rs")):
+            r = _render(tmp_path, f, "x@sha256:" + "0" * 64, env=env)
+            assert r.returncode == 0, r.stderr
+            dep = next(d for d in yaml.safe_load_all(r.stdout) if d and d["kind"] == "Deployment")
+            envs = {e["name"]: e.get("value") for e in dep["spec"]["template"]["spec"]["containers"][0]["env"]}
+            assert envs["PK_API"] == want
+
+
+def test_prepared_policies_admit_the_worker_to_pk_api(tmp_path):
+    r = _render(tmp_path, PREPARED, "", RS_IMG)
+    ds = [d for d in yaml.safe_load_all(r.stdout) if d]
+    pk = next(d for d in ds if d["kind"] == "NetworkPolicy" and d["metadata"]["name"] == "punchable-api-rs")
+    peers = [p for rule in pk["spec"]["ingress"] for p in rule["from"]]
+    assert {"podSelector": {"matchLabels": {"app": "punchable-worker"}}} in peers
+    w = next(d for d in ds if d["metadata"]["name"] == "punchable-worker-to-api-rs")
+    assert w["spec"]["egress"][0]["to"] == [{"podSelector": {"matchLabels": {"app": "punchable-api-rs"}}}]

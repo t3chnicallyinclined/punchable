@@ -315,6 +315,8 @@ spec:
         paths:
           - { path: /api/upload, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
+# render-flag: servicemonitor
+# (dropped by infra/render.sh unless PK_SERVICEMONITOR=1: the cluster may have no ServiceMonitor CRD)
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -338,6 +340,7 @@ spec:
   ingress:
     - from:
         - ipBlock: { cidr: __PK_ORIGIN_IP__/32 }
+        - podSelector: { matchLabels: { app: punchable-worker } }
       ports:
         - { protocol: TCP, port: 8080 }
     - from:
@@ -393,3 +396,17 @@ spec:
   ingress:
     - from: [ { podSelector: { matchLabels: { app: punchable-api-rs } } } ]
       ports: [ { protocol: TCP, port: 8000 } ]
+---
+# the worker (egress): 10-networkpolicy.yaml lets it reach only app=punchable-api; this adds pk-api. Together with the
+# worker pod's selector in the pk-api ingress rule above, this is what lets PK_WORKER_API=http://punchable-api-rs work.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: punchable-worker-to-api-rs, namespace: punchable }
+spec:
+  podSelector: { matchLabels: { app: punchable-worker } }
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: punchable-api-rs } }
+      ports:
+        - { protocol: TCP, port: 8080 }

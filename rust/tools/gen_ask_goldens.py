@@ -8,6 +8,8 @@ crates/pk-worker/tests/ask_goldens.rs (pk-creative's `oneshot` + pk-fts). Synthe
 """
 from __future__ import annotations
 
+import pin_blas  # noqa: F401  (first: the BLAS kernel, so the numbers are the same on every machine)
+
 import json
 import os
 import sqlite3
