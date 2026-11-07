@@ -1287,9 +1287,11 @@ def main() -> int:
             return sum(float(ln.rsplit(" ", 1)[1]) for ln in call(rs, "GET", "/metrics")[2].decode().splitlines()
                        if ln.startswith("pk_http_requests_total{"))
         n0 = counted()
-        call(rs, "GET", "/api/notes", app)
+        # a path pk-api does not own (with PK_UPLOAD_DB=1 here, /api/notes is answered by pk-api itself, so it is no
+        # longer a forward in this harness): the fallback sends it to the Python and records nothing
+        call(rs, "GET", "/api/no-such-route", app)
         if counted() != n0:
-            problems.append("pk-api counted a forwarded request (/api/notes): the fallback must count nothing")
+            problems.append("pk-api counted a forwarded request (/api/no-such-route): the fallback must count nothing")
         # and the model was used here: pk-api's own search answered with vectors, not words only
         if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
             problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")
