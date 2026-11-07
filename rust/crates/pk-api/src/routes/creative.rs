@@ -118,7 +118,7 @@ fn to_sort(judge: Option<&str>, kept: &Items, idx: &AppIndex) -> usize {
 
 /// `worker_status(cr)`: the worker's line from its last claim in the database, whichever server answered it; a
 /// database that cannot be read is the 500 the Python's would be.
-pub(super) async fn worker_status(st: &AppState) -> Result<Value, ApiError> {
+pub(crate) async fn worker_status(st: &AppState) -> Result<Value, ApiError> {
     let store = st
         .store_handle()
         .ok_or_else(|| ApiError::internal("ConnectionError", "the database is not connected"))?;

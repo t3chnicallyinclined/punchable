@@ -261,7 +261,8 @@ fn the_prepared_ingress_moves_exactly_the_paths_answered_here() {
 /// on it is forwarded.
 fn write_methods(path: &str) -> &'static [&'static str] {
     match path {
-        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" => &["PATCH"],
+        "/api/settings" | "/api/boards/{id}" | "/api/workingsets/{id}/try/{id2}" | "/api/venues/{id}" => &["PATCH"],
+        "/api/ask/chats/{id}" => &["POST", "PATCH"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],
     }
@@ -333,7 +334,6 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         "/api/merge/history",
         "/api/jokes/a/b/versions",
         "/api/jokes/x/versions/y",
-        "/api/ask/chats",
         "/api/worker/jobs/x/file",
         "/api/worker/files",
     ] {

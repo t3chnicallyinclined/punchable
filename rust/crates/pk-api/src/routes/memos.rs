@@ -84,9 +84,17 @@ pub(crate) async fn texts(st: &AppState, paths: &[String]) -> ApiResult<BTreeMap
 /// `load(comedy)`: gsync's memo state, or none when the row is not there or is not JSON.
 async fn load(st: &AppState) -> ApiResult<Option<Map<String, Value>>> {
     let mut t = texts(st, &[MEMOS_JSON.to_string()]).await?;
-    Ok(t.remove(MEMOS_JSON)
-        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .and_then(|v| if let Value::Object(m) = v { Some(m) } else { None }))
+    let Some(text) = t.remove(MEMOS_JSON) else {
+        return Ok(None);
+    };
+    // gsync's memo state is megabytes at production scale: parsed off the async threads
+    tokio::task::spawn_blocking(move || {
+        serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|v| if let Value::Object(m) = v { Some(m) } else { None })
+    })
+    .await
+    .map_err(|e| ApiError::internal("JoinError", e))
 }
 
 fn items_of(m: &Map<String, Value>) -> Vec<&Map<String, Value>> {

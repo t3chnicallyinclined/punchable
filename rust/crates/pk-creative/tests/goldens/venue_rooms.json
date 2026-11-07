@@ -1,0 +1,1713 @@
+{
+ "raws": [
+  "Mabel's Comedy Club, Springfield",
+  "Joe's (likely Brooklyn) ",
+  "Comix at Harbor, NYC",
+  "maybe The Loft)",
+  "The Corner Room",
+  "Seaside Comedy Club",
+  "Mabel's (upstairs)",
+  "Unknown",
+  "",
+  "Pat's Place, CT",
+  "Zed, NJ (show)",
+  "Cafe Uno, Paris, France",
+  "likely Boston Pub",
+  "MAYBE The Quiet Room'",
+  "The Annex, ",
+  " , Foo",
+  "Bar, NY, USA"
+ ],
+ "parsed": {
+  "Mabel's Comedy Club, Springfield": {
+   "name": "Mabel's Comedy Club",
+   "query": "Mabel's Comedy Club, Springfield",
+   "queries": [
+    "Mabel's Comedy Club, Springfield",
+    "Mabel's Comedy Club"
+   ],
+   "uncertain_reasons": []
+  },
+  "Joe's (likely Brooklyn) ": {
+   "name": "Joe's",
+   "query": "Joe's, Brooklyn",
+   "queries": [
+    "Joe's, Brooklyn",
+    "Joe's"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'Joe's (likely Brooklyn)'"
+   ]
+  },
+  "Comix at Harbor, NYC": {
+   "name": "Harbor",
+   "query": "Harbor, New York, NY",
+   "queries": [
+    "Harbor, New York, NY",
+    "Harbor, New York",
+    "Harbor"
+   ],
+   "uncertain_reasons": []
+  },
+  "maybe The Loft)": {
+   "name": "The Loft",
+   "query": "The Loft",
+   "queries": [
+    "The Loft"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'maybe The Loft)'"
+   ]
+  },
+  "The Corner Room": {
+   "name": "The Corner Room",
+   "query": "The Corner Room",
+   "queries": [
+    "The Corner Room"
+   ],
+   "uncertain_reasons": []
+  },
+  "Seaside Comedy Club": {
+   "name": "Seaside Comedy Club",
+   "query": "Seaside Comedy Club",
+   "queries": [
+    "Seaside Comedy Club"
+   ],
+   "uncertain_reasons": []
+  },
+  "Mabel's (upstairs)": {
+   "name": "Mabel's",
+   "query": "Mabel's",
+   "queries": [
+    "Mabel's"
+   ],
+   "uncertain_reasons": []
+  },
+  "Unknown": {
+   "name": "Unknown",
+   "query": "Unknown",
+   "queries": [
+    "Unknown"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'Unknown'"
+   ]
+  },
+  "": {
+   "name": "",
+   "query": "",
+   "queries": [
+    ""
+   ],
+   "uncertain_reasons": []
+  },
+  "Pat's Place, CT": {
+   "name": "Pat's Place",
+   "query": "Pat's Place, Connecticut",
+   "queries": [
+    "Pat's Place, Connecticut",
+    "Pat's Place"
+   ],
+   "uncertain_reasons": []
+  },
+  "Zed, NJ (show)": {
+   "name": "Zed",
+   "query": "Zed, New Jersey",
+   "queries": [
+    "Zed, New Jersey",
+    "Zed"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'Zed, NJ (show)'"
+   ]
+  },
+  "Cafe Uno, Paris, France": {
+   "name": "Cafe Uno",
+   "query": "Cafe Uno, Paris",
+   "queries": [
+    "Cafe Uno, Paris",
+    "Cafe Uno"
+   ],
+   "uncertain_reasons": []
+  },
+  "likely Boston Pub": {
+   "name": "likely Boston Pub",
+   "query": "likely Boston Pub, Boston Pub",
+   "queries": [
+    "likely Boston Pub, Boston Pub",
+    "likely Boston Pub"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'likely Boston Pub'"
+   ]
+  },
+  "MAYBE The Quiet Room'": {
+   "name": "The Quiet Room",
+   "query": "The Quiet Room",
+   "queries": [
+    "The Quiet Room"
+   ],
+   "uncertain_reasons": [
+    "venue name is a guess in the set metadata: 'MAYBE The Quiet Room''"
+   ]
+  },
+  "The Annex, ": {
+   "name": "The Annex",
+   "query": "The Annex",
+   "queries": [
+    "The Annex"
+   ],
+   "uncertain_reasons": []
+  },
+  " , Foo": {
+   "name": "Foo",
+   "query": "Foo",
+   "queries": [
+    "Foo"
+   ],
+   "uncertain_reasons": []
+  },
+  "Bar, NY, USA": {
+   "name": "Bar",
+   "query": "Bar, New York",
+   "queries": [
+    "Bar, New York",
+    "Bar"
+   ],
+   "uncertain_reasons": []
+  }
+ },
+ "cache": {
+  "The Corner Room": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": [
+    {
+     "lat": 40.0,
+     "lon": -73.0,
+     "display_name": "The Corner Room, 1 Main St, Springfield",
+     "category": "amenity",
+     "type": "bar",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 1
+    },
+    {
+     "lat": 41.5,
+     "lon": -73.0,
+     "display_name": "The Corner Room (the other one), a long display name that goes on past eighty characters for sure",
+     "category": "amenity",
+     "type": "pub",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 2
+    },
+    {
+     "lat": 40.001,
+     "lon": -73.001,
+     "display_name": "The Corner Room annex",
+     "category": "amenity",
+     "type": "bar",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 3
+    }
+   ]
+  },
+  "Seaside Comedy Club": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": []
+  },
+  "Mabel's": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": [
+    {
+     "lat": 10.0,
+     "lon": 20.0,
+     "display_name": "Mabel's building",
+     "category": "building",
+     "type": "yes",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 4
+    }
+   ]
+  },
+  "9 Pier Rd, Atlantic City": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": [
+    {
+     "lat": 39.35,
+     "lon": -74.43,
+     "display_name": "9 Pier Rd, Atlantic City",
+     "category": "tourism",
+     "type": "theatre",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 5
+    }
+   ]
+  },
+  "Pat's Place, Connecticut": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": []
+  },
+  "Pat's Place": {
+   "fetched_at": "2024-01-01T00:00:00Z",
+   "source": "nominatim",
+   "results": [
+    {
+     "lat": 41.0,
+     "lon": -72.9,
+     "display_name": "Pat's Place",
+     "category": "leisure",
+     "type": "park",
+     "importance": 0.4,
+     "osm_type": "node",
+     "osm_id": 6
+    }
+   ]
+  }
+ },
+ "addresses": {
+  "seaside comedy club": {
+   "address": "9 Pier Rd, Atlantic City",
+   "note": "he told us"
+  }
+ },
+ "edits": {
+  "venue:the-corner-room": {
+   "venue_id": "venue:the-corner-room",
+   "lat": 12.5,
+   "lon": 55.5,
+   "name": "My Corner",
+   "by": "owner",
+   "updated_at": "2024-02-02T00:00:00Z"
+  },
+  "venue:mabel-s": {
+   "venue_id": "venue:mabel-s",
+   "lat": null,
+   "lon": null,
+   "name": "Mabel",
+   "by": "owner",
+   "updated_at": "2024-02-03T00:00:00Z"
+  },
+  "venue:unknown": {
+   "venue_id": "venue:unknown",
+   "lat": null,
+   "lon": null,
+   "name": null,
+   "by": "owner",
+   "updated_at": "2024-02-04T00:00:00Z"
+  },
+  "venue:the-loft": {
+   "venue_id": "venue:the-loft",
+   "lat": 1.0,
+   "lon": 2.0,
+   "name": null,
+   "by": "owner",
+   "updated_at": "2024-02-05T00:00:00Z"
+  }
+ },
+ "stats": [
+  {
+   "venue_id": "venue:mabel-s",
+   "raw": "Mabel's (upstairs)",
+   "name": "Mabel's",
+   "sets": [
+    {
+     "set": "2023-03-01_z",
+     "date": "2023-03-01",
+     "title": null,
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": null,
+     "material_s": null,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2023-03-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [
+    {
+     "joke_id": "joke:a",
+     "title": "A bit (draft)",
+     "date": "2023-03-01",
+     "vs_room": 0.82,
+     "laugh_s_per_min": 4.1,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2023-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ]
+    }
+   ],
+   "worst_jokes": [
+    {
+     "joke_id": "joke:a",
+     "title": "A bit (draft)",
+     "date": "2023-03-01",
+     "vs_room": 0.82,
+     "laugh_s_per_min": 4.1,
+     "ai_rating": "worked",
+     "evidence": [
+      {
+       "node": "seg:2023-03-01_z#2",
+       "quote": "Alpha opener line one."
+      }
+     ]
+    }
+   ],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample."
+  },
+  {
+   "venue_id": "venue:seaside-comedy-club",
+   "raw": "Seaside Comedy Club",
+   "name": "Seaside Comedy Club",
+   "sets": [
+    {
+     "set": "2024-02-01_y",
+     "date": "2024-02-01",
+     "title": null,
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": null,
+     "material_s": null,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-02-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [],
+   "worst_jokes": [],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample."
+  },
+  {
+   "venue_id": "venue:the-corner-room",
+   "raw": "The Corner Room",
+   "name": "The Corner Room",
+   "sets": [
+    {
+     "set": "2024-01-01_x",
+     "date": "2024-01-01",
+     "title": null,
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": null,
+     "material_s": null,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-01-01"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [],
+   "worst_jokes": [],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample."
+  },
+  {
+   "venue_id": "venue:unknown",
+   "raw": "Unknown",
+   "name": "Unknown",
+   "sets": [
+    {
+     "set": "2024-05-05_w",
+     "date": "2024-05-05",
+     "title": null,
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": null,
+     "material_s": null,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2024-05-05"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [],
+   "worst_jokes": [],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample."
+  },
+  {
+   "venue_id": "venue:the-loft",
+   "raw": "maybe The Loft",
+   "name": "The Loft",
+   "sets": [
+    {
+     "set": "2015-09-09_v",
+     "date": "2015-09-09",
+     "title": null,
+     "laugh_s_per_min": 5.0,
+     "room_heat": 1.0,
+     "pct_laughing": null,
+     "material_s": null,
+     "best": null,
+     "weakest": null
+    }
+   ],
+   "dates": [
+    "2015-09-09"
+   ],
+   "n_sets": 1,
+   "avg_laugh_s_per_min": 5.0,
+   "avg_room_heat": 1.0,
+   "best_jokes": [],
+   "worst_jokes": [],
+   "works_here": [],
+   "works_elsewhere": [],
+   "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample."
+  }
+ ],
+ "built": {
+  "generated_at": "NOW",
+  "venues": [
+   {
+    "venue_id": "venue:mabel-s",
+    "raw": "Mabel's (upstairs)",
+    "name": "Mabel's",
+    "sets": [
+     {
+      "set": "2023-03-01_z",
+      "date": "2023-03-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2023-03-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [
+     {
+      "joke_id": "joke:a",
+      "title": "A bit (draft)",
+      "date": "2023-03-01",
+      "vs_room": 0.82,
+      "laugh_s_per_min": 4.1,
+      "ai_rating": "worked",
+      "evidence": [
+       {
+        "node": "seg:2023-03-01_z#2",
+        "quote": "Alpha opener line one."
+       }
+      ]
+     }
+    ],
+    "worst_jokes": [
+     {
+      "joke_id": "joke:a",
+      "title": "A bit (draft)",
+      "date": "2023-03-01",
+      "vs_room": 0.82,
+      "laugh_s_per_min": 4.1,
+      "ai_rating": "worked",
+      "evidence": [
+       {
+        "node": "seg:2023-03-01_z#2",
+        "quote": "Alpha opener line one."
+       }
+      ]
+     }
+    ],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Mabel's (upstairs)",
+     "name": "Mabel's",
+     "query": "Mabel's",
+     "queries_tried": [
+      "Mabel's"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": 10.0,
+     "lon": 20.0,
+     "display_name": "Mabel's building",
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "top match is a building/yes, not a venue"
+     ],
+     "osm": "node/4",
+     "osm_type": "yes"
+    }
+   },
+   {
+    "venue_id": "venue:seaside-comedy-club",
+    "raw": "Seaside Comedy Club",
+    "name": "Seaside Comedy Club",
+    "sets": [
+     {
+      "set": "2024-02-01_y",
+      "date": "2024-02-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-02-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Seaside Comedy Club",
+     "name": "Seaside Comedy Club",
+     "query": "9 Pier Rd, Atlantic City",
+     "queries_tried": [
+      "9 Pier Rd, Atlantic City"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": 39.35,
+     "lon": -74.43,
+     "display_name": "9 Pier Rd, Atlantic City",
+     "ambiguous": false,
+     "ambiguous_reasons": [],
+     "osm": "node/5",
+     "osm_type": "theatre"
+    }
+   },
+   {
+    "venue_id": "venue:the-corner-room",
+    "raw": "The Corner Room",
+    "name": "The Corner Room",
+    "sets": [
+     {
+      "set": "2024-01-01_x",
+      "date": "2024-01-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-01-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "The Corner Room",
+     "name": "The Corner Room",
+     "query": "The Corner Room",
+     "queries_tried": [
+      "The Corner Room"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": 40.0,
+     "lon": -73.0,
+     "display_name": "The Corner Room, 1 Main St, Springfield",
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "1 other match(es) more than 2 km away (e.g. The Corner Room (the other one), a long display name that goes on past eighty ch)"
+     ],
+     "osm": "node/1",
+     "osm_type": "bar"
+    }
+   },
+   {
+    "venue_id": "venue:unknown",
+    "raw": "Unknown",
+    "name": "Unknown",
+    "sets": [
+     {
+      "set": "2024-05-05_w",
+      "date": "2024-05-05",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-05-05"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Unknown",
+     "name": "Unknown",
+     "query": "Unknown",
+     "queries_tried": [
+      "Unknown"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": null,
+     "lon": null,
+     "display_name": null,
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "venue name is a guess in the set metadata: 'Unknown'",
+      "not geocoded yet (offline)"
+     ]
+    }
+   },
+   {
+    "venue_id": "venue:the-loft",
+    "raw": "maybe The Loft",
+    "name": "The Loft",
+    "sets": [
+     {
+      "set": "2015-09-09_v",
+      "date": "2015-09-09",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2015-09-09"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "maybe The Loft",
+     "name": "The Loft",
+     "query": "The Loft",
+     "queries_tried": [
+      "The Loft"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": null,
+     "lon": null,
+     "display_name": null,
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "venue name is a guess in the set metadata: 'maybe The Loft'",
+      "not geocoded yet (offline)"
+     ]
+    }
+   }
+  ],
+  "ambiguous": [
+   {
+    "venue_id": "venue:mabel-s",
+    "raw": "Mabel's (upstairs)",
+    "reasons": [
+     "top match is a building/yes, not a venue"
+    ],
+    "picked": "Mabel's building"
+   },
+   {
+    "venue_id": "venue:the-corner-room",
+    "raw": "The Corner Room",
+    "reasons": [
+     "1 other match(es) more than 2 km away (e.g. The Corner Room (the other one), a long display name that goes on past eighty ch)"
+    ],
+    "picked": "The Corner Room, 1 Main St, Springfield"
+   },
+   {
+    "venue_id": "venue:unknown",
+    "raw": "Unknown",
+    "reasons": [
+     "venue name is a guess in the set metadata: 'Unknown'",
+     "not geocoded yet (offline)"
+    ],
+    "picked": null
+   },
+   {
+    "venue_id": "venue:the-loft",
+    "raw": "maybe The Loft",
+    "reasons": [
+     "venue name is a guess in the set metadata: 'maybe The Loft'",
+     "not geocoded yet (offline)"
+    ],
+    "picked": null
+   }
+  ],
+  "geojson": {
+   "type": "FeatureCollection",
+   "features": [
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       20.0,
+       10.0
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:mabel-s",
+      "name": "Mabel's",
+      "raw": "Mabel's (upstairs)",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2023-03-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Mabel's"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       -74.43,
+       39.35
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:seaside-comedy-club",
+      "name": "Seaside Comedy Club",
+      "raw": "Seaside Comedy Club",
+      "status": "inferred",
+      "ambiguous": false,
+      "n_sets": 1,
+      "dates": [
+       "2024-02-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Seaside"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       -73.0,
+       40.0
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:the-corner-room",
+      "name": "The Corner Room",
+      "raw": "The Corner Room",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2024-01-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "The Corner Room"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": null,
+     "properties": {
+      "venue_id": "venue:unknown",
+      "name": "Unknown",
+      "raw": "Unknown",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2024-05-05"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Unknown room"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": null,
+     "properties": {
+      "venue_id": "venue:the-loft",
+      "name": "The Loft",
+      "raw": "maybe The Loft",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2015-09-09"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "The Loft?"
+     }
+    }
+   ]
+  },
+  "geocoder": {
+   "service": "OpenStreetMap Nominatim",
+   "user_agent": "Punchable/0.1 (personal)",
+   "requests_this_run": 0,
+   "cache": "CACHE_PATH",
+   "attribution": "Data © OpenStreetMap contributors, ODbL"
+  }
+ },
+ "overlaid": {
+  "generated_at": "NOW",
+  "venues": [
+   {
+    "venue_id": "venue:mabel-s",
+    "raw": "Mabel's (upstairs)",
+    "name": "Mabel",
+    "sets": [
+     {
+      "set": "2023-03-01_z",
+      "date": "2023-03-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2023-03-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [
+     {
+      "joke_id": "joke:a",
+      "title": "A bit (draft)",
+      "date": "2023-03-01",
+      "vs_room": 0.82,
+      "laugh_s_per_min": 4.1,
+      "ai_rating": "worked",
+      "evidence": [
+       {
+        "node": "seg:2023-03-01_z#2",
+        "quote": "Alpha opener line one."
+       }
+      ]
+     }
+    ],
+    "worst_jokes": [
+     {
+      "joke_id": "joke:a",
+      "title": "A bit (draft)",
+      "date": "2023-03-01",
+      "vs_room": 0.82,
+      "laugh_s_per_min": 4.1,
+      "ai_rating": "worked",
+      "evidence": [
+       {
+        "node": "seg:2023-03-01_z#2",
+        "quote": "Alpha opener line one."
+       }
+      ]
+     }
+    ],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Mabel's (upstairs)",
+     "name": "Mabel's",
+     "query": "Mabel's",
+     "queries_tried": [
+      "Mabel's"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": 10.0,
+     "lon": 20.0,
+     "display_name": "Mabel's building",
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "top match is a building/yes, not a venue"
+     ],
+     "osm": "node/4",
+     "osm_type": "yes"
+    },
+    "edited": {
+     "lat": null,
+     "lon": null,
+     "name": "Mabel",
+     "updated_at": "2024-02-03T00:00:00Z"
+    }
+   },
+   {
+    "venue_id": "venue:seaside-comedy-club",
+    "raw": "Seaside Comedy Club",
+    "name": "Seaside Comedy Club",
+    "sets": [
+     {
+      "set": "2024-02-01_y",
+      "date": "2024-02-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-02-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Seaside Comedy Club",
+     "name": "Seaside Comedy Club",
+     "query": "9 Pier Rd, Atlantic City",
+     "queries_tried": [
+      "9 Pier Rd, Atlantic City"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": 39.35,
+     "lon": -74.43,
+     "display_name": "9 Pier Rd, Atlantic City",
+     "ambiguous": false,
+     "ambiguous_reasons": [],
+     "osm": "node/5",
+     "osm_type": "theatre"
+    }
+   },
+   {
+    "venue_id": "venue:the-corner-room",
+    "raw": "The Corner Room",
+    "name": "My Corner",
+    "sets": [
+     {
+      "set": "2024-01-01_x",
+      "date": "2024-01-01",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-01-01"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "The Corner Room",
+     "name": "The Corner Room",
+     "query": "The Corner Room",
+     "queries_tried": [
+      "The Corner Room"
+     ],
+     "status": "his",
+     "source": "nominatim",
+     "lat": 12.5,
+     "lon": 55.5,
+     "display_name": "The Corner Room, 1 Main St, Springfield",
+     "ambiguous": false,
+     "ambiguous_reasons": [
+      "1 other match(es) more than 2 km away (e.g. The Corner Room (the other one), a long display name that goes on past eighty ch)"
+     ],
+     "osm": "node/1",
+     "osm_type": "bar"
+    },
+    "edited": {
+     "lat": 12.5,
+     "lon": 55.5,
+     "name": "My Corner",
+     "updated_at": "2024-02-02T00:00:00Z"
+    }
+   },
+   {
+    "venue_id": "venue:unknown",
+    "raw": "Unknown",
+    "name": "Unknown",
+    "sets": [
+     {
+      "set": "2024-05-05_w",
+      "date": "2024-05-05",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2024-05-05"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "Unknown",
+     "name": "Unknown",
+     "query": "Unknown",
+     "queries_tried": [
+      "Unknown"
+     ],
+     "status": "inferred",
+     "source": "nominatim",
+     "lat": null,
+     "lon": null,
+     "display_name": null,
+     "ambiguous": true,
+     "ambiguous_reasons": [
+      "venue name is a guess in the set metadata: 'Unknown'",
+      "not geocoded yet (offline)"
+     ]
+    },
+    "edited": {
+     "lat": null,
+     "lon": null,
+     "name": null,
+     "updated_at": "2024-02-04T00:00:00Z"
+    }
+   },
+   {
+    "venue_id": "venue:the-loft",
+    "raw": "maybe The Loft",
+    "name": "The Loft",
+    "sets": [
+     {
+      "set": "2015-09-09_v",
+      "date": "2015-09-09",
+      "title": null,
+      "laugh_s_per_min": 5.0,
+      "room_heat": 1.0,
+      "pct_laughing": null,
+      "material_s": null,
+      "best": null,
+      "weakest": null
+     }
+    ],
+    "dates": [
+     "2015-09-09"
+    ],
+    "n_sets": 1,
+    "avg_laugh_s_per_min": 5.0,
+    "avg_room_heat": 1.0,
+    "best_jokes": [],
+    "worst_jokes": [],
+    "works_here": [],
+    "works_elsewhere": [],
+    "note": "vs_room compares a joke with the rest of that night's set; one set per room is a small sample.",
+    "geo": {
+     "raw": "maybe The Loft",
+     "name": "The Loft",
+     "query": "The Loft",
+     "queries_tried": [
+      "The Loft"
+     ],
+     "status": "his",
+     "source": "nominatim",
+     "lat": 1.0,
+     "lon": 2.0,
+     "display_name": null,
+     "ambiguous": false,
+     "ambiguous_reasons": [
+      "venue name is a guess in the set metadata: 'maybe The Loft'",
+      "not geocoded yet (offline)"
+     ]
+    },
+    "edited": {
+     "lat": 1.0,
+     "lon": 2.0,
+     "name": null,
+     "updated_at": "2024-02-05T00:00:00Z"
+    }
+   }
+  ],
+  "ambiguous": [
+   {
+    "venue_id": "venue:mabel-s",
+    "raw": "Mabel's (upstairs)",
+    "reasons": [
+     "top match is a building/yes, not a venue"
+    ],
+    "picked": "Mabel's building"
+   },
+   {
+    "venue_id": "venue:unknown",
+    "raw": "Unknown",
+    "reasons": [
+     "venue name is a guess in the set metadata: 'Unknown'",
+     "not geocoded yet (offline)"
+    ],
+    "picked": null
+   }
+  ],
+  "geojson": {
+   "type": "FeatureCollection",
+   "features": [
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       20.0,
+       10.0
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:mabel-s",
+      "name": "Mabel",
+      "raw": "Mabel's (upstairs)",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2023-03-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Mabel",
+      "edited_at": "2024-02-03T00:00:00Z"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       -74.43,
+       39.35
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:seaside-comedy-club",
+      "name": "Seaside Comedy Club",
+      "raw": "Seaside Comedy Club",
+      "status": "inferred",
+      "ambiguous": false,
+      "n_sets": 1,
+      "dates": [
+       "2024-02-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Seaside"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       55.5,
+       12.5
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:the-corner-room",
+      "name": "My Corner",
+      "raw": "The Corner Room",
+      "status": "his",
+      "ambiguous": false,
+      "n_sets": 1,
+      "dates": [
+       "2024-01-01"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "My Corner",
+      "edited_at": "2024-02-02T00:00:00Z"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": null,
+     "properties": {
+      "venue_id": "venue:unknown",
+      "name": "Unknown",
+      "raw": "Unknown",
+      "status": "inferred",
+      "ambiguous": true,
+      "n_sets": 1,
+      "dates": [
+       "2024-05-05"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "Unknown room",
+      "edited_at": "2024-02-04T00:00:00Z"
+     }
+    },
+    {
+     "type": "Feature",
+     "geometry": {
+      "type": "Point",
+      "coordinates": [
+       2.0,
+       1.0
+      ]
+     },
+     "properties": {
+      "venue_id": "venue:the-loft",
+      "name": "The Loft",
+      "raw": "maybe The Loft",
+      "status": "his",
+      "ambiguous": false,
+      "n_sets": 1,
+      "dates": [
+       "2015-09-09"
+      ],
+      "avg_laugh_s_per_min": 5.0,
+      "avg_room_heat": 1.0,
+      "color": "#f5b544",
+      "label": "The Loft?",
+      "edited_at": "2024-02-05T00:00:00Z"
+     }
+    }
+   ]
+  },
+  "geocoder": {
+   "service": "OpenStreetMap Nominatim",
+   "user_agent": "Punchable/0.1 (personal)",
+   "requests_this_run": 0,
+   "cache": "CACHE_PATH",
+   "attribution": "Data © OpenStreetMap contributors, ODbL"
+  }
+ },
+ "geocoded": {
+  "Mabel's Comedy Club, Springfield": {
+   "raw": "Mabel's Comedy Club, Springfield",
+   "name": "Mabel's Comedy Club",
+   "query": "Mabel's Comedy Club",
+   "queries_tried": [
+    "Mabel's Comedy Club, Springfield",
+    "Mabel's Comedy Club"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "Joe's (likely Brooklyn) ": {
+   "raw": "Joe's (likely Brooklyn) ",
+   "name": "Joe's",
+   "query": "Joe's",
+   "queries_tried": [
+    "Joe's, Brooklyn",
+    "Joe's"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'Joe's (likely Brooklyn)'",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "Comix at Harbor, NYC": {
+   "raw": "Comix at Harbor, NYC",
+   "name": "Harbor",
+   "query": "Harbor",
+   "queries_tried": [
+    "Harbor, New York, NY",
+    "Harbor, New York",
+    "Harbor"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "maybe The Loft)": {
+   "raw": "maybe The Loft)",
+   "name": "The Loft",
+   "query": "The Loft",
+   "queries_tried": [
+    "The Loft"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'maybe The Loft)'",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "The Corner Room": {
+   "raw": "The Corner Room",
+   "name": "The Corner Room",
+   "query": "The Corner Room",
+   "queries_tried": [
+    "The Corner Room"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": 40.0,
+   "lon": -73.0,
+   "display_name": "The Corner Room, 1 Main St, Springfield",
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "1 other match(es) more than 2 km away (e.g. The Corner Room (the other one), a long display name that goes on past eighty ch)"
+   ],
+   "osm": "node/1",
+   "osm_type": "bar"
+  },
+  "Seaside Comedy Club": {
+   "raw": "Seaside Comedy Club",
+   "name": "Seaside Comedy Club",
+   "query": "9 Pier Rd, Atlantic City",
+   "queries_tried": [
+    "9 Pier Rd, Atlantic City"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": 39.35,
+   "lon": -74.43,
+   "display_name": "9 Pier Rd, Atlantic City",
+   "ambiguous": false,
+   "ambiguous_reasons": [],
+   "osm": "node/5",
+   "osm_type": "theatre"
+  },
+  "Mabel's (upstairs)": {
+   "raw": "Mabel's (upstairs)",
+   "name": "Mabel's",
+   "query": "Mabel's",
+   "queries_tried": [
+    "Mabel's"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": 10.0,
+   "lon": 20.0,
+   "display_name": "Mabel's building",
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "top match is a building/yes, not a venue"
+   ],
+   "osm": "node/4",
+   "osm_type": "yes"
+  },
+  "Unknown": {
+   "raw": "Unknown",
+   "name": "Unknown",
+   "query": "Unknown",
+   "queries_tried": [
+    "Unknown"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'Unknown'",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "": {
+   "raw": "",
+   "name": "",
+   "query": "",
+   "queries_tried": [
+    ""
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "Pat's Place, CT": {
+   "raw": "Pat's Place, CT",
+   "name": "Pat's Place",
+   "query": "Pat's Place",
+   "queries_tried": [
+    "Pat's Place, Connecticut",
+    "Pat's Place"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": 41.0,
+   "lon": -72.9,
+   "display_name": "Pat's Place",
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "matched only on the bare name 'Pat's Place'"
+   ],
+   "osm": "node/6",
+   "osm_type": "park"
+  },
+  "Zed, NJ (show)": {
+   "raw": "Zed, NJ (show)",
+   "name": "Zed",
+   "query": "Zed",
+   "queries_tried": [
+    "Zed, New Jersey",
+    "Zed"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'Zed, NJ (show)'",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "Cafe Uno, Paris, France": {
+   "raw": "Cafe Uno, Paris, France",
+   "name": "Cafe Uno",
+   "query": "Cafe Uno",
+   "queries_tried": [
+    "Cafe Uno, Paris",
+    "Cafe Uno"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "likely Boston Pub": {
+   "raw": "likely Boston Pub",
+   "name": "likely Boston Pub",
+   "query": "likely Boston Pub",
+   "queries_tried": [
+    "likely Boston Pub, Boston Pub",
+    "likely Boston Pub"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'likely Boston Pub'",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "MAYBE The Quiet Room'": {
+   "raw": "MAYBE The Quiet Room'",
+   "name": "The Quiet Room",
+   "query": "The Quiet Room",
+   "queries_tried": [
+    "The Quiet Room"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'MAYBE The Quiet Room''",
+    "not geocoded yet (offline)"
+   ]
+  },
+  "The Annex, ": {
+   "raw": "The Annex, ",
+   "name": "The Annex",
+   "query": "The Annex",
+   "queries_tried": [
+    "The Annex"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  " , Foo": {
+   "raw": " , Foo",
+   "name": "Foo",
+   "query": "Foo",
+   "queries_tried": [
+    "Foo"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "Bar, NY, USA": {
+   "raw": "Bar, NY, USA",
+   "name": "Bar",
+   "query": "Bar",
+   "queries_tried": [
+    "Bar, New York",
+    "Bar"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "not geocoded yet (offline)"
+   ]
+  },
+  "maybe The Loft": {
+   "raw": "maybe The Loft",
+   "name": "The Loft",
+   "query": "The Loft",
+   "queries_tried": [
+    "The Loft"
+   ],
+   "status": "inferred",
+   "source": "nominatim",
+   "lat": null,
+   "lon": null,
+   "display_name": null,
+   "ambiguous": true,
+   "ambiguous_reasons": [
+    "venue name is a guess in the set metadata: 'maybe The Loft'",
+    "not geocoded yet (offline)"
+   ]
+  }
+ },
+ "colors": {
+  "None": "#9ca3af",
+  "0.0": "#fca5a5",
+  "0.79": "#fca5a5",
+  "0.8": "#f5b544",
+  "1.19": "#f5b544",
+  "1.2": "#22c55e",
+  "3.0": "#22c55e"
+ }
+}

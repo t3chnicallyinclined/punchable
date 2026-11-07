@@ -1,6 +1,6 @@
 //! Punchable's API on axum (docs/ARCHITECTURE.md section 2). Lane T9: the read routes that answer from the database
 //! snapshot, behind the same Keycloak check, CORS, errors and metrics as `api-dev/server.py`; lane T10: the writes,
-//! group by group (`writes`), `/api/live` (`live`, `routes::live`), the worker's routes (`writes::worker`) and the
+//! group by group (`writes`), the Ask conversations, `/api/live` (`live`, `routes::live`), the worker's routes (`writes::worker`) and the
 //! vector sweeper (`sweep`). Every other request (the routes not ported yet) is forwarded unchanged to the Python
 //! API until T10 is whole (`proxy`).
 //!
@@ -15,6 +15,7 @@ pub mod creative;
 pub mod display;
 pub mod embed;
 pub mod error;
+pub mod expiry;
 pub mod index;
 pub mod instrument;
 pub mod jokes;
@@ -50,7 +51,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 27] = [
+pub const OWN_PATHS: [&str; 30] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -78,6 +79,9 @@ pub const OWN_PATHS: [&str; 27] = [
     "/api/inbox",
     "/api/memos",
     "/api/merge/history",
+    "/api/ask/chats",
+    "/api/venues",
+    "/api/venues.geojson",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -86,7 +90,7 @@ pub const OWN_PATHS: [&str; 27] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 19] = [
+pub const OWN_PATTERNS: [&str; 20] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -106,12 +110,13 @@ pub const OWN_PATTERNS: [&str; 19] = [
     "/api/memos/{id}/audio",
     "/api/worker/jobs/{id}/file",
     "/api/merge/{id}",
+    "/api/ask/chats/{id}",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 26] = [
+pub const OWN_WRITE_PATHS: [&str; 27] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -138,11 +143,12 @@ pub const OWN_WRITE_PATHS: [&str; 26] = [
     "/api/facts",
     "/api/import/youtube",
     "/api/upload",
+    "/api/ask/chats",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 14] = [
+pub const OWN_WRITE_PATTERNS: [&str; 16] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -157,6 +163,8 @@ pub const OWN_WRITE_PATTERNS: [&str; 14] = [
     "/api/workingsets/{id}/bits/{id2}/punchup",
     "/api/worker/jobs/{id}/result",
     "/api/jobs/{id}/drop",
+    "/api/ask/chats/{id}",
+    "/api/venues/{id}",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -419,8 +427,28 @@ pub fn app(st: AppState) -> Router {
                 get(guarded(&st, writes::worker::profile_get)).put(guarded_write(&st, writes::worker::profile_put)),
             ),
         )
+        // T10 round 5, group A: the conversations (`/api/ask/chats*`)
+        .route(
+            "/api/ask/chats",
+            finish(
+                &st,
+                get(guarded(&st, writes::chats::list)).post(guarded_write(&st, writes::chats::create)),
+            ),
+        )
+        .route(
+            "/api/ask/chats/{id}",
+            finish(
+                &st,
+                get(guarded_write(&st, writes::chats::one))
+                    .post(guarded_write(&st, writes::chats::one))
+                    .patch(guarded_write(&st, writes::chats::one)),
+            ),
+        )
+        // T10 round 5, group B: the rooms and the map's pins (his moves and renames are the PATCH)
+        .route("/api/venues", read_route(&st, routes::venues::venues))
+        .route("/api/venues.geojson", read_route(&st, routes::venues::geojson))
+        .route("/api/venues/{id}", patch_route(&st, writes::venues::patch))
         // T10 group 6, the cheap half: the one-shot questions and the imports that only queue a job
-        // (`/api/ask/chats*`, the conversations, stays the Python's: an exact path moves `/api/ask` alone)
         .route("/api/ask", write_route(&st, writes::ask::ask))
         .route("/api/riff", write_route(&st, writes::ask::riff))
         .route("/api/facts", write_route(&st, writes::ask::facts))
@@ -475,6 +503,12 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
             worker::Lease::embedder(sweep::me(), every),
             every,
         ));
+    }
+    // the recordings nobody collected (docs/adr/0014), when uploads live in the database
+    if st.config().upload_db
+        && let Some(every) = st.config().upload_sweep_every
+    {
+        tokio::spawn(expiry::run(st.clone(), expiry::lease(sweep::me(), every), every));
     }
     let listener = bind(&addr).await?;
     tracing::info!(%addr, auth = st.verifier().is_some(), "pk-api listening");

@@ -175,6 +175,20 @@ impl Store {
             .collect())
     }
 
+    /// The names of the uploads committed before `cutoff` (seconds since the epoch), oldest first.
+    pub async fn upload_names_before(&self, cutoff: f64) -> Result<Vec<String>> {
+        let v = self
+            .last(
+                "SELECT VALUE name FROM upload WHERE t < $c ORDER BY t;",
+                vars([("c", float(cutoff))]),
+            )
+            .await?;
+        Ok(rows_of(v)
+            .into_iter()
+            .filter_map(|r| as_str(&r).map(str::to_string))
+            .collect())
+    }
+
     /// How many uploads wait.
     pub async fn upload_count(&self) -> Result<i64> {
         Ok(as_i64(&self.last("RETURN count(SELECT id FROM upload);", Object::new()).await?).unwrap_or(0))

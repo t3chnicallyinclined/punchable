@@ -219,3 +219,39 @@ fn finish_matches_python() {
         same("refusal", &json!(refusal(&strings(&case["ids"]))), &case["out"]);
     }
 }
+
+/// The notebook the API builds from a corpus (`Notebook::from_corpus`, `askchat.sources` ported) is the one the
+/// Python flattened: the same sources in the same order with every field, the same rooms and titles. The corpus is
+/// built from the very inputs the generator gave the Python's.
+#[test]
+fn the_notebook_built_from_a_corpus_is_the_pythons() {
+    use pk_creative::corpus::{Corpus, Parts};
+    let inp = golden("ask_inputs.json");
+    let analyses: IndexMap<String, Value> = serde_json::from_value(inp["analyses"].clone()).expect("analyses");
+    let decisions: Vec<Value> = serde_json::from_value(inp["decisions"].clone()).expect("decisions");
+    let c = Corpus::new(Parts {
+        graph: inp["graph"].clone(),
+        analyses,
+        decisions,
+        owner: "owner".into(),
+        ..Parts::default()
+    });
+    let nb = Notebook::from_corpus(&c);
+    let g = golden("ask_notebook.json");
+    let want = g["sources"].as_object().expect("sources");
+    assert_eq!(nb.sources().len(), want.len(), "how many sources");
+    // the Python's order, then every field of every row
+    for ((got_id, got), (want_id, want)) in nb.sources().iter().zip(want) {
+        assert_eq!(got_id, want_id, "source order");
+        // the Python's written rows carry no `status`, `words`, `laughs` or `gate_text` key at all
+        let mut row = json!(got);
+        for k in ["status", "words", "laughs", "gate_text"] {
+            if row[k].is_null() {
+                row.as_object_mut().expect("a row").remove(k);
+            }
+        }
+        same(&format!("source {got_id}"), &row, want);
+    }
+    assert_eq!(json!(nb.rooms()), g["rooms"], "rooms");
+    assert_eq!(json!(nb.joke_titles()), g["joke_titles"], "joke titles");
+}

@@ -30,8 +30,9 @@ use crate::error::{ApiError, ApiResult, ok};
 use crate::query::Query;
 use crate::state::AppState;
 
-/// `MAX_UPLOAD`: 1 GB.
-pub const MAX_UPLOAD: i64 = 1024 * 1024 * 1024;
+/// The largest upload when the database is its home (docs/adr/0014): 64 MiB. Audio of a set is tens of megabytes; a
+/// Film-it video never leaves the phone. Over it is a 413, on both servers while both exist (`server.py` `upload`).
+pub const MAX_UPLOAD: i64 = 64 * 1024 * 1024;
 /// `AUDIO_EXT`.
 const AUDIO_EXT: [&str; 12] = [
     ".webm", ".m4a", ".mp3", ".wav", ".ogg", ".opus", ".mp4", ".mov", ".aac", ".flac", ".caf", ".3gp",
@@ -220,7 +221,11 @@ fn cut_short() -> ApiError {
 
 /// The body into `upload_part` rows, `PART` bytes each; how many parts.
 async fn stage(store: &Store, token: &str, body: Body, n: usize) -> ApiResult<i64> {
-    store.upload_sweep_orphans().await.map_err(store_err)?;
+    // best effort: concurrent uploads each sweep the same stale staging rows and can lose a write conflict (seen under
+    // the same-rate probe as a 500 on the upload that happened to sweep); the next upload sweeps again
+    if let Err(e) = store.upload_sweep_orphans().await {
+        tracing::warn!(error = %e, "upload: the orphan sweep failed; the next upload tries again");
+    }
     let mut stream = body.into_data_stream();
     let mut buf: Vec<u8> = Vec::with_capacity(PART.min(n));
     let (mut seq, mut got) = (0_i64, 0_usize);
@@ -267,6 +272,12 @@ pub async fn upload(
             "uploads in the database are off (PK_UPLOAD_DB); route /api/upload to the Python API",
         ));
     }
+    if !st.schema_extra_current() {
+        // the `upload` tables are another build's (a deploy in progress): never write rows the schema does not describe
+        return Err(ApiError::unavailable(
+            "the database schema is not the one this build expects (a deploy is in progress); try again shortly",
+        ));
+    }
     let q = Query::parse(raw.as_deref());
     st.require_loaded()?;
     crate::routes::pick(&q)?;
@@ -275,8 +286,11 @@ pub async fn upload(
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.trim().parse::<i64>().ok())
         .unwrap_or(0);
-    if n <= 0 || n > MAX_UPLOAD {
-        return Err(ApiError::bad_request("upload missing or over 1 GB"));
+    if n <= 0 {
+        return Err(ApiError::bad_request("upload missing"));
+    }
+    if n > MAX_UPLOAD {
+        return Err(ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "upload over 64 MiB"));
     }
     let kind = {
         let k = py::strip(&hdr(&headers, "X-Kind")).to_string();
@@ -425,6 +439,21 @@ pub async fn inbox(State(st): State<AppState>, req: axum::extract::Request) -> A
     let store = st.store_handle().ok_or_else(not_connected)?;
     let rows = store.upload_rows().await.map_err(store_err)?;
     Ok(ok(&json!({"items": rows.iter().map(inbox_row).collect::<Vec<_>>()})))
+}
+
+/// A job that will not run again lets go of its recording (ADR 0014): the bytes of a `process_set` job that was
+/// dropped, or that failed for good, are deleted. A failed delete is logged and left to the expiry sweep: the job's
+/// own end has already been written and the caller must answer it.
+pub async fn release_for_job(st: &AppState, job: &Map<String, Value>) {
+    if !st.config().upload_db || job.get("kind").and_then(Value::as_str) != Some("process_set") {
+        return;
+    }
+    let (Some(name), Some(store)) = (upload_name(job), st.store_handle()) else {
+        return;
+    };
+    if let Err(e) = store.upload_delete(&name).await {
+        tracing::warn!(error = %e, file = %name, "upload: not deleted after its job ended; the expiry sweep will find it");
+    }
 }
 
 /// The upload a `process_set` job names, when its name is a plain file name.

@@ -131,6 +131,12 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
     # T10 round 4 (group 6a): a recording (UPLOAD_HEADERS), a size of its own per call so no two are the same upload
     if path == "/api/upload":
         return bytes((i * 31 + w) % 251 for i in range(40_000 + 977 * w + 7 * i + (3 if col == "via" else 0)))
+    # T10 round 5, group A: a conversation per call (a question of its own, so no two are the same turn)
+    if path == "/api/ask/chats":
+        return json.dumps({"question": f"probe question {tag}: what did I write about the parking meter and the bus?"}).encode()
+    # T10 round 5, group B: a room renamed per call
+    if path.startswith("/api/venues/"):
+        return json.dumps({"name": f"Probe room {tag}"}).encode()
     if path.endswith("/bridge"):
         return json.dumps({"from": "{from}", "to": "{to}"}).encode()
     if path.endswith("/punchup"):
@@ -251,7 +257,8 @@ def main() -> int:
         global ROUTES
         ROUTES = a.routes.split(",")
         sources = {"{joke}": ("/api/jokes?limit=40", "items"), "{board}": ("/api/boards", "boards"),
-                   "{set}": ("/api/mysets", "sets"), "{perf}": ("/api/sets", "sets")}
+                   "{set}": ("/api/mysets", "sets"), "{perf}": ("/api/sets", "sets"),
+                   "{venue}": ("/api/venues", "venues")}
 
         def fetch(path: str):
             c = Conn(pair["python"])
@@ -287,7 +294,7 @@ def main() -> int:
                     if len(ids) >= 64:
                         break
             else:
-                ids = [x["id"] for x in fetch(path)[key]]
+                ids = [x.get("id") or x.get("venue_id") for x in fetch(path)[key]]
             if not ids:
                 raise SystemExit(f"{path} has nothing to put in {ph}")
             k = 0

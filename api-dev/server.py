@@ -2101,7 +2101,13 @@ class Handler(BaseHTTPRequestHandler):
     def upload(self):
         kb = self.kb
         n = int(self.headers.get("Content-Length") or 0)
-        if n <= 0 or n > MAX_UPLOAD:
+        if hosted_uploads(kb):   # docs/adr/0014: the database is the home, so the cap is 64 MiB (pk-api answers the same)
+            import upload_store as US
+            if n <= 0:
+                raise K.DecisionError("upload missing")
+            if n > US.MAX_BYTES:
+                raise K.DecisionError("upload over 64 MiB", 413)
+        elif n <= 0 or n > MAX_UPLOAD:
             raise K.DecisionError("upload missing or over 1 GB")
         kind = (self.headers.get("X-Kind") or "upload").strip()
         if kind not in ("set", "note", "upload"):
@@ -2162,7 +2168,10 @@ class Handler(BaseHTTPRequestHandler):
         left, seq = n, 0
         self._body_taken = True   # from here the body is read (or the connection is dead); a refusal above leaves it to the drain
         try:
-            US.sweep_orphans(kb.rpc)
+            try:   # best effort: concurrent uploads sweep the same stale rows and can lose a write conflict (a 500 here)
+                US.sweep_orphans(kb.rpc)
+            except Exception as e:  # noqa: BLE001
+                self.log_message("upload: the orphan sweep failed (%r); the next upload tries again", e)
             while left > 0:
                 chunk = self.rfile.read(min(US.PART, left))
                 if not chunk:

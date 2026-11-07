@@ -432,6 +432,10 @@ MERGE_HIST_READS = ["/api/merge/history?joke=joke:x01", "/api/merge/history?joke
                     "/api/merge/history?joke=joke:x01&backend=files", "/api/merge/at:x05", "/api/merge/at:x09", "/api/merge/dm:x02",
                     "/api/merge/at:nope", "/api/merge/mg:nope", "/api/merge/zzz", "/api/merge/mg:", "/api/merge/at%3Ax05", "/api/merge/at:x05/extra",
                     "/api/merge/at:x05?backend=x", "/api/merge/attach", "/api/merge/undo"]
+# round 5, group A: the Ask conversations (none exist in the bundle's stores: the list is empty, every id is not found)
+CHAT_READS = ["/api/ask/chats", "/api/ask/chats?backend=files", "/api/ask/chats?backend=surreal", "/api/ask/chats/nope",
+              "/api/ask/chats/chat:00000000", "/api/ask/chats/chat:00000000?backend=x", "/api/ask/chats/chat:0123abcd",
+              "/api/ask/chats/", "/api/ask/chats/chat:00000000/extra", "/api/ask/chatsx"]
 MEMO_READS = ["/api/memos", "/api/memos?backend=files", "/api/memos?include_hidden=1", "/api/memos/m1", "/api/memos/m2", "/api/memos/m3",
               "/api/memos/m4", "/api/memos/m5", "/api/memos/m6", "/api/memos/m7", "/api/memos/m8", "/api/memos/m9", "/api/memos/nope",
               "/api/memos/m1?backend=x", "/api/memos/m1/audio", "/api/memos/m3/audio", "/api/memos/m5/audio", "/api/memos/nope/audio",
@@ -1040,6 +1044,8 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in STORE_READS]
         reqs += [(p, "GET", p, app) for p in MERGE_READS]
         reqs += [(p, "GET", p, app) for p in MEMO_READS]
+        reqs += [(p, "GET", p, app) for p in CHAT_READS]
+        reqs += [("chats signed out", "GET", "/api/ask/chats", {})]
         reqs += [(p, "GET", p, app) for p in MERGE_HIST_READS]
         reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
                  ("workingsets signed out", "GET", "/api/workingsets", {})]
@@ -1238,6 +1244,28 @@ def main() -> int:
             problems += got
             n_ok += not got
             reqs.append((label, "GET", "", {}))
+        # round 5, group B: the rooms and the map's pins. `generated_at` is each server's own clock (the answer is built
+        # per request), so it is taken out of both bodies before they are compared; nothing else is
+        for p in ("/api/venues", "/api/venues?include_hidden=1", "/api/venues?backend=files", "/api/venues?backend=surreal",
+                  "/api/venues.geojson", "/api/venues.geojson?backend=x", "/api/venues/", "/api/venues/x", "/api/venuesx"):
+            pair = []
+            for base in (py, rs):
+                r_ = call(base, "GET", p, app)
+                try:
+                    j_ = json.loads(r_[2] or b"null")
+                    if isinstance(j_, dict):
+                        j_.pop("generated_at", None)
+                    pair.append((r_[0], r_[1], json.dumps(j_).encode()))
+                except ValueError:
+                    pair.append(r_)
+            got = compare("venues: " + p, pair[0], pair[1])
+            problems += got
+            n_ok += not got
+            reqs.append(("venues: " + p, "GET", p, app))
+        reqs.append(("venues signed out", "GET", "/api/venues", {}))
+        got = compare("venues signed out", call(py, "GET", "/api/venues", {}), call(rs, "GET", "/api/venues", {}))
+        problems += got
+        n_ok += not got
         report["requests"] = len(reqs)
         report["equal"] = n_ok
         # proof the answers came from pk-api and not through its fallback: its own counters saw every moved route
@@ -1250,7 +1278,8 @@ def main() -> int:
                       "/api/profile/voice", "/api/suggestions/not-a-joke", "/api/jobs/{id}", "/api/workingsets",
                       "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
                       "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates",
-                      "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}"):
+                      "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}",
+                      "/api/ask/chats", "/api/venues", "/api/{id}"):  # (`/api/venues.geojson` is labelled `/api/{id}`)
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)

@@ -459,6 +459,12 @@ ASK_SETS = {  # key -> venue (the set node's), then the segments
 
 
 def ask_corpus() -> Corpus:
+    c, _inputs = ask_corpus_and_inputs()
+    return c
+
+
+def ask_corpus_and_inputs():
+    """The corpus and the three inputs it was built from (the Rust test builds its own from the same ones)."""
     nodes, edges = [], []
     for k in "abcdefh":
         nodes.append({"id": f"joke:{k}", "type": "joke", "title": k.upper() + " bit (draft)", "stage": "testing",
@@ -488,7 +494,8 @@ def ask_corpus() -> Corpus:
                          "joke_id": joke, "transcript": text, "ai_rating": rating,
                          "laughs": {"count": laughs, "laugh_s": float(laughs), "window_s": (end - start) / 1000}})
         analyses[key] = {"set": key, "summary": {"laugh_s_per_min": 5.0, "room_heat": 1.0}, "jokes": rows}
-    return Corpus({"nodes": nodes, "edges": edges}, analyses, decisions=decisions)
+    inputs = {"graph": {"nodes": nodes, "edges": edges}, "analyses": analyses, "decisions": decisions}
+    return Corpus({"nodes": nodes, "edges": edges}, analyses, decisions=decisions), inputs
 
 
 TOKENS_CASES = ["The purple monkey's dishwasher", "Mabel\u2019s and Mabel's", "boxes churches babies glasses buses ties",
@@ -637,7 +644,8 @@ def owner_env(name):
 
 def main_ask() -> dict:
     from creative import voice
-    c = ask_corpus()
+    c, inputs = ask_corpus_and_inputs()
+    (OUT / "ask_inputs.json").write_text(json.dumps(inputs, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
     S = AC.sources(c)
     out_sources = {}
     for sid, s in S.items():
@@ -788,6 +796,61 @@ def main_seed() -> dict:
     return {"cases": len(cases), "reordered": sum(c["reordered"] for c in cases)}
 
 
+# ============================================================== venues (T10 round 5): creative/venues.py over the ask notebook
+VENUE_RAWS = ["Mabel's Comedy Club, Springfield", "Joe's (likely Brooklyn) ", "Comix at Harbor, NYC", "maybe The Loft)",
+              "The Corner Room", "Seaside Comedy Club", "Mabel's (upstairs)", "Unknown", "", "Pat's Place, CT", "Zed, NJ (show)",
+              "Cafe Uno, Paris, France", "likely Boston Pub", "MAYBE The Quiet Room'", "The Annex, ", " , Foo", "Bar, NY, USA"]
+
+
+def main_venues() -> dict:
+    import os
+    import tempfile
+
+    import creative_api as CRA
+    from creative import venues as V
+
+    c, _inputs = ask_corpus_and_inputs()
+    hit = lambda lat, lon, name, cat, typ, i: {"lat": lat, "lon": lon, "display_name": name, "category": cat, "type": typ,  # noqa: E731
+                                               "importance": 0.4, "osm_type": "node", "osm_id": i}
+    cache = {
+        "The Corner Room": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": [
+            hit(40.0, -73.0, "The Corner Room, 1 Main St, Springfield", "amenity", "bar", 1),
+            hit(41.5, -73.0, "The Corner Room (the other one), a long display name that goes on past eighty characters for sure", "amenity", "pub", 2),
+            hit(40.001, -73.001, "The Corner Room annex", "amenity", "bar", 3)]},
+        "Seaside Comedy Club": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": []},
+        "Mabel's": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": [hit(10.0, 20.0, "Mabel's building", "building", "yes", 4)]},
+        "9 Pier Rd, Atlantic City": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": [
+            hit(39.35, -74.43, "9 Pier Rd, Atlantic City", "tourism", "theatre", 5)]},
+        "Pat's Place, Connecticut": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": []},
+        "Pat's Place": {"fetched_at": "2024-01-01T00:00:00Z", "source": "nominatim", "results": [hit(41.0, -72.9, "Pat's Place", "leisure", "park", 6)]},
+    }
+    addresses = {"seaside comedy club": {"address": "9 Pier Rd, Atlantic City", "note": "he told us"}}
+    edits = {"venue:the-corner-room": {"venue_id": "venue:the-corner-room", "lat": 12.5, "lon": 55.5, "name": "My Corner", "by": "owner",
+                                       "updated_at": "2024-02-02T00:00:00Z"},
+             "venue:mabel-s": {"venue_id": "venue:mabel-s", "lat": None, "lon": None, "name": "Mabel", "by": "owner", "updated_at": "2024-02-03T00:00:00Z"},
+             "venue:unknown": {"venue_id": "venue:unknown", "lat": None, "lon": None, "name": None, "by": "owner", "updated_at": "2024-02-04T00:00:00Z"},
+             "venue:the-loft": {"venue_id": "venue:the-loft", "lat": 1.0, "lon": 2.0, "name": None, "by": "owner", "updated_at": "2024-02-05T00:00:00Z"}}
+    with tempfile.TemporaryDirectory() as d:
+        cdir = Path(d)
+        (cdir / "geocode_cache.json").write_text(json.dumps(cache), encoding="utf-8")
+        (cdir / "venue_addresses.json").write_text(json.dumps(addresses), encoding="utf-8")
+        os.environ["PUNCHABLE_CREATIVE_DIR"] = str(cdir)
+        geo = V.Geocoder(cdir / "geocode_cache.json")
+        stats = V.venue_stats(c)
+        built = V.build(c, geo, offline=True)
+        built["generated_at"] = "NOW"
+        built["geocoder"]["cache"] = "CACHE_PATH"
+        overlaid = CRA.venue_overlay(json.loads(json.dumps(built)), edits)
+        geocoded = {raw: V.geocode_venue(geo, raw, offline=True) for raw in VENUE_RAWS + [v["raw"] for v in stats]}
+        os.environ.pop("PUNCHABLE_CREATIVE_DIR", None)
+    out = {"raws": VENUE_RAWS, "parsed": {raw: V.parse_venue(raw) for raw in VENUE_RAWS}, "cache": cache, "addresses": addresses,
+           "edits": edits, "stats": stats, "built": built, "overlaid": overlaid, "geocoded": geocoded,
+           "colors": {str(h): V.heat_color(h) for h in (None, 0.0, 0.79, 0.8, 1.19, 1.2, 3.0)}}
+    (OUT / "venue_rooms.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
+    return {"venues": len(stats), "geocoded": len(geocoded), "features": len(built["geojson"]["features"])}
+
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     counts = {}
@@ -814,6 +877,8 @@ def main():
     print(f"  story seed: {seed['cases']} cases, {seed['reordered']} re-ordered")
     ask = main_ask()
     print("  askchat: " + ", ".join(f"{k} {v}" for k, v in ask.items()))
+    ven = main_venues()
+    print("  venues: " + ", ".join(f"{k} {v}" for k, v in ven.items()))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,559 @@
+{
+ "graph": {
+  "nodes": [
+   {
+    "id": "joke:a",
+    "type": "joke",
+    "title": "A bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:a1"
+   },
+   {
+    "id": "joke:b",
+    "type": "joke",
+    "title": "B bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:b1"
+   },
+   {
+    "id": "joke:c",
+    "type": "joke",
+    "title": "C bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:c1"
+   },
+   {
+    "id": "joke:d",
+    "type": "joke",
+    "title": "D bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:d1"
+   },
+   {
+    "id": "joke:e",
+    "type": "joke",
+    "title": "E bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:e1"
+   },
+   {
+    "id": "joke:f",
+    "type": "joke",
+    "title": "F bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:f1"
+   },
+   {
+    "id": "joke:h",
+    "type": "joke",
+    "title": "H bit (draft)",
+    "stage": "testing",
+    "lead_unit": "unit:h1"
+   },
+   {
+    "id": "unit:a1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Alpha opener line one. The alpha punch lands here every time.",
+    "date": "2015-06-26T10:00:00"
+   },
+   {
+    "id": "unit:b1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+    "date": "2024-01-10"
+   },
+   {
+    "id": "unit:b2",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Bravo older draft about the dog and the purple monkey. Dishwasher humming.",
+    "date": "2023-05-01"
+   },
+   {
+    "id": "unit:b3",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Bravo oldest draft: a dog, a purple monkey, no dishwasher yet.",
+    "date": "2022-01-01"
+   },
+   {
+    "id": "unit:b4",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Bravo scrap: purple monkey, dishwasher, dog, the lot.",
+    "date": "2021-01-01"
+   },
+   {
+    "id": "unit:c1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, Charlie premise about cars and the long drive home, the radio, the exits, the same billboard twice, and then the gridlock on the bridge, honestly."
+   },
+   {
+    "id": "unit:d1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Delta bit about my niece and the laundromat place.",
+    "date": "2015-03-03"
+   },
+   {
+    "id": "unit:e1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Echo bit about my niece and her soccer schedule.",
+    "date": "2024-04-04"
+   },
+   {
+    "id": "unit:f1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Foxtrot never performed idea about planes and pilots up there.",
+    "date": "2016-07-07"
+   },
+   {
+    "id": "unit:h1",
+    "type": "unit",
+    "kind": "setup+punch",
+    "text": "Hotel voice note: the meter asked for my pronouns — I don’t have a card.",
+    "date": "2024-08-08",
+    "source": "memo"
+   },
+   {
+    "id": "set:2024-01-01_x",
+    "type": "set",
+    "venue": "The Corner Room"
+   },
+   {
+    "id": "set:2024-02-01_y",
+    "type": "set",
+    "venue": "Seaside Comedy Club"
+   },
+   {
+    "id": "set:2023-03-01_z",
+    "type": "set",
+    "venue": "Mabel's (upstairs)"
+   },
+   {
+    "id": "set:2024-05-05_w",
+    "type": "set",
+    "venue": "Unknown"
+   },
+   {
+    "id": "set:2015-09-09_v",
+    "type": "set",
+    "venue": "maybe The Loft"
+   }
+  ],
+  "edges": [
+   {
+    "id": "e:pa1",
+    "src": "unit:a1",
+    "dst": "joke:a",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pb1",
+    "src": "unit:b1",
+    "dst": "joke:b",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pb2",
+    "src": "unit:b2",
+    "dst": "joke:b",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pb3",
+    "src": "unit:b3",
+    "dst": "joke:b",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pb4",
+    "src": "unit:b4",
+    "dst": "joke:b",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pc1",
+    "src": "unit:c1",
+    "dst": "joke:c",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pd1",
+    "src": "unit:d1",
+    "dst": "joke:d",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pe1",
+    "src": "unit:e1",
+    "dst": "joke:e",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:pf1",
+    "src": "unit:f1",
+    "dst": "joke:f",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   },
+   {
+    "id": "e:ph1",
+    "src": "unit:h1",
+    "dst": "joke:h",
+    "kind": "part_of",
+    "status": "inferred",
+    "confidence": 0.9,
+    "evidence": []
+   }
+  ]
+ },
+ "analyses": {
+  "2024-01-01_x": {
+   "set": "2024-01-01_x",
+   "summary": {
+    "laugh_s_per_min": 5.0,
+    "room_heat": 1.0
+   },
+   "jokes": [
+    {
+     "idx": 1,
+     "start_ms": 0,
+     "end_ms": 60000,
+     "title": "T1",
+     "status": "known",
+     "joke_id": "joke:a",
+     "transcript": "Alpha opener line one. The alpha punch lands here every time.",
+     "ai_rating": "killed",
+     "laughs": {
+      "count": 7,
+      "laugh_s": 7.0,
+      "window_s": 60.0
+     }
+    },
+    {
+     "idx": 2,
+     "start_ms": 70500,
+     "end_ms": 130000,
+     "title": "T2",
+     "status": "known",
+     "joke_id": "joke:b",
+     "transcript": "Bravo setup about the dog. The purple monkey dishwasher line here. Bravo closer words.",
+     "ai_rating": "worked",
+     "laughs": {
+      "count": 3,
+      "laugh_s": 3.0,
+      "window_s": 59.5
+     }
+    },
+    {
+     "idx": 3,
+     "start_ms": 130000,
+     "end_ms": 150000,
+     "title": "T3",
+     "status": "crowd_work",
+     "joke_id": null,
+     "transcript": "So who here has a car?",
+     "ai_rating": null,
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 20.0
+     }
+    },
+    {
+     "idx": 4,
+     "start_ms": 150000,
+     "end_ms": 210000,
+     "title": "T4",
+     "status": "known",
+     "joke_id": "joke:c",
+     "transcript": "Charlie premise about cars and traffic and more traffic today.",
+     "ai_rating": "meh",
+     "laughs": {
+      "count": 1,
+      "laugh_s": 1.0,
+      "window_s": 60.0
+     }
+    },
+    {
+     "idx": 5,
+     "start_ms": 210000,
+     "end_ms": 215000,
+     "title": "T5",
+     "status": "banter",
+     "joke_id": null,
+     "transcript": "Thanks for coming out tonight folks.",
+     "ai_rating": null,
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 5.0
+     }
+    }
+   ]
+  },
+  "2024-02-01_y": {
+   "set": "2024-02-01_y",
+   "summary": {
+    "laugh_s_per_min": 5.0,
+    "room_heat": 1.0
+   },
+   "jokes": [
+    {
+     "idx": 1,
+     "start_ms": 0,
+     "end_ms": 60000,
+     "title": "T1",
+     "status": "known",
+     "joke_id": "joke:a",
+     "transcript": "Alpha opener line one. The alpha punch lands here every time.",
+     "ai_rating": "worked",
+     "laughs": {
+      "count": 4,
+      "laugh_s": 4.0,
+      "window_s": 60.0
+     }
+    },
+    {
+     "idx": 2,
+     "start_ms": 60000,
+     "end_ms": 150000,
+     "title": "T2",
+     "status": "known",
+     "joke_id": "joke:b",
+     "transcript": "Bravo setup about the dog. Bravo closer words.",
+     "ai_rating": "died",
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 90.0
+     }
+    },
+    {
+     "idx": 3,
+     "start_ms": 150000,
+     "end_ms": 210000,
+     "title": "T3",
+     "status": "new",
+     "joke_id": "joke:d",
+     "transcript": "Delta bit about my niece and the laundromat place.",
+     "ai_rating": "killed",
+     "laughs": {
+      "count": 12,
+      "laugh_s": 12.0,
+      "window_s": 60.0
+     }
+    }
+   ]
+  },
+  "2023-03-01_z": {
+   "set": "2023-03-01_z",
+   "summary": {
+    "laugh_s_per_min": 5.0,
+    "room_heat": 1.0
+   },
+   "jokes": [
+    {
+     "idx": 1,
+     "start_ms": 0,
+     "end_ms": 40000,
+     "title": "T1",
+     "status": "known",
+     "joke_id": "joke:b",
+     "transcript": "Bravo setup about the dog. Bravo closer words about the cat today.",
+     "ai_rating": "killed",
+     "laughs": {
+      "count": 9,
+      "laugh_s": 9.0,
+      "window_s": 40.0
+     }
+    },
+    {
+     "idx": 2,
+     "start_ms": 40000,
+     "end_ms": 70000,
+     "title": "T2",
+     "status": "known",
+     "joke_id": "joke:a",
+     "transcript": "Alpha opener line one.",
+     "ai_rating": "worked",
+     "laughs": {
+      "count": 2,
+      "laugh_s": 2.0,
+      "window_s": 30.0
+     }
+    },
+    {
+     "idx": 3,
+     "start_ms": 71500,
+     "end_ms": 100000,
+     "title": "T3",
+     "status": "known",
+     "joke_id": "joke:a",
+     "transcript": "The alpha punch lands here every time.",
+     "ai_rating": "worked",
+     "laughs": {
+      "count": 2,
+      "laugh_s": 2.0,
+      "window_s": 28.5
+     }
+    },
+    {
+     "idx": 4,
+     "start_ms": 100000,
+     "end_ms": 120000,
+     "title": "T4",
+     "status": "known",
+     "joke_id": "joke:zz",
+     "transcript": "A line about a zebra and a quokka.",
+     "ai_rating": "meh",
+     "laughs": {
+      "count": 1,
+      "laugh_s": 1.0,
+      "window_s": 20.0
+     }
+    },
+    {
+     "idx": 5,
+     "start_ms": 120000,
+     "end_ms": 121000,
+     "title": "T5",
+     "status": "known",
+     "joke_id": null,
+     "transcript": "   ",
+     "ai_rating": null,
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 1.0
+     }
+    },
+    {
+     "idx": 6,
+     "start_ms": 121000,
+     "end_ms": 150000,
+     "title": "T6",
+     "status": "known",
+     "joke_id": "joke:h",
+     "transcript": "  Leading space moment about the meter.  ",
+     "ai_rating": "worked",
+     "laughs": {
+      "count": 1,
+      "laugh_s": 1.0,
+      "window_s": 29.0
+     }
+    }
+   ]
+  },
+  "2024-05-05_w": {
+   "set": "2024-05-05_w",
+   "summary": {
+    "laugh_s_per_min": 5.0,
+    "room_heat": 1.0
+   },
+   "jokes": [
+    {
+     "idx": 1,
+     "start_ms": 0,
+     "end_ms": 60000,
+     "title": "T1",
+     "status": "known",
+     "joke_id": "joke:e",
+     "transcript": "Echo bit about my niece and her soccer schedule.",
+     "ai_rating": "meh",
+     "laughs": {
+      "count": 1,
+      "laugh_s": 1.0,
+      "window_s": 60.0
+     }
+    }
+   ]
+  },
+  "2015-09-09_v": {
+   "set": "2015-09-09_v",
+   "summary": {
+    "laugh_s_per_min": 5.0,
+    "room_heat": 1.0
+   },
+   "jokes": [
+    {
+     "idx": 1,
+     "start_ms": 5000,
+     "end_ms": 60000,
+     "title": "T1",
+     "status": "known",
+     "joke_id": "joke:b",
+     "transcript": "Bravo setup about the dog. Nobody laughed at the purple monkey.",
+     "ai_rating": "died",
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 55.0
+     }
+    },
+    {
+     "idx": 2,
+     "start_ms": 60000,
+     "end_ms": 90000,
+     "title": "T2",
+     "status": "known",
+     "joke_id": "joke:a",
+     "transcript": "Alpha opener line one, to silence.",
+     "ai_rating": "died",
+     "laughs": {
+      "count": 0,
+      "laugh_s": 0.0,
+      "window_s": 30.0
+     }
+    }
+   ]
+  }
+ },
+ "decisions": [
+  {
+   "target": "node",
+   "action": "add",
+   "id": "joke:g",
+   "by": "owner",
+   "after": {
+    "type": "joke",
+    "title": "Golf idea (jot)",
+    "summary": "Golf idea about caddies and the cart that talks back.",
+    "text": "Golf idea typed: caddies and the cart that talks back.",
+    "date": "2024-09-09T08:00:00+00:00"
+   }
+  }
+ ]
+}

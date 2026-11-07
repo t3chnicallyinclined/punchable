@@ -25,6 +25,7 @@ pub mod account;
 pub mod ask;
 pub mod bits;
 pub mod boards;
+pub mod chats;
 pub mod film;
 pub mod ideas;
 pub mod jobs;
@@ -33,6 +34,7 @@ pub mod merge;
 pub mod review;
 pub mod transcript;
 pub mod uploads;
+pub mod venues;
 pub mod worker;
 pub mod workingsets;
 

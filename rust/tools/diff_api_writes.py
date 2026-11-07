@@ -69,11 +69,12 @@ problems: list[str] = []
 n_equal = 0
 
 # ---------------------------------------------------------------- volatile parts of a write's answer
-VOLATILE_KEYS = {"ts", "created_at", "updated_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
+VOLATILE_KEYS = {"ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
           (re.compile(r"\b(?:sb|ws):[a-z0-9\-]+\b"), "list:X"), (re.compile(r"\btry:[0-9a-f]{8}\b"), "try:X"),
+          (re.compile(r"\bchat:[0-9a-f]{8}\b"), "chat:X"),
           (re.compile(r"\((?:A|B|P|R)\)"), "(T)"),
           (re.compile(r"\d{4}-\d{2}-\d{2}_punchable-[a-z]+_\d{6}_[a-z0-9\-]+\.[a-z0-9]+"), "upload:X")]
 
@@ -486,6 +487,43 @@ def raw_call(base: str, method: str, path: str, data: bytes, headers: dict):
         return 0, {}, b""
 
 
+def refused_unread(base: str, path: str, claimed: int, extra: str = "", detail: bool = False):
+    """The status (and with `detail` the parsed body) a server answers to a POST whose Content-Length claims `claimed`
+    bytes and whose body is one byte long (so it can only have been refused from the header)."""
+    import socket
+    u = urllib.request.urlparse(base)
+    with socket.create_connection((u.hostname, u.port), timeout=30) as s:
+        head = (f"POST {path} HTTP/1.1\r\nHost: {u.hostname}:{u.port}\r\nAuthorization: {app['Authorization']}\r\n"
+                f"{extra or 'Content-Type: application/json' + chr(13) + chr(10)}Content-Length: {claimed}\r\n\r\n{{")
+        s.sendall(head.encode())
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            buf += chunk
+        if b"\r\n" not in buf:
+            return (0, None) if detail else 0
+        status = int(buf.split(b" ", 2)[1])
+        if not detail:
+            return status
+        head_b, _, rest = buf.partition(b"\r\n\r\n")
+        want = 0
+        for ln in head_b.split(b"\r\n")[1:]:
+            k, _, v = ln.partition(b":")
+            if k.strip().lower() == b"content-length":
+                want = int(v.strip())
+        while len(rest) < want:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            rest += chunk
+        try:
+            return status, json.loads(rest)
+        except ValueError:
+            return status, rest
+
+
 def same_write(label: str, method: str, path: str, b_py, b_rs=None, by_shape: bool = False, headers: dict | None = None) -> None:
     """The same request to both; the answers equal after normalisation (status, body, the headers the app reads)."""
     global n_equal
@@ -665,8 +703,8 @@ def refusals() -> None:
         n_equal += not got
     # a body over MAX_BODY (256 KiB): both refuse it from `Content-Length` alone, before reading it (the Python's
     # `body_json`), so the client may lose the connection while it is still sending: the status is what is compared
-    big = json.dumps({"segments": [{"text": "x" * 300_000}]}).encode()
-    codes = [raw_call(base, "POST", "/api/sets/transcript", big, app)[0] for base in (py, rs)]
+    # (the headers and one byte of the body are sent and the answer read, so no reset can race the answer)
+    codes = [refused_unread(base, "/api/sets/transcript", 300_000) for base in (py, rs)]
     ok("transcript: a body over 256 KiB is refused unread by both", codes == [400, 400], str(codes))
 
 
@@ -1197,10 +1235,10 @@ def upload_phase(port: int, pw: str) -> None:
     both("upload: the transcriber's fetch refused", ["/api/worker/jobs/job:nope/file", "/api/worker/jobs/job:nope/file?backend=files"], headers=worker_tok)
     st, r = write(rs, "POST", "/api/ask", {"question": "A job that is not an upload?"})
     both("upload: a job that is no upload", [f"/api/worker/jobs/{q(r['job']['id'])}/file"], headers=worker_tok)
-    # a failed result keeps the recording (a queued transcriber kind may end only as a final failure)
+    # a final failure lets go of the recording (ADR 0014: a queued transcriber kind may end only as a final failure)
     keep = len(body(R.call(py, "GET", "/api/inbox", app))["items"])
     st, res = write(rs, "POST", f"/api/worker/jobs/{q(r1['job']['id'])}/result", {"ok": False, "error": "no transcriber"}, headers=worker_tok, want=(200,))
-    ok("upload: a failed result keeps the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep, json.dumps(res)[:200])
+    ok("upload: a failed result lets go of the recording", res["job"]["status"] == "failed" and len(body(R.call(py, "GET", "/api/inbox", app))["items"]) == keep - 1, json.dumps(res)[:200])
     stages = R.surreal_sql(port, pw, "RETURN count(SELECT id FROM upload_stage);")[-1]["result"]
     ok("upload: no staging row is left once every upload is committed, cut short or deleted", stages == 0, str(stages))
     # the transcriber's result: ok deletes the upload (through either server), the other keeps nothing behind
@@ -1242,6 +1280,9 @@ def film_phase() -> None:
     want_lines = {t: [f"You sit in traffic ({t}).", "  Nobody moves."] for t in units}
     # the same request to both servers: the answers equal (the job id normalised)
     same_write("same: a rant", "POST", "/api/jokes/joke:c/rant", {"unit": units["R"]}, {"unit": units["P"]})
+    # a claim hands out the oldest job by (created_at, id) and a stamp has one-second resolution: the jobs below are
+    # made a second later, so the two above are the oldest whatever their ids sort like
+    time.sleep(1.1)
     same_write("same: a rant with a punch", "POST", "/api/jokes/joke:c/rant", {"unit": units["R"], "punch": 1}, {"unit": units["P"], "punch": 1})
     same_write("same: a rant on the stage cut", "POST", "/api/jokes/joke:c/rant", {"unit": "unit:c1", "text": "ignored (P)"},
                {"unit": "unit:c1", "text": "ignored (R)"})
@@ -1330,6 +1371,270 @@ def film_phase() -> None:
         n_equal += not got
         ok(f"{label}: a refusal", a_[0] >= 400, f"the Python answered {a_[0]} {a_[2][:200]!r}")
     both("film: after the refusals", page + ["/api/jokes/joke:x05"])
+
+
+def chat_norm(v):
+    """A conversation view with its asked-at stamps dropped (a clock) and the minted chat ids made the same."""
+    if isinstance(v, dict):
+        return {k: chat_norm(x) for k, x in v.items() if k != "asked_at"}
+    if isinstance(v, list):
+        return [chat_norm(x) for x in v]
+    return v
+
+
+def same_chat(label: str, a, b) -> None:
+    """Two conversation views equal after normalisation."""
+    bad = [f"{label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}"
+           for p, u, v in R.diff(norm(chat_norm(a)), norm(chat_norm(b)))]
+    problems.extend(bad)
+    global n_equal
+    n_equal += not bad
+
+
+def chats_phase() -> None:
+    """Round 5, group A: the Ask conversations through both servers. The same question starts a conversation on each
+    (the same view, apart from the minted id), each reads the other's, the same canned model answer is gated by the
+    Python on one and by pk-api on the other (the same view, the same dropped count), a follow-up carries the earlier
+    answer's citations into the prompt the same way on both, a failed job reads the same plain words, nothing
+    retrieved is the refusal at once, a conversation about one bit pins its sources, a rename and a hide cross over,
+    and every refusal is the same to the letter."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    cpath = lambda c: f"/api/ask/chats/{q(c)}"  # noqa: E731
+    question = "What did I say about the purple monkey and the dishwasher?"
+    cid, first = {}, {}
+    for base, tag in ((rs, "R"), (py, "P")):
+        st, r = write(base, "POST", "/api/ask/chats", {"question": question}, want=(201,))
+        cid[tag], first[tag] = r["id"], r
+        ok(f"chats: a new conversation via {tag} is thinking with one turn", r["turns"][0]["status"] == "thinking" and r["id"].startswith("chat:"),
+           json.dumps(r)[:300])
+    same_chat("chats: the same question starts the same conversation", first["P"], first["R"])
+    both("chats: after the first questions", ["/api/ask/chats", cpath(cid["R"]), cpath(cid["P"])])
+    for tag, base in (("R", py), ("P", rs)):
+        right_after(f"chats: the conversation made via {tag}", base, cpath(cid[tag]), lambda b: b and b["turns"][0]["q"] == question)
+    # the follow-up while it thinks is the 409 on both
+    for label, path_p, path_r, b in [("chats: a follow-up while it thinks", cpath(cid["P"]), cpath(cid["R"]), {"question": "and another"})]:
+        a_, c_ = R.call(py, "POST", path_p, app, b), R.call(rs, "POST", path_r, app, b)
+        got = R.compare(label, a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"{label}: a refusal", a_[0] == 409, f"{a_[0]} {a_[2][:200]!r}")
+    # the worker takes both jobs (the oldest first, the one made via pk-api) and gets the same messages
+    claims = []
+    for base in (py, rs):
+        st, r = write(base, "POST", "/api/worker/claim", {"kinds": ["ask_chat"], "worker": "diff-chat", "hosted": True}, headers=worker_tok, want=(200,))
+        claims.append(r["job"])
+    ok("chats: both jobs carry the same messages (the same sources, numbered and cut the same)",
+       claims[0]["input"]["messages"] == claims[1]["input"]["messages"] and len(claims[0]["input"]["messages"]) == 2,
+       json.dumps([c["input"]["messages"] for c in claims])[:600])
+    answer = {"found": True, "answer": "You wrote the monkey bit [S1] and used it on stage [S2, S9].",
+              "citations": [{"source": "S1", "quote": "purple monkey dishwasher line here"},
+                            {"source": "S2", "quote": "words that are in no source"}, {"source": "S9", "quote": "nobody"}]}
+    res = {"status": "answered", "data": answer, "provider": "diff", "model": "canned"}
+    for job, other in ((claims[0], rs), (claims[1], py)):
+        st, r = write(other, "POST", f"/api/worker/jobs/{q(job['id'])}/result", {"ok": True, "result": res}, headers=worker_tok, want=(200,))
+    # the gate: the Python settles the one made via pk-api, pk-api settles the other
+    a_ = body(R.call(py, "GET", cpath(cid["R"]), app))
+    b_ = body(R.call(rs, "GET", cpath(cid["P"]), app))
+    ok("chats: the gated answer is done on both", a_["turns"][0]["status"] == b_["turns"][0]["status"] == "done", json.dumps([a_, b_])[:500])
+    same_chat("chats: the Python's gate and pk-api's gate make the same answer", a_, b_)
+    ok("chats: the gate kept the quote that is in the source and cut the rest",
+       a_["turns"][0]["dropped_n"] >= 1 and any(c.get("quote") for c in a_["turns"][0]["chips"]), json.dumps(a_["turns"][0])[:500])
+    both("chats: after the answers", ["/api/ask/chats", cpath(cid["R"]), cpath(cid["P"])])
+    # a follow-up with the earlier answer's citations carried: the same prompt on both
+    for tag, base in (("R", rs), ("P", py)):
+        st, r = write(base, "POST", cpath(cid[tag]), {"question": "which of those killed?"}, want=(200,))
+        ok(f"chats: the follow-up via {tag} is turn two", r["turns"][1]["id"] == "t2" and r["turns"][1]["status"] == "thinking", json.dumps(r)[:300])
+    follow = []
+    for base in (py, rs):
+        st, r = write(base, "POST", "/api/worker/claim", {"kinds": ["ask_chat"], "worker": "diff-chat", "hosted": True}, headers=worker_tok, want=(200,))
+        follow.append(r["job"])
+    ok("chats: the follow-ups carry the same history and the same sources",
+       follow[0]["input"]["messages"] == follow[1]["input"]["messages"] and len(follow[0]["input"]["messages"]) >= 4,
+       json.dumps([f["input"]["messages"] for f in follow])[:800])
+    # one fails at the worker (read as plain words), one is answered with nothing found
+    write(rs, "POST", f"/api/worker/jobs/{q(follow[0]['id'])}/result", {"ok": False, "error": "read timed out", "retry": False}, headers=worker_tok, want=(200,))
+    write(py, "POST", f"/api/worker/jobs/{q(follow[1]['id'])}/result", {"ok": False, "error": "read timed out", "retry": False}, headers=worker_tok, want=(200,))
+    a_ = body(R.call(rs, "GET", cpath(cid["R"]), app))
+    b_ = body(R.call(py, "GET", cpath(cid["P"]), app))
+    ok("chats: a failed job reads as plain words on both", a_["turns"][1]["status"] == b_["turns"][1]["status"] == "failed"
+       and a_["turns"][1]["error"] == b_["turns"][1]["error"] == "Your PC took too long to answer. Ask again.", json.dumps([a_["turns"][1], b_["turns"][1]])[:400])
+    both("chats: after the failures", ["/api/ask/chats", cpath(cid["R"]), cpath(cid["P"])])
+    # nothing retrieved: the refusal at once; a conversation about one bit; the same on both
+    views = {}
+    for base, tag in ((rs, "R"), (py, "P")):
+        st, r = write(base, "POST", "/api/ask/chats", {"question": "zzqx wvvk"}, want=(201,))
+        views[tag] = r
+        ok(f"chats: nothing retrieved is the refusal at once via {tag}", r["turns"][0]["status"] == "done" and r["turns"][0]["found"] is False
+           and r["turns"][0]["answer"] == "I couldn't find that in your notebook.", json.dumps(r)[:300])
+    same_chat("chats: the refusal is the same view", views["P"], views["R"])
+    scoped = {}
+    for base, tag in ((rs, "R"), (py, "P")):
+        st, r = write(base, "POST", "/api/ask/chats", {"question": "what is this one about?", "joke": "joke:b"}, want=(201,))
+        scoped[tag] = r
+    same_chat("chats: a conversation about one bit is the same view", scoped["P"], scoped["R"])
+    sj = [write(b_, "POST", "/api/worker/claim", {"kinds": ["ask_chat"], "worker": "diff-chat", "hosted": True}, headers=worker_tok, want=(200,))[1]["job"]
+          for b_ in (py, rs)]
+    ok("chats: the pinned prompts are the same and name the bit",
+       sj[0]["input"]["messages"] == sj[1]["input"]["messages"] and "THIS CONVERSATION IS ABOUT HIS BIT" in sj[0]["input"]["messages"][-1]["content"],
+       json.dumps([s["input"]["messages"] for s in sj])[:600])
+    for j in sj:
+        write(rs, "POST", f"/api/worker/jobs/{q(j['id'])}/result", {"ok": False, "error": "nope", "retry": False}, headers=worker_tok, want=(200,))
+    # a rename, a hide and a bring-back, each side's conversation changed through the other server
+    for base, tag, title in ((py, "R", "Renamed via the Python"), (rs, "P", "Renamed via pk-api")):
+        st, r = write(base, "PATCH", cpath(cid[tag]), {"title": f"  {title}  "})
+        ok(f"chats: a rename of {tag}'s conversation through the other server", r["title"] == title, json.dumps(r)[:300])
+    both("chats: after the renames", ["/api/ask/chats", cpath(cid["R"]), cpath(cid["P"])])
+    for base in (py, rs):
+        for tag in ("R", "P"):
+            write(base, "PATCH", cpath(cid[tag]), {"deleted": True})
+            both("chats: hidden", ["/api/ask/chats", cpath(cid[tag])])
+            write(base, "PATCH", cpath(cid[tag]), {"deleted": False})
+            both("chats: brought back", ["/api/ask/chats", cpath(cid[tag])])
+    # every refusal to the letter
+    ids = cid["R"]
+    for label, m, p_, b, h in [
+            ("chats: no question", "POST", "/api/ask/chats", {}, app),
+            ("chats: a blank question", "POST", "/api/ask/chats", {"question": "  "}, app),
+            ("chats: a question too long", "POST", "/api/ask/chats", {"question": "x" * 1001}, app),
+            ("chats: a question that is a number", "POST", "/api/ask/chats", {"question": 5}, app),
+            ("chats: the joke is a number", "POST", "/api/ask/chats", {"question": "x", "joke": 5}, app),
+            ("chats: the joke is not an id", "POST", "/api/ask/chats", {"question": "x", "joke": "bit a"}, app),
+            ("chats: no such joke", "POST", "/api/ask/chats", {"question": "x", "joke": "joke:nope"}, app),
+            ("chats: court material", "POST", "/api/ask/chats", {"question": "The petitioner and the respondent walked in."}, app),
+            ("chats: a follow-up with no question", "POST", cpath(ids), {}, app),
+            ("chats: a follow-up that is court material", "POST", cpath(ids), {"question": "The petitioner and the respondent walked in."}, app),
+            ("chats: a bad id", "GET", "/api/ask/chats/nope", None, app),
+            ("chats: a bad id on a post", "POST", "/api/ask/chats/nope", {}, app),
+            ("chats: an id with nothing behind it", "GET", "/api/ask/chats/chat:00000000", None, app),
+            ("chats: a post to an id with nothing behind it", "POST", "/api/ask/chats/chat:00000000", {"question": "x"}, app),
+            ("chats: a patch to an id with nothing behind it", "PATCH", "/api/ask/chats/chat:00000000", {"title": "x"}, app),
+            ("chats: a patch with nothing to change", "PATCH", cpath(ids), {}, app),
+            ("chats: a patch with a blank title", "PATCH", cpath(ids), {"title": "  "}, app),
+            ("chats: a patch with a long title", "PATCH", cpath(ids), {"title": "t" * 121}, app),
+            ("chats: a patch on the list", "PATCH", "/api/ask/chats", {"title": "x"}, app),
+            ("chats: a put on the list", "PUT", "/api/ask/chats", {"title": "x"}, app),
+            ("chats: a put on a conversation", "PUT", cpath(ids), {"title": "x"}, app),
+            ("chats: a delete on a conversation", "DELETE", cpath(ids), None, app),
+            ("chats: a trailing slash", "GET", "/api/ask/chats/", None, app),
+            ("chats: backend files", "GET", "/api/ask/chats?backend=files", None, app),
+            ("chats: worker token", "GET", "/api/ask/chats", None, worker_tok),
+            ("chats: no token", "GET", "/api/ask/chats", None, {})]:
+        a_, c_ = R.call(py, m, p_, h, b), R.call(rs, m, p_, h, b)
+        got = R.compare(label, a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"{label}: a refusal", a_[0] >= 400, f"the Python answered {a_[0]} {a_[2][:200]!r}")
+    # a body that is not an object, and one that is not JSON, are the same 400s
+    for label, data in [("chats: a body that is not an object", b"[1]"), ("chats: a body that is not JSON", b"{x}")]:
+        got = R.compare(label, raw_call(py, "POST", "/api/ask/chats", data, app), raw_call(rs, "POST", "/api/ask/chats", data, app))
+        problems.extend(got)
+        n_equal += not got
+
+
+def upload_end_phase() -> None:
+    """ADR 0014's lead defaults on both servers: 413 over 64 MiB with the Python's error, a recording's bytes gone with
+    a job he dropped and with a job that failed for good (through the other server than the one that took the upload),
+    kept when a failed result sends the job back to the queue."""
+    global n_equal
+    q = lambda s: quote(s, safe="")  # noqa: E731
+    hdr = {"Content-Type": "audio/mp4", "X-Kind": "set", "X-Filename": "end.m4a"}
+    extra = "Content-Type: audio/mp4\r\nX-Kind: set\r\n"
+    for label, claimed in (("one byte over 64 MiB", 64 * 1024 * 1024 + 1), ("a gigabyte", 1 << 30)):
+        a_, c_ = (refused_unread(base, "/api/upload", claimed, extra, detail=True) for base in (py, rs))
+        ok(f"upload cap: {label} is the same 413 on both", a_ == c_ == (413, {"error": "upload over 64 MiB"}), f"{a_} / {c_}")
+    inbox = lambda: body(R.call(py, "GET", "/api/inbox", app))["items"]  # noqa: E731
+    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
+        st, h, b = post_bytes(base, "/api/upload", (f"drop {who} ").encode() * 80, {**hdr, "X-Title": "Drop " + who})
+        r = json.loads(b)
+        jid, n0 = r["job"]["id"], len(inbox())
+        st, d = write(other, "POST", f"/api/jobs/{q(jid)}/drop", {"reason": "end test"})
+        ok(f"upload end: his drop through the other server ends {who}'s job", d["job"]["status"] == "failed", json.dumps(d)[:200])
+        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok) for b_ in (py, rs)]
+        ok(f"upload end: the dropped job's recording is gone on both servers",
+           all(g[0] == 404 for g in gone) and len(inbox()) == n0 - 1, str([(g[0], g[2][:80]) for g in gone]))
+    for base, other, who in ((py, rs, "the Python"), (rs, py, "pk-api")):
+        post_bytes(base, "/api/upload", (f"fail {who} ").encode() * 90, {**hdr, "X-Title": "Fail " + who})
+        st, c = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+        jid = c["job"]["id"]
+        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": True}, headers=worker_tok, want=(200,))
+        kept = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
+        ok(f"upload end: a failed result sent back to the queue keeps {who}'s recording", res["job"]["status"] == "queued" and kept == [200, 200], f"{res['job']['status']} {kept}")
+        st, c2 = write(base, "POST", "/api/worker/claim", {"kinds": ["process_set"], "worker": "diff-end", "hosted": False}, headers=worker_tok, want=(200,))
+        ok(f"upload end: the same job is handed out again", c2["job"]["id"] == jid, f"{c2['job']['id']} vs {jid}")
+        st, res = write(other, "POST", f"/api/worker/jobs/{q(jid)}/result", {"ok": False, "error": "no speech", "retry": False}, headers=worker_tok, want=(200,))
+        gone = [R.call(b_, "GET", f"/api/worker/jobs/{q(jid)}/file", worker_tok)[0] for b_ in (py, rs)]
+        ok(f"upload end: a job that failed for good lets go of {who}'s recording", res["job"]["status"] == "failed" and gone == [404, 404], f"{res['job']['status']} {gone}")
+    both("upload end: after", ["/api/inbox", "/api/today", "/api/notes"])
+
+
+def venues_same(label: str, path: str) -> None:
+    """The same venue read on both servers; `generated_at` is each server's own clock and is the only thing left out."""
+    global n_equal
+    pair = []
+    for base in (py, rs):
+        r_ = R.call(base, "GET", path, app)
+        j_ = json.loads(r_[2] or b"null")
+        if isinstance(j_, dict):
+            j_.pop("generated_at", None)
+        pair.append((r_[0], r_[1], json.dumps(j_).encode()))
+    got = R.compare(f"{label}: {path}", pair[0], pair[1])
+    problems.extend(got)
+    n_equal += not got
+
+
+def venues_phase() -> None:
+    """Round 5, group B: a room's pin moved through one server and renamed through the other, each read on both; the
+    same reset to both; every refusal to the letter. The geocoder is never asked a question (no PK_GEOCODE on either)."""
+    global n_equal
+    reads = ["/api/venues", "/api/venues.geojson", "/api/venues?include_hidden=1"]
+    for p in reads:
+        venues_same("venues: before any edit", p)
+    rooms = body(R.call(py, "GET", "/api/venues", app))["venues"]
+    ok("venues: the scratch notebook has rooms to edit", len(rooms) >= 2, str(len(rooms)))
+    vid, vid2 = rooms[0]["venue_id"], rooms[1]["venue_id"]
+    path, path2 = f"/api/venues/{quote(vid, safe='')}", f"/api/venues/{quote(vid2, safe='')}"
+    st, r = write(rs, "PATCH", path, {"lat": 12.5, "lon": -70.25})
+    ok("venues: a pin moved through pk-api is his on the feature", r["feature"]["properties"]["status"] == "his"
+       and r["feature"]["geometry"]["coordinates"] == [-70.25, 12.5] and r["venue"]["geo"]["status"] == "his", json.dumps(r)[:400])
+    for p in reads:
+        venues_same("venues: after a pin via pk-api", p)
+    st, r = write(py, "PATCH", path, {"name": "  Moved Room  "})
+    ok("venues: a rename through the Python names the feature and the room", r["feature"]["properties"]["name"] == "Moved Room"
+       and r["venue"]["name"] == "Moved Room", json.dumps(r)[:400])
+    for p in reads:
+        venues_same("venues: after a rename via the Python", p)
+    st, r = write(rs, "PATCH", path2, {"lat": 1.0, "lon": 2.0, "name": "Both at once"})
+    for p in reads:
+        venues_same("venues: after a pin and a rename in one body via pk-api", p)
+    same_write("same: a reset", "PATCH", path, {"reset": True})
+    same_write("same: a reset again", "PATCH", path, {"reset": True})
+    same_write("same: a pin", "PATCH", path2, {"lat": -33.5, "lon": 151.25})
+    same_write("same: a reset wins over a pin", "PATCH", path, {"reset": True, "lat": 1000})
+    for p in reads:
+        venues_same("venues: after the resets", p)
+    big = "n" * 121
+    for label, p_, b, h in [
+            ("venues: no such room", "/api/venues/venue:nope", {"name": "x"}, app),
+            ("venues: nothing to change", path, {}, app),
+            ("venues: lat without lon", path, {"lat": 10}, app),
+            ("venues: lat and lon as text", path, {"lat": "1", "lon": "2"}, app),
+            ("venues: lat and lon as bools", path, {"lat": True, "lon": False}, app),
+            ("venues: lat out of range", path, {"lat": 91, "lon": 0}, app),
+            ("venues: lon out of range", path, {"lat": 0, "lon": -181}, app),
+            ("venues: a blank name", path, {"name": "   "}, app),
+            ("venues: a name that is not text", path, {"name": 5}, app),
+            ("venues: a long name", path, {"name": big}, app),
+            ("venues: worker token", path, {"name": "x"}, worker_tok),
+            ("venues: no token", path, {"name": "x"}, {}),
+            ("venues: a put", path, {"name": "x"}, app)]:
+        m = "PUT" if label.endswith("a put") else "PATCH"
+        a_, c_ = R.call(py, m, p_, h, b), R.call(rs, m, p_, h, b)
+        got = R.compare(label, a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"{label}: a refusal", a_[0] >= 400, f"the Python answered {a_[0]} {a_[2][:200]!r}")
+    venues_same("venues: after the refusals", "/api/venues")
 
 
 # ---------------------------------------------------------------- the run
@@ -1479,7 +1784,10 @@ def main() -> int:
         worker_phase()
         enqueue_phase()
         upload_phase(port, pw)
+        upload_end_phase()
         film_phase()
+        chats_phase()
+        venues_phase()
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
@@ -1505,20 +1813,29 @@ def main() -> int:
                                       ("POST", "/api/ask", 202), ("POST", "/api/riff", 202), ("POST", "/api/facts", 202),
                                       ("POST", "/api/import/youtube", 202), ("POST", "/api/jobs/{id}/drop", 200), ("POST", "/api/jobs/{id}/drop", 409),
                                       # round 4, group 6a
-                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("GET", "/api/inbox", 200),
+                                      ("POST", "/api/upload", 200), ("POST", "/api/upload", 400), ("POST", "/api/upload", 413), ("GET", "/api/inbox", 200),
                                       ("GET", "/api/worker/jobs/{id}/file", 200), ("GET", "/api/worker/jobs/{id}/file", 404),
                                       # Film it (build 24)
                                       ("POST", "/api/jokes/{id}/rant", 202), ("POST", "/api/jokes/{id}/hook", 202),
                                       ("POST", "/api/jokes/{id}/rant", 400), ("POST", "/api/jokes/{id}/rant", 404),
-                                      ("POST", "/api/jokes/{id}/rant", 422), ("POST", "/api/jokes/{id}/hook", 400)):
+                                      ("POST", "/api/jokes/{id}/rant", 422), ("POST", "/api/jokes/{id}/hook", 400),
+                                      # round 5, group A: the Ask conversations
+                                      ("POST", "/api/ask/chats", 201), ("POST", "/api/ask/chats", 400), ("POST", "/api/ask/chats", 404),
+                                      ("POST", "/api/ask/chats", 422), ("POST", "/api/ask/chats/{id}", 200), ("POST", "/api/ask/chats/{id}", 409),
+                                      ("GET", "/api/ask/chats", 200), ("GET", "/api/ask/chats/{id}", 200), ("GET", "/api/ask/chats/{id}", 404),
+                                      ("PATCH", "/api/ask/chats/{id}", 200), ("PATCH", "/api/ask/chats/{id}", 400),
+                                      # round 5, group B: the rooms
+                                      ("GET", "/api/venues", 200), ("GET", "/api/{id}", 200),  # `venues.geojson` is a label with an {id}: the dot is no word
+                                      ("PATCH", "/api/venues/{id}", 200), ("PATCH", "/api/venues/{id}", 400),
+                                      ("PATCH", "/api/venues/{id}", 404)):
             ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
         ok("metrics: /api/live is not a counted request (its sockets are pk_live_clients)",
            'route="/api/live"' not in mtext and "pk_live_clients 0" in mtext, mtext[:0])
         n0 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext.splitlines() if ln.startswith("pk_http_requests_total{"))
-        R.call(rs, "POST", "/api/ask/chats", app, {"question": "x"})
+        R.call(rs, "POST", "/api/no-such-route", app, {"question": "x"})
         mtext2 = R.call(rs, "GET", "/metrics")[2].decode()
         n1 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext2.splitlines() if ln.startswith("pk_http_requests_total{"))
-        ok("metrics: a forwarded write (POST /api/ask/chats) is counted by nobody here", n1 == n0)
+        ok("metrics: a forwarded write (POST /api/no-such-route) is counted by nobody here", n1 == n0)
         plog = (tmp / "python-api-model.log").read_text(encoding="utf-8", errors="replace")
         ok("the Python's creative stores never diverged from the database", "differ from event" not in plog, plog[-600:])
         report["rss_mib"] = {"python": R.rss_mib(pp.pid), "rust": R.rss_mib(rp.pid)}

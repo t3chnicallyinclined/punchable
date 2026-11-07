@@ -49,10 +49,22 @@ pub struct ApiConfig {
     /// `PK_LIVE_IDLE_S` (default 40): a socket that has sent no frame (its pong included) this long is half open and
     /// is closed. A test sets both to a few hundred milliseconds.
     pub live_idle: std::time::Duration,
-    /// `PK_UPLOAD_DB` = `1` (default off): uploads are rows in the database (docs/adr/0014, Proposed). Off, `POST
+    /// `PK_UPLOAD_DB` = `1` (default off): uploads are rows in the database (docs/adr/0014, accepted on the lead's defaults). Off, `POST
     /// /api/upload` answers 503 here and the inbox and the transcriber's fetch are the Python's (the pod's inbox
     /// folder), so a moved path can never silently diverge from it.
     pub upload_db: bool,
+    /// `PK_UPLOAD_KEEP_S` (default 7 days): how long a recording waits for a transcriber before the expiry pass
+    /// deletes it (docs/adr/0014).
+    pub upload_keep: std::time::Duration,
+    /// `PK_SCHEMA_OWNER` (default on; `0` = off): this process applies `db/schema_extra.surql` when the database holds
+    /// another sha of it, at connect and every supervise round (T10 round 5, group F: the Python no longer has to).
+    /// Off, it only reports the difference (uploads answer 503 until the database has this build's tables).
+    pub schema_owner: bool,
+    /// `PK_UPLOAD_SWEEP_S` (default an hour): how often the expiry pass runs; `0` = never.
+    pub upload_sweep_every: Option<std::time::Duration>,
+    /// `PK_COMIC_NAME` as set: how the AI prompts name him (the Ask conversations' system line). Unset, empty and
+    /// the placeholder all read "a stand-up comic's".
+    pub comic_name: Option<String>,
 }
 
 /// Keycloak.
@@ -142,6 +154,17 @@ impl ApiConfig {
                 env.f64("PK_LIVE_IDLE_S")?.filter(|s| *s > 0.0).unwrap_or(40.0),
             ),
             upload_db: env.opt("PK_UPLOAD_DB") == Some("1"),
+            schema_owner: env.opt("PK_SCHEMA_OWNER") != Some("0"),
+            upload_keep: match env.f64("PK_UPLOAD_KEEP_S")? {
+                Some(s) if s > 0.0 => std::time::Duration::from_secs_f64(s),
+                _ => crate::expiry::DEFAULT_KEEP,
+            },
+            upload_sweep_every: match env.f64("PK_UPLOAD_SWEEP_S")? {
+                None => Some(crate::expiry::DEFAULT_EVERY),
+                Some(s) if s > 0.0 => Some(std::time::Duration::from_secs_f64(s)),
+                Some(_) => None,
+            },
+            comic_name: env.opt("PK_COMIC_NAME").map(str::to_string),
             sweep_every: match env.f64("PK_VEC_SWEEP_S")? {
                 None => Some(crate::sweep::DEFAULT_EVERY),
                 Some(s) if s > 0.0 => Some(std::time::Duration::from_secs_f64(s)),

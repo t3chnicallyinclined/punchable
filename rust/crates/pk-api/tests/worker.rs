@@ -530,13 +530,26 @@ async fn the_worker_routes_hand_out_and_end_jobs_and_keep_the_claim_in_the_datab
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn eight_claimers_racing_for_three_jobs_get_exactly_three() {
-    let Some((_srv, env, port)) = scratch().await else {
+    claim_race("memory", "t_worker_race").await;
+}
+
+/// The same race on `SurrealKV` with versioning, the engine production runs on: its write-conflict behaviour is the
+/// one that matters for two processes claiming.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn eight_claimers_racing_for_three_jobs_get_exactly_three_on_surrealkv() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("db").to_string_lossy().replace('\\', "/");
+    claim_race(&format!("surrealkv://{path}?versioned=true"), "t_worker_race_kv").await;
+}
+
+async fn claim_race(engine: &str, db: &str) {
+    let Some((_srv, env, port)) = scratch_on(engine).await else {
         return;
     };
-    let (_writer, st) = setup(&env, port, "t_worker_race").await;
+    let (_writer, st) = setup(&env, port, db).await;
     // two processes (two states, two connections): one `creative_lock` serialises the claimers of one process, so
     // only the database's unique (store, seq) index arbitrates between these two
-    let states = [st.clone(), another(&env, port, "t_worker_race").await];
+    let states = [st.clone(), another(&env, port, db).await];
     let mut ids = Vec::new();
     for i in 0..3 {
         let (s, r) = call(
@@ -1300,4 +1313,223 @@ async fn the_sweeper_embeds_every_pending_row_once_under_one_lease() {
 
 fn cfg_of(env: &Env, port: u16, db: &str) -> Config {
     Config::scratch(env, port, "punchable_test", db).expect("config")
+}
+
+/// `POST /api/upload` with `n` bytes of body and `claimed` as its Content-Length.
+async fn upload_with(st: &AppState, n: usize, claimed: usize) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/upload")
+        .header(header::CONTENT_TYPE, "audio/mp4")
+        .header(header::CONTENT_LENGTH, claimed)
+        .header("X-Kind", "set")
+        .header("X-Filename", "late-show.m4a")
+        .body(Body::from(vec![7_u8; n]))
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    let (parts, body) = r.into_parts();
+    let b = axum::body::to_bytes(body, 1 << 20).await.expect("body");
+    (parts.status, serde_json::from_slice(&b).unwrap_or(Value::Null))
+}
+
+/// ADR 0014's lead defaults: an upload over 64 MiB is a 413 (an empty one a 400); the bytes go when the job is
+/// dropped and when it fails for good (not when it goes back to the queue); and after a week the expiry pass deletes
+/// the recording nobody claimed, failing its job with the reason, leaves one that was claimed and takes a stray.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[allow(clippy::many_single_char_names)] // a status and a body per call, as every test here
+async fn uploads_let_go_when_their_job_ends_and_after_a_week() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_upload_end").await;
+    let (s, r) = upload_with(&st, 10, 64 * 1024 * 1024 + 1).await;
+    assert_eq!(
+        (s, r["error"].as_str()),
+        (StatusCode::PAYLOAD_TOO_LARGE, Some("upload over 64 MiB"))
+    );
+    let (s, r) = upload_with(&st, 0, 0).await;
+    assert_eq!(
+        (s, r["error"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("upload missing"))
+    );
+    let (s, r) = upload_with(&st, 1000, 1000).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(
+        writer.upload_count().await.unwrap(),
+        1,
+        "an upload at the cap's side of the line is kept"
+    );
+
+    // his drop of the queued job takes its recording with it
+    let (file_a, job_a) = (
+        r["file"].as_str().unwrap().to_string(),
+        r["job"]["id"].as_str().unwrap().to_string(),
+    );
+    let (s, d) = call(&st, "POST", &format!("/api/jobs/{job_a}/drop"), Some(json!({}))).await;
+    assert_eq!(s, StatusCode::OK, "{d}");
+    assert!(
+        writer.upload_get(&file_a).await.unwrap().is_none(),
+        "the dropped job's recording is gone"
+    );
+
+    // a job that fails for good takes it; one sent back to the queue keeps it
+    let claim = json!({"kinds": ["process_set"], "worker": "w1"});
+    let (_, r) = upload_with(&st, 2000, 2000).await;
+    let file_b = r["file"].as_str().unwrap().to_string();
+    let (s, c) = call(&st, "POST", "/api/worker/claim", Some(claim.clone())).await;
+    assert_eq!(s, StatusCode::OK, "{c}");
+    let job_b = c["job"]["id"].as_str().unwrap().to_string();
+    let (s, _) = call(
+        &st,
+        "POST",
+        &format!("/api/worker/jobs/{job_b}/result"),
+        Some(json!({"ok": false, "error": "no speech", "retry": true})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(
+        writer.upload_get(&file_b).await.unwrap().is_some(),
+        "a retry keeps the recording"
+    );
+    let (_, c) = call(&st, "POST", "/api/worker/claim", Some(claim.clone())).await;
+    assert_eq!(c["job"]["id"], job_b.as_str(), "the retried job is handed out again");
+    let (s, r) = call(
+        &st,
+        "POST",
+        &format!("/api/worker/jobs/{job_b}/result"),
+        Some(json!({"ok": false, "error": "no speech", "retry": false})),
+    )
+    .await;
+    assert_eq!(
+        (s, r["job"]["status"].as_str()),
+        (StatusCode::OK, Some("failed")),
+        "{r}"
+    );
+    assert!(
+        writer.upload_get(&file_b).await.unwrap().is_none(),
+        "a job that failed for good lets go"
+    );
+
+    // after a week: one waiting, one claimed, one with no job at all, and one too young
+    let (_, r) = upload_with(&st, 3000, 3000).await;
+    let (_, q) = upload_with(&st, 3001, 3001).await;
+    let names = [
+        r["file"].as_str().unwrap().to_string(),
+        q["file"].as_str().unwrap().to_string(),
+    ];
+    let (_, c) = call(&st, "POST", "/api/worker/claim", Some(claim)).await;
+    let claimed_job = c["job"]["id"].as_str().unwrap().to_string();
+    let (claimed_file, waiting_file) = if c["job"]["input"]["file"] == names[0].as_str() {
+        (names[0].clone(), names[1].clone())
+    } else {
+        (names[1].clone(), names[0].clone())
+    };
+    writer.upload_put_part("tok-stray", 0, vec![1; 5]).await.unwrap();
+    writer
+        .upload_commit("stray.m4a", "tok-stray", &json!({"kind": "set"}), 5, 1)
+        .await
+        .unwrap();
+    assert_eq!(
+        pk_api::expiry::expire_once(&st, pk_api::worker::unix_now())
+            .await
+            .unwrap(),
+        0,
+        "nothing is old yet"
+    );
+    let week_on = pk_api::worker::unix_now() + 8.0 * 86_400.0;
+    assert_eq!(
+        pk_api::expiry::expire_once(&st, week_on).await.unwrap(),
+        2,
+        "the waiting one and the stray"
+    );
+    assert!(writer.upload_get(&waiting_file).await.unwrap().is_none());
+    assert!(writer.upload_get("stray.m4a").await.unwrap().is_none());
+    assert!(
+        writer.upload_get(&claimed_file).await.unwrap().is_some(),
+        "a claimed recording is left alone"
+    );
+    let jobs = pk_api::writes::Creative::new(st.clone()).items("jobs").await.unwrap();
+    // (an earlier job of this test may carry the same file name, made in the same second: look at all of them)
+    assert!(
+        jobs.values().any(|j| j["input"]["file"] == waiting_file.as_str()
+            && j["status"] == "failed"
+            && j["error"].as_str().is_some_and(|e| e.contains("waited a week"))),
+        "the waiting job ended with the reason"
+    );
+    assert_eq!(jobs[&claimed_job]["status"], "claimed");
+    assert_eq!(
+        pk_api::expiry::expire_once(&st, week_on).await.unwrap(),
+        0,
+        "a second pass finds nothing new"
+    );
+}
+
+async fn set_extra_sha(writer: &Store, sha: &str) {
+    writer
+        .write(
+            "UPDATE meta:state SET extra_sha = $x RETURN id;",
+            vars([("x", to_db(&json!(sha)))]),
+            None,
+        )
+        .await
+        .expect("sha");
+}
+
+/// While the database holds another build's `extra_sha`, an upload answers 503 (never a row the schema does not
+/// describe); once it is this build's again the next check lets uploads through.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_upload_waits_while_the_stored_schema_is_another_builds() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup_full(&env, port, "t_upload_schema", false, &[("PK_SCHEMA_OWNER", "0")]).await;
+    st.check_schema().await;
+    assert!(st.schema_extra_current(), "setup applied this build's schema");
+    let (s, _) = upload_with(&st, 500, 500).await;
+    assert_eq!(s, StatusCode::OK);
+    set_extra_sha(&writer, "another-build").await;
+    st.check_schema().await;
+    assert!(!st.schema_extra_current());
+    let (s, r) = upload_with(&st, 501, 501).await;
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{r}");
+    assert!(
+        r["error"].as_str().unwrap().contains("not the one this build expects"),
+        "{r}"
+    );
+    assert_eq!(writer.upload_count().await.unwrap(), 1, "nothing was written");
+    set_extra_sha(&writer, &pk_store::schema_shas().1).await;
+    st.check_schema().await;
+    let (s, r) = upload_with(&st, 502, 502).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+}
+
+/// T10 round 5, group F: the schema is pk-api's to keep. A database that holds another sha of `schema_extra.surql`
+/// (and has lost a table of it) gets the file applied again by the next check, the sha stored, and uploads work.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_schema_owner_applies_the_tables_again_when_the_sha_differs() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port, "t_schema_owner").await;
+    writer
+        .write(
+            "REMOVE TABLE upload_stage; UPDATE meta:state SET extra_sha = 'an-older-build' RETURN id;",
+            vars([]),
+            None,
+        )
+        .await
+        .expect("the older database");
+    let (s, _) = upload_with(&st, 700, 700).await;
+    assert_eq!(
+        s,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "the table is gone: the write has nowhere to go"
+    );
+    st.check_schema().await;
+    assert!(
+        st.schema_extra_current(),
+        "the owner applied the file and stored its sha"
+    );
+    let (s, r) = upload_with(&st, 701, 701).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
 }

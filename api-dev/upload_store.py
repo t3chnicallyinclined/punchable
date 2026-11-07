@@ -14,6 +14,7 @@ import re
 import time
 
 PART = 1024 * 1024
+MAX_BYTES = 64 * 1024 * 1024  # docs/adr/0014: the largest upload when the database is its home (over it: 413)
 
 
 def enabled() -> bool:

@@ -11,7 +11,7 @@ the pinned python slim image with no pip (infra/k8s/60-backup.yaml).
   backup.py export <out.gz>         export + checks to a local file, no upload (needs no R2_* settings)
 
 Settings (environment only; nothing secret is ever on argv or printed):
-  SURREAL_URL       http://surrealdb:8000          SurrealDB HTTP endpoint (`GET /export`)
+  SURREAL_URL       http://surrealdb:8000          SurrealDB HTTP endpoint (`INFO FOR DB`, then `POST /export`)
   SURREAL_NS / SURREAL_DB     punchable / main
   SURREAL_USER / SURREAL_PASS                      the login used for the export (see infra/README.md "Backups")
   SURREAL_AUTH_LEVEL database (default: a user defined ON DATABASE SURREAL_DB; EDITOR or VIEWER both export the
@@ -262,8 +262,40 @@ def _s3_error(body: bytes) -> str:
 # --------------------------------------------------------------------------------------------------------------------
 # the dump: export (streamed) -> gzip -> checks
 # --------------------------------------------------------------------------------------------------------------------
+# Recordings the phone uploaded live in the database while they wait for a transcriber (docs/adr/0014): bulky (up to 64 MiB
+# each), transient (deleted on a drop, a failed job, a done one and after 7 days) and sent again by the phone, so a backup
+# carries their table DEFINITIONS (a restore needs the indexes) and none of their rows.
+EXCLUDED_TABLES = ("upload", "upload_part", "upload_stage")
+# SurrealDB's POST /export options that leave everything but the named tables' definitions out
+DEFINITIONS_ONLY = {"records": False, "users": False, "accesses": False, "params": False, "functions": False,
+                    "analyzers": False}
+
+
+def _surreal_request(conn, method: str, path: str, headers: dict, body: bytes | None = None):
+    conn.request(method, path, body=body, headers=headers)
+    r = conn.getresponse()
+    if r.status != 200:
+        raise BackupError(f"{path.rsplit('/', 1)[-1]}: HTTP {r.status} {r.read(300).decode('utf-8', 'replace').strip()}")
+    return r
+
+
+def database_tables(conn, base: str, headers: dict) -> list[str]:
+    """Every table of the database (`INFO FOR DB`), sorted."""
+    import json
+    r = _surreal_request(conn, "POST", base + "/sql", {**headers, "Accept": "application/json", "Content-Type": "text/plain"},
+                         b"INFO FOR DB;")
+    try:
+        rows = json.loads(r.read())
+        return sorted(rows[0]["result"]["tables"])
+    except (ValueError, KeyError, IndexError, TypeError):
+        raise BackupError("INFO FOR DB did not answer a table list") from None
+
+
 def export_to_gzip(dest: str) -> int:
-    """Stream SurrealDB's `GET /export` for SURREAL_NS/SURREAL_DB into a gzip file. Returns uncompressed bytes."""
+    """Stream SurrealDB's export for SURREAL_NS/SURREAL_DB into a gzip file: every table's definition and rows except
+    [EXCLUDED_TABLES]' rows (`POST /export` with the other tables named), then those tables' definitions alone. Returns
+    uncompressed bytes."""
+    import json
     u = urllib.parse.urlsplit(env("SURREAL_URL", "http://surrealdb:8000"))
     if u.scheme not in ("http", "https") or not u.hostname:
         raise BackupError("SURREAL_URL must be http(s)://host:port")
@@ -279,16 +311,29 @@ def export_to_gzip(dest: str) -> int:
         raise BackupError("SURREAL_AUTH_LEVEL must be database or root")
     C = http.client.HTTPSConnection if u.scheme == "https" else http.client.HTTPConnection
     conn = C(u.hostname, u.port or (443 if u.scheme == "https" else 80), timeout=600)
+    base = u.path.rstrip("/") or ""
     n = 0
     try:
-        conn.request("GET", (u.path.rstrip("/") or "") + "/export", headers=headers)
-        r = conn.getresponse()
-        if r.status != 200:
-            raise BackupError(f"export: HTTP {r.status} {r.read(300).decode('utf-8', 'replace').strip()}")
+        tables = database_tables(conn, base, headers)
+        kept = [t for t in tables if t not in EXCLUDED_TABLES]
+        left_out = [t for t in tables if t in EXCLUDED_TABLES]
+        if not kept:
+            raise BackupError("export: the database has no table to back up")
+        parts = [{"tables": kept}] + ([{"tables": left_out, **DEFINITIONS_ONLY}] if left_out else [])
         with open(dest, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=6, mtime=0) as gz:
-            while chunk := r.read(CHUNK):   # a dropped chunked stream raises IncompleteRead here
-                gz.write(chunk)
-                n += len(chunk)
+            for k, cfg in enumerate(parts):
+                r = _surreal_request(conn, "POST", base + "/export", {**headers, "Content-Type": "application/json"},
+                                     json.dumps(cfg).encode())
+                if k:
+                    # the definitions-only part is a few KB: read it whole and drop its `OPTION IMPORT;`, which an import
+                    # refuses to see twice ("Cannot change OPTION IMPORT during an import stream", seen on 3.3.4)
+                    chunk = r.read().replace(b"OPTION IMPORT;\n", b"", 1)
+                    gz.write(chunk)
+                    n += len(chunk)
+                    continue
+                while chunk := r.read(CHUNK):   # a dropped chunked stream raises IncompleteRead here
+                    gz.write(chunk)
+                    n += len(chunk)
     except (OSError, http.client.HTTPException) as e:
         raise BackupError(f"export: {type(e).__name__}: {e}") from None
     finally:
