@@ -339,6 +339,66 @@ async fn the_writes_land_and_are_read_back_at_once() {
     );
 }
 
+/// Eight writers undo the same line at once, thirty lines over, without the process lock (as processes do). A line
+/// checked against N decisions must not land at N+1 beside a writer's inverse it never saw: each line gets exactly
+/// one inverse and every other writer the Python's 409 "already undone". Red arm: with the undo's `append_once` given `None`
+/// for `after` (the row count, the old behaviour) this fails within a few lines.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn racing_undos_of_one_line_land_exactly_one_inverse() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let joke = st
+        .data()
+        .await
+        .unwrap()
+        .view(false)
+        .await
+        .unwrap()
+        .jokes
+        .first()
+        .cloned()
+        .expect("a joke");
+    for round in 0..30usize {
+        let req =
+            json!({"target": "node", "id": joke, "action": "edit", "after": {"title": format!("undo race {round}")}});
+        let (seq, _) = Kb::new(st.clone(), false)
+            .decide_at(&req, "2026-11-03T12:00:00+00:00", "", "owner")
+            .await
+            .expect("the edit lands");
+        let target = i64::try_from(seq).unwrap();
+        let mut tasks = Vec::new();
+        for _ in 0..8 {
+            let st = st.clone();
+            tasks.push(tokio::spawn(async move {
+                Kb::new(st, false).undo(Some(target), "owner").await
+            }));
+        }
+        let mut landed = 0;
+        for t in tasks {
+            match t.await.expect("task") {
+                Ok(_) => landed += 1,
+                Err(err) => assert_eq!(
+                    (err.status, err.msg.as_str()),
+                    (StatusCode::CONFLICT, "already undone"),
+                    "round {round}"
+                ),
+            }
+        }
+        assert_eq!(landed, 1, "round {round}: one inverse of one line");
+        let inverses = st
+            .data()
+            .await
+            .unwrap()
+            .decisions()
+            .iter()
+            .filter(|x| x.undo_of() == Some(seq))
+            .count();
+        assert_eq!(inverses, 1, "round {round}: one inverse row of line {seq}");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_writers_racing_for_one_place_never_both_land() {
     let Some((_srv, env, port)) = scratch().await else {

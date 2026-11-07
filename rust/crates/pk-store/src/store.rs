@@ -326,6 +326,21 @@ impl Store {
     /// is given (the lines in `decisions.jsonl`) and differs, the write is refused with 409 before anything happens,
     /// and 503 while a reload is running.
     pub async fn append_decision(&self, d: &Decision, file_count: Option<usize>) -> Result<Appended> {
+        self.append_decision_at(d, file_count, None).await
+    }
+
+    /// [`Store::append_decision`] for a line validated against a view of `after` decisions: the line takes place
+    /// `after`, the one right behind that view, not the row count of the moment. When another writer landed a line
+    /// since the view was read, place `after` is taken and the unique index `decision_seq` refuses this one in the
+    /// transaction (the error `is_place_taken` names), so the caller builds the line again from a fresh view. Without
+    /// it a line checked against N decisions landed at N+1 beside a line it never saw (two inverses of one line).
+    /// `None` is the row count (the Python's `_append`). A view ahead of the database is refused with 409.
+    pub async fn append_decision_at(
+        &self,
+        d: &Decision,
+        file_count: Option<usize>,
+        after: Option<usize>,
+    ) -> Result<Appended> {
         let pre = self
             .query(
                 "SELECT gen, loading, orphans FROM ONLY meta:state; RETURN count(SELECT id FROM decision);",
@@ -351,7 +366,18 @@ impl Store {
                 ),
             ));
         }
-        let seq = n_db;
+        let seq = match after.map(i64::try_from) {
+            None => n_db,
+            Some(Ok(n)) if n > n_db => {
+                return Err(StoreError::refused(
+                    409,
+                    format!("the view holds {n} decisions but SurrealDB has {n_db}; read again"),
+                ));
+            }
+            // behind the database, the place is taken and the index says so in the transaction below
+            Some(Ok(n)) => n,
+            Some(Err(e)) => return Err(StoreError::mapping(e.to_string())),
+        };
         let row = DecisionRow::from_decision(d, seq);
         let target = d.target();
         let tgt = if target == Some("edge") {

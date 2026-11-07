@@ -283,6 +283,49 @@ async fn none_and_null_stay_distinct() {
     assert!(snap.decisions[1].has_undo_of());
 }
 
+/// A line takes the place behind the view it was checked against: behind the database it is refused by the unique
+/// index (nothing written), ahead of it by a 409, and at the count it lands. Red arm: the old append (always the row
+/// count) lands the stale line at 1 and the first `unwrap_err` panics.
+#[tokio::test]
+async fn a_line_takes_the_place_behind_the_view_it_was_built_from() {
+    let Some((_srv, store)) = scratch("after").await else {
+        return;
+    };
+    store
+        .append_decision_at(&blob_decision(0), None, Some(0))
+        .await
+        .unwrap();
+    // built from a view of 0 decisions, though one has landed since
+    let e = store
+        .append_decision_at(&blob_decision(1), None, Some(0))
+        .await
+        .unwrap_err();
+    let text = e.to_string();
+    assert!(
+        text.contains("already contains") && text.contains("decision_seq"),
+        "the index names the taken place: {text}"
+    );
+    assert_eq!(
+        store.decision_count().await.unwrap(),
+        1,
+        "the stale line was rolled back"
+    );
+    // a view ahead of the database is refused before the database sees it
+    let e = store
+        .append_decision_at(&blob_decision(1), None, Some(5))
+        .await
+        .unwrap_err();
+    assert!(matches!(e, StoreError::Refused { status: 409, .. }), "{e}");
+    // the current view lands, and so does the plain append
+    let a = store
+        .append_decision_at(&blob_decision(1), None, Some(1))
+        .await
+        .unwrap();
+    assert_eq!(a.seq, 1);
+    let a = store.append_decision(&blob_decision(2), None).await.unwrap();
+    assert_eq!(a.seq, 2);
+}
+
 #[tokio::test]
 async fn db_replay_matches_pk_kb_replay() {
     let Some((_srv, store)) = scratch("replay").await else {

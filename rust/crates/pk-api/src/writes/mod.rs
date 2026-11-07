@@ -16,7 +16,10 @@
 //! appends that raced for the same place; the loser reads again and retries ([`RETRIES`]), and every retry starts
 //! over from a fresh view or fresh items (a decision is built again, an undo's inverse is built again, a route's
 //! check runs again), so a line that no longer holds is refused the way a first attempt would be. Nothing is
-//! merged silently and no append can land twice.
+//! merged silently and no append can land twice. An undo is the one line whose truth depends on
+//! the whole log (one inverse per line), so it asks for the place right behind the view it was built from
+//! (`Store::append_decision_at`), not the row count of the moment: built against N decisions it cannot land at
+//! N+1 beside an inverse it never saw.
 //!
 //! A write runs to its end once started ([`detached`]): a client that hangs up mid-way (the phone losing signal)
 //! cannot leave a unit without its edge or a merge half written, as the Python's request thread cannot.
@@ -340,7 +343,7 @@ impl Kb {
             let mut built = self.build(&v, req, now)?;
             patch(&mut built);
             let line = Decision(pk_kb::build::stamp(&built, now, reason, by));
-            match self.append_once(&line).await {
+            match self.append_once(&line, None).await {
                 Ok(out) => return Ok(out),
                 Err(Retry(e)) if attempt + 1 < RETRIES => {
                     tracing::info!(attempt, "decision: another writer took the place; building again: {e}");
@@ -369,7 +372,7 @@ impl Kb {
             for (k, raw) in lines.iter().enumerate() {
                 for again in 0..RETRIES {
                     back_off(again).await;
-                    match self.append_once(&raw.line(&pk_core::time::now_iso(), by)).await {
+                    match self.append_once(&raw.line(&pk_core::time::now_iso(), by), None).await {
                         Ok(x) => {
                             out.push(x);
                             break;
@@ -403,9 +406,14 @@ impl Kb {
         unreachable!("the loop returns on its last attempt")
     }
 
-    async fn append_once(&self, line: &Decision) -> Result<(usize, Decision), Appended> {
+    /// One try at appending `line`. `after` is the number of decisions of the view the line was built from (an undo):
+    /// the line takes the place right behind them, so a writer that landed since makes the unique `decision_seq`
+    /// index refuse it ([`Retry`]) instead of the line landing beside one it never saw. `None` is the row count; the
+    /// other lines keep it, because binding them would make each writer wait for every other (a line that is still
+    /// true after another's landing needs no rebuild).
+    async fn append_once(&self, line: &Decision, after: Option<usize>) -> Result<(usize, Decision), Appended> {
         let store = self.st.store_handle().ok_or_else(|| Final(not_connected()))?;
-        match store.append_decision(line, None).await {
+        match store.append_decision_at(line, None, after).await {
             Ok(a) => {
                 let seq = usize::try_from(a.seq).map_err(|e| Final(fault("ValueError", e)))?;
                 // the line as the Python hands it back: through the row and out again (`row_to_decision`)
@@ -435,7 +443,7 @@ impl Kb {
             };
             let now = pk_core::time::now_iso();
             let line = Decision(pk_kb::undo_line(&v, index, &now, by).map_err(kb_err)?);
-            match self.append_once(&line).await {
+            match self.append_once(&line, Some(n)).await {
                 Ok(out) => return Ok(out),
                 Err(Retry(e)) if attempt + 1 < RETRIES => {
                     tracing::info!(attempt, "undo: another writer took the place; building again: {e}");
