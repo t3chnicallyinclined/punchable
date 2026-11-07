@@ -17,6 +17,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
 import { addVersion } from '@/lib/bitWork';
+import { rant } from '@/lib/rant';
 import { isFreshBit, nameFromFirstLine } from '@/rules/bitWorkRules';
 import type { SimilarResult } from '@/rules/searchRows';
 import * as R from '@/rules/bitLines';
@@ -176,6 +177,22 @@ export default function BitPage() {
   const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
   // Film it (SPEC 2026-11-03 §2.1): the front camera with the newest version's lines on the band; phone only
   const filmIt = () => router.push(`/film/${enc(id)}` as any);
+  // Rant on this… (SPEC 2026-11-06 §12.7): a topic named for the bit, the bit kept on it, the topic opened in Rant
+  const [ranting, setRanting] = useState(false);
+  const rantOn = async () => {
+    if (ranting) return;
+    setRanting(true);
+    try {
+      const t = await rant.addTopic(shortName || title);
+      // the topic opens with the bit on it, or says it is not there yet
+      try { await rant.mark(t.topic.id, id, 'kept'); } catch { ui.snack('The topic is made, but this bit didn’t keep on it: + it there.'); }
+      router.push({ pathname: '/topic/[topic]', params: { topic: t.topic.id } } as any);
+    } catch {
+      ui.snack(online ? 'Couldn’t make the topic.' : 'Can’t reach Punchable. Nothing changed.');
+    } finally {
+      setRanting(false);
+    }
+  };
   // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so the sparkle is off there)
   const canAsk = online && lines.length > 0 && !!v && v.key !== 'idea' && editing == null && order == null;
   const openSessions = () => {
@@ -246,6 +263,7 @@ export default function BitPage() {
     { label: 'Reorder lines', onPress: startReorder, disabled: !canWrite || lines.length < 2, testID: 'menu-reorder' },
     { label: 'Record a memo', onPress: recordMemo, disabled: true },
     { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => void toSet(), disabled: !barOn || !boards.current },
+    { label: 'Rant on this…', onPress: () => void rantOn(), disabled: !online, testID: 'menu-rant-on' },
     { label: 'Pick a set list…', onPress: () => boards.pick(id, title) },
     { label: 'Merge with…', onPress: () => router.push('/merge' as any) },
     { label: 'Share…', onPress: () => void share() },
@@ -274,6 +292,7 @@ export default function BitPage() {
             <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
             {/* Film it sits with the two "make something from this bit" items; greyed with its one-word reason when there is nothing to read */}
             <Stack.Toolbar.MenuAction icon="video" disabled={!lines.length} subtitle={lines.length ? undefined : 'nothing to read'} onPress={filmIt}>Film it…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="megaphone" disabled={!online} subtitle={online ? undefined : 'offline'} onPress={() => void rantOn()}>Rant on this…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.Menu inline>
               <Stack.Toolbar.MenuAction icon="list.bullet" onPress={() => boards.pick(id, title)}>Pick a set list…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="arrow.triangle.merge" onPress={() => router.push('/merge' as any)}>Merge with…</Stack.Toolbar.MenuAction>

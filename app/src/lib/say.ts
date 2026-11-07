@@ -7,7 +7,7 @@
 // text is kept in a per-device outbox (localStorage, a convenience, not state) as a bit, shown "saving…", and sent
 // as soon as the API answers again.
 import { useEffect, useState } from 'react';
-import { ApiError, get, post, useOnline } from './api';
+import { ApiError, get, patch, post, useOnline } from './api';
 import type { Chat, Worker } from './ask';
 
 import type { SayKind } from '@/rules/sayRules';
@@ -91,6 +91,9 @@ export async function flushOutbox(onSent?: (q: Queued, r: SayResult) => void) {
       try {
         const r = await say.send(q.text, { kind: 'bit', context: q.context });
         outbox.drop(q.key);
+        // a jot typed on a topic offline (the Rant tab, SPEC 2026-11-06 §12.3) is filed on that topic once it is an idea
+        const topic = q.context?.screen?.startsWith('topic:') ? q.context.screen.slice(6) : null;
+        if (topic && r.idea?.id) void patch(`/api/topics/${encodeURIComponent(topic)}`, { jot: r.idea.id }).catch(() => {});
         onSent?.(q, r);
       } catch (e) {
         if (e instanceof ApiError) outbox.drop(q.key); // the API refused it (bad text): it will never send; drop it

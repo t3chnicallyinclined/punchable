@@ -7,7 +7,7 @@
 //!
 //! The allow-list, each with its reason (`docs/RUST_WORKSTREAM.md` T8):
 //! - `claim.kinds`: this worker claims the ported kinds only, in the Python's order, then its Rust-only kinds
-//!   (`Kind::RUST_ONLY`: `rant_draft`, which the Python never had).
+//!   (`Kind::RUST_ONLY`: `rant_draft`, `rant_line`, which the Python never had).
 //! - the workspace-mirror reads (`GET files`, `files/content`, `decisions`, `creative`): for a kind that reads his
 //!   notebook they are compared request for request, query strings included; for any other kind the Python mirrors
 //!   anyway and this worker does not (asserted absent), and `result.online.refresh` is then not compared.

@@ -241,9 +241,11 @@ spec:
           - { path: /api/venues, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/venues.geojson, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # the Rant tab (slice 1, Rust only: the Python has no such paths): his topics (GET + POST), a rant drafted
-          # from them (POST, a rant_draft job for pk-worker), the bits with a rant cut (GET)
+          # from them (POST, a rant_draft job for pk-worker), the bits with a rant cut (GET), Claude on one line of a
+          # script (POST, a rant_line job; spec §12.5)
           - { path: /api/topics, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/rant/draft, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/rant/line, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/rants, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
@@ -321,8 +323,9 @@ spec:
           - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 5 (group B): his pin move, rename or reset (PATCH only on the Python too)
           - { path: "/api/venues/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
-          # the Rant tab: one topic's PATCH (ranted, delete)
+          # the Rant tab: one topic (GET the page; PATCH ranted, delete, undelete, rename, keep, drop, unmark, jot, script) and its material (GET; spec §12.7)
           - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/topics/[^/]+/material$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a): POST /api/upload, the phone's recording (at most 64 MiB with the database as its home, ADR 0014;
 # the servers answer 413 from Content-Length, so nginx's limit stays above it and the app gets the JSON error). The Python's own

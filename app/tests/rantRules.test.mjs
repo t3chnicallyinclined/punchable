@@ -1,11 +1,13 @@
-// Unit test for rules/rantRules.ts and rules/hookRules.ts (the Rant tab, SPEC 2026-11-06 §2, §3, §5): the tab's lists
-// (Drafts vs Finished, a topic's row, Gather's ticks), Film a rant's target, the Keep / Skip assembly of a drafted
-// rant and the hook check on the script. Every joke here is invented.
+// Unit test for rules/rantRules.ts and rules/hookRules.ts (the Rant tab as his creative space, SPEC 2026-11-06 §12;
+// the hook check §5): a topic's row on the tab (every number has something behind it), where he left off, the topic
+// page's lists with his taps applied (Kept, Found, Dropped: each card in one list), a card's head and lines, what a
+// draft draws on, the filmed takes, the rants no topic names, and the hook check on the script. Every joke here is
+// invented.
 //   node --experimental-strip-types --no-warnings tests/rantRules.test.mjs          the suite
-//   node --experimental-strip-types --no-warnings tests/rantRules.test.mjs --red    the red arm: lenient rules (a filmed
-//                                                                                  rant still a draft, an undecided new
-//                                                                                  line kept, every hit counted, a hook
-//                                                                                  never late) must FAIL
+//   node --experimental-strip-types --no-warnings tests/rantRules.test.mjs --red    the red arm: lenient rules (a
+//                                                                                  count with nothing behind it, a kept
+//                                                                                  card still in Found, a fourth line on
+//                                                                                  the card, a hook never late) must FAIL
 import * as R from "../src/rules/rantRules.ts";
 import * as H from "../src/rules/hookRules.ts";
 
@@ -17,77 +19,83 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // ---- the rules under test, or the planted lenient ones (--red)
 const L = red ? {
   ...R,
-  splitRants: (rants, takes) => ({ drafts: rants, finished: R.splitRants(rants, takes).finished }),
-  isIn: () => true,
-  assemble: (lines) => lines.map((l) => l.text.trim()),
-  matchCount: (r) => (r?.bits || []).length,
-  gatherHits: (r, a) => R.gatherHits(r, a).map((h) => ({ ...h, ticked: true })),
+  // the build-25 bug: a number shown before the server looked, and the search's cap as a count
+  topicSub: (t, f) => (t.found == null ? "12 bits" : R.topicSub(t, f)),
+  // a tap that adds the card to Kept but leaves it in Found too
+  materialRows: (p, marks, extra) => { const r = R.materialRows(p, marks, extra); return { ...r, found: [...(p?.found || []), ...(extra || [])] }; },
+  cardLines: (m, open) => ({ ...R.cardLines(m, true), more: 0 }),
 } : R;
 const HK = red ? { ...H, hookCheck: (lines, his, wpm) => ({ ...H.hookCheck(lines, his, wpm), late: false }) } : H;
 
-const RANTS = [
-  { id: "joke:rant-b", title: "Self-checkout machines", short_name: "Self-checkout", versions: 2, v: 2, unit: "unit:b2", at: "2026-11-06", hook: true },
-  { id: "joke:rant-a", title: "Airport bins", short_name: "Airport bins", versions: 1, v: 1, unit: "unit:a1", at: "2026-11-05" },
+// ---- a topic's row (§12.2)
+check(L.topicSub({ id: "t", text: "x", rant_id: "joke:r", v: 3 }, "2026-11-06T20:00:00Z") === "Rant v3 · filmed Nov 6", "a filmed rant: Rant v3 · filmed Nov 6");
+check(L.topicSub({ id: "t", text: "x", rant_id: "joke:r", v: 3, kept: 2 }) === "Rant v3", "a rant leads, whatever else is there");
+check(L.topicSub({ id: "t", text: "x", kept: 3, found: 9, jots: 1 }) === "3 kept · 9 found · 1 jot", "3 kept · 9 found · 1 jot");
+check(L.topicSub({ id: "t", text: "x", kept: 0, found: 30, found_more: true, jots: 2 }) === "30+ found · 2 jots", "zero parts left out; 30+ at the cap");
+check(L.topicSub({ id: "t", text: "x", kept: 0, found: 0, jots: 0 }) === "Nothing yet", "Nothing yet");
+check(L.topicSub({ id: "t", text: "x", kept: 0, found: null, jots: 0 }) === "", "before the server looked: no number at all");
+check(L.topicSub({ id: "t", text: "x", kept: 1, found: null }) === "1 kept", "what is known is said, what is not is left out");
+
+// ---- where he left off; rants no topic names
+const TOPICS = [
+  { id: "topic:a", text: "Airport bins", kept: 1, found: 4 },
+  { id: "topic:b", text: "Self-checkout", rant_id: "joke:r1", v: 3, rants: ["joke:r0", "joke:r1"] },
+  { id: "topic:c", text: "Phone trees", rant_id: "joke:r2", v: 1, rants: ["joke:r2"] },
 ];
+check(R.leftOff(TOPICS)?.id === "topic:b", "where he left off: the most recently touched topic with a rant");
+check(R.leftOff([TOPICS[0]]) === null, "no rant yet: no card");
+const RANTS = [{ id: "joke:r1" }, { id: "joke:r9" }, { id: "joke:r0" }];
+check(eq(R.rantsWithoutTopic(RANTS, TOPICS).map((r) => r.id), ["joke:r9"]), "a rant made from a bit's page, named by no topic, is listed on its own");
+
+// ---- the topic page's lists (§12.3): each card in one list, his taps at once
+const m = (ref, kind = "bit", extra = {}) => ({ ref, kind, label: `${ref} v2`, short_name: ref, v: 2, at: "2026-10-29", words: "One.\nTwo.\nThree.\nFour.\nFive.", ...extra });
+const PAGE = { kept: [m("joke:k1"), m("joke:j1", "jot")], found: [m("joke:f1"), m("joke:f2"), m("perf:p1", "moment")], dropped: [m("joke:d1")] };
+let rows = L.materialRows(PAGE);
+check(eq(rows.kept.map((x) => x.ref), ["joke:j1", "joke:k1"]), "Kept: his jots first, then the bits he kept");
+rows = L.materialRows(PAGE, { "joke:f2": "kept" });
+check(rows.kept[0].ref !== "joke:f2" && rows.kept.some((x) => x.ref === "joke:f2"), "+ on a Found card: it is kept (below his jots)");
+check(!rows.found.some((x) => x.ref === "joke:f2"), "and it leaves Found: one card, one list");
+rows = L.materialRows(PAGE, { "joke:f1": "dropped", "joke:d1": null });
+check(eq(rows.dropped.map((x) => x.ref), ["joke:f1"]), "Drop: it goes to Dropped");
+check(rows.found.some((x) => x.ref === "joke:d1") && !rows.found.some((x) => x.ref === "joke:f1"), "Put back: it is in Found again, and only there");
+rows = L.materialRows(PAGE, {}, [m("joke:x1"), m("joke:f1")]);
+check(eq(rows.found.map((x) => x.ref), ["joke:f1", "joke:f2", "perf:p1", "joke:x1"]), "Find more appends, never repeats a card");
+check(eq(L.materialRows(null).found, []), "no page yet: empty lists");
+
+// ---- what a draft draws on (C4)
+check(eq(R.draftFrom(R.materialRows(PAGE)), { n: 2, word: "2 kept" }), "Draft it from 2 kept");
+check(R.draftFrom({ kept: [], found: [m("a"), m("b")] }, true)?.word === "2+ found", "nothing kept: from the found");
+check(R.draftFrom({ kept: [], found: [] }) === null, "nothing to draw on");
+
+// ---- a card (his words on screen)
+const card = L.cardLines(m("joke:k1", "bit", { punch: [2, 7] }));
+check(eq(card.lines, ["One.", "Two.", "Three."]) && card.more === 2 && eq(card.punch, [2]), "a card shows three lines of the newest version, the punch within them");
+check(R.moreWord(card.more) === "+ 2 more lines" && R.moreWord(1) === "+ 1 more line", "+ 2 more lines unfolds the rest");
+check(R.cardLines(m("joke:k1"), true).lines.length === 5, "unfolded: every line");
+check(R.cardHead(m("joke:k1")) === "joke:k1 · v2 · Oct 29", "a bit: short name · v2 · Oct 29");
+check(R.cardHead({ ref: "perf:p", kind: "moment", label: "On tape", at: "2026-11-02", venue: "The Back Room", start_ms: 41000, words: "x" }) === "On tape · Nov 2 · The Back Room · 0:41", "a moment: On tape · Nov 2 · The Back Room · 0:41");
+check(R.cardHead({ ref: "joke:j", kind: "jot", label: "x", at: "2026-11-07", words: "x" }) === "Jot · Nov 7", "a jot: Jot · Nov 7");
+check(R.cardA11y(m("joke:k1"), "kept").startsWith("joke:k1, version 2, kept: One. Two."), "VoiceOver: one element, whose and its words");
+check(R.sourceLabel(m("joke:k1")) === "joke:k1 v2", "a pulled line's source: the bit and its version");
+
+// ---- filmed
 const TAKES = [
-  { id: "rec-1", kind: "film", recorded_at: "2026-11-06T20:00:00Z", duration_s: 58, bit: { id: "joke:rant-a", title: "Airport bins" } },
-  { id: "rec-2", kind: "memo", recorded_at: "2026-11-06T21:00:00Z", duration_s: 9, bit: { id: "joke:rant-b", title: "x" } },
-  { id: "rec-3", kind: "film", recorded_at: "2026-11-06T22:00:00Z", duration_s: 40, bit: { id: "joke:not-a-rant", title: "x" } },
+  { id: "rec-1", kind: "film", recorded_at: "2026-11-06T20:00:00Z", duration_s: 58, bit: { id: "joke:r1", title: "x" } },
+  { id: "rec-2", kind: "memo", recorded_at: "2026-11-06T21:00:00Z", duration_s: 9, bit: { id: "joke:r1", title: "x" } },
+  { id: "rec-3", kind: "film", recorded_at: "2026-11-07T22:00:00Z", duration_s: 40, bit: { id: "joke:not-a-rant", title: "x" } },
 ];
-
-// ---- Drafts and Finished
-const s = L.splitRants(RANTS, TAKES);
-check(eq(s.drafts.map((r) => r.id), ["joke:rant-b"]), "a filmed rant leaves Drafts; a memo on a rant does not film it");
-check(eq(s.finished.map((f) => f.take.id), ["rec-1"]), "Finished is the filmed takes of rants only (a take on another bit is not a rant)");
-check(R.draftSub(RANTS[0]) === "v2 · Nov 6 · hook", "a draft reads v2 · Nov 6 · hook");
-check(R.finishedSub(TAKES[0]) === "Nov 6 · 0:58 · in Photos", "a finished video reads Nov 6 · 0:58 · in Photos");
-check(eq(R.filmTarget([]), { k: "none" }) && eq(R.filmTarget([RANTS[0]]), { k: "one", id: "joke:rant-b" }) && R.filmTarget(RANTS).k === "pick",
-  "Film a rant: nothing without a draft, the one draft, a pick among several");
-
-// ---- My topics
-const SEARCH = { bits: [{ id: "joke:a", title: "A", distance: 0.2 }, { id: "joke:b", title: "B", distance: null }, { id: "joke:c", title: "C", distance: 0.55 }, { id: "joke:d", title: "D", distance: 0.39 }],
-  moments: [{ id: "performance:p1", text: "  unexpected item\n in the bagging area ", venue: "The Cellar", date: "2025-03-04" }] };
-check(L.matchCount(SEARCH) === 3, "a topic counts the close bits only (word matches and distance under 0.4)");
-check(R.topicSub({ id: "topic:a", text: "x" }, 3) === "3 bits" && R.topicSub({ id: "topic:a", text: "x" }, 1) === "1 bit", "the row says how many bits");
-check(R.topicSub({ id: "topic:a", text: "x", ranted_at: "2026-11-06T10:00:00Z" }, 3) === "ranted Nov 6", "a topic used for a rant reads ranted Nov 6");
-
-// ---- Gather
-const hits = L.gatherHits(SEARCH);
-check(eq(hits.map((h) => [h.id, h.ticked]), [["joke:a", true], ["joke:b", true], ["joke:c", false], ["joke:d", true], ["performance:p1", false]]),
-  "Gather ticks the close bits and never a far one or a taped moment");
-check(hits[4].title === "unexpected item in the bagging area" && hits[4].sub === "On tape · The Cellar · Mar 4", "a moment row: its words, On tape and where");
-const more = L.gatherHits({ bits: [{ id: "joke:a", title: "A", distance: 0.1 }, { id: "joke:e", title: "E", distance: 0.1 }] }, hits);
-check(more.length === 6 && more[5].id === "joke:e" && more[5].ticked === false, "Find more adds new hits unticked, never twice");
-check(R.tickedIds(hits.map((h) => ({ ...h, ticked: true }))).length === 5 && R.tickedIds(Array.from({ length: 20 }, (_, i) => ({ id: `joke:${i}`, ticked: true }))).length === 12,
-  "at most 12 sources go to the draft");
-
-// ---- a drafted rant: Keep / Skip
-const LINES = [
-  { role: "hook", text: "Stop scanning your own groceries.", his: false },
-  { role: "setup", text: "Self-checkout is the store hiring you for free.", his: true, source: "joke:self-checkout", source_label: "Self-checkout v8" },
-  { role: "beat", text: "You bag. You weigh. You apologise to a machine.", his: false },
-  { role: "turn", text: "my dignity", his: true, source: "performance:p1", source_label: "On tape" },
-  { role: "button", text: "I quit. I never worked there.", his: false },
-];
-check(eq(R.assemble(LINES, []), LINES.map((l) => l.text)), "no review step: every line is in until he takes it out");
-const marks = [undefined, undefined, false, false, undefined];
-check(eq(L.assemble(LINES, marks), [LINES[0].text, LINES[1].text, LINES[4].text]), "Skip one new line, cut his moment: the rant is the rest");
-check(R.lineAction(LINES[1], undefined) === "Cut" && R.lineAction(LINES[0], undefined) === "Skip" && R.lineAction(LINES[0], false) === "Put back", "the button: Cut his, Skip a new one, Put back");
-check(eq(R.skippedNew(LINES, marks), [LINES[2].text]), "the skipped new line teaches the profile; his cut line never does");
-check(eq(R.fromLinks(LINES, marks), ["joke:self-checkout"]), "the saved rant links the bits whose lines he kept");
-check(R.canSaveRant(LINES, []) && !R.canSaveRant([LINES[0]], [false]), "Save is live while the rant has a line");
-check(R.rantTitle("  self-checkout   machines ") === "Self-checkout machines", "the new bit is named for the topic");
-check(R.lineLabel(LINES[1], 1, 5, undefined) === "Line 2 of 5, the setup. Yours, from Self-checkout v8: Self-checkout is the store hiring you for free.", "VoiceOver says whose line it is");
+const f = R.filmedList(TAKES, [{ id: "joke:r1", title: "S", short_name: "S", versions: 3, v: 3, unit: "u" }], TOPICS);
+check(f.length === 1 && f[0].take.id === "rec-1" && f[0].topic?.id === "topic:b", "Filmed: takes of rants only (never a memo), with the topic it came from");
+check(R.filmedSub(TAKES[0]) === "Nov 6 · 0:58 · in Photos", "Nov 6 · 0:58 · in Photos");
+check(R.takesOf(TAKES, "joke:r1").length === 1, "a rant's takes: films only");
+check(R.runOf(144) === "1:00" && R.runOf(null) === "0:00", "the run time at his pace");
 
 // ---- Hook check on the script
 const c1 = HK.hookCheck(["Nobody asked for self-checkout.", "x"], [false, true]);
-check(c1 && c1.seconds === 1.7 && !c1.late && c1.shape === "claim" && c1.wordsBeforeHis === 4, "a 4-word claim lands at 1.7 s, 4 words before his");
+check(c1 && c1.seconds === 1.7 && !c1.late && c1.shape === "claim", "a 4-word claim lands at 1.7 s");
 check(H.hookWord(H.hookCheck(["Five words make this hook."], [true])) === "Hook lands at 2.1 s", "five words at 144 wpm: Hook lands at 2.1 s");
 const late = HK.hookCheck(["So yesterday I went to the store and I tried to buy one single thing"], [false], 144);
 check(late && late.late && H.hookWord(late) === "Hook lands late: 6.3 s", "a long hook is flagged late");
-check(late && late.shape === "scene" && late.wordsBeforeHis === null, "it is a scene, and none of it is his");
-check(H.shapeOf("Have you ever been fired by a machine?”") === "question", "a question, closing quote and all");
-check(H.hookDetail(c1) === "a claim · 4 words before yours", "the detail line");
 check(H.hookCheck([], []) === null, "no lines, no check");
 
 if (fails.length) {

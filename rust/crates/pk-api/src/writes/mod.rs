@@ -33,6 +33,7 @@ pub mod learned;
 pub mod merge;
 pub mod rant;
 pub mod review;
+pub mod topic;
 pub mod transcript;
 pub mod uploads;
 pub mod venues;

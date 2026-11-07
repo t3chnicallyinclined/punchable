@@ -1,125 +1,146 @@
-// The Rant tab's pure rules (docs/design/SPEC-2026-11-06-rant-tab.md §2, §3; slice 1): which rants are Drafts and which
-// are Finished, a topic's row, which search hits Gather offers and ticks, Film a rant's target, and the assembly of a
-// drafted rant: every line is in until he takes it out (his: Cut; a new one: Skip). The owner's standing rule "no review
-// step is ever required" wins over the spec's "Keeps or Skips each new line" (§3.3): a new line shows as the current
-// state with the AI badge and he edits. No React, no network: tests/rantRules.test.mjs runs it under node, --red arm.
+// The Rant tab's pure rules (docs/design/SPEC-2026-11-06-rant-tab.md §12: the creative space): a topic's row on the
+// tab, where he left off, the topic page's material (Kept, Found, Dropped) with his taps applied at once, a card's
+// head and its lines, what a draft draws on, the filmed takes, and the rants no topic names. No React, no network:
+// tests/rantRules.test.mjs runs it under node, with a --red arm.
 import { mmss } from './format.ts';
-import { monthDay } from './bitLines.ts';
+import { linesOf, monthDay } from './bitLines.ts';
+import { DEFAULT_WPM } from './prompterRules.ts';
 
-/** A topic, as GET /api/topics sends it. */
-export type Topic = { id: string; text: string; created?: string | null; ranted_at?: string | null; rant?: string | null };
+/** A topic, as GET /api/topics sends a row: the topic and its counts (`found` null until the server has looked). */
+export type Topic = {
+  id: string; text: string; created?: string | null; touched?: string | null; ranted_at?: string | null; rant?: string | null;
+  kept?: number; jots?: number; dropped?: number; found?: number | null; found_more?: boolean;
+  rants?: string[]; last_lines?: string[]; v?: number | null; at?: string | null; words?: number | null; rant_id?: string | null;
+  /** the newest rant's version unit (a local draft written over another one is stale) */
+  unit?: string | null;
+};
 /** A bit with a rant cut, as GET /api/rants sends it. */
 export type RantRow = { id: string; title: string; short_name: string; versions: number; v: number; unit: string; at?: string | null; hook?: boolean; written?: boolean };
 /** A filmed take on this phone (rules/memoRules LocalRec, the fields used here). */
 export type Take = { id: string; kind: string; recorded_at: string; duration_s: number; bit?: { id: string; title: string } | null };
-/** One drafted line (pk-worker rant_draft): his = word for word from `source` (checked on the server); else new. */
-export type DraftLine = { role: string; text: string; his: boolean; source?: string | null; source_label?: string | null; source_kind?: string | null };
-/** Per line: false = taken out (Cut / Skip), anything else = in. */
-export type Marks = (boolean | undefined)[];
+/** One piece of material (GET /api/topics/<id>, §12.7 `Mat`). */
+export type Mat = {
+  ref: string; kind: 'bit' | 'moment' | 'jot'; label: string; short_name?: string | null; v?: number | null; at?: string | null;
+  words: string; punch?: number[]; venue?: string | null; set?: string | null; start_ms?: number | null; distance?: number | null;
+  state?: State | null;
+};
+export type State = 'kept' | 'dropped';
+/** One rant on a topic page (its newest rant cut, each line with where it came from). */
+export type RantDoc = { id: string; title: string; short_name: string; v: number; versions: number; at?: string | null; unit: string; words: number; lines: { text: string; by?: 'him' | 'ai' | 'yours' | null; from?: string | null; label?: string | null; edited?: boolean; punch?: boolean }[] };
+/** GET /api/topics/<id>. */
+export type TopicPage = { topic: Topic; rants: RantDoc[]; kept: Mat[]; found: Mat[]; found_more: boolean; dropped: Mat[] };
 
-/** A search hit closer than this counts as "about" the topic (rules/searchRows closeness: "Close" and nearer). */
-export const MATCH_CLOSE = 0.4;
+/** Rows one page of Found shows; the server says "more" past it ("30+"). */
+export const FOUND_CAP = 30;
 
-/** Drafts are rants not filmed on this phone, newest first as the server sends them; Finished are the filmed takes
- *  of rants, newest first, each with the rant it came from. */
-export function splitRants(rants: RantRow[], takes: Take[]): { drafts: RantRow[]; finished: { take: Take; rant: RantRow }[] } {
-  const byId = new Map(rants.map((r) => [r.id, r]));
-  const filmed = new Set<string>();
-  const finished: { take: Take; rant: RantRow }[] = [];
-  for (const t of takes) {
-    const r = t.kind === 'film' && t.bit ? byId.get(t.bit.id) : undefined;
-    if (!r) continue;
-    filmed.add(r.id);
-    finished.push({ take: t, rant: r });
+/** The run time of a number of words at his pace: "0:58". */
+export const runOf = (words: number | null | undefined, wpm: number = DEFAULT_WPM): string => mmss(((words || 0) / (wpm > 0 ? wpm : DEFAULT_WPM)) * 60);
+
+/** The filmed takes of a bit, newest first (Film it's takes kept on this phone). */
+export function takesOf(takes: Take[], bit: string | null | undefined): Take[] {
+  if (!bit) return [];
+  return takes.filter((t) => t.kind === 'film' && t.bit?.id === bit).sort((a, b) => b.recorded_at.localeCompare(a.recorded_at));
+}
+
+/** A topic row's one sub line (§12.2), the first that applies: "Rant v3 · filmed Nov 6" · "Rant v3" · "3 kept · 9 found
+ *  · 1 jot" (zero parts left out, "30+ found" at the cap) · "Nothing yet". Empty while the server has not looked yet
+ *  and there is nothing else to say (never a number with nothing behind it). */
+export function topicSub(t: Topic, filmedAt?: string | null): string {
+  if (t.rant_id && t.v) return `Rant v${t.v}${filmedAt ? ` · filmed ${monthDay(filmedAt)}` : ''}`;
+  const kept = t.kept || 0;
+  const jots = t.jots || 0;
+  const parts: string[] = [];
+  if (kept) parts.push(`${kept} kept`);
+  if (t.found) parts.push(`${foundWord(t.found, !!t.found_more)} found`);
+  if (jots) parts.push(jots === 1 ? '1 jot' : `${jots} jots`);
+  if (parts.length) return parts.join(' · ');
+  return t.found == null ? '' : 'Nothing yet';
+}
+
+/** "9" / "30+". */
+export const foundWord = (n: number, more: boolean): string => `${n}${more ? '+' : ''}`;
+
+/** Where he left off (§12.2): the most recently touched topic with a rant (rows come last touched first). */
+export const leftOff = (topics: Topic[]): Topic | null => topics.find((t) => !!t.rant_id && !!t.v) || null;
+
+/** The rants no topic names (made from a bit's Make it a rant): rows in Topics that open the bit. */
+export function rantsWithoutTopic(rants: RantRow[], topics: Topic[]): RantRow[] {
+  const named = new Set(topics.flatMap((t) => [...(t.rants || []), ...(t.rant ? [t.rant] : [])]));
+  return rants.filter((r) => !named.has(r.id));
+}
+
+/** The topic page's lists with his taps applied at once (`marks`: a ref's new state, `null` = back in Found), and the
+ *  rows Find more or the search brought (`extra`, appended to Found). Each ref is in one list only. */
+export function materialRows(page: Pick<TopicPage, 'kept' | 'found' | 'dropped'> | null | undefined, marks: Record<string, State | null> = {}, extra: Mat[] = []): { kept: Mat[]; found: Mat[]; dropped: Mat[] } {
+  const all = new Map<string, Mat>();
+  const base = new Map<string, State | null>();
+  for (const [list, st] of [[page?.kept, 'kept'], [page?.found, null], [page?.dropped, 'dropped'], [extra, undefined]] as const) {
+    for (const m of list || []) {
+      if (all.has(m.ref)) continue;
+      all.set(m.ref, m);
+      base.set(m.ref, st === undefined ? (m.state ?? null) : st);
+    }
   }
-  finished.sort((a, b) => b.take.recorded_at.localeCompare(a.take.recorded_at));
-  return { drafts: rants.filter((r) => !filmed.has(r.id)), finished };
-}
-
-/** A draft's second line: "v3 · Nov 6 · hook". */
-export function draftSub(r: RantRow): string {
-  return [`v${r.v}`, monthDay(r.at), r.hook ? 'hook' : ''].filter(Boolean).join(' · ');
-}
-
-/** A finished video's line: "Nov 6 · 0:58 · in Photos". */
-export function finishedSub(t: Take): string {
-  return [monthDay(t.recorded_at), mmss(t.duration_s), 'in Photos'].filter(Boolean).join(' · ');
-}
-
-/** A topic's trailing words: "ranted Nov 6" once it became a rant, else how many of his bits match ("3 bits"). */
-export function topicSub(t: Topic, matches: number | null | undefined): string {
-  if (t.ranted_at) return `ranted ${monthDay(t.ranted_at)}`;
-  if (matches == null) return '';
-  return `${matches} ${matches === 1 ? 'bit' : 'bits'}`;
-}
-
-type Found = { id: string; title?: string; short_name?: string | null; summary?: string; distance?: number | null };
-type FoundMoment = { id: string; text: string; venue?: string | null; set_title?: string | null; date?: string | null };
-
-/** A hit is about the topic when the words matched (no distance) or the meaning is close. */
-export const isClose = (d?: number | null): boolean => d == null || (Number.isFinite(d) && d < MATCH_CLOSE);
-
-/** How many of his bits a topic matches (today's search): the close ones only; a vector search always returns its
- *  limit, so counting every hit would say "6 bits" for anything. */
-export function matchCount(r: { bits?: Found[] } | null | undefined): number {
-  return (r?.bits || []).filter((b) => isClose(b.distance)).length;
-}
-
-export type Hit = { id: string; kind: 'bit' | 'moment'; title: string; sub: string; ticked: boolean };
-
-/** Gather's rows from a search: his bits first (ticked when close), then taped moments (never ticked for him), each id
- *  once. Hits from "Find more" (`already` non-empty) are appended unticked after what is listed. */
-export function gatherHits(r: { bits?: Found[]; moments?: FoundMoment[] } | null | undefined, already: Hit[] = []): Hit[] {
-  const seen = new Set(already.map((h) => h.id));
-  const out = [...already];
-  const first = !already.length;
-  for (const b of r?.bits || []) {
-    if (seen.has(b.id)) continue;
-    seen.add(b.id);
-    out.push({ id: b.id, kind: 'bit', title: b.short_name || b.title || b.id, sub: (b.summary || '').trim(), ticked: first && isClose(b.distance) });
+  const out = { kept: [] as Mat[], found: [] as Mat[], dropped: [] as Mat[] };
+  const order: string[] = [];
+  // a tap moves the card to the top of its new list (the newest kept first), never jots above his jots
+  const tapped = Object.keys(marks).filter((r) => all.has(r));
+  for (const r of [...tapped.reverse(), ...[...all.keys()].filter((r) => !(r in marks))]) order.push(r);
+  for (const r of order) {
+    const m = all.get(r) as Mat;
+    const st = r in marks ? marks[r] : base.get(r) ?? null;
+    (st === 'kept' ? out.kept : st === 'dropped' ? out.dropped : out.found).push(m);
   }
-  for (const m of r?.moments || []) {
-    if (seen.has(m.id)) continue;
-    seen.add(m.id);
-    out.push({ id: m.id, kind: 'moment', title: (m.text || '').replace(/\s+/g, ' ').trim().slice(0, 120), sub: ['On tape', m.venue || m.set_title || '', monthDay(m.date)].filter(Boolean).join(' · '), ticked: false });
-  }
+  const jotsFirst = (a: Mat, b: Mat) => Number(b.kind === 'jot') - Number(a.kind === 'jot');
+  out.kept.sort(jotsFirst);
+  // Found stays closest first: a row put back returns to its place
+  const rank = new Map<string, number>();
+  for (const x of [...(page?.found || []), ...extra]) if (!rank.has(x.ref)) rank.set(x.ref, rank.size);
+  out.found.sort((a, b) => (rank.get(a.ref) ?? -1) - (rank.get(b.ref) ?? -1));
   return out;
 }
 
-/** At most this many sources go to the draft (pk-api MAX_SOURCES). */
-export const MAX_SOURCES = 12;
-/** The ticked ids, in list order, at most MAX_SOURCES. */
-export const tickedIds = (hits: Hit[]): string[] => hits.filter((h) => h.ticked).map((h) => h.id).slice(0, MAX_SOURCES);
-
-/** Film a rant: nothing to film (no draft), the one draft, or a pick among several (newest first, five at most). */
-export function filmTarget(drafts: RantRow[]): { k: 'none' } | { k: 'one'; id: string } | { k: 'pick'; rows: RantRow[] } {
-  if (!drafts.length) return { k: 'none' };
-  if (drafts.length === 1) return { k: 'one', id: drafts[0].id };
-  return { k: 'pick', rows: drafts.slice(0, 5) };
+/** What a draft draws on (§12.3 C4: nothing has to be sorted): Kept when anything is kept, else the Found he has not
+ *  dropped. `null` when there is nothing. The button's words: "Draft it from 3 kept" / "Draft it from 9 found". */
+export function draftFrom(rows: { kept: Mat[]; found: Mat[] }, foundMore = false): { n: number; word: string } | null {
+  if (rows.kept.length) return { n: rows.kept.length, word: `${rows.kept.length} kept` };
+  if (rows.found.length) return { n: rows.found.length, word: `${foundWord(rows.found.length, foundMore)} found` };
+  return null;
 }
 
-/** Whether a line is in: every line, his or new, until he takes it out (no review step: the owner's standing rule). */
-export const isIn = (_l: DraftLine, mark: boolean | undefined): boolean => mark !== false;
-
-const kept = (lines: DraftLine[], marks: Marks): DraftLine[] => lines.filter((l, i) => isIn(l, marks[i]) && !!l.text.trim());
-
-/** The rant's lines as saved: the kept ones, in order. */
-export const assemble = (lines: DraftLine[], marks: Marks): string[] => kept(lines, marks).map((l) => l.text.trim());
-
-/** Save shows once the rant has a line. */
-export const canSaveRant = (lines: DraftLine[], marks: Marks): boolean => assemble(lines, marks).length > 0;
-
-/** The new lines he skipped: the learning loop's lines he passed over (never his own, never one he left in). */
-export function skippedNew(lines: DraftLine[], marks: Marks): string[] {
-  return lines.filter((l, i) => !l.his && marks[i] === false).map((l) => l.text.trim()).filter(Boolean);
+/** A card's head (§12.3): "Free employee · v3 · Oct 29" · "On tape · Nov 2 · The Back Room · 0:41" · "Jot · Nov 7". */
+export function cardHead(m: Mat): string {
+  if (m.kind === 'jot') return ['Jot', monthDay(m.at)].filter(Boolean).join(' · ');
+  if (m.kind === 'moment') {
+    const at = m.start_ms != null && m.start_ms >= 0 ? mmss(m.start_ms / 1000, { floor: true }) : '';
+    return ['On tape', monthDay(m.at), m.venue || '', at].filter(Boolean).join(' · ');
+  }
+  return [m.short_name || m.label, m.v ? `v${m.v}` : '', monthDay(m.at)].filter(Boolean).join(' · ');
 }
 
-/** Which kept lines are his, aligned with `assemble` (the hook check's input). */
-export const hisOfKept = (lines: DraftLine[], marks: Marks): boolean[] => kept(lines, marks).map((l) => l.his);
+/** A card's lines: the first three, then how many more ("+ 2 more lines" unfolds in place). */
+export const CARD_LINES = 3;
+export function cardLines(m: Mat, open = false): { lines: string[]; more: number; punch: number[] } {
+  const all = linesOf(m.words);
+  const shown = open ? all : all.slice(0, CARD_LINES);
+  const punch = (m.punch || []).filter((i) => Number.isInteger(i) && i >= 0 && i < shown.length);
+  return { lines: shown, more: all.length - shown.length, punch };
+}
+export const moreWord = (n: number): string => `+ ${n} more ${n === 1 ? 'line' : 'lines'}`;
 
-/** The ticked bits the saved rant links to ("from" links): the bits whose lines he kept; moments are not bits. */
-export const fromLinks = (lines: DraftLine[], marks: Marks): string[] =>
-  [...new Set(kept(lines, marks).filter((l) => l.his && (l.source || '').startsWith('joke:')).map((l) => l.source as string))];
+/** VoiceOver for a card: one element (§12.3): "Free employee, version 3, kept: I scan, I bag…". */
+export function cardA11y(m: Mat, state: State | null): string {
+  const who = m.kind === 'moment' ? `On tape${m.venue ? ` at ${m.venue}` : ''}` : m.kind === 'jot' ? 'Your jot' : `${m.short_name || m.label}${m.v ? `, version ${m.v}` : ''}`;
+  const st = state === 'kept' ? ', kept' : state === 'dropped' ? ', dropped' : '';
+  return `${who}${st}: ${linesOf(m.words).join(' ')}`;
+}
+
+/** The label a line pulled from this material carries in the script: "Free employee v3" / "On tape Nov 2" / "Jot". */
+export function sourceLabel(m: Mat): string {
+  if (m.kind === 'moment') return ['On tape', monthDay(m.at)].filter(Boolean).join(' ');
+  if (m.kind === 'jot') return 'your jot';
+  return m.label || m.short_name || 'your bit';
+}
 
 /** The new bit's title: the topic, first letter up, at most 60 characters, cut at a word. */
 export function rantTitle(topic: string): string {
@@ -132,13 +153,17 @@ export function rantTitle(topic: string): string {
   return cut ? cut[0].toUpperCase() + cut.slice(1) : 'Rant';
 }
 
-/** VoiceOver for a drafted line: "Line 3 of 8, the turn. Yours, from Self-checkout v8: …" / "New, by Claude: …, skipped". */
-export function lineLabel(l: DraftLine, i: number, n: number, mark: boolean | undefined): string {
-  const head = `Line ${i + 1} of ${n}, the ${l.role}.`;
-  const who = l.his ? `Yours${l.source_label ? `, from ${l.source_label}` : ''}` : 'New, by Claude';
-  const state = mark === false ? (l.his ? ', cut' : ', skipped') : '';
-  return `${head} ${who}: ${l.text}${state}`;
+/** A filmed take's line: "Nov 6 · 0:58 · in Photos". */
+export function filmedSub(t: Take): string {
+  return [monthDay(t.recorded_at), mmss(t.duration_s), 'in Photos'].filter(Boolean).join(' · ');
 }
 
-/** The button under a line: "Cut" / "Skip" while it is in, "Put back" once taken out. */
-export const lineAction = (l: DraftLine, mark: boolean | undefined): string => (mark === false ? 'Put back' : l.his ? 'Cut' : 'Skip');
+/** The filmed takes of rants on this phone, newest first, each with the rant and its topic when one names it. */
+export function filmedList(takes: Take[], rants: RantRow[], topics: Topic[]): { take: Take; rant: RantRow; topic: Topic | null }[] {
+  const byId = new Map(rants.map((r) => [r.id, r]));
+  const topicOf = (id: string) => topics.find((t) => (t.rants || []).includes(id) || t.rant === id) || null;
+  return takes
+    .filter((t) => t.kind === 'film' && t.bit && byId.has(t.bit.id))
+    .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+    .map((t) => ({ take: t, rant: byId.get((t.bit as { id: string }).id) as RantRow, topic: topicOf((t.bit as { id: string }).id) }));
+}

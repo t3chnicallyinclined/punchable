@@ -1312,13 +1312,13 @@ async fn the_rant_tab_topics_draft_and_rants() {
             format!("/api/topics/{tid}"),
             json!({}),
             400,
-            "send {ranted: <the rant's joke id>} or {delete: true}",
+            "send one of {ranted}, {delete: true}, {undelete: true}, {rename}, {keep}, {drop}, {unmark}, {jot}, {script}",
         ),
         (
             format!("/api/topics/{tid}"),
             json!({"ranted": "unit:x"}),
             400,
-            "send {ranted: <the rant's joke id>} or {delete: true}",
+            "send one of {ranted}, {delete: true}, {undelete: true}, {rename}, {keep}, {drop}, {unmark}, {jot}, {script}",
         ),
         (
             "/api/topics/topic:nope".to_string(),
@@ -1386,4 +1386,352 @@ async fn the_rant_tab_topics_draft_and_rants() {
         (s.as_u16(), r["error"].as_str()),
         (400, Some("at most 200 topics: delete one first"))
     );
+}
+
+/// The creative space (spec §12.7, Rust only: no Python twin, so the statuses and words are this test's): a topic is a
+/// page of his words. Keep, drop, unmark and jot are references on the topic, never a change to the bit; the tab's row
+/// and the page's heading are one number; a found hit is a real word match (no model here); the script's marks come
+/// back on the version they were written for and never on another; a deleted topic comes back with its material; a
+/// draft with no sources named draws on Kept and carries his lines as fixed; Claude on a line queues one `rant_line`.
+/// The red arm: a row whose count ignored Kept would not equal the heading after a keep (asserted below by value).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[expect(
+    clippy::many_single_char_names,
+    reason = "a and b are the two bits of the story; s, r, p are the file's own status / reply / page names"
+)]
+async fn the_topic_page_material_script_and_line() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.expect("data").view(false).await.expect("view");
+    let (a, b) = (v0.jokes[0].clone(), v0.jokes[1].clone());
+    for (j, text) in [
+        (&a, "Self-checkout is the store hiring you for free."),
+        (&b, "The self-checkout called a manager on me."),
+    ] {
+        let (s, r) = send(&st, "POST", &format!("/api/jokes/{j}/versions"), json!({"text": text})).await;
+        assert_eq!(s, StatusCode::OK, "{r}");
+    }
+    let units_b = st
+        .data()
+        .await
+        .expect("data")
+        .view(false)
+        .await
+        .expect("view")
+        .joke_units
+        .get(&b)
+        .map(Vec::len);
+    let (_, r) = send(&st, "POST", "/api/topics", json!({"text": "self-checkout"})).await;
+    let tid = r["topic"]["id"].as_str().unwrap().to_string();
+    let page = format!("/api/topics/{tid}");
+
+    // the page: both bits found by their words (no distance), whole words on screen
+    let (s, p) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(s, StatusCode::OK, "{p}");
+    let found: Vec<&str> = p["found"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|m| m["ref"].as_str())
+        .collect();
+    assert!(found.contains(&a.as_str()) && found.contains(&b.as_str()), "{p}");
+    let fa = p["found"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["ref"] == json!(a))
+        .unwrap();
+    assert_eq!(fa["kind"], "bit");
+    assert_eq!(fa["words"], "Self-checkout is the store hiring you for free.");
+    assert!(fa["label"].as_str().unwrap().contains(" v"), "{fa}");
+    assert_eq!(fa["distance"], Value::Null, "a word match");
+    assert_eq!(p["found_more"], false);
+
+    // keep one: it leaves Found for Kept; the row and the heading are one number
+    let (s, r) = send(&st, "PATCH", &page, json!({"keep": a})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(p["kept"][0]["ref"], json!(a));
+    let n_found = p["found"].as_array().unwrap().len();
+    let (_, list) = send(&st, "GET", "/api/topics", Value::Null).await;
+    let row = list["topics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["id"] == json!(tid))
+        .unwrap()
+        .clone();
+    assert_eq!(row["found"], json!(n_found), "the row's number is the heading's: {row}");
+    assert_eq!(row["kept"], 1);
+    assert!(row.get("material").is_none(), "the row carries counts, not the refs");
+    // the red arm: the row before the keep counted the kept bit as found; that number would now be wrong
+    assert_ne!(row["found"], json!(found.len()), "Kept left Found: {row}");
+
+    // drop the other, put it back; unmark the kept one
+    let (_, _) = send(&st, "PATCH", &page, json!({"drop": b})).await;
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(p["dropped"][0]["ref"], json!(b));
+    assert!(
+        !p["found"].as_array().unwrap().iter().any(|m| m["ref"] == json!(b)),
+        "a dropped bit stays out of Found"
+    );
+    let (_, _) = send(&st, "PATCH", &page, json!({"unmark": b})).await;
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert!(
+        p["found"].as_array().unwrap().iter().any(|m| m["ref"] == json!(b)),
+        "Put back"
+    );
+    // the bit itself never changed
+    let v1 = st.data().await.expect("data").view(false).await.expect("view");
+    assert_eq!(
+        v1.joke_units.get(&b).map(Vec::len),
+        units_b,
+        "keep, drop and unmark never touch the bit"
+    );
+
+    // a jot: a real idea, then a reference; listed first under Kept, as a jot
+    let (s, idea) = send(
+        &st,
+        "POST",
+        "/api/ideas",
+        json!({"text": "The scale knows my secrets."}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{idea}");
+    let jot = idea["id"].as_str().unwrap().to_string();
+    let (s, r) = send(&st, "PATCH", &page, json!({"jot": jot})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(
+        (p["kept"][0]["ref"].clone(), p["kept"][0]["kind"].clone()),
+        (json!(jot), json!("jot")),
+        "{p}"
+    );
+    let (_, list) = send(&st, "GET", "/api/topics", Value::Null).await;
+    assert_eq!(list["topics"][0]["jots"], 1);
+
+    // the page's search: word hits with their state on this topic
+    let (s, m) = send(&st, "GET", &format!("{page}/material?q=manager"), Value::Null).await;
+    assert_eq!(s, StatusCode::OK, "{m}");
+    assert_eq!(m["rows"][0]["ref"], json!(b));
+    assert_eq!(m["rows"][0]["state"], Value::Null);
+    let (_, m) = send(
+        &st,
+        "GET",
+        &format!("{page}/material?q=nothing-of-his-says-this"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(m["rows"], json!([]));
+    let (s, m) = send(&st, "GET", &format!("{page}/material"), Value::Null).await;
+    assert_eq!(s, StatusCode::OK, "Find more answers: {m}");
+
+    // the rant: a version with its marks; the marks come back on that version only
+    let (_, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{a}/versions"),
+        json!({"text": "Nobody asked me.\nSelf-checkout is the store hiring you for free.", "source": "rant_write"}),
+    )
+    .await;
+    let unit = r["unit"].as_str().unwrap().to_string();
+    let (s, r) = send(&st, "PATCH", &page, json!({"ranted": a})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    // the first line claims to come from the other bit, whose words do not hold it: the server drops that claim
+    let marks =
+        json!([{"by": "him", "from": b, "label": "Lie v1"}, {"by": "him", "from": a, "label": "Self-checkout v2"}]);
+    let (s, r) = send(&st, "PATCH", &page, json!({"script": {"unit": unit, "lines": marks}})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    let rant = &p["rants"][0];
+    assert_eq!(rant["unit"], json!(unit));
+    assert_eq!(
+        rant["lines"][1]["text"],
+        "Self-checkout is the store hiring you for free."
+    );
+    assert_eq!(rant["lines"][1]["from"], json!(a));
+    assert_eq!(rant["lines"][1]["label"], "Self-checkout v2");
+    assert_eq!(
+        (rant["lines"][0]["by"].clone(), rant["lines"][0].get("from").cloned()),
+        (json!("him"), None),
+        "a claim the verbatim gate cannot find in its source is dropped"
+    );
+    let (_, list) = send(&st, "GET", "/api/topics", Value::Null).await;
+    let row = &list["topics"][0];
+    assert_eq!(
+        row["last_lines"],
+        json!(["Nobody asked me.", "Self-checkout is the store hiring you for free."])
+    );
+    assert_eq!(row["rant_id"], json!(a));
+    // a newer rant version without marks shows none, never the older version's
+    let (_, _) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{a}/versions"),
+        json!({"text": "Nobody asked me.\nNew line.\nSelf-checkout is the store hiring you for free.", "source": "rant_write"}),
+    )
+    .await;
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert!(
+        p["rants"][0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|l| l.get("by").is_none()),
+        "{p}"
+    );
+    // a mark row that does not line up with its version (two marks, three lines) shows nothing either
+    let unit3 = p["rants"][0]["unit"].as_str().unwrap().to_string();
+    let (s, r) = send(
+        &st,
+        "PATCH",
+        &page,
+        json!({"script": {"unit": unit3, "lines": [{"by": "ai"}, {"by": "ai"}]}}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, p2) = send(&st, "GET", &page, Value::Null).await;
+    let l2 = p2["rants"][0]["lines"].as_array().unwrap();
+    assert_eq!(l2.len(), 3);
+    assert!(
+        l2.iter().all(|l| l.get("by").is_none()),
+        "no marks rather than wrong ones: {p2}"
+    );
+
+    // a topic of two words: a bit with one of them is not a word match (no model here, so nothing is found)
+    let (_, r) = send(&st, "POST", "/api/topics", json!({"text": "self-checkout dinosaurs"})).await;
+    let t2 = r["topic"]["id"].as_str().unwrap().to_string();
+    let (_, p3) = send(&st, "GET", &format!("/api/topics/{t2}"), Value::Null).await;
+    assert_eq!(p3["found"], json!([]), "one word of two is not the topic: {p3}");
+
+    // refusals, each with its words
+    let bad = [
+        (
+            json!({}),
+            400,
+            "send one of {ranted}, {delete: true}, {undelete: true}, {rename}, {keep}, {drop}, {unmark}, {jot}, {script}",
+        ),
+        (
+            json!({"keep": a, "drop": a}),
+            400,
+            "send one of {ranted}, {delete: true}, {undelete: true}, {rename}, {keep}, {drop}, {unmark}, {jot}, {script}",
+        ),
+        (json!({"keep": "unit:x"}), 400, "material is a bit or a taped moment id"),
+        (json!({"jot": "perf:p1"}), 400, "material is a bit or a taped moment id"),
+        (
+            json!({"keep": "joke:nope"}),
+            404,
+            "joke:nope is not a bit or a taped moment with words",
+        ),
+        (
+            json!({"script": {"unit": "unit:nope", "lines": []}}),
+            404,
+            "no version unit:nope",
+        ),
+        (
+            json!({"script": {"unit": unit, "lines": [{"by": "bot"}]}}),
+            400,
+            "by must be him, ai or yours",
+        ),
+        (json!({"rename": "  "}), 400, "text is required (the topic)"),
+        (json!({"undelete": true}), 404, &*format!("no topic {tid}")),
+    ];
+    for (b, status, msg) in bad {
+        let (s, r) = send(&st, "PATCH", &page, b.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{b}");
+    }
+
+    // rename, delete, undelete: the material comes back
+    let (_, r) = send(&st, "PATCH", &page, json!({"rename": "Self-checkout machines"})).await;
+    assert_eq!(r["topic"]["text"], "Self-checkout machines");
+    let (s, _) = send(&st, "PATCH", &page, json!({"delete": true})).await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, _) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+    let (s, r) = send(&st, "PATCH", &page, json!({"undelete": true})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (_, p) = send(&st, "GET", &page, Value::Null).await;
+    assert_eq!(p["kept"][0]["ref"], json!(jot), "Undo keeps the material");
+
+    // Draft the rest: no sources named = Kept; his lines go along fixed
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/rant/draft",
+        json!({"topic": "Self-checkout machines", "topic_id": tid, "keep": ["Nobody asked me."]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let input = &jobs[r["job"]["id"].as_str().unwrap()]["input"];
+    assert_eq!(input["keep"], json!(["Nobody asked me."]));
+    let ids: Vec<&str> = input["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|s| s["id"].as_str())
+        .collect();
+    assert_eq!(ids, [jot.as_str(), a.as_str()], "Kept, the jot first: {input}");
+    for (b, msg) in [
+        (
+            json!({"topic": "x", "keep": ["two\nlines"]}),
+            "keep must be a list of at most 500 lines of at most 2000 characters",
+        ),
+        (json!({"topic": "x", "topic_id": "topic:nope"}), "no topic topic:nope"),
+    ] {
+        let (_, r) = send(&st, "POST", "/api/rant/draft", b.clone()).await;
+        assert_eq!(r["error"].as_str().unwrap_or(""), msg, "{b}");
+    }
+
+    // Claude on a line: one job with the line, its neighbours and the ask; nothing written to the bit
+    let lines = json!(["A", "B", "C", "D", "E", "F", "G", "H"]);
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/rant/line",
+        json!({"joke": a, "lines": lines, "at": 4, "ask": "sharper"}),
+    )
+    .await;
+    assert_eq!((s, r["status"].as_str()), (StatusCode::ACCEPTED, Some("queued")), "{r}");
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let j = &jobs[r["job"]["id"].as_str().unwrap()];
+    assert_eq!(j["kind"], "rant_line");
+    assert_eq!(j["input"]["line"], "E");
+    assert_eq!(j["input"]["before"], json!(["B", "C", "D"]));
+    assert_eq!(j["input"]["after"], json!(["F", "G", "H"]));
+    let (_, again) = send(
+        &st,
+        "POST",
+        "/api/rant/line",
+        json!({"joke": a, "lines": lines, "at": 4, "ask": "sharper"}),
+    )
+    .await;
+    assert_eq!(again["job"]["id"], r["job"]["id"], "the same ask is the same job");
+    for (b, msg) in [
+        (
+            json!({"lines": lines, "at": 9, "ask": "sharper"}),
+            "at must be the place of a line in lines",
+        ),
+        (
+            json!({"lines": lines, "at": 0, "ask": "funnier"}),
+            "ask must be one of sharper, shorter, angrier, bigger, tag",
+        ),
+        (
+            json!({"lines": lines, "at": 0}),
+            "ask or say is required (what he wants from the line)",
+        ),
+        (
+            json!({"lines": [], "at": 0, "ask": "tag"}),
+            "at must be the place of a line in lines",
+        ),
+        (
+            json!({"lines": lines, "at": 0, "say": "x".repeat(501)}),
+            "say at most 500 characters",
+        ),
+    ] {
+        let (s, r) = send(&st, "POST", "/api/rant/line", b.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (400, msg), "{b}");
+    }
 }
