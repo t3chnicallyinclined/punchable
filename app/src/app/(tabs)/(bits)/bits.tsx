@@ -7,7 +7,10 @@
 // 2026-10-29 (owner: "like Google Docs"): the list opens on what he touched last (sort=recent, the server's
 // `touched` timestamp: his last add/edit/confirm, else the newest version, night or first day); Performed and
 // Strongest stay as choices in the toolbar's sort menu (HIG/pull-down-buttons: a sort is a menu, not a segmented
-// control, which is for views). "+" in the navigation bar makes a new bit at once (lib/newBit, shared with Tonight's "+").
+// control, which is for views). "+" in the navigation bar makes a new bit at once (lib/newBit).
+// 2026-11-07 (SPEC 2026-11-06 R2, Tonight retired): "N to sort" (the morning inbox, its count the Bits tab's badge) is
+// the first row here, and Record a memo / Import a recording… are in the toolbar's ⋯ with the sort; "Ask your
+// material" was always this search field (a question goes to the conversation).
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -26,6 +29,7 @@ import { getPrefs, setPrefs } from '@/lib/prefs';
 import { mergeInto, pickMain, undoMerge } from '@/lib/bitWork';
 import { actionSheet } from '@/lib/actionSheet';
 import { useUI } from '@/lib/ui';
+import { useTonight } from '@/lib/tonight';
 import { Screen } from '@/lib/Screen';
 
 type View_ = 'bits' | 'notes';
@@ -90,6 +94,8 @@ export default function Bits() {
   const [selecting, setSelecting] = useState(false);            // work off a search list: pick bits, make them one
   const [picked, setPicked] = useState<string[]>([]);
   const ui = useUI();
+  const tonight = useTonight();
+  const toSort = tonight.data?.to_sort;
   const input = useRef<any>(null);
   useEffect(() => {
     const t = setTimeout(() => setDq(q.trim()), 300);
@@ -162,10 +168,15 @@ export default function Bits() {
     </Stack.Toolbar>
   ) : (
     <Stack.Toolbar placement="right">
-      {/* HIG/toolbars: the primary action ("+") at the trailing end; a pop-up for the sort, labelled with the current choice */}
+      {/* HIG/toolbars: the primary action ("+") at the trailing end; the ⋯ holds the creates that were Tonight's (Record a
+          memo, Import a recording…) and, as its own inline section, the sort with a check on the current choice */}
       <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
-      <Stack.Toolbar.Menu icon="arrow.up.arrow.down" accessibilityLabel={`Sorted by ${SORT_WORD[sort]}. Change the order`}>
-        {SORTS.map((k) => <Stack.Toolbar.MenuAction key={k} icon={k === sort ? 'checkmark' : undefined} onPress={() => { haptics.selection(); setSort(k); }}>{SORT_WORD[k]}</Stack.Toolbar.MenuAction>)}
+      <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel={`More. Sorted by ${SORT_WORD[sort]}`}>
+        <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
+        <Stack.Toolbar.MenuAction icon="square.and.arrow.down" onPress={() => router.push('/import' as any)}>Import a recording…</Stack.Toolbar.MenuAction>
+        <Stack.Toolbar.Menu inline title="Sort">
+          {SORTS.map((k) => <Stack.Toolbar.MenuAction key={k} icon={k === sort ? 'checkmark' : undefined} onPress={() => { haptics.selection(); setSort(k); }}>{SORT_WORD[k]}</Stack.Toolbar.MenuAction>)}
+        </Stack.Toolbar.Menu>
       </Stack.Toolbar.Menu>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
     </Stack.Toolbar>
@@ -211,6 +222,15 @@ export default function Bits() {
           </View>
           {moments.map((m, i) => <MomentRow key={m.id} m={m} testID={`bits-moment-${i}`} />)}
         </View>
+      )}
+      {!dq && (
+        // HIG/lists-and-tables: a disclosure row reveals the next level (the inbox); the count is the tab's badge too
+        <Pressable testID="to-sort" accessibilityRole="button" accessibilityLabel={toSort == null ? 'Loading the inbox' : `${toSort} to sort. Open the inbox`} onPress={() => router.push('/inbox' as any)}
+          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toSort ? C.amber : C.borderStrong }} />
+          {toSort != null ? <Text maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>{toSort} to sort</Text> : <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: C.surface2 }} accessibilityLabel="Loading" />}
+          <Icon name="chevron" size={18} color={C.dim} />
+        </Pressable>
       )}
       <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Memos']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
       {view === 'bits' && !dq && !native && (

@@ -214,7 +214,7 @@ const CUT_RE = /^rant(_[a-z_]*)?$/;
 /** A version's cut from its source: `rant`, `rant_session`, `rant_hook` are the rant cut; anything else is stage. */
 export const cutOf = (source?: unknown): Cut => (typeof source === 'string' && CUT_RE.test(source) ? 'rant' : 'stage');
 /** The session a version came from, as the stepper names it. */
-export const SESSION_WORD: Record<string, string> = { rant_session: 'Make it a rant', hook: 'Pick a hook', rant_hook: 'Pick a hook' };
+export const SESSION_WORD: Record<string, string> = { rant_session: 'Make it a rant', hook: 'Pick a hook', rant_hook: 'Pick a hook', rant_draft: 'Write a rant' };
 /** The source a write carries: his own write or a restore keeps the cut; a session names itself. A stage write sends
  *  none (the server's default, `app`). */
 export function sourceFor(cut: Cut, from: 'write' | 'rant' | 'hook'): string | undefined {

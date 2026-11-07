@@ -13,11 +13,11 @@ import { Face, Icon, SignInBtn, useUI, useWide } from './ui';
 
 export type { ScreenProps } from './screenTypes';
 
-// The three tabs (docs/UX_2026-10.md): Tonight · Bits · Sets. Ask is on every screen (the input bar), not a tab.
+// The three tabs: Rant · Bits · Sets (SPEC 2026-11-06; the first tab's key stays `tonight`, lib/TopBar ROOTS).
 // screens one tap down, and the tab they belong under (the old tabs Write / Boards / Notebook stay as routes)
 const PUSHED_ROOT: Record<string, string> = {
   joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', set: 'bits', venue: 'bits', calendar: 'bits',
-  merge: 'bits', write: 'bits', today: 'tonight', import: 'tonight', record: 'tonight', inbox: 'tonight', say: 'tonight', ask: 'tonight',
+  merge: 'bits', write: 'bits', today: 'tonight', import: 'bits', record: 'tonight', inbox: 'bits', say: 'bits', ask: 'bits',
   board: 'sets', builder: 'sets', list: 'sets', archived: 'sets', bitnotes: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
   settings: 'tonight', profile: 'tonight', learned: 'tonight',
 };
