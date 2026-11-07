@@ -536,6 +536,26 @@ pub fn app(st: AppState) -> Router {
     r.fallback(proxy::forward).with_state(st)
 }
 
+/// The court-material rule for this process (see [`state`]).
+pub fn load_legal(config: &ApiConfig) -> anyhow::Result<pk_core::legal::Legal> {
+    let owner = config.legal_owner.as_deref();
+    if !config.legal_rules_required {
+        return Ok(match std::fs::read_to_string(&config.legal_rules) {
+            Ok(text) => pk_core::legal::Legal::from_rules(&text, owner),
+            Err(_) => pk_core::legal::Legal::from_rules("", owner),
+        });
+    }
+    let path = config.legal_rules.display();
+    let text = std::fs::read_to_string(&config.legal_rules).map_err(|e| {
+        tracing::error!(path = %path, error = %e, "PUNCHABLE_LEGAL_RULES is set and the file cannot be read: refusing to start");
+        anyhow::anyhow!("PUNCHABLE_LEGAL_RULES {path} cannot be read: {e}")
+    })?;
+    pk_core::legal::Legal::try_from_rules(&text, owner).map_err(|e| {
+        tracing::error!(path = %path, error = %e, "PUNCHABLE_LEGAL_RULES is set and the file is not usable: refusing to start");
+        anyhow::anyhow!("PUNCHABLE_LEGAL_RULES {path} is not a rules file: {e}")
+    })
+}
+
 /// Build the state from the settings (the verifier, the metrics, one HTTP client).
 pub fn state(config: ApiConfig) -> anyhow::Result<AppState> {
     // jsonwebtoken picks its crypto backend from crate features and panics on every verify if a dependency ever
@@ -552,12 +572,11 @@ pub fn state(config: ApiConfig) -> anyhow::Result<AppState> {
         auth::Verifier::new(a.issuer.clone(), a.audience.clone(), jwks, clock)
     });
     let metrics = pk_obs::ApiMetrics::new(VERSION, &config.build_sha)?;
-    // the private legal rules, when this process has the file (the hosted pod does not): the generic markers plus his
+    // the private legal rules: the generic markers plus his. With `PUNCHABLE_LEGAL_RULES` set the file is REQUIRED: a
+    // file that cannot be read or parsed refuses the start (readiness never comes up) instead of running on the generic
+    // markers alone, which hid a Secret mounted unreadable. Unset, the generic markers only (a pod with no rules file).
     let mut config = config;
-    config.legal = match std::fs::read_to_string(&config.legal_rules) {
-        Ok(text) => pk_core::legal::Legal::from_rules(&text, config.legal_owner.as_deref()),
-        Err(_) => pk_core::legal::Legal::from_rules("", config.legal_owner.as_deref()),
-    };
+    config.legal = load_legal(&config)?;
     tracing::info!(markers = config.legal.len(), "legal rules loaded");
     Ok(AppState::new(config, verifier, metrics, http))
 }

@@ -317,7 +317,9 @@ async fn put_files(st: &AppState, by: &str, files: Vec<(String, String)>, gone: 
                 .map_err(store_err)?;
         }
     }
-    let synced = if written.iter().chain(&removed).any(|r| is_set_input(r)) {
+    // a sync that failed earlier is owed: it runs now even when this post's own files are not set inputs
+    let owed = store.sync_owed().await.unwrap_or(false);
+    let synced = if owed || written.iter().chain(&removed).any(|r| is_set_input(r)) {
         Some(sync_now(st).await?)
     } else {
         None
@@ -334,6 +336,8 @@ async fn put_files(st: &AppState, by: &str, files: Vec<(String, String)>, gone: 
 /// pipeline output). The inputs are the bundle's graph and id map, `kb/v0/inferred.json`, every set's
 /// `analysis.json`, `meta.json` and `laughs_auto.json`.
 pub async fn sync_now(st: &AppState) -> ApiResult<Value> {
+    // the whole read-then-sync under the KB lock: two posts cannot interleave and leave the older texts in the graph
+    let _kb = st.kb_lock().lock().await;
     let store = store_of(st)?;
     let ms = store.meta_state().await.map_err(store_err)?;
     let li = ms.and_then(|m| m.load_info).unwrap_or(Value::Null);
@@ -456,7 +460,6 @@ pub async fn sync_now(st: &AppState) -> ApiResult<Value> {
         paths,
         owner: &st.config().owner_id,
     };
-    let _kb = st.kb_lock().lock().await;
     // the hosted Python's `load_vectors` finds no vector cache folder in its pod, so a unit that changed is written
     // without a vector and the sweeper embeds it: the same here
     let out = store

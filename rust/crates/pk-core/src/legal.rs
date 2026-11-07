@@ -89,6 +89,16 @@ impl Legal {
         Self::from_rules(text, None)
     }
 
+    /// [`Legal::from_rules`] that refuses a file that is not a JSON object (the lenient one reads it as no rules at
+    /// all, the Python's `_local_rules`): for a process that was told to use the file and must not run without it.
+    pub fn try_from_rules(text: &str, owner_env: Option<&str>) -> Result<Self, String> {
+        match serde_json::from_str::<serde_json::Value>(text) {
+            Ok(v) if v.is_object() => Ok(Self::from_rules(text, owner_env)),
+            Ok(_) => Err("not a JSON object".to_string()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
     /// [`Legal::from_rules_json`] with `PUNCHABLE_OWNER_EMAIL` (`owner`, when the file names none).
     pub fn from_rules(text: &str, owner_env: Option<&str>) -> Self {
         let v: serde_json::Value = serde_json::from_str(text)

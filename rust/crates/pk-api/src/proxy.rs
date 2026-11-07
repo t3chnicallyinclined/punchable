@@ -45,10 +45,17 @@ fn copy_headers(from: &HeaderMap, to: &mut HeaderMap) {
     }
 }
 
+/// Set on a response that came from the Python: the metrics of this service never count it (it is the Python's latency,
+/// not ours), whether the fallback sent it or an owned route forwards while its feature is off.
+#[derive(Debug, Clone, Copy)]
+pub struct Uncounted;
+
 /// The fallback: forward to `PK_PYTHON_URL`, or answer 404 the Python's way when none is configured.
 pub async fn forward(State(st): State<AppState>, req: Request) -> Response {
     let Some(base) = st.config().python_url.clone() else {
-        return ApiError::not_found("not found").into_response();
+        let mut r = ApiError::not_found("not found").into_response();
+        r.extensions_mut().insert(Uncounted);
+        return r;
     };
     // the slot is held until the forwarded body has been sent (moved into the stream below)
     let Ok(Ok(permit)) = tokio::time::timeout(PERMIT_WAIT, st.proxy_permits().acquire_owned()).await else {
@@ -78,6 +85,7 @@ pub async fn forward(State(st): State<AppState>, req: Request) -> Response {
             let mut out = Response::new(Body::from_stream(stream));
             *out.status_mut() = status;
             *out.headers_mut() = headers;
+            out.extensions_mut().insert(Uncounted);
             out
         }
         Err(e) => {

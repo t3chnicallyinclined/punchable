@@ -579,3 +579,75 @@ async fn live_changes_arrive_for_decision_meta_and_creative_event() {
         (Some("storyboards"), Some("put"), Some("sb1"))
     );
 }
+
+// ---------------------------------------------------------------- the graph sync (T10 round 6)
+
+async fn loading_and_owed(store: &Store) -> (Option<bool>, bool) {
+    let v = store
+        .last("SELECT loading, sync_owed FROM ONLY meta:state;", Object::new())
+        .await
+        .unwrap();
+    let o = obj(v);
+    let b = |k: &str| matches!(o.get(k), Some(Value::Bool(true)));
+    (Some(b("loading")), b("sync_owed"))
+}
+
+/// A sync that fails after it raised `loading` (here: a changed unit needs its vector and the vectors cannot be read)
+/// brings the flag down and owes the sync; a process killed in the middle leaves the flag up, and the next start clears
+/// it only when nobody holds a live `lease:sync`. Red arm: `sync_recover` without the lease test clears a LIVE sync's
+/// flag (the second assertion), and without the recovery the flag stays (the first).
+#[tokio::test]
+async fn a_sync_that_dies_midway_leaves_loading_cleared_at_the_next_start() {
+    let Some((_srv, store)) = scratch("syncdie").await else {
+        return;
+    };
+    let f = fixture();
+    let graph = fixture_graph(&f);
+    store.load_graph(&graph).await.unwrap();
+    store
+        .query(
+            "UPDATE meta:state SET load_info = {graph: 'g'} RETURN NONE;",
+            Object::new(),
+        )
+        .await
+        .unwrap();
+    let mut changed = graph.clone();
+    for n in changed["nodes"].as_array_mut().unwrap() {
+        if n["type"] == "unit" {
+            n["text"] = json!("a unit whose text changed");
+            break;
+        }
+    }
+    let files = pk_kb::overlay::OverlayFiles::default();
+    let input = pk_store::SyncInput {
+        graph: &changed,
+        files: &files,
+        laughs: &[],
+        sources: vec![],
+        paths: std::collections::BTreeMap::new(),
+        owner: "owner",
+    };
+    // 1. a sync that fails: the flag comes down, the sync is owed
+    let r = store
+        .sync_graph(&input, async || Err(StoreError::mapping("the vector cache is gone")))
+        .await;
+    assert!(r.is_err(), "the sync failed");
+    assert_eq!(loading_and_owed(&store).await, (Some(false), true), "down, and owed");
+    // 2. a sync killed midway: the flag is up and nobody holds the lease (it lapsed)
+    store
+        .query(
+            "UPDATE meta:state SET loading = true, sync_owed = false RETURN NONE;",
+            Object::new(),
+        )
+        .await
+        .unwrap();
+    assert!(store.lease_acquire("sync", "dead-process", 1).await.unwrap());
+    // while its lease is live the flag stays: that sync may still be running
+    assert!(!store.sync_recover().await.unwrap(), "a live holder keeps the flag");
+    assert_eq!(loading_and_owed(&store).await.0, Some(true));
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    assert!(store.sync_recover().await.unwrap(), "the lease lapsed: cleared");
+    assert_eq!(loading_and_owed(&store).await, (Some(false), true), "cleared, and owed");
+    // 3. nothing to clear
+    assert!(!store.sync_recover().await.unwrap());
+}

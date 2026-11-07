@@ -1673,6 +1673,16 @@ def side_rows(port: int, pw: str, dirname: str, sid: str) -> str:
     return re.sub(r'"path": "[^"]*corpus[\\/]+sets[\\/]+DIR[\\/]+analysis.json"', '"path": "P"', text)
 
 
+def settle(paths: list[str], secs: float = 30.0) -> None:
+    """Wait (polling) until the Python's answers to `paths` equal pk-api's: its pod copies the rows pk-api wrote on its
+    next poll (PK_BOOT_POLL_S, 15 s), so a read right after a write may still be the old copy. Up to `secs`."""
+    end = time.time() + secs
+    while time.time() < end:
+        if all(R.call(py, "GET", p_, app)[2] == R.call(rs, "GET", p_, app)[2] for p_ in paths):
+            return
+        time.sleep(1)
+
+
 PY_DATA: Path | None = None
 
 
@@ -1778,7 +1788,7 @@ def ingest_phase(port: int, pw: str) -> None:
     synced["rs"] = r.get("synced") or {}
     ok("ingest: a set posted through pk-api is written, three files and a sync", r["ok"] is True and len(r["written"]) == 3 and r["unchanged"] == 0
        and synced["rs"].get("mode") == "sync" and synced["rs"]["changed"]["nodes"] >= 4 and synced["rs"]["changed"]["edges"] >= 1, json.dumps(r)[:400])
-    time.sleep(17)  # the Python pod copies the new rows on its next poll
+    settle(["/api/jokes?limit=5000", "/api/sets"])
     both("ingest: after a set via pk-api", reads + ["/api/sets", f"/api/sets/{q(sid)}/analysis", f"/api/sets/{q(sid)}/review",
                                                      "/api/jokes/joke:a", "/api/pipeline", "/api/meta", "/api/today"], headers=w)
     both("ingest: the app's reads after a set via pk-api", ["/api/sets", f"/api/sets/{q(sid)}/analysis", "/api/jokes?limit=5000", "/api/jokes/joke:a"])
@@ -1825,6 +1835,7 @@ def ingest_phase(port: int, pw: str) -> None:
     # 6. an idea from an import through each server, a decision through one, its undo through the other
     shapes = []
     jid = ""
+    ideas_posted = 0
     for base, who in ((rs, "pk-api"), (py, "python")):
         st, r = write(base, "POST", "/api/worker/ideas", {"text": f"An imported idea about the {who} cat (I).", "actor": "import:memo"}, headers=w)
         shapes.append(shape(norm(r)))
@@ -1832,6 +1843,7 @@ def ingest_phase(port: int, pw: str) -> None:
            and r["decisions"][0]["after"]["stage"] == "idea", json.dumps(r)[:300])
         both(f"ingest: after an idea via {who}", ["/api/jokes?limit=5000", "/api/decisions?limit=5", "/api/today"])
         jid = r["id"]
+        ideas_posted += 1
     ok("ingest: the two answers to an idea have the same shape", shapes[0] == shapes[1], json.dumps(shapes)[:300])
     jobs = R.surreal_sql(port, pw, "SELECT VALUE line FROM creative_event WHERE store = 'jobs' ORDER BY seq;")[-1]["result"]
     ok("ingest: an imported memo idea queued its embed and memolink jobs", any('"embed"' in x for x in jobs) and any('"memolink"' in x for x in jobs), str(len(jobs)))
@@ -1868,7 +1880,8 @@ def ingest_phase(port: int, pw: str) -> None:
            json.dumps(r)[:400])
         both(f"ingest: after {who} removed a set", ["/api/sets", "/api/jokes/joke:a", "/api/pipeline"] + reads[:3], headers=w)
     after = counts(port, pw)
-    ok("ingest: the graph tables are as they were before the two sets", {k: v for k, v in after.items() if k not in ("srcfile", "joke")} == {k: v for k, v in base0.items() if k not in ("srcfile", "joke")},
+    ok("ingest: the graph tables are as they were before the two sets", {k: v for k, v in after.items() if k not in ("srcfile", "joke")} == {k: v for k, v in base0.items() if k not in ("srcfile", "joke")}
+       and after["joke"] == base0["joke"] + ideas_posted,
        f"{base0} -> {after}")
     ok("ingest: the files the two sets left are the gsync file only", after["srcfile"] == base0["srcfile"] + 1, f"{base0['srcfile']} -> {after['srcfile']}")
 
@@ -1921,7 +1934,7 @@ def say_pair(label: str, text_py: str, text_rs: str | None = None, extra: dict |
 
 def say_phase() -> None:
     global n_equal
-    time.sleep(17)  # the Python pod copies the rows the ingest phase removed on its next poll (PK_BOOT_POLL_S, 15 s)
+    settle(["/api/sets", "/api/jokes?limit=5000", "/api/tonight/screen"])
     reads = ["/api/tonight/screen", "/api/boards", "/api/ask/chats", "/api/decisions?limit=6", "/api/jokes?limit=5000"]
     both("say: before", reads)
     # every refusal, to the letter
@@ -1999,13 +2012,15 @@ def mysets_phase() -> None:
         for h in R.HEADERS:
             if a[1].get(h) != b[1].get(h):
                 bad.append(f"{label}: header {h}: python {a[1].get(h)!r} rust {b[1].get(h)!r}")
-        # `tapes` is left out: two sets made of the same bits tie for a recording, and the tie goes to the lower id,
-        # which differs between a set each server made
+        # `tapes` of the answer is left out: two sets made of the same bits tie for a recording, the tie goes to the lower
+        # id, and the two answers are about two different sets. The same tie is checked below on the SAME set, read
+        # through both servers.
         drop = lambda d_: {k: v for k, v in d_.items() if k != "tapes"} if isinstance(d_, dict) else d_  # noqa: E731
         for p, u, v in R.diff(norm(drop(body(a))), norm(drop(body(b)))):
             bad.append(f"{label}: {p}: python {json.dumps(u)[:160]} rust {json.dumps(v)[:160]}")
         problems.extend(bad)
         n_equal += not bad
+        both(f"mysets: {label}: each set read through both servers", [f"/api/mysets/{q(i_)}" for i_ in mine.values()])
         return body(a), body(b)
 
     mine = {}

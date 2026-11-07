@@ -676,6 +676,15 @@ impl AppState {
                     .unwrap_or_else(|_| Err(pk_store::StoreError::mapping("connect timed out")))
                 {
                     Ok(s) => {
+                        // a process killed in the middle of a graph sync leaves `loading` true (every write 503):
+                        // cleared here when nobody holds a live `lease:sync`; the sync is then owed
+                        match s.sync_recover().await {
+                            Ok(true) => tracing::warn!(
+                                "meta:state.loading was left true by a sync that died: cleared, the next worker post syncs again"
+                            ),
+                            Ok(false) => {}
+                            Err(e) => tracing::warn!(error = %e, "sync_recover could not run"),
+                        }
                         self.set_store(Some(s));
                         tracing::info!("connected to SurrealDB");
                     }

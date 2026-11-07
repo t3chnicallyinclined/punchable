@@ -11,6 +11,7 @@
 //! the full load (the data was never loaded; the records' order changed) is refused with a 503 instead of doing it.
 
 use std::collections::{BTreeMap, HashMap};
+use std::fmt::Write as _;
 use std::time::Instant;
 
 use pk_kb::overlay::{OverlayFiles, build_overlay, set_id_of};
@@ -51,6 +52,11 @@ pub struct SyncOutcome {
     /// Seconds it took.
     pub seconds: f64,
 }
+
+/// How many laughs one `INSERT` of the side-table transaction carries.
+const SIDE_BATCH: usize = 400;
+/// How long a sync may hold `lease:sync` without finishing before another process may take it (seconds).
+const SYNC_LEASE_S: u32 = 300;
 
 /// `load_info` keys another writer owns and a sync carries over (`FOREIGN_INFO`).
 const FOREIGN_INFO: [&str; 1] = ["bundle"];
@@ -121,13 +127,14 @@ impl Store {
     }
 
     /// `write_side_tables`: `laugh_run` + `laugh` (every set folder with a `laughs_auto.json`) and `analysis` (the AI
-    /// index) are replaced. Returns how many laughs were written.
+    /// index) are replaced. Returns how many laughs were written. ONE transaction (the Python's are separate
+    /// statements): a crash or a refused row halfway leaves the tables as they were, never empty.
     async fn write_side_tables(&self, laughs: &[(String, Json)], index: &pk_kb::overlay::Index) -> Result<usize> {
-        for tb in ["analysis", "laugh", "laugh_run"] {
-            self.query(&format!("DELETE {tb} RETURN NONE;"), Object::new()).await?;
-        }
+        let mut sql =
+            String::from("BEGIN; DELETE analysis RETURN NONE; DELETE laugh RETURN NONE; DELETE laugh_run RETURN NONE;");
+        let mut bound = Object::new();
         let mut nl = 0;
-        for (dir, doc) in laughs {
+        for (n, (dir, doc)) in laughs.iter().enumerate() {
             let (Some(sid), Some(obj)) = (set_id_of(dir), doc.as_object()) else {
                 continue;
             };
@@ -141,15 +148,12 @@ impl Store {
             content.insert("set", Value::RecordId(set_rid.clone()));
             content.insert("set_dir", Value::String(dir.clone()));
             content.insert("doc", to_db(&Json::Object(kept)));
-            self.write(
-                "CREATE type::record('laugh_run', $k) CONTENT $c RETURN id;",
-                vars([
-                    ("k", Value::String(crate::ids::key_str(&set_rid.key))),
-                    ("c", Value::Object(content)),
-                ]),
-                None,
-            )
-            .await?;
+            bound.insert(format!("rk{n}"), Value::String(crate::ids::key_str(&set_rid.key)));
+            bound.insert(format!("rc{n}"), Value::Object(content));
+            let _ = write!(
+                sql,
+                "CREATE type::record('laugh_run', $rk{n}) CONTENT $rc{n} RETURN id;"
+            );
             let rows: Vec<Value> = obj
                 .get("laughs")
                 .and_then(Json::as_array)
@@ -159,8 +163,9 @@ impl Store {
                 .filter_map(|(i, l)| l.as_object().map(|l| laugh_to_row(l, &set_rid, idx(i))))
                 .collect();
             nl += rows.len();
-            if !rows.is_empty() {
-                self.insert_rows(Some("laugh"), rows).await?;
+            for (c, chunk) in rows.chunks(SIDE_BATCH).enumerate() {
+                bound.insert(format!("lr{n}_{c}"), Value::Array(Array::from(chunk.to_vec())));
+                let _ = write!(sql, "INSERT INTO laugh $lr{n}_{c} RETURN id;");
             }
         }
         // the AI index (set analyses and the inferred run), so the API needs no AI files at all
@@ -178,16 +183,12 @@ impl Store {
             c.insert("ord", Value::Number(Number::Int(idx(i))));
             c.insert("meta", to_db(meta));
             c.insert("rows", to_db(&Json::Array(rows)));
-            self.write(
-                "CREATE type::record('analysis', $k) CONTENT $c RETURN id;",
-                vars([
-                    ("k", Value::String(crate::ids::key_str(&set_rid.key))),
-                    ("c", Value::Object(c)),
-                ]),
-                None,
-            )
-            .await?;
+            bound.insert(format!("ak{i}"), Value::String(crate::ids::key_str(&set_rid.key)));
+            bound.insert(format!("ac{i}"), Value::Object(c));
+            let _ = write!(sql, "CREATE type::record('analysis', $ak{i}) CONTENT $ac{i} RETURN id;");
         }
+        sql.push_str("COMMIT;");
+        self.query(&sql, bound).await?;
         Ok(nl)
     }
 
@@ -252,6 +253,69 @@ impl Store {
     /// asked for (once) only when a unit has to be rewritten, and gives `unit id -> vector` for the units that
     /// have one (`load_vectors`).
     pub async fn sync_graph(
+        &self,
+        input: &SyncInput<'_>,
+        vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
+    ) -> Result<SyncOutcome> {
+        let me = format!(
+            "sync-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_nanos())
+        );
+        if !self.lease_acquire("sync", &me, SYNC_LEASE_S).await? {
+            return Err(StoreError::refused(
+                503,
+                "another sync is running; this file is saved and the next post syncs it",
+            ));
+        }
+        let out = self.sync_locked(input, vectors).await;
+        // the lease is given back whatever happened; a process that dies keeps it until it lapses, and the next
+        // start clears `loading` when nobody holds it (`sync_recover`)
+        if let Err(e) = self.lease_release("sync", &me).await {
+            tracing::warn!(error = %e, "lease:sync was not released; it lapses in a few minutes");
+        }
+        // a failed sync is owed: the next post syncs again even when its own files changed nothing
+        let flag = if out.is_ok() { "false" } else { "true" };
+        if let Err(e) = self
+            .query(
+                &format!("UPDATE meta:state SET sync_owed = {flag} RETURN NONE;"),
+                Object::new(),
+            )
+            .await
+        {
+            tracing::warn!(error = %e, "meta:state.sync_owed was not written");
+        }
+        out
+    }
+
+    /// Whether a sync failed and has not been made good since (`meta:state.sync_owed`): the caller syncs again at its
+    /// next chance, whatever its own files say.
+    pub async fn sync_owed(&self) -> Result<bool> {
+        let v = self
+            .last("SELECT VALUE sync_owed FROM ONLY meta:state;", Object::new())
+            .await?;
+        Ok(matches!(v, Value::Bool(true)))
+    }
+
+    /// At start: a process killed in the middle of a sync leaves `meta:state.loading` true, and every write answers 503
+    /// while it is. When nobody holds a live `lease:sync` the flag is cleared (and the sync owed). Returns whether it
+    /// was cleared.
+    pub async fn sync_recover(&self) -> Result<bool> {
+        let v = self
+            .last(
+                "IF (SELECT VALUE loading FROM ONLY meta:state) = true \
+                    AND (!record::exists(lease:sync) OR lease:sync.owner = NONE OR lease:sync.until = NONE \
+                         OR lease:sync.until < time::now()) \
+                 { UPDATE meta:state SET loading = false, sync_owed = true, gen += 1 RETURN VALUE id } ELSE { [] };",
+                Object::new(),
+            )
+            .await?;
+        Ok(!rows_of(v).is_empty())
+    }
+
+    async fn sync_locked(
         &self,
         input: &SyncInput<'_>,
         vectors: impl AsyncFnOnce() -> Result<HashMap<String, Vec<f64>>>,
