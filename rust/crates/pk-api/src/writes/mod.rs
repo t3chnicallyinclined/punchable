@@ -34,6 +34,7 @@ pub mod merge;
 pub mod review;
 pub mod transcript;
 pub mod uploads;
+pub mod venues;
 pub mod worker;
 pub mod workingsets;
 

@@ -219,6 +219,11 @@ spec:
           # regex path below). A GET settles a finished answer by writing events, so both servers write this store
           # until the Python is retired; either reads what the other wrote.
           - { path: /api/ask/chats, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 5 (group B): the rooms and the map's pins (GET only on the Python too; the pin edit is the PATCH on
+          # the regex path below). The geocoder is never asked a question (PK_GEOCODE stays unset): the pins come from the
+          # cache row.
+          - { path: /api/venues, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/venues.geojson, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -293,6 +298,8 @@ spec:
           - { path: "/api/merge/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 5 (group A): one conversation (GET settles it, POST asks a follow-up, PATCH renames or hides it)
           - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 5 (group B): his pin move, rename or reset (PATCH only on the Python too)
+          - { path: "/api/venues/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a): POST /api/upload, the phone's recording (up to 1 GB, api-dev MAX_UPLOAD). The Python's own
 # Ingress (50-ingress.yaml) carries these annotations for it; the others here do not, so the upload is its own object:

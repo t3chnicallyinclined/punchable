@@ -69,7 +69,7 @@ problems: list[str] = []
 n_equal = 0
 
 # ---------------------------------------------------------------- volatile parts of a write's answer
-VOLATILE_KEYS = {"ts", "created_at", "updated_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
+VOLATILE_KEYS = {"ts", "created_at", "updated_at", "edited_at", "done_at", "claimed_at", "received_at", "at", "date", "generated_at",
                  "undone_at", "detached_at", "index", "indexes", "undo_of", "undo_indexes", "kept", "dropped"}
 MINTED = [(re.compile(r"\bjob:[a-z_]+-[0-9a-f]{12}\b"), "job:X"), (re.compile(r"\b(?:at|mg|dm):[0-9a-f]{8}\b"), "id:X"),
           (re.compile(r"\bunit:[0-9a-f]{12}\b"), "unit:X"), (re.compile(r"\bjoke:[a-z0-9\-]+\b"), "joke:X"),
@@ -1496,6 +1496,75 @@ def chats_phase() -> None:
         n_equal += not got
 
 
+def venues_same(label: str, path: str) -> None:
+    """The same venue read on both servers; `generated_at` is each server's own clock and is the only thing left out."""
+    global n_equal
+    pair = []
+    for base in (py, rs):
+        r_ = R.call(base, "GET", path, app)
+        j_ = json.loads(r_[2] or b"null")
+        if isinstance(j_, dict):
+            j_.pop("generated_at", None)
+        pair.append((r_[0], r_[1], json.dumps(j_).encode()))
+    got = R.compare(f"{label}: {path}", pair[0], pair[1])
+    problems.extend(got)
+    n_equal += not got
+
+
+def venues_phase() -> None:
+    """Round 5, group B: a room's pin moved through one server and renamed through the other, each read on both; the
+    same reset to both; every refusal to the letter. The geocoder is never asked a question (no PK_GEOCODE on either)."""
+    global n_equal
+    reads = ["/api/venues", "/api/venues.geojson", "/api/venues?include_hidden=1"]
+    for p in reads:
+        venues_same("venues: before any edit", p)
+    rooms = body(R.call(py, "GET", "/api/venues", app))["venues"]
+    ok("venues: the scratch notebook has rooms to edit", len(rooms) >= 2, str(len(rooms)))
+    vid, vid2 = rooms[0]["venue_id"], rooms[1]["venue_id"]
+    path, path2 = f"/api/venues/{quote(vid, safe='')}", f"/api/venues/{quote(vid2, safe='')}"
+    st, r = write(rs, "PATCH", path, {"lat": 12.5, "lon": -70.25})
+    ok("venues: a pin moved through pk-api is his on the feature", r["feature"]["properties"]["status"] == "his"
+       and r["feature"]["geometry"]["coordinates"] == [-70.25, 12.5] and r["venue"]["geo"]["status"] == "his", json.dumps(r)[:400])
+    for p in reads:
+        venues_same("venues: after a pin via pk-api", p)
+    st, r = write(py, "PATCH", path, {"name": "  Moved Room  "})
+    ok("venues: a rename through the Python names the feature and the room", r["feature"]["properties"]["name"] == "Moved Room"
+       and r["venue"]["name"] == "Moved Room", json.dumps(r)[:400])
+    for p in reads:
+        venues_same("venues: after a rename via the Python", p)
+    st, r = write(rs, "PATCH", path2, {"lat": 1.0, "lon": 2.0, "name": "Both at once"})
+    for p in reads:
+        venues_same("venues: after a pin and a rename in one body via pk-api", p)
+    same_write("same: a reset", "PATCH", path, {"reset": True})
+    same_write("same: a reset again", "PATCH", path, {"reset": True})
+    same_write("same: a pin", "PATCH", path2, {"lat": -33.5, "lon": 151.25})
+    same_write("same: a reset wins over a pin", "PATCH", path, {"reset": True, "lat": 1000})
+    for p in reads:
+        venues_same("venues: after the resets", p)
+    big = "n" * 121
+    for label, p_, b, h in [
+            ("venues: no such room", "/api/venues/venue:nope", {"name": "x"}, app),
+            ("venues: nothing to change", path, {}, app),
+            ("venues: lat without lon", path, {"lat": 10}, app),
+            ("venues: lat and lon as text", path, {"lat": "1", "lon": "2"}, app),
+            ("venues: lat and lon as bools", path, {"lat": True, "lon": False}, app),
+            ("venues: lat out of range", path, {"lat": 91, "lon": 0}, app),
+            ("venues: lon out of range", path, {"lat": 0, "lon": -181}, app),
+            ("venues: a blank name", path, {"name": "   "}, app),
+            ("venues: a name that is not text", path, {"name": 5}, app),
+            ("venues: a long name", path, {"name": big}, app),
+            ("venues: worker token", path, {"name": "x"}, worker_tok),
+            ("venues: no token", path, {"name": "x"}, {}),
+            ("venues: a put", path, {"name": "x"}, app)]:
+        m = "PUT" if label.endswith("a put") else "PATCH"
+        a_, c_ = R.call(py, m, p_, h, b), R.call(rs, m, p_, h, b)
+        got = R.compare(label, a_, c_)
+        problems.extend(got)
+        n_equal += not got
+        ok(f"{label}: a refusal", a_[0] >= 400, f"the Python answered {a_[0]} {a_[2][:200]!r}")
+    venues_same("venues: after the refusals", "/api/venues")
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -1645,6 +1714,7 @@ def main() -> int:
         upload_phase(port, pw)
         film_phase()
         chats_phase()
+        venues_phase()
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
         for method, route, status in (("POST", "/api/ideas", 200), ("POST", "/api/sets/transcript", 202), ("POST", "/api/jokes/{id}/versions", 200),
@@ -1680,7 +1750,11 @@ def main() -> int:
                                       ("POST", "/api/ask/chats", 201), ("POST", "/api/ask/chats", 400), ("POST", "/api/ask/chats", 404),
                                       ("POST", "/api/ask/chats", 422), ("POST", "/api/ask/chats/{id}", 200), ("POST", "/api/ask/chats/{id}", 409),
                                       ("GET", "/api/ask/chats", 200), ("GET", "/api/ask/chats/{id}", 200), ("GET", "/api/ask/chats/{id}", 404),
-                                      ("PATCH", "/api/ask/chats/{id}", 200), ("PATCH", "/api/ask/chats/{id}", 400)):
+                                      ("PATCH", "/api/ask/chats/{id}", 200), ("PATCH", "/api/ask/chats/{id}", 400),
+                                      # round 5, group B: the rooms
+                                      ("GET", "/api/venues", 200), ("GET", "/api/{id}", 200),  # `venues.geojson` is a label with an {id}: the dot is no word
+                                      ("PATCH", "/api/venues/{id}", 200), ("PATCH", "/api/venues/{id}", 400),
+                                      ("PATCH", "/api/venues/{id}", 404)):
             ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
         ok("metrics: /api/live is not a counted request (its sockets are pk_live_clients)",
            'route="/api/live"' not in mtext and "pk_live_clients 0" in mtext, mtext[:0])

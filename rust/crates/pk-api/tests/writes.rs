@@ -1142,3 +1142,30 @@ async fn the_ask_conversations_queue_settle_and_are_renamed() {
 async fn get_path(st: &AppState, path: &str) -> (StatusCode, Value) {
     send(st, "GET", path, Value::Null).await
 }
+
+/// T10 round 5, group B: the rooms. A notebook with no analysed set has no rooms; a pin or a rename of a room that is
+/// not there is the Python's 404 before anything else is looked at, and nothing is written.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_rooms_answer_and_an_unknown_room_is_not_found() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let (s, r) = get_path(&st, "/api/venues").await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["venues"], json!([]));
+    assert_eq!(r["ambiguous"], json!([]));
+    assert_eq!(r["geocoder"]["requests_this_run"], 0);
+    assert!(r["generated_at"].is_string());
+    let (s, r) = get_path(&st, "/api/venues.geojson").await;
+    assert_eq!(
+        (s, r["type"].as_str(), r["features"].clone()),
+        (StatusCode::OK, Some("FeatureCollection"), json!([]))
+    );
+    for body in [json!({"name": "x"}), json!({}), json!({"lat": 1, "lon": 2})] {
+        let (s, r) = send(&st, "PATCH", "/api/venues/venue:nope", body).await;
+        assert_eq!((s, r["error"].as_str()), (StatusCode::NOT_FOUND, Some("no such venue")));
+    }
+    let lines = Creative::new(st.clone()).lines("venues").await.unwrap();
+    assert!(lines.is_empty(), "a refused edit writes nothing: {lines:?}");
+}

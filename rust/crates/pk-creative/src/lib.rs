@@ -31,6 +31,7 @@ pub mod story;
 pub mod textdiff;
 pub mod today;
 pub mod util;
+pub mod venues;
 pub mod verbatim;
 pub mod write;
 

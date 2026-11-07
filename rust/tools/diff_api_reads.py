@@ -1244,6 +1244,28 @@ def main() -> int:
             problems += got
             n_ok += not got
             reqs.append((label, "GET", "", {}))
+        # round 5, group B: the rooms and the map's pins. `generated_at` is each server's own clock (the answer is built
+        # per request), so it is taken out of both bodies before they are compared; nothing else is
+        for p in ("/api/venues", "/api/venues?include_hidden=1", "/api/venues?backend=files", "/api/venues?backend=surreal",
+                  "/api/venues.geojson", "/api/venues.geojson?backend=x", "/api/venues/", "/api/venues/x", "/api/venuesx"):
+            pair = []
+            for base in (py, rs):
+                r_ = call(base, "GET", p, app)
+                try:
+                    j_ = json.loads(r_[2] or b"null")
+                    if isinstance(j_, dict):
+                        j_.pop("generated_at", None)
+                    pair.append((r_[0], r_[1], json.dumps(j_).encode()))
+                except ValueError:
+                    pair.append(r_)
+            got = compare("venues: " + p, pair[0], pair[1])
+            problems += got
+            n_ok += not got
+            reqs.append(("venues: " + p, "GET", p, app))
+        reqs.append(("venues signed out", "GET", "/api/venues", {}))
+        got = compare("venues signed out", call(py, "GET", "/api/venues", {}), call(rs, "GET", "/api/venues", {}))
+        problems += got
+        n_ok += not got
         report["requests"] = len(reqs)
         report["equal"] = n_ok
         # proof the answers came from pk-api and not through its fallback: its own counters saw every moved route
@@ -1257,7 +1279,7 @@ def main() -> int:
                       "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
                       "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates",
                       "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}",
-                      "/api/ask/chats"):
+                      "/api/ask/chats", "/api/venues", "/api/{id}"):  # (`/api/venues.geojson` is labelled `/api/{id}`)
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)

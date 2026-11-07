@@ -50,7 +50,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 28] = [
+pub const OWN_PATHS: [&str; 30] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -79,6 +79,8 @@ pub const OWN_PATHS: [&str; 28] = [
     "/api/memos",
     "/api/merge/history",
     "/api/ask/chats",
+    "/api/venues",
+    "/api/venues.geojson",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -145,7 +147,7 @@ pub const OWN_WRITE_PATHS: [&str; 27] = [
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 15] = [
+pub const OWN_WRITE_PATTERNS: [&str; 16] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -161,6 +163,7 @@ pub const OWN_WRITE_PATTERNS: [&str; 15] = [
     "/api/worker/jobs/{id}/result",
     "/api/jobs/{id}/drop",
     "/api/ask/chats/{id}",
+    "/api/venues/{id}",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -440,6 +443,10 @@ pub fn app(st: AppState) -> Router {
                     .patch(guarded_write(&st, writes::chats::one)),
             ),
         )
+        // T10 round 5, group B: the rooms and the map's pins (his moves and renames are the PATCH)
+        .route("/api/venues", read_route(&st, routes::venues::venues))
+        .route("/api/venues.geojson", read_route(&st, routes::venues::geojson))
+        .route("/api/venues/{id}", patch_route(&st, writes::venues::patch))
         // T10 group 6, the cheap half: the one-shot questions and the imports that only queue a job
         .route("/api/ask", write_route(&st, writes::ask::ask))
         .route("/api/riff", write_route(&st, writes::ask::riff))
