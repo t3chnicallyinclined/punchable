@@ -145,6 +145,22 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0g. **The Rant tab as his creative space (owner on build 25, 2026-11-07: "i added a topic i see it says 12 bits but i
+   cant see them on the screen, i cant edit/list them i can't work with them"): TestFlight build 26, branch
+   `app/rant-workspace` (not merged, not pushed, not built, not deployed).** `docs/design/SPEC-2026-11-06-rant-tab.md`
+   §12 (slices A, B and C); §11's "§12" row lists what is in and the fifteen calls; §10 "Build 26" is his checks. The
+   "12 bits" was the search's cap, not a count (CONFIRMED: `/api/search` sends no distance on its bit rows). A topic is
+   now a page of his words (Kept, Found, Dropped, Jot, search to add), the script is a Notes-style page (each line's
+   source, Material, Claude on a line, Draft the rest that only adds, a local draft, Back saves), Film it from the
+   script. **Server, Rust only:** pk-api `GET /api/topics/<id>`, `GET /api/topics/<id>/material`, `POST /api/rant/line`,
+   `PATCH /api/topics/<id>` and `GET /api/topics` and `POST /api/rant/draft` extended; pk-worker kind `rant_line`; the
+   `script` creative store. **Deploy order (a `rant_line` row in the shared `jobs` store breaks a server that does not
+   know the kind):** the Python API image (its `JOB_KINDS` gains `rant_line`) → pk-api → pk-worker → re-apply the pk-api
+   Ingresses (`infra/k8s/prepared/t10-api-rs.yaml`: `/api/rant/line`, `/api/topics/[^/]+/material$`); then build 26.
+   The Python never runs the kind. Older `delete` events on the topics store now replay as tombstones (hidden by every
+   reader). **Merging with round 6:** both branches grow `OWN_PATTERNS` and `OWN_WRITE_PATHS` in `pk-api/src/lib.rs`
+   (this branch: +2 patterns, +1 write path, each in its own commented block); fix the array lengths by hand and re-run
+   `tests/routes.rs`.
 0f. **The Rant tab, slice 1 (owner 2026-11-07: "i dont see the new record/rant tab/button, where are we with that ??
    lets get it going"): TestFlight build 25, branch `app/rant-tab` (not merged, not pushed, not built, not deployed).**
    `docs/design/SPEC-2026-11-06-rant-tab.md` §11 lists what is in and the fourteen calls; §10 is the owner's checks.

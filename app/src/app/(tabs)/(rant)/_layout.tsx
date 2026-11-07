@@ -14,6 +14,12 @@ export default function RantStack() {
   return (
     <Stack screenOptions={{ headerShown: false, headerTintColor: C.amber, contentStyle: { backgroundColor: C.bg } }}>
       <Stack.Screen name="index" options={{ title: t('Rant') }} />
+      {/* the creative space (SPEC 2026-11-06 §12.7): a topic is a page, its script a push, a bit opened from it stays here */}
+      <Stack.Screen name="new-topic" options={{ title: t('New topic') }} />
+      <Stack.Screen name="topic/[topic]/index" options={{ title: t('Topic') }} />
+      <Stack.Screen name="topic/[topic]/script" options={{ title: t('The rant') }} />
+      <Stack.Screen name="topic/[topic]/bit/[id]" options={{ title: t('Joke') }} />
+      <Stack.Screen name="filmed" options={{ title: t('Filmed') }} />
       <Stack.Screen name="settings" options={{ title: t('Settings') }} />
       {/* his voice profile: a form sheet on the phone (HIG/sheets: the grabber, swipe down to dismiss, full height for the editor); a page on the web */}
       <Stack.Screen name="voice" options={{ title: t('Voice profile'), ...(Platform.OS === 'web' ? {} : { presentation: 'formSheet', sheetAllowedDetents: [1.0], sheetGrabberVisible: true, sheetExpandsWhenScrolledToEdge: true }) }} />

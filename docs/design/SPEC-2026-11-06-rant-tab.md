@@ -1,7 +1,8 @@
 # SPEC 2026-11-06: the Rant tab (topics and trends, write it, film it, finish it)
 
 Status: **slice 1 built 2026-11-07** (branch `app/rant-tab`, TestFlight build 25; §11 lists what is in and the
-calls taken against this text). Slices 2-4 proposed, not built. **§12 (owner feedback 2026-11-07) replaces §2 and §3 where they differ: read it first.** Owner direction 2026-11-06 (and 2026-11-07: "i dont see the
+calls taken against this text). **§12 slices A, B and C built 2026-11-07** (branch `app/rant-workspace`, for TestFlight
+build 26; §11's "§12" row lists what is in and the calls; §10 "Build 26" is the owner's checks). Slices 2-4 proposed, not built. **§12 (owner feedback 2026-11-07) replaces §2 and §3 where they differ: read it first.** Owner direction 2026-11-06 (and 2026-11-07: "i dont see the
 new record/rant tab/button, where are we with that ?? lets get it going"):
 
 - "the recording works, but i dont like that its hidden, i think it should be one of the main features"; "lets name it
@@ -255,15 +256,48 @@ video, INFERRED), a posted mark from the activity type, and "Mark as posted". A 
 Tell us: whether the drafted lines sound like him (the his / new split), whether "3 bits" matches what he expects for a
 topic, and whether opening the saved rant in Bits (the tab switches) is fine or should stay on Rant.
 
+**Build 26 (§12, the creative space: slices A, B and C), in order, one line each:**
+
+1. Rant opens on the topic you worked on last: a card with its name, the rant's last two lines in your words, "Rant v3 ·
+   Nov 7 · 0:58", **Keep writing** and **Film it**. With no rant yet it opens on **Topics**.
+2. Tap a topic: your words are on the screen, up to three lines a card, under **Kept · N** and **Found · N**; the row's
+   number on the tab equals the heading's (both may read "30+").
+3. **+** on a Found card: it moves to Kept ("Kept", Undo). The check is soft amber; tap it again: back in Found.
+4. Tap a card's words: **Open · To the rant · Drop** under it. Drop: it goes to **Dropped · 1** at the bottom; **Put back**.
+5. Tap a card's words twice: the bit's page opens; Back returns to the topic, still on Rant (no tab switch).
+6. **Jot a thought**, Return: it is first under Kept ("Jotted", Undo); search Bits for it: it is there.
+7. Type in **Find a bit to add** (pull the page down if the field is hidden): your matching bits as cards; **+** keeps one.
+8. **+** on the tab: a blank page, "What's the rant about?", type, Return: your topic, with what it found on it.
+9. **Write the rant** (or Keep writing): tap a line, then again: you write there; Return makes a new line; Back: "Saved
+   as v4" with Undo, and the topic's card shows v4.
+10. In the script, **Material** (bottom left): a sheet of your kept and found lines; **+** on one line: it lands after the
+    line you are on, with "from <bit> v3" under it ("Added", Undo).
+11. Airplane mode: edit the script, force quit, reopen: everything is there ("Offline · saving on this phone"); back
+    online, open the Rant tab: it saves.
+12. **Film it** (bottom right of the script) opens the camera on your lines.
+13. Tap a line, **Claude**, **Sharper**: "Asking Claude…", then three versions with the AI badge; nothing changed in the
+    script until you tap **Use this** ("Line changed", Undo); edit that line: its badge becomes "yours".
+14. A blank rant: **Draft it from 3 kept**; or the sparkle › **Draft the rest**: new lines appear around yours, badged,
+    yours untouched ("6 lines added", Undo).
+15. A bit's ⋯ › **Rant on this…**: a topic named for the bit opens on Rant with the bit under Kept.
+
+**Device checks for build 26 (tell us which way each went):** A. the bottom bar (Material, Film it) sits above the tab
+bar, nothing hidden; B. while writing, the bar with Material · Claude · Punch sits flush on the keyboard (no gap, not
+under it); C. Return five times quickly: does the keyboard flash between lines?; D. Backspace on an empty line: does it
+join the line above? (if not, the empty line goes when you leave it); E. Return in the middle of a line: where is the
+cursor on the new line?; F. for two or three topics, does "N found" feel like what you have on it (the closeness cut is
+0.4, never measured on your notes)?
+
 ## 11. Built
 
 | Slice | What is in (2026-11-07, branch `app/rant-tab`) | Calls taken against this text |
 |---|---|---|
 | 1 | **App:** the tab bar is Rant · Bits · Sets (`lib/TabsShell.native.tsx`, `megaphone.fill`, the "N to sort" badge on Bits); the `(tonight)` group is now `(rant)` and its index is the Rant screen (`app/(tabs)/(rant)/index.tsx`: Film a rant, My topics, Drafts, Finished); the inbox, the conversation (`/say`), Ask and Import moved into Bits' stack; Sets opens on tonight's bar (`lib/SetBar.tsx` TonightCard) and Record a set; Bits has "N to sort" and a ⋯ with Record a memo, Import a recording… and Sort; `lib/tonight.ts` (the Tonight screen's request, which feeds the badge from launch); Write a rant (`app/rant/new.tsx`, a full-height form sheet; `lib/rant.ts`); `rules/rantRules.ts`, `rules/hookRules.ts`; tests `rantRules.test.mjs` and `rantTab.test.mjs` (the Tonight-parts move read from the files), each with a `--red` arm. **No new native module** (JS only on build 23's binary set). **Server (Rust only, R7):** pk-api `GET`/`POST /api/topics`, `PATCH /api/topics/<id>` (`ranted` / `delete`), `POST /api/rant/draft`, `GET /api/rants` (`writes/rant.rs`, the prepared Ingress); pk-worker kind `rant_draft` (`kinds/rant_draft.rs`); the `topics` creative store (`pk-creative` reducers/topics.rs). | (1) **Every drafted line is in until he takes it out** (Cut his, Skip a new one, Put back): the standing owner rule "no review step is ever required" wins over §3.3's "Keeps or Skips each new line"; Save is always shown, inactive until there is a line. (2) **Topics are a creative store** (`creative_event` rows, store `topics`, append-only like the others), **not a new table**: no schema change, nothing for `schema_extra` (so nothing to coordinate with round 5's schema owner). (3) `rant_draft` **reuses the `creative_rant` task** (Opus, high effort): a new task would change the Python-recorded routing goldens for a kind the Python never runs; it shares that task's spend line. (4) The Python API's `JOB_KINDS` tuple gains `rant_draft` (vocabulary only: the Python replays the shared `jobs` store and refuses an unknown kind, which would break every creative route it still answers); the Python worker never runs it. (5) Trending is slice 2: no Trending section, and the empty state reads "Add a topic, or tap + to write a rant." (6) Tonight's three suggested questions and the "Last set" row are not carried over (asking is the Bits search; the last set is Sets › Recorded). (7) The conversation, Ask and Import moved with the inbox to Bits (reviews: a tap there must not switch tabs); the bit page stays in Bits, so a Drafts row and Save open it there (the tab switches). (8) A topic's count is the close search hits only (a word match, or a distance under 0.4) from `/api/search?limit=12`, once per topic per session. (9) Film a rant has no "ready" mark: the one draft, or a picker of the newest five. Finished = Film it takes of rant bits kept on this phone (no captions until slice 3). (10) Hook check shows in Write a rant (the script), not on the bit page. (11) A his line may be part of a source line; it must sit on word boundaries and within one of his lines (the verbatim gate plus those two checks); a line that fails is dropped, never shown as his and never re-labelled new. (12) A topic typed in the sheet that is not in My topics is not added to it. (13) The draft's cache key is the topic and the sources' words (a new version of a ticked bit is a new draft), not their tick order. (14) At most 200 topics (the route's 400, not the reducer's). |
+| §12 A+B+C | **Found was the cap (CONFIRMED):** `GET /api/search` sends no distance on its bit rows (`pk-api/src/search.rs` `search_payload`), so `rantRules isClose(undefined)` counted every hit and a vector search always returns its limit: "12 bits" was always 12. **Server (Rust only):** `search::close_hits` (its own batch: the four word legs, every word of the topic required (CONFIRMED on a scratch SurrealDB 3.3.4: "self-checkout dinosaurs" finds nothing a bit with only "self-checkout" has), then the vector legs under 0.4), `writes/topic.rs` (`GET /api/topics/<id>`, `GET /api/topics/<id>/material`, `TopicFound` (one list per topic feeds the row and the heading through `found_rows`)), `writes/rant.rs` (`PATCH` ops, `POST /api/rant/line`, draft `keep` + default sources), `pk-creative` `topics` ops and the `script` store, pk-worker `rant_line` and `rant_draft` `keep`; to_sort and the "not a joke?" list skip held jots. **App:** the tab, `topic/[topic]` (page, script, bit), `new-topic`, `filmed`, the sheets `material/[topic]` and `rant-line`; `lib/MaterialCard`, `scriptStore`, `scriptDraft` (+ `.native`); `rules/rantRules` (rewritten), `rules/scriptRules`; tests `rantRules`, `scriptRules`, `rantTab`, each with a `--red` arm. `/rant/new` is a Redirect for one build. No new native module. | (1) New topic is `/new-topic`, not `/topic/new` (the route test refuses a URL two routes claim). (2) Delete is a tombstone (`deleted_at`) with an `undelete` op, so Undo brings the material back. (3) The script's marks are written by `PATCH /api/topics/<id> {script: {unit, lines}}` (the topic touched first, then the `script` row); the server runs the verbatim gate on every `from` claim not marked `edited` and drops a claim it cannot find. (4) A mark row that does not line up with its version's lines shows no marks. (5) `TopicFound` is per process and in memory (a restart forgets; the row has no number until a background read, three at a time; the app re-reads after 2.5 s); a read with hidden bits never fills it. (6) The sparkle is a native pull-down menu with subtitles, not a sheet; every grey item says why. (7) A moment card has no in-place play (the hosted pod has no audio); Open goes to the set at that second. (8) No "Reorder lines" in the script's ⋯: Move up / Move down per line. (9) Make it a rant and Pick a hook are today's session sheet on the saved version; back on the script, marks carry by text and the session's new lines are badged. (10) Draft the rest always asks fresh; a result that drops or changes a fixed line is refused whole ("Claude changed one of your lines…"), and fixed lines come back with `his: null` (whose line it is stays the script's mark). (11) An offline jot rides the say outbox and is filed on its topic when it sends. (12) Back saves when the page unmounts (expo-router 58 has no `beforeRemove`); a minute in the background is checked on return (iOS suspends timers); empty lines go when he leaves a line (iOS never reports Backspace on an empty multiline field, CONFIRMED in RN source by the iOS dev review). (13) Undo of Added, Line changed and a draft removes only what it added. (14) Known: a "Start another rant" draft made offline shares its topic's draft file with the older rant's unsaved words. (15) Slice C (Claude on a line) is in this build. |
 
 ## 12. The creative space (owner feedback 2026-11-07)
 
-Status: **proposed build spec, not built.** Replaces §2 and §3 where they differ; §4-§9 stand. Every joke in this
+Status: **built 2026-11-07 (slices A, B and C, branch `app/rant-workspace`, for build 26; §11 lists the calls).** Replaces §2 and §3 where they differ; §4-§9 stand. Every joke in this
 section is invented. The clickable mockup is a working file outside the repo (as the 3c pages were); everything a
 builder needs is written here. Tags: **CONFIRMED** = `file:line` or a HIG page read live today; **INFERRED** = design
 reasoning or a figure not yet measured; **UNKNOWN** = a device check decides.

@@ -1,7 +1,8 @@
 // Static test for the Rant tab and the Tonight-parts move (SPEC 2026-11-06 R1, R2, R4; slice 1), read from the files:
 // the tab bar is Rant · Bits · Sets with megaphone.fill first and the "N to sort" badge on Bits; Tonight's set list bar
 // and Record a set open Sets above its segments; "N to sort" and Record a memo are on Bits, the inbox in Bits' stack;
-// the Rant screen has Film a rant, My topics, Drafts and Finished and opens Write a rant. A layout check, not a render.
+// the Rant screen is his creative space (§12): where he left off, Topics as pages, the script a push, Material and Claude
+// on a line as sheets. A layout check, not a render.
 //   node --experimental-strip-types --no-warnings tests/rantTab.test.mjs          the suite (the working tree)
 //   node --experimental-strip-types --no-warnings tests/rantTab.test.mjs --red    the red arm: the same checks over the
 //                                                                                tree before the move (0cf224b, Tonight
@@ -41,7 +42,6 @@ check(/Trigger\.Badge/.test(bitsTrigger), "the \"N to sort\" badge is on the Bit
 check(has("src/app/(tabs)/(rant)/index.tsx") && !has("src/app/(tabs)/(tonight)/index.tsx"), "the first tab's root is (rant)/index.tsx (the URL / is unchanged)");
 check(has("src/app/(tabs)/(bits)/inbox.tsx") && !has("src/app/(tabs)/(rant)/inbox.tsx"), "the inbox lives in Bits' stack, where \"N to sort\" is");
 check(["say.tsx", "import.tsx", "ask/index.tsx"].every((f) => has(`src/app/(tabs)/(bits)/${f}`)), "the conversation, Ask and Import sit in Bits' stack with the rows that open them (no tab switch)");
-check(has("src/app/rant/new.tsx"), "Write a rant is the root-level sheet /rant/new");
 
 // ---- Sets opens on tonight's list bar and Record a set, above the segments (R2)
 const sets = src("src/app/(tabs)/(sets)/sets.tsx");
@@ -56,12 +56,21 @@ const menu = bits.split('icon="ellipsis.circle"')[1]?.split("</Stack.Toolbar.Men
 check(/Record a memo/.test(menu) && /inline title="Sort"/.test(menu), "Record a memo is in Bits' ⋯, with the sort as its inline section");
 check(bits.includes("placeholder: 'Search your bits, or ask'"), "Ask your material stays the Bits search");
 
-// ---- the Rant screen (§2)
+// ---- the Rant screen (§12.2: the creative space): where he left off, Topics, Filmed; no red disc, no Drafts form
 const rantScreen = src("src/app/(tabs)/(rant)/index.tsx");
-check(rantScreen.includes('title="Rant"') && rantScreen.includes('testID="rant-film"'), "the Rant screen: a large title Rant and the Film a rant row");
-check(["My topics", "Drafts", "Finished"].every((w) => rantScreen.includes(`title="${w}"`)), "My topics, Drafts and Finished");
-check(rantScreen.includes("'/rant/new'") && rantScreen.includes("useTonight()"), "+ and a topic open Write a rant; the badge is fed from launch");
+check(rantScreen.includes('title="Rant"') && rantScreen.includes('testID="rant-leftoff"') && rantScreen.includes("Keep writing"), "the Rant screen opens on where he left off, in his words, with Keep writing");
+check(rantScreen.includes('title="Topics"') && rantScreen.includes("openTopic(t)") && rantScreen.includes("'/new-topic'"), "Topics push the topic page; + is New topic");
+check(rantScreen.includes("useTonight()"), "the badge is fed from launch");
 check(!/Ask your material|tonight-set|Record a set/.test(rantScreen), "none of Tonight's parts stayed on the first tab");
+check(!rantScreen.includes("'/rant/new'") && !/Film a rant|useTopicCounts|title="Drafts"|title="Finished"/.test(rantScreen), "the red disc row, the 12-bits count and the Drafts and Finished sections are gone (§12.8)");
+
+// ---- the topic is a page, the script a push, a bit opened from a topic stays in Rant (§12.7)
+check(has("src/app/(tabs)/(rant)/topic/[topic]/index.tsx") && has("src/app/(tabs)/(rant)/topic/[topic]/script.tsx") && has("src/app/(tabs)/(rant)/new-topic.tsx"), "the topic, its script and New topic are pushes in the Rant stack");
+check(/export \{ default \} from '.*\(bits\)\/joke\/\[id\]'/.test(src("src/app/(tabs)/(rant)/topic/[topic]/bit/[id].tsx")), "a bit opened from a topic is the bit page, in the Rant stack");
+const topicPage = src("src/app/(tabs)/(rant)/topic/[topic]/index.tsx");
+check(["Find a bit to add", "Jot a thought", "Kept · ", "Found · ", "Dropped · ", "Find more"].every((w) => topicPage.includes(w)), "the topic page: search, jot, Kept, Found, Dropped, Find more");
+const root = src("src/app/_layout.tsx");
+check(root.includes('name="material/[topic]"') && root.includes('name="rant-line"') && !root.includes('name="rant/new"'), "Material and Claude on a line are sheets; Write a rant's sheet is gone");
 
 if (fails.length) {
   console.log(`\n${fails.length} FAILED${red ? " (the red arm: the tree before the move must fail)" : ""}`);
