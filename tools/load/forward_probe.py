@@ -137,6 +137,17 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
     # T10 round 5, group B: a room renamed per call
     if path.startswith("/api/venues/"):
         return json.dumps({"name": f"Probe room {tag}"}).encode()
+    # T10 round 6, group A: the ingest routes. The actor is named in the body (the scratch pair has auth off, where a
+    # write may name one). A gsync file with a counter (written, no sync), a set's analysis with a new stamp (a file
+    # write and the graph sync that finds nothing to change: the steady state of a worker's post), an idea from an import
+    if path.startswith("/api/worker/files?probe=gsync"):
+        return json.dumps({"files": [{"path": "kb/gsync/runs.jsonl", "text": json.dumps({"probe": tag}) + chr(10)}],
+                           "actor": "import:gsync"}).encode()
+    if path.startswith("/api/worker/files?probe=analysis"):
+        doc = dict(ANALYSIS[1], generated_at=f"probe {tag}")
+        return json.dumps({"files": [{"path": ANALYSIS[0], "text": json.dumps(doc)}], "actor": "import:probe"}).encode()
+    if path == "/api/worker/ideas":
+        return json.dumps({"text": f"probe import {tag}: the valet who parked the meter.", "actor": "import:probe"}).encode()
     if path.endswith("/bridge"):
         return json.dumps({"from": "{from}", "to": "{to}"}).encode()
     if path.endswith("/punchup"):
@@ -145,6 +156,7 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
 
 
 UPLOAD_HEADERS = {"Content-Type": "audio/mp4", "X-Kind": "note", "X-Filename": "probe.m4a", "X-Duration-S": "12.5"}
+ANALYSIS: tuple[str, dict] = ("", {})   # the set analysis the analysis probe re-posts (its path and its document)
 PERFS: list[str] = []
 JOKES: list[str] = []
 BRIDGE: tuple[str, str] = ("", "")
@@ -162,6 +174,8 @@ def run_phase(pair: dict, threads: int, n: int, write_every: float | None) -> di
         d, v = Conn(pair["python"]), Conn(pair["rust"])
         for i in range(n):
             for k, route in enumerate(ROUTES):
+                if threads > 1 and "probe=analysis" in route:
+                    continue  # two processes syncing the same tables at once is not what a worker does: seq only
                 method, path = split_route(route)
                 if "{perfs}" in path:
                     path = path.replace("{perfs}", PERFS[w % len(PERFS)])
@@ -317,6 +331,18 @@ def main() -> int:
             if ph == "{joke}":
                 global JOKES
                 JOKES = ids
+    if any("probe=analysis" in r for r in ROUTES):
+        # the first set with an analysis: its path and document, read from the Python
+        c = Conn(pair["python"])
+        c.c = http.client.HTTPConnection(c.host, c.port, timeout=120)
+        c.c.request("GET", "/api/worker/files?prefix=corpus/sets/")
+        files = json.loads(c.c.getresponse().read())["files"]
+        path = next((f["path"] for f in files if f["path"].endswith("/analysis.json")), None)
+        if not path:
+            raise SystemExit("no set has an analysis.json to re-post")
+        c.c.request("GET", "/api/worker/files/content?path=" + urllib.parse.quote(path, safe="/"))
+        global ANALYSIS
+        ANALYSIS = (path, json.loads(json.loads(c.c.getresponse().read())["text"]))
     res = {}
     for ph in a.phases.split(","):
         name, _, n = ph.partition(":")  # conc:4 / writes:1 = that many threads instead of --conc
