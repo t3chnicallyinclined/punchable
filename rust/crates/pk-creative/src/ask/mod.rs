@@ -13,6 +13,7 @@
 //! written out in [`bm25`] on purpose (see its doc). The quote gate is this crate's one [`verbatim`].
 
 mod bm25;
+mod build;
 pub mod words;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -443,6 +444,16 @@ impl Notebook {
     /// The sources, in order.
     pub fn sources(&self) -> &Sources {
         &self.sources
+    }
+
+    /// Set key to the room's short name, every set.
+    pub fn rooms(&self) -> &IndexMap<String, String> {
+        &self.rooms
+    }
+
+    /// Joke id to its title, every joke he has.
+    pub fn joke_titles(&self) -> &IndexMap<String, String> {
+        &self.joke_titles
     }
 
     /// `rooms_named(c, question)`: the set keys whose room is named in the question ("The Corner Room",

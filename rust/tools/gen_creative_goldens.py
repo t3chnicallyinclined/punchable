@@ -457,6 +457,12 @@ ASK_SETS = {  # key -> venue (the set node's), then the segments
 
 
 def ask_corpus() -> Corpus:
+    c, _inputs = ask_corpus_and_inputs()
+    return c
+
+
+def ask_corpus_and_inputs():
+    """The corpus and the three inputs it was built from (the Rust test builds its own from the same ones)."""
     nodes, edges = [], []
     for k in "abcdefh":
         nodes.append({"id": f"joke:{k}", "type": "joke", "title": k.upper() + " bit (draft)", "stage": "testing",
@@ -486,7 +492,8 @@ def ask_corpus() -> Corpus:
                          "joke_id": joke, "transcript": text, "ai_rating": rating,
                          "laughs": {"count": laughs, "laugh_s": float(laughs), "window_s": (end - start) / 1000}})
         analyses[key] = {"set": key, "summary": {"laugh_s_per_min": 5.0, "room_heat": 1.0}, "jokes": rows}
-    return Corpus({"nodes": nodes, "edges": edges}, analyses, decisions=decisions)
+    inputs = {"graph": {"nodes": nodes, "edges": edges}, "analyses": analyses, "decisions": decisions}
+    return Corpus({"nodes": nodes, "edges": edges}, analyses, decisions=decisions), inputs
 
 
 TOKENS_CASES = ["The purple monkey's dishwasher", "Mabel\u2019s and Mabel's", "boxes churches babies glasses buses ties",
@@ -635,7 +642,8 @@ def owner_env(name):
 
 def main_ask() -> dict:
     from creative import voice
-    c = ask_corpus()
+    c, inputs = ask_corpus_and_inputs()
+    (OUT / "ask_inputs.json").write_text(json.dumps(inputs, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
     S = AC.sources(c)
     out_sources = {}
     for sid, s in S.items():

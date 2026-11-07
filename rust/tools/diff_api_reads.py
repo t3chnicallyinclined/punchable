@@ -432,6 +432,10 @@ MERGE_HIST_READS = ["/api/merge/history?joke=joke:x01", "/api/merge/history?joke
                     "/api/merge/history?joke=joke:x01&backend=files", "/api/merge/at:x05", "/api/merge/at:x09", "/api/merge/dm:x02",
                     "/api/merge/at:nope", "/api/merge/mg:nope", "/api/merge/zzz", "/api/merge/mg:", "/api/merge/at%3Ax05", "/api/merge/at:x05/extra",
                     "/api/merge/at:x05?backend=x", "/api/merge/attach", "/api/merge/undo"]
+# round 5, group A: the Ask conversations (none exist in the bundle's stores: the list is empty, every id is not found)
+CHAT_READS = ["/api/ask/chats", "/api/ask/chats?backend=files", "/api/ask/chats?backend=surreal", "/api/ask/chats/nope",
+              "/api/ask/chats/chat:00000000", "/api/ask/chats/chat:00000000?backend=x", "/api/ask/chats/chat:0123abcd",
+              "/api/ask/chats/", "/api/ask/chats/chat:00000000/extra", "/api/ask/chatsx"]
 MEMO_READS = ["/api/memos", "/api/memos?backend=files", "/api/memos?include_hidden=1", "/api/memos/m1", "/api/memos/m2", "/api/memos/m3",
               "/api/memos/m4", "/api/memos/m5", "/api/memos/m6", "/api/memos/m7", "/api/memos/m8", "/api/memos/m9", "/api/memos/nope",
               "/api/memos/m1?backend=x", "/api/memos/m1/audio", "/api/memos/m3/audio", "/api/memos/m5/audio", "/api/memos/nope/audio",
@@ -1040,6 +1044,8 @@ def main() -> int:
         reqs += [(p, "GET", p, app) for p in STORE_READS]
         reqs += [(p, "GET", p, app) for p in MERGE_READS]
         reqs += [(p, "GET", p, app) for p in MEMO_READS]
+        reqs += [(p, "GET", p, app) for p in CHAT_READS]
+        reqs += [("chats signed out", "GET", "/api/ask/chats", {})]
         reqs += [(p, "GET", p, app) for p in MERGE_HIST_READS]
         reqs += [("related signed out", "GET", "/api/notebook/related?q=niece", {}),
                  ("workingsets signed out", "GET", "/api/workingsets", {})]
@@ -1250,7 +1256,8 @@ def main() -> int:
                       "/api/profile/voice", "/api/suggestions/not-a-joke", "/api/jobs/{id}", "/api/workingsets",
                       "/api/workingsets/{id}", "/api/workingsets/{id}/nights", "/api/workingsets/{id}/bits/{id}",
                       "/api/notebook/related", "/api/sets/{id}/clips", "/api/merge/candidates",
-                      "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}"):
+                      "/api/inbox", "/api/memos", "/api/memos/{id}", "/api/merge/history", "/api/merge/{id}",
+                      "/api/ask/chats"):
             if f'route="{route}",status="200"' not in mtext:
                 problems.append(f"pk-api did not answer {route} itself (no 200 in its own /metrics)")
         # a forwarded request is counted by nobody here (the fallback adds nothing to what it forwards)

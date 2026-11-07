@@ -80,6 +80,7 @@ pub struct StoryCorpus {
     corpus: Arc<Corpus>,
     cache: StoryCache,
     notebook: OnceLock<crate::notebook::Index>,
+    ask: OnceLock<crate::ask::Notebook>,
 }
 
 impl StoryCorpus {
@@ -89,6 +90,7 @@ impl StoryCorpus {
             corpus: Arc::new(corpus),
             cache: StoryCache::default(),
             notebook: OnceLock::new(),
+            ask: OnceLock::new(),
         }
     }
 
@@ -100,6 +102,11 @@ impl StoryCorpus {
     /// The his-words index over this corpus (`notebook._index`, kept on the corpus object), built on first use.
     pub fn notebook_index(&self) -> &crate::notebook::Index {
         self.notebook.get_or_init(|| crate::notebook::Index::new(&self.corpus))
+    }
+
+    /// His notebook flattened for Ask (`askchat.sources`, kept on the corpus object), built on first use.
+    pub fn ask_notebook(&self) -> &crate::ask::Notebook {
+        self.ask.get_or_init(|| crate::ask::Notebook::from_corpus(&self.corpus))
     }
 
     /// The story layer over this corpus, with its caches.

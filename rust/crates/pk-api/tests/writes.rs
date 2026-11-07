@@ -954,3 +954,191 @@ async fn the_film_it_sessions_queue_over_the_version_the_kb_holds() {
         );
     }
 }
+
+/// T10 round 5, group A: the Ask conversations. A question is retrieved from the notebook and queued for the worker;
+/// the GET that finds the job done gates the answer (a quote that is word for word stays, the chip carries it); a
+/// failed job reads as plain words; nothing retrieved is the refusal at once; a rename and a hide change the list.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_ask_conversations_queue_settle_and_are_renamed() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/ask/chats",
+        json!({"question": "  what did I write about   the meter and pronouns? "}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    let cid = r["id"].as_str().unwrap().to_string();
+    assert!(cid.starts_with("chat:") && cid.len() == 13, "{cid}");
+    assert_eq!(r["title"], "what did I write about the meter and pronouns?");
+    assert_eq!(r["turns"][0]["status"], "thinking", "{r}");
+    assert_eq!(r["turns"][0]["q"], "what did I write about the meter and pronouns?");
+    assert!(r["worker"].is_object());
+    let (s, list) = get_path(&st, "/api/ask/chats").await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(list["chats"][0]["id"], cid.as_str());
+    assert_eq!(list["chats"][0]["questions"], 1);
+    assert_eq!(list["chats"][0]["thinking"], true);
+    let (s, r2) = send(
+        &st,
+        "POST",
+        &format!("/api/ask/chats/{cid}"),
+        json!({"question": "and another"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r2["error"].as_str()),
+        (StatusCode::CONFLICT, Some("still thinking about the last question"))
+    );
+
+    // the worker takes the job and answers: a quote that is in the source, and one that is not
+    let (s, c) = send(
+        &st,
+        "POST",
+        "/api/worker/claim",
+        json!({"kinds": ["ask_chat"], "worker": "w1", "hosted": true}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{c}");
+    let jid = c["job"]["id"].as_str().unwrap().to_string();
+    let msgs = c["job"]["input"]["messages"].as_array().expect("the messages");
+    assert_eq!(msgs[0]["role"], "system");
+    assert!(msgs.last().unwrap()["content"].as_str().unwrap().contains("[S1]"));
+    let answer = json!({"found": true, "answer": "You wrote it down [S1].",
+                        "citations": [{"source": "S1", "quote": "The meter asked for my pronouns"},
+                                      {"source": "S9", "quote": "nobody"}]});
+    let (s, _) = send(
+        &st,
+        "POST",
+        &format!("/api/worker/jobs/{jid}/result"),
+        json!({"ok": true, "result": {"status": "answered", "data": answer, "provider": "p", "model": "m"}}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
+    let (s, r) = get_path(&st, &format!("/api/ask/chats/{cid}")).await;
+    assert_eq!(s, StatusCode::OK);
+    let t = &r["turns"][0];
+    assert_eq!(t["status"], "done", "{r}");
+    assert_eq!(
+        (t["found"].clone(), t["answer"].as_str()),
+        (json!(true), Some("You wrote it down [1]."))
+    );
+    assert_eq!(t["chips"][0]["quote"], "The meter asked for my pronouns");
+    assert_eq!(t["chips"][0]["source"], "unit:m1");
+    assert_eq!((t["dropped_n"].clone(), t["model"].clone()), (json!(1), json!("m")));
+    // read again: settled once, the same answer
+    let (_, again) = get_path(&st, &format!("/api/ask/chats/{cid}")).await;
+    assert_eq!(again["turns"], r["turns"]);
+    let lines = Creative::new(st.clone()).lines("chats").await.unwrap();
+    assert_eq!(lines.len(), 3, "new, ask, answer: {lines:?}");
+
+    // a follow-up that fails at the worker reads as plain words
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/ask/chats/{cid}"),
+        json!({"question": "tell me more about the meter"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["turns"][1]["id"], "t2");
+    let (_, c) = send(
+        &st,
+        "POST",
+        "/api/worker/claim",
+        json!({"kinds": ["ask_chat"], "worker": "w1", "hosted": true}),
+    )
+    .await;
+    let jid = c["job"]["id"].as_str().unwrap().to_string();
+    send(
+        &st,
+        "POST",
+        &format!("/api/worker/jobs/{jid}/result"),
+        json!({"ok": false, "error": "429 rate limit hit", "retry": false}),
+    )
+    .await;
+    let (_, r) = get_path(&st, &format!("/api/ask/chats/{cid}")).await;
+    assert_eq!(r["turns"][1]["status"], "failed", "{r}");
+    assert!(
+        r["turns"][1]["error"]
+            .as_str()
+            .unwrap()
+            .starts_with("Claude is at its usage limit")
+    );
+
+    // nothing retrieved: the refusal at once, no job
+    let (s, r) = send(&st, "POST", "/api/ask/chats", json!({"question": "zzqx wvvk"})).await;
+    assert_eq!(s, StatusCode::CREATED, "{r}");
+    assert_eq!(r["turns"][0]["status"], "done");
+    assert_eq!(r["turns"][0]["answer"], "I couldn't find that in your notebook.");
+    assert_eq!(r["turns"][0]["found"], false);
+
+    // a conversation about one bit; the refusals
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/ask/chats",
+        json!({"question": "meter", "joke": "joke:meters"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["joke"].as_str()),
+        (StatusCode::CREATED, Some("joke:meters")),
+        "{r}"
+    );
+    let cases = [
+        (json!({}), 400, "question is required (at most 1000 characters)"),
+        (json!({"question": "x", "joke": 5}), 400, "joke must be a joke id"),
+        (
+            json!({"question": "x", "joke": "joke:nope"}),
+            404,
+            "no such joke joke:nope",
+        ),
+    ];
+    for (body, status, msg) in cases {
+        let (s, r) = send(&st, "POST", "/api/ask/chats", body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{body}");
+    }
+    for p in ["/api/ask/chats/nope", "/api/ask/chats/chat:00000000"] {
+        let (s, r) = get_path(&st, p).await;
+        assert_eq!(
+            (s, r["error"].as_str()),
+            (StatusCode::NOT_FOUND, Some("no such conversation"))
+        );
+    }
+
+    // a rename and a hide
+    let path = format!("/api/ask/chats/{cid}");
+    let (s, r) = send(&st, "PATCH", &path, json!({"title": "  Meters  "})).await;
+    assert_eq!((s, r["title"].as_str()), (StatusCode::OK, Some("Meters")), "{r}");
+    for (body, msg) in [
+        (json!({}), "nothing to change (title, deleted)"),
+        (json!({"title": "  "}), "title must be 1-120 characters"),
+    ] {
+        let (s, r) = send(&st, "PATCH", &path, body).await;
+        assert_eq!((s.as_u16(), r["error"].as_str()), (400, Some(msg)));
+    }
+    let (_, before) = get_path(&st, "/api/ask/chats").await;
+    send(&st, "PATCH", &path, json!({"deleted": true})).await;
+    let (_, after) = get_path(&st, "/api/ask/chats").await;
+    assert_eq!(
+        before["chats"].as_array().unwrap().len() - 1,
+        after["chats"].as_array().unwrap().len()
+    );
+    let (s, _) = get_path(&st, &path).await;
+    assert_eq!(s, StatusCode::NOT_FOUND, "a hidden conversation is not found");
+    let (s, r) = send(&st, "PATCH", &path, json!({"deleted": false})).await;
+    assert_eq!(
+        (s, r["id"].as_str()),
+        (StatusCode::OK, Some(cid.as_str())),
+        "a PATCH finds a hidden one"
+    );
+}
+
+async fn get_path(st: &AppState, path: &str) -> (StatusCode, Value) {
+    send(st, "GET", path, Value::Null).await
+}

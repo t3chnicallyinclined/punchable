@@ -194,7 +194,7 @@ spec:
           - { path: /api/worker/creative, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/worker/profile/voice, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T10 round 3 (group 6, the cheap half; POST only on the Python too): the one-shot questions and the imports
-          # that only queue a job. /api/ask is an exact path: /api/ask/chats* (the conversations) stays the Python's.
+          # that only queue a job. /api/ask is an exact path; the conversations (/api/ask/chats*) moved in round 5, below.
           - { path: /api/ask, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/riff, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/facts, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
@@ -215,6 +215,10 @@ spec:
           # T10 round 4 (group 6b): what was folded into a bit (GET only on the Python too). One merge record is the
           # regex path below; /api/merge/attach, /dismiss and /undo are exact paths above and win over it.
           - { path: /api/merge/history, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 5 (group A): the Ask conversations (GET and POST on the list; the conversation's own page is the
+          # regex path below). A GET settles a finished answer by writing events, so both servers write this store
+          # until the Python is retired; either reads what the other wrote.
+          - { path: /api/ask/chats, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -287,6 +291,8 @@ spec:
           - { path: "/api/memos/[^/]+/audio$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/worker/jobs/[^/]+/file$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/merge/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # T10 round 5 (group A): one conversation (GET settles it, POST asks a follow-up, PATCH renames or hides it)
+          - { path: "/api/ask/chats/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a): POST /api/upload, the phone's recording (up to 1 GB, api-dev MAX_UPLOAD). The Python's own
 # Ingress (50-ingress.yaml) carries these annotations for it; the others here do not, so the upload is its own object:

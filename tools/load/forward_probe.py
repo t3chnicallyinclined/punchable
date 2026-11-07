@@ -131,6 +131,9 @@ def body_for(path: str, col: str, w: int, i: int, turn: int = 0) -> bytes | None
     # T10 round 4 (group 6a): a recording (UPLOAD_HEADERS), a size of its own per call so no two are the same upload
     if path == "/api/upload":
         return bytes((i * 31 + w) % 251 for i in range(40_000 + 977 * w + 7 * i + (3 if col == "via" else 0)))
+    # T10 round 5, group A: a conversation per call (a question of its own, so no two are the same turn)
+    if path == "/api/ask/chats":
+        return json.dumps({"question": f"probe question {tag}: what did I write about the parking meter and the bus?"}).encode()
     if path.endswith("/bridge"):
         return json.dumps({"from": "{from}", "to": "{to}"}).encode()
     if path.endswith("/punchup"):

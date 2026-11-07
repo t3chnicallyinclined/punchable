@@ -25,6 +25,7 @@ pub mod account;
 pub mod ask;
 pub mod bits;
 pub mod boards;
+pub mod chats;
 pub mod film;
 pub mod ideas;
 pub mod jobs;

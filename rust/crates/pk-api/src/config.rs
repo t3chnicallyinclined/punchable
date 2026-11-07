@@ -53,6 +53,9 @@ pub struct ApiConfig {
     /// /api/upload` answers 503 here and the inbox and the transcriber's fetch are the Python's (the pod's inbox
     /// folder), so a moved path can never silently diverge from it.
     pub upload_db: bool,
+    /// `PK_COMIC_NAME` as set: how the AI prompts name him (the Ask conversations' system line). Unset, empty and
+    /// the placeholder all read "a stand-up comic's".
+    pub comic_name: Option<String>,
 }
 
 /// Keycloak.
@@ -142,6 +145,7 @@ impl ApiConfig {
                 env.f64("PK_LIVE_IDLE_S")?.filter(|s| *s > 0.0).unwrap_or(40.0),
             ),
             upload_db: env.opt("PK_UPLOAD_DB") == Some("1"),
+            comic_name: env.opt("PK_COMIC_NAME").map(str::to_string),
             sweep_every: match env.f64("PK_VEC_SWEEP_S")? {
                 None => Some(crate::sweep::DEFAULT_EVERY),
                 Some(s) if s > 0.0 => Some(std::time::Duration::from_secs_f64(s)),
