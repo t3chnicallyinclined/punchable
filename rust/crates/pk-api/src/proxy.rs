@@ -176,7 +176,12 @@ async fn standalone(st: &AppState, req: Request) -> Response {
         } else {
             handler_refusal(&parts.method, parts.uri.path())
         };
-        if let Some(Refusal { body_first, status, msg }) = special {
+        if let Some(Refusal {
+            body_first,
+            status,
+            msg,
+        }) = special
+        {
             if body_first {
                 crate::writes::body_json(&parts.headers, body).await?;
             }
@@ -217,7 +222,11 @@ static CHAT_ID: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| 
 /// Python (`do_HEAD` calls `do_GET`).
 fn handler_refusal(method: &Method, path: &str) -> Option<Refusal> {
     let get = *method == Method::GET || *method == Method::HEAD;
-    let refuse = |status: StatusCode, msg: &'static str| Refusal { body_first: false, status, msg };
+    let refuse = |status: StatusCode, msg: &'static str| Refusal {
+        body_first: false,
+        status,
+        msg,
+    };
     let not_allowed = StatusCode::METHOD_NOT_ALLOWED;
     match path {
         "/api/profile/voice/learn" if *method != Method::POST => Some(refuse(not_allowed, "POST")),
@@ -242,9 +251,11 @@ fn handler_refusal(method: &Method, path: &str) -> Option<Refusal> {
             let Some(m) = ASK_PATH.captures(path) else {
                 return Some(refuse(StatusCode::NOT_FOUND, "no such route"));
             };
-            let cid = m
-                .get(1)
-                .map(|c| percent_encoding::percent_decode_str(c.as_str()).decode_utf8_lossy().into_owned());
+            let cid = m.get(1).map(|c| {
+                percent_encoding::percent_decode_str(c.as_str())
+                    .decode_utf8_lossy()
+                    .into_owned()
+            });
             if cid.as_deref().is_some_and(|c| !CHAT_ID.is_match(c)) {
                 return Some(refuse(StatusCode::NOT_FOUND, "no such conversation"));
             }
@@ -288,7 +299,10 @@ pub async fn unsupported_method(req: Request, next: axum::middleware::Next) -> R
     );
     let mut r = (StatusCode::NOT_IMPLEMENTED, page).into_response();
     let h = r.headers_mut();
-    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html;charset=utf-8"));
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/html;charset=utf-8"),
+    );
     h.insert(header::CONNECTION, HeaderValue::from_static("close"));
     r.extensions_mut().insert(Uncounted);
     r
@@ -298,34 +312,84 @@ pub async fn unsupported_method(req: Request, next: axum::middleware::Next) -> R
 mod tests {
     use super::*;
 
-    fn said(m: Method, p: &str) -> Option<(u16, &'static str, bool)> {
-        handler_refusal(&m, p).map(|r| (r.status.as_u16(), r.msg, r.body_first))
+    fn said(m: &Method, p: &str) -> Option<(u16, &'static str, bool)> {
+        handler_refusal(m, p).map(|r| (r.status.as_u16(), r.msg, r.body_first))
     }
 
     /// The handlers' refusals on a method they do not take (`profile_api`, `say_api`, `ask_api`).
     /// Red arm: dropping the `HEAD`-is-`GET` rule fails the `/api/say` case.
     #[test]
     fn the_pythons_handlers_refuse_a_method_they_do_not_take() {
-        assert_eq!(said(Method::PUT, "/api/profile/voice/learn"), Some((405, "POST", false)));
-        assert_eq!(said(Method::POST, "/api/profile/voice"), Some((405, "GET or PUT", false)));
-        assert_eq!(said(Method::PATCH, "/api/worker/profile/voice"), Some((405, "GET or PUT", false)));
-        assert_eq!(said(Method::GET, "/api/say"), Some((405, "method not allowed", false)));
-        assert_eq!(said(Method::HEAD, "/api/say"), Some((405, "method not allowed", false)));
-        assert_eq!(said(Method::POST, "/api/tonight/screen"), Some((405, "method not allowed", false)));
-        assert_eq!(said(Method::HEAD, "/api/tonight/screen"), None, "HEAD is a GET to the Python");
-        assert_eq!(said(Method::GET, "/api/ask/chats/"), Some((404, "no such route", false)));
-        assert_eq!(said(Method::GET, "/api/ask/chats/a/b"), Some((404, "no such route", false)));
-        assert_eq!(said(Method::GET, "/api/ask/chatsX"), Some((404, "no such route", false)));
-        assert_eq!(said(Method::PUT, "/api/ask/chats/nope"), Some((404, "no such conversation", false)));
-        assert_eq!(said(Method::PATCH, "/api/ask/chats"), Some((404, "no such conversation", true)));
-        assert_eq!(said(Method::PUT, "/api/ask/chats"), Some((404, "no such conversation", false)));
-        assert_eq!(said(Method::PUT, "/api/labels"), None);
-        assert_eq!(said(Method::PATCH, "/api/mysets/match"), Some((404, "no such working set", true)));
-        assert_eq!(said(Method::GET, "/api/jokes/a/b"), Some((404, "no such joke", false)));
-        assert_eq!(said(Method::GET, "/api/jokes/a/b/similar"), Some((404, "no such joke", false)));
-        assert_eq!(said(Method::GET, "/api/jokes/a"), None);
-        assert_eq!(said(Method::GET, "/api/memos/x/y"), Some((404, "no such memos route", false)));
-        assert_eq!(said(Method::POST, "/api/memos/x/y"), None, "only a GET goes to the memos handler");
-        assert_eq!(said(Method::POST, "/api/jokes/a/b"), None);
+        assert_eq!(
+            said(&Method::PUT, "/api/profile/voice/learn"),
+            Some((405, "POST", false))
+        );
+        assert_eq!(
+            said(&Method::POST, "/api/profile/voice"),
+            Some((405, "GET or PUT", false))
+        );
+        assert_eq!(
+            said(&Method::PATCH, "/api/worker/profile/voice"),
+            Some((405, "GET or PUT", false))
+        );
+        assert_eq!(said(&Method::GET, "/api/say"), Some((405, "method not allowed", false)));
+        assert_eq!(
+            said(&Method::HEAD, "/api/say"),
+            Some((405, "method not allowed", false))
+        );
+        assert_eq!(
+            said(&Method::POST, "/api/tonight/screen"),
+            Some((405, "method not allowed", false))
+        );
+        assert_eq!(
+            said(&Method::HEAD, "/api/tonight/screen"),
+            None,
+            "HEAD is a GET to the Python"
+        );
+        assert_eq!(
+            said(&Method::GET, "/api/ask/chats/"),
+            Some((404, "no such route", false))
+        );
+        assert_eq!(
+            said(&Method::GET, "/api/ask/chats/a/b"),
+            Some((404, "no such route", false))
+        );
+        assert_eq!(
+            said(&Method::GET, "/api/ask/chatsX"),
+            Some((404, "no such route", false))
+        );
+        assert_eq!(
+            said(&Method::PUT, "/api/ask/chats/nope"),
+            Some((404, "no such conversation", false))
+        );
+        assert_eq!(
+            said(&Method::PATCH, "/api/ask/chats"),
+            Some((404, "no such conversation", true))
+        );
+        assert_eq!(
+            said(&Method::PUT, "/api/ask/chats"),
+            Some((404, "no such conversation", false))
+        );
+        assert_eq!(said(&Method::PUT, "/api/labels"), None);
+        assert_eq!(
+            said(&Method::PATCH, "/api/mysets/match"),
+            Some((404, "no such working set", true))
+        );
+        assert_eq!(said(&Method::GET, "/api/jokes/a/b"), Some((404, "no such joke", false)));
+        assert_eq!(
+            said(&Method::GET, "/api/jokes/a/b/similar"),
+            Some((404, "no such joke", false))
+        );
+        assert_eq!(said(&Method::GET, "/api/jokes/a"), None);
+        assert_eq!(
+            said(&Method::GET, "/api/memos/x/y"),
+            Some((404, "no such memos route", false))
+        );
+        assert_eq!(
+            said(&Method::POST, "/api/memos/x/y"),
+            None,
+            "only a GET goes to the memos handler"
+        );
+        assert_eq!(said(&Method::POST, "/api/jokes/a/b"), None);
     }
 }

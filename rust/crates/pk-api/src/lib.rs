@@ -572,7 +572,10 @@ pub fn app(st: AppState) -> Router {
         .route("/api/rant/draft", write_route(&st, writes::rant::draft))
         .route("/api/rants", read_route(&st, writes::rant::rants))
         // T11 round 3: "delete my material" (the Python's `delete_me`: records a request, deletes nothing)
-        .route("/api/me", finish(&st, delete(guarded_write(&st, writes::me::delete_me))));
+        .route(
+            "/api/me",
+            finish(&st, delete(guarded_write(&st, writes::me::delete_me))),
+        );
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     if st.config().python_url.is_some() {

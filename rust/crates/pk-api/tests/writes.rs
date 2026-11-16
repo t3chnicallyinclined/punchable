@@ -1845,6 +1845,7 @@ async fn row_count(w: &Store, t: &str) -> i64 {
 /// `deletion` request in his `account` log naming the caller's `sub`; and in every case nothing is deleted. The inventory
 /// names database tables and counts their rows. Red arm: a handler that deletes (or records on a wrong phrase) fails.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[allow(clippy::many_single_char_names)]
 async fn delete_me_records_a_request_and_deletes_nothing() {
     use axum::Extension;
     use axum::extract::{RawQuery, State};
@@ -1908,7 +1909,10 @@ async fn delete_me_records_a_request_and_deletes_nothing() {
     .await;
     assert_eq!(
         (s, r["error"].as_str().unwrap_or("")),
-        (StatusCode::BAD_REQUEST, "backend 'files' is not available (have: surreal)")
+        (
+            StatusCode::BAD_REQUEST,
+            "backend 'files' is not available (have: surreal)"
+        )
     );
     // a POST on the path is not this route (the Python answers its 404)
     let (s, _) = send(&st, "POST", "/api/me", json!({"confirm": "delete my material"})).await;

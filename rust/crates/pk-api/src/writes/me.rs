@@ -30,13 +30,12 @@ pub const DELETE_CONFIRM: &str = "delete my material";
 const STORES: [&str; 5] = ["storyboards", "workingsets", "venues", "account", "jobs"];
 
 /// The dry run's note (`delete_me`, no sign-in).
-const DRY_RUN_NOTE: &str =
-    "Local dev: nothing is ever deleted by the API. This is what a deletion would cover.";
+const DRY_RUN_NOTE: &str = "Local dev: nothing is ever deleted by the API. This is what a deletion would cover.";
 /// The recorded request's note.
 const REQUESTED_NOTE: &str = "Your request is recorded. The owner deletes it by hand and tells you when it is done.";
 
-fn line(what: impl Into<String>, place: impl Into<String>, count: Value) -> Value {
-    json!({"what": what.into(), "where": place.into(), "count": count})
+fn line(what: impl Into<String>, place: impl Into<String>, count: impl Into<Value>) -> Value {
+    json!({"what": what.into(), "where": place.into(), "count": count.into()})
 }
 
 /// `inventory(kb)`: what "delete all my data" covers, with sizes. Read-only.
@@ -82,7 +81,10 @@ async fn inventory(st: &AppState) -> ApiResult<Vec<Value>> {
         .map_err(store_err)?;
     let mut dirs = std::collections::BTreeSet::new();
     for r in pk_store::store::rows_of(rows).into_iter().map(from_db) {
-        if let Some(rest) = r.get("path").and_then(Value::as_str).and_then(|p| p.strip_prefix("corpus/sets/"))
+        if let Some(rest) = r
+            .get("path")
+            .and_then(Value::as_str)
+            .and_then(|p| p.strip_prefix("corpus/sets/"))
             && let Some((dir, _)) = rest.split_once('/')
         {
             dirs.insert(dir.to_string());
@@ -180,26 +182,34 @@ mod tests {
     use super::*;
     use serde_json::Map;
 
-    fn body(v: Value) -> Map<String, Value> {
+    fn body(v: &Value) -> Map<String, Value> {
         v.as_object().cloned().unwrap_or_default()
     }
 
     #[test]
     fn the_phrase_is_read_the_pythons_way() {
-        assert_eq!(confirm_phrase(&body(json!({}))).unwrap(), "");
-        assert_eq!(confirm_phrase(&body(json!({"confirm": null}))).unwrap(), "");
-        assert_eq!(confirm_phrase(&body(json!({"confirm": 0}))).unwrap(), "");
-        assert_eq!(confirm_phrase(&body(json!({"confirm": []}))).unwrap(), "");
+        assert_eq!(confirm_phrase(&body(&json!({}))).unwrap(), "");
+        assert_eq!(confirm_phrase(&body(&json!({"confirm": null}))).unwrap(), "");
+        assert_eq!(confirm_phrase(&body(&json!({"confirm": 0}))).unwrap(), "");
+        assert_eq!(confirm_phrase(&body(&json!({"confirm": []}))).unwrap(), "");
         assert_eq!(
-            confirm_phrase(&body(json!({"confirm": "  Delete My MATERIAL\u{a0}\n"}))).unwrap(),
+            confirm_phrase(&body(&json!({"confirm": "  Delete My MATERIAL\u{a0}\n"}))).unwrap(),
             DELETE_CONFIRM
         );
-        for (v, kind) in [(json!(5), "int"), (json!(1.5), "float"), (json!(true), "bool"), (json!([1]), "list")] {
-            let e = confirm_phrase(&body(json!({ "confirm": v }))).unwrap_err();
+        for (v, kind) in [
+            (json!(5), "int"),
+            (json!(1.5), "float"),
+            (json!(true), "bool"),
+            (json!([1]), "list"),
+        ] {
+            let e = confirm_phrase(&body(&json!({ "confirm": v }))).unwrap_err();
             assert_eq!(e.status, StatusCode::INTERNAL_SERVER_ERROR);
-            assert_eq!(e.msg, format!("AttributeError: '{kind}' object has no attribute 'strip'"));
+            assert_eq!(
+                e.msg,
+                format!("AttributeError: '{kind}' object has no attribute 'strip'")
+            );
         }
-        let e = confirm_phrase(&body(json!({"confirm": {"a": 1}}))).unwrap_err();
+        let e = confirm_phrase(&body(&json!({"confirm": {"a": 1}}))).unwrap_err();
         assert!(e.msg.contains("'dict'"));
     }
 }

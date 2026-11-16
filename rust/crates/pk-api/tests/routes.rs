@@ -185,7 +185,11 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
             .body(Body::empty())
             .unwrap();
         let (s, _, b) = send(&st, req).await;
-        assert_eq!((s, error_of(&b).as_str()), (StatusCode::BAD_GATEWAY, "the API is restarting; try again in a moment"), "{m}");
+        assert_eq!(
+            (s, error_of(&b).as_str()),
+            (StatusCode::BAD_GATEWAY, "the API is restarting; try again in a moment"),
+            "{m}"
+        );
     }
     let (s, _, _) = send(&st, get("/api/notes").body(Body::empty()).unwrap()).await;
     assert_eq!(s, StatusCode::BAD_GATEWAY);
@@ -448,7 +452,11 @@ async fn a_route_that_forwards_while_its_feature_is_off_is_not_counted() {
     let st = fwd_state(false);
     for p in ["/api/notes", "/api/export", "/api/inbox"] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
-        assert_eq!(s, StatusCode::BAD_GATEWAY, "{p} is forwarded (the test's Python is a closed port)");
+        assert_eq!(
+            s,
+            StatusCode::BAD_GATEWAY,
+            "{p} is forwarded (the test's Python is a closed port)"
+        );
     }
     let _ = send(&st, get("/api/labels").body(Body::empty()).unwrap()).await;
     let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
@@ -543,9 +551,23 @@ async fn an_unknown_path_is_answered_the_pythons_way() {
     // signed out: auth first
     let st = state(true);
     for m in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
-        let (s, h, b) = send(&st, req(m, "/api/no-such-route").header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
-        assert_eq!((s, error_of(&b).as_str()), (StatusCode::UNAUTHORIZED, "sign in required"), "{m}");
-        assert_eq!(h[header::WWW_AUTHENTICATE], r#"Bearer realm="punchable", error="invalid_token""#);
+        let (s, h, b) = send(
+            &st,
+            req(m, "/api/no-such-route")
+                .header(header::ORIGIN, ORIGIN)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(
+            (s, error_of(&b).as_str()),
+            (StatusCode::UNAUTHORIZED, "sign in required"),
+            "{m}"
+        );
+        assert_eq!(
+            h[header::WWW_AUTHENTICATE],
+            r#"Bearer realm="punchable", error="invalid_token""#
+        );
         assert_eq!(h[header::ACCESS_CONTROL_ALLOW_ORIGIN], ORIGIN);
     }
     // no auth, no data yet: the booting 503 comes before the 404
@@ -556,7 +578,14 @@ async fn an_unknown_path_is_answered_the_pythons_way() {
         assert_eq!(h[header::CACHE_CONTROL], "no-store");
     }
     // the preflight is the fixed 204 on any path
-    let (s, h, _) = send(&st, req("OPTIONS", "/api/no-such-route").header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
+    let (s, h, _) = send(
+        &st,
+        req("OPTIONS", "/api/no-such-route")
+            .header(header::ORIGIN, ORIGIN)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
     assert_eq!(s, StatusCode::NO_CONTENT);
     assert_eq!(h[header::ACCESS_CONTROL_ALLOW_METHODS], pk_api::cors::ALLOW_METHODS);
 }
@@ -566,12 +595,19 @@ async fn an_unknown_path_is_answered_the_pythons_way() {
 async fn a_verb_the_python_does_not_have_is_its_501_page() {
     let st = state(true);
     for (m, p) in [("TRACE", "/api/no-such-route"), ("BREW", "/api/labels")] {
-        let (s, h, b) = send(&st, req(m, p).header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
+        let (s, h, b) = send(
+            &st,
+            req(m, p).header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap(),
+        )
+        .await;
         assert_eq!(s, StatusCode::NOT_IMPLEMENTED, "{m}");
         assert_eq!(h[header::CONTENT_TYPE], "text/html;charset=utf-8");
         assert!(h.get(header::ACCESS_CONTROL_ALLOW_ORIGIN).is_none());
         let text = String::from_utf8(b).unwrap();
-        assert!(text.contains(&format!("<p>Message: Unsupported method ('{m}').</p>")), "{text}");
+        assert!(
+            text.contains(&format!("<p>Message: Unsupported method ('{m}').</p>")),
+            "{text}"
+        );
     }
 }
 
@@ -584,14 +620,26 @@ async fn the_fallback_counts_every_request_it_sees() {
     let _ = send(&st, req("POST", "/api/other/joke:abc").body(Body::empty()).unwrap()).await;
     let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
     let text = String::from_utf8(b).unwrap();
-    assert!(text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="none"} 1"#), "{text}");
-    assert!(text.contains(r#"pk_api_forwarded_total{method="POST",route="/api/other/{id}",to="none"} 1"#), "{text}");
-    assert!(!text.contains(r#"to="python""#), "nothing was passed to a Python: {text}");
+    assert!(
+        text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="none"} 1"#),
+        "{text}"
+    );
+    assert!(
+        text.contains(r#"pk_api_forwarded_total{method="POST",route="/api/other/{id}",to="none"} 1"#),
+        "{text}"
+    );
+    assert!(
+        !text.contains(r#"to="python""#),
+        "nothing was passed to a Python: {text}"
+    );
     let st = fwd_state(false);
     let _ = send(&st, get("/api/no-such-route").body(Body::empty()).unwrap()).await;
     let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
     let text = String::from_utf8(b).unwrap();
-    assert!(text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="python"} 1"#), "{text}");
+    assert!(
+        text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="python"} 1"#),
+        "{text}"
+    );
 }
 
 /// A scanner walking made-up paths cannot grow the series without bound.
@@ -599,11 +647,17 @@ async fn the_fallback_counts_every_request_it_sees() {
 async fn the_forward_counter_keeps_a_bounded_number_of_routes() {
     let st = state(false);
     for i in 0..200 {
-        let word: String = [i / 26 % 26, i % 26].iter().map(|c| char::from(b'a' + *c as u8)).collect();
+        let word: String = [i / 26 % 26, i % 26]
+            .iter()
+            .map(|c| char::from(b'a' + *c as u8))
+            .collect();
         let _ = send(&st, get(&format!("/scan/{word}")).body(Body::empty()).unwrap()).await;
     }
     let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
     let text = String::from_utf8(b).unwrap();
-    let n = text.lines().filter(|l| l.starts_with("pk_api_forwarded_total{")).count();
+    let n = text
+        .lines()
+        .filter(|l| l.starts_with("pk_api_forwarded_total{"))
+        .count();
     assert!(n <= 65, "{n} series");
 }
