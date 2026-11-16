@@ -11,6 +11,7 @@ export const REQUIRED_URLS = [
   '/bit/x', '/map/x', '/venue/x', '/myset/x', '/workingset/x', '/setlist/x', '/add/x', '/voice',
   '/archived', '/bitnotes', '/film/x', '/take/x', '/session/x', '/rant/new',
   '/new-topic', '/topic/x', '/topic/x/script', '/topic/x/bit/y', '/filmed', '/material/x', '/rant-line',
+  '/around', '/setpick',
 ];
 /** Served as static files by the web image (app/public), outside the router. */
 export const STATIC_URLS: Record<string, string> = { '/privacy': 'privacy.html', '/terms': 'terms.html' };

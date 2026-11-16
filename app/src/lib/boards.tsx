@@ -1,16 +1,16 @@
 // "To a set" from anywhere (UX_SPEC 7.1): tap adds the bit to the current set list (the last one of HIS he opened,
 // still live) with a snackbar "Added to … · Change · Undo"; with no such list the picker opens and nothing is written
 // (docs/design/SPEC-2026-10-29-set-lists-and-stage-notes.md §1: never a draft, never the newest by default).
-// Long-press opens the picker. The picker lists his live lists only (rules/setListRules pickerLists).
+// Long-press opens the picker. The picker is lib/SetPicker (SPEC 2026-11-16 §4.5): his live lists, multi-tick, staged
+// until Done; `pick` opens it as its own sheet route (/setpick).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { ApiError } from './api';
 import { BoardListItem, creative } from './creative';
-import { C, F } from './theme';
+import { openSetPicker } from './SetPicker';
 import { mmss } from '@/rules/format';
-import { addTarget, pickerLists } from '@/rules/setListRules';
-import { Btn, Sheet, T, s, useUI } from './ui';
+import { addTarget } from '@/rules/setListRules';
+import { useUI } from './ui';
 
 const KEY = 'pk.board.current';
 type Cur = { id: string; title: string } | null;
@@ -45,9 +45,6 @@ export const useBoards = () => {
 export function BoardProvider({ children }: { children: React.ReactNode }) {
   const ui = useUI();
   const [current, setCur] = useState<Cur>(() => readCur());
-  const [picker, setPicker] = useState<{ jokeId: string; title?: string; moveFrom?: string } | null>(null);
-  const [list, setList] = useState<BoardListItem[] | null>(null);
-  const [newTitle, setNewTitle] = useState('');
   const curRef = useRef(current);
   curRef.current = current;
 
@@ -83,7 +80,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     if (quiet) return true;
     ui.snack(`Added to ${board.title}`, async () => {
       await creative.patchBoard(board.id, { remove: { joke_id: jokeId } });
-    }, { label: 'Change', testID: 'snack-change', run: () => setPicker({ jokeId, title, moveFrom: board.id }) });
+    }, { label: 'Change', testID: 'snack-change', run: () => openSetPicker(jokeId, title) });
     return true;
   }, [setCurrent, ui]);
 
@@ -93,70 +90,14 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     const bs = curRef.current ? (await creative.boards().catch(() => ({ boards: [] as BoardListItem[] }))).boards : [];
     const target = addTarget(curRef.current, bs);
     if (!target) {
-      setPicker({ jokeId, title });
+      openSetPicker(jokeId, title);
       return false;
     }
     return addTo({ id: target.id, title: target.title }, jokeId, title);
   }, [addTo]);
 
-  const pick = useCallback((jokeId: string, title?: string) => setPicker({ jokeId, title }), []);
-
-  useEffect(() => {
-    if (picker) {
-      setList(null);
-      setNewTitle('');
-      creative.boards().then((r) => setList(pickerLists(r.boards))).catch(() => setList([]));
-    }
-  }, [picker]);
-
-  const choose = async (b: { id: string; title: string }) => {
-    const p = picker!;
-    setPicker(null);
-    if (p.moveFrom && p.moveFrom !== b.id) await creative.patchBoard(p.moveFrom, { remove: { joke_id: p.jokeId } }).catch(() => {});
-    await addTo(b, p.jokeId, p.title);
-  };
-  const createAndAdd = async () => {
-    const p = picker!;
-    const t = newTitle.trim() || `${p.title || 'New'} set list`;
-    setPicker(null);
-    if (p.moveFrom) await creative.patchBoard(p.moveFrom, { remove: { joke_id: p.jokeId } }).catch(() => {});
-    try {
-      const v = await creative.createBoard({ title: t, joke_ids: [p.jokeId] });
-      setCurrent({ id: v.board.id, title: v.board.title });
-      ui.snack(`Started ${v.board.title}`, undefined, { label: 'Open', run: () => router.push(`/list/${encodeURIComponent(v.board.id)}` as any) });
-    } catch (e: any) {
-      ui.snack(`Couldn't create the set list: ${e.message}`);
-    }
-  };
+  const pick = useCallback((jokeId: string, title?: string) => openSetPicker(jokeId, title), []);
 
   const value = useMemo(() => ({ current, setCurrent, add, pick }), [current, setCurrent, add, pick]);
-  return (
-    <Ctx.Provider value={value}>
-      {children}
-      <Sheet visible={!!picker} onClose={() => setPicker(null)} label="Add to which set list?" testID="board-picker">
-        <T v="h2" style={{ marginBottom: 4 }}>{picker?.moveFrom ? 'Move to which set list?' : 'Add to which set list?'}</T>
-        {!!picker?.title && <T v="mut" style={{ marginBottom: 12 }}>{picker.title}</T>}
-        <View style={{ gap: 8 }}>
-          {list == null && <T v="mut">Loading your set lists…</T>}
-          {list?.length === 0 && <T v="mut">No set list of yours yet. Start one below.</T>}
-          {list?.slice(0, 8).map((b) => (
-            <Pressable key={b.id} testID={`pick-board-${b.id}`} accessibilityRole="button" onPress={() => choose({ id: b.id, title: b.title })}
-              style={[s.inner, { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-              <View style={{ flex: 1 }}>
-                <T v="semi" numberOfLines={1}>{b.working_set ? '★ ' : ''}{b.title}</T>
-                <T v="small">{b.n} bits · {b.runtime}{current?.id === b.id ? ' · current' : ''}</T>
-              </View>
-            </Pressable>
-          ))}
-          <View style={[s.inner, { gap: 8 }]}>
-            <T v="semi">New set list</T>
-            <TextInput testID="new-board-title" value={newTitle} onChangeText={setNewTitle} placeholder="Name it (e.g. Friday · 7)" placeholderTextColor={C.dim}
-              style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16 }} />
-            <Btn testID="new-board-create" label="Create and add" v="add" small onPress={createAndAdd} />
-          </View>
-        </View>
-        <Btn label="Cancel" v="ghost" onPress={() => setPicker(null)} style={{ marginTop: 8 }} />
-      </Sheet>
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

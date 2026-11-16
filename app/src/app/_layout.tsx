@@ -163,7 +163,9 @@ function RootLayout() {
                 <Stack.Screen name="take/[rec]" options={{ ...fullScreen, title: t('Filmed') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
                 {/* the focus-mode mock for device checks 2 and 3 (SPEC 2026-11-03 §4.1): Slice 1 only, removed in Slice 2 */}
-                <Stack.Screen name="spike-write" options={{ ...fullScreen, title: t('Focus mock') }} />
+                <Stack.Screen name="spike-write" options={{ ...fullScreen, title: t('Line editor mock') }} />
+                {/* device check 7 (SPEC 2026-11-16 §4.4): a sound take under a walk-through, then the camera on top */}
+                <Stack.Screen name="spike-run" options={{ ...fullScreen, gestureEnabled: false, title: t('Walk-through mock') }} />
                 {/* Short tasks as form sheets: Add a joke at the large detent ("+" itself is no sheet: it acts, SPEC 2026-10-30) */}
                 <Stack.Screen name="add/[board]" options={{ ...sheet([1]), title: t('Add a joke') }} />
                 {/* A bit's notes over the stage or a set list (HIG/sheets: medium detent first, large on drag; nonmodal at
@@ -176,6 +178,10 @@ function RootLayout() {
                     undimmed there so the script stays in sight and live behind them; large on drag; the grabber; a swipe dismisses */}
                 <Stack.Screen name="material/[topic]" options={{ ...sheet([0.5, 1]), sheetLargestUndimmedDetentIndex: 0, title: t('Material'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="rant-line" options={{ ...sheet([0.5, 1]), sheetLargestUndimmedDetentIndex: 0, title: t('Claude'), contentStyle: { backgroundColor: C.surface } }} />
+                {/* The redesign, Slice 1 (SPEC 2026-11-16 §3.1, §4.5): one card of Around this bit, and Add to a set. Medium
+                    detent first, large on drag; dimmed behind (the page must not change under a choice being made) */}
+                <Stack.Screen name="around" options={{ ...sheet([0.5, 1]), title: t('Around this bit'), contentStyle: { backgroundColor: C.surface } }} />
+                <Stack.Screen name="setpick" options={{ ...sheet([0.5, 1]), title: t('Add to a set'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

@@ -132,10 +132,12 @@ export function AIBadge({ conf, word, testID, style }: { conf?: number | null; w
 }
 /** He edited it: the badge becomes a small "yours" mark. */
 export function Yours({ testID }: { testID?: string }) {
+  // light-mode amber is never text (HIG.md §5): the deep amber there, as every link
+  const fg = C.scheme === 'light' ? C.amberDeep : C.amber;
   return (
     <View testID={testID} accessibilityLabel="yours" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center' }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.amber }} />
-      <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g6, fontSize: 11, color: C.amber }}>yours</Text>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: fg }} />
+      <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.g6, fontSize: 11, color: fg }}>yours</Text>
     </View>
   );
 }
