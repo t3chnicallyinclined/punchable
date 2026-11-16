@@ -21,6 +21,9 @@ run with `PK_REQUIRE_EXTERNAL=1` to make a missing one fail instead of skip.
   other projects' names. The commit guard runs on commit and push; fix the content, never bypass it.
 - One lane owns one crate directory and its generator under `rust/tools/`; never edit another lane's crate.
   `rust/Cargo.toml` and `Cargo.lock` are shared: add lines, never reorder or remove others'.
+- New code is Rust (owner 2026-11-16): every service, job, tool and script from here on, unless there is a specific
+  reason it cannot be. The standing reasons: the phone and web app is React Native / TypeScript, and the Python
+  oracle stays only until T11 retires it. Say the reason in the commit when something new is not Rust.
 - Popular crates only (ADR 0002); the crate DAG rule (ADR 0010); library crates never read the environment.
 - Equality in a differential is of parsed JSON values (ADR 0007); goldens are synthetic and written by the Python
   generator; the Rust test compares. Never regenerate a golden from the code under test.

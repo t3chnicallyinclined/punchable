@@ -89,9 +89,7 @@ Research 2026-11-06 (official pages; CONFIRMED unless marked):
 | Claude web search (`web_search_20260318`) | Ranks and explains the above against his angles, with citations | $10 per 1,000 searches; "citations must be included to the original source" | **yes**, twice a day, ~10 searches a run (~$3-6 a month) |
 | GDELT DOC 2.0 | Headlines, last 3 months | free, cite GDELT | later |
 | YouTube `videos.list chart=mostPopular` | **The actual most-viewed videos** by region (and category; Comedy's chart may be missing, INFERRED) | 1 quota unit a call; store ≤ 30 days, show YouTube as the source | **yes** (a "Viral on YouTube" row), daily |
-| X trends | **The real trending list** | $0.010 a request, post reads $0.005 each (pricing page 2026-11-06); no free tier | **yes, if the owner agrees** to about $1-2 a month (4 calls a day) |
-| Instagram Hashtag Search (`ig_hashtag_search`, `top_media`) | The most popular public posts **for a hashtag he names** (caption, comments, likes, permalink); no "what is trending" list | Facebook Login only, a Business/Creator account linked to a Page, the "Instagram Public Content Access" feature; **30 unique hashtags per 7 days**; whether it works in Development mode without App Review is **UNKNOWN** (Meta's App Review page and third-party guides disagree) | **try**, once he links a Page: a few fixed hashtags (#rant, #standup) |
-| Threads keyword search (`search_type=TOP`, `media_type=VIDEO`) | Popular posts for a keyword | "without approval, the search will be performed only on posts owned by the authenticated user": needs App Review | no |
+| X trends, Instagram hashtags, Threads search | | | **roadmap** (owner 2026-11-07, §9.1) |
 | TikTok Creative Center / Research API | Hashtags, sounds / video data | **no public API; the terms forbid automated extraction**; the Research API is for academic and not-for-profit researchers only | **no** (an "Open TikTok trends" link opens the website for him to browse) |
 | Reddit | Hot posts | approval needed, free tier uncertain (INFERRED) | no |
 | NewsAPI free / Google News RSS | News | not for production / personal non-commercial only | no |
@@ -226,6 +224,17 @@ The share sheet (`Share.share({url, message})`, CONFIRMED to share a file and re
 `RCTActionSheetManager.mm:257-293`) with the caption copied first (`expo-clipboard`; most apps drop text sent with a
 video, INFERRED), a posted mark from the activity type, and "Mark as posted". A caption per platform from Claude
 (owner: yes), AI badge, verbatim-checked where it quotes him.
+
+### 9.1 Roadmap: platform trends (owner 2026-11-07: "lets also put this on the roadmap")
+
+Research 2026-11-06/07, official pages:
+
+| Source | What it gives | Access and cost | Needs from the owner |
+|---|---|---|---|
+| X trends | **the real trending list** | pay per use: Trends $0.010 a request, post reads $0.005 each, no free tier (docs.x.com pricing) | an X developer account with a payment method (about $1-2 a month at 4 calls a day) |
+| Instagram Hashtag Search (`ig_hashtag_search`, `top_media`) | the most popular public posts **for a hashtag he names** (caption, comments, likes, permalink); no "what is trending" list | Facebook Login only, a Business/Creator account linked to a Page, the "Instagram Public Content Access" feature; **30 unique hashtags per 7 days**; whether Development mode works without App Review is **UNKNOWN** (Meta's App Review page and third-party guides disagree) | a Creator account linked to a Facebook Page; a Meta app |
+| Threads keyword search (`search_type=TOP`, `media_type=VIDEO`) | popular posts for a keyword | "without approval, the search will be performed only on posts owned by the authenticated user": needs App Review | App Review |
+| TikTok | nothing usable: no trends API, the terms forbid automated extraction, the Research API is academic only | | |
 
 ## 10. Owner checks (per slice, written when built)
 
