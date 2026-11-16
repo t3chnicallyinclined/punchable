@@ -251,6 +251,10 @@ fn preflight(st: &AppState) -> impl Handler<((),), AppState> {
     )
 }
 
+/// A verb the Python has no handler for is its 501 page whether or not a Python is configured: the page carries
+/// `Connection: close`, a hop-by-hop header the forward would strip (RFC 9110 7.6.1), so the fallback answers it itself
+/// before it forwards ([`proxy::unsupported_method`]).
+///
 /// The layers around the fallback when there is no Python (T11 round 3), outermost first: the Python's 501 page for a
 /// verb it has no handler for, CORS and the preflight, then auth. It answers an unknown path the way the Python does,
 /// behind the same refusals the Python makes first. No request metrics (a scanner's made-up paths must not become
@@ -270,7 +274,7 @@ macro_rules! standalone_layers {
 fn finish(st: &AppState, methods: MethodRouter<AppState>) -> MethodRouter<AppState> {
     let methods = methods.options(preflight(st));
     if st.config().python_url.is_some() {
-        methods.fallback(proxy::forward)
+        methods.fallback(proxy::forward.layer(axum::middleware::from_fn(proxy::unsupported_method)))
     } else {
         methods.fallback(proxy::forward.layer(standalone_layers!(st)))
     }
@@ -579,7 +583,8 @@ pub fn app(st: AppState) -> Router {
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
     if st.config().python_url.is_some() {
-        r.fallback(proxy::forward).with_state(st)
+        r.fallback(proxy::forward.layer(axum::middleware::from_fn(proxy::unsupported_method)))
+            .with_state(st)
     } else {
         let layers = standalone_layers!(st);
         r.fallback(proxy::forward.layer(layers)).with_state(st)
@@ -590,7 +595,7 @@ pub fn app(st: AppState) -> Router {
 fn metrics_route(st: &AppState) -> MethodRouter<AppState> {
     let m = get(routes::metrics::metrics);
     if st.config().python_url.is_some() {
-        m.fallback(proxy::forward)
+        m.fallback(proxy::forward.layer(axum::middleware::from_fn(proxy::unsupported_method)))
     } else {
         m.fallback(proxy::forward.layer(standalone_layers!(st)))
     }
