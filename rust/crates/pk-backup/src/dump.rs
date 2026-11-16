@@ -8,12 +8,11 @@
 //! to see it twice, seen on 3.3.4).
 
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use std::time::Duration;
 
 use base64::Engine;
-use flate2::read::MultiGzDecoder;
 use flate2::write::GzEncoder;
 use flate2::{Compression, GzBuilder};
 use reqwest::blocking::{Client, Response};
@@ -22,6 +21,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::error::{BackupError, Result, fail};
+use crate::gzread::PyGzip;
 use crate::settings::Vars;
 use crate::{CHUNK, s3};
 
@@ -267,7 +267,7 @@ pub fn check_dump_chunked(path: &Path, min_bytes: u64, chunk: usize) -> Result<D
     let (mut head, mut tail, mut carry): (Vec<u8>, Vec<u8>, Vec<u8>) = (Vec::new(), Vec::new(), Vec::new());
     let sha = hash_file(path).map_err(|e| incomplete(&e))?;
     let f = File::open(path).map_err(|e| incomplete(&e))?;
-    let mut g = MultiGzDecoder::new(f);
+    let mut g = PyGzip::new(BufReader::new(f));
     let mut buf = vec![0u8; chunk.max(1)];
     loop {
         let got = g.read(&mut buf).map_err(|e| incomplete(&e))?;
@@ -450,6 +450,13 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let e = check_dump_chunked(&write(d.path(), &gzip(&b"hello;\n".repeat(2000))), 1024, CHUNK).unwrap_err();
         assert!(e.0.contains("OPTION IMPORT"), "{e}");
+    }
+
+    #[test]
+    fn an_empty_file_is_read_as_an_empty_stream_like_pythons_gzip() {
+        let d = tempfile::tempdir().unwrap();
+        let e = check_dump_chunked(&write(d.path(), b""), 1024, CHUNK).unwrap_err();
+        assert!(e.0.contains("export is only 0 bytes"), "{e}");
     }
 
     #[test]

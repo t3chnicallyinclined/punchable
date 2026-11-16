@@ -5,7 +5,7 @@
 //! bucket, and that a PUT's `x-amz-content-sha256` is the SHA-256 of the bytes that arrived.
 //!
 //! It can be told to fail a kind of call, to store only half of an upload, and to cut a download short. Its
-//! certificate is made at test time (a throwaway CA and a leaf for `localhost`); `ca_pem` is what a client trusts.
+//! certificate is made at test time (a throwaway CA and a leaf for `127.0.0.1` and `localhost`); `ca_pem` is what a client trusts.
 //!
 //! The server lives in threads (rustls's blocking API), so a test can use it from a plain `#[test]`. Included by path
 //! from the integration tests; never part of the library.
@@ -60,7 +60,8 @@ impl Pki {
         ca.distinguished_name.push(DnType::CommonName, "pk-backup test CA");
         let ca_cert = ca.self_signed(&ca_key).expect("ca cert");
         let leaf_key = KeyPair::generate().expect("leaf key");
-        let mut leaf = CertificateParams::new(vec!["localhost".to_string()]).expect("leaf params");
+        let mut leaf =
+            CertificateParams::new(vec!["localhost".to_string(), "127.0.0.1".to_string()]).expect("leaf params");
         leaf.use_authority_key_identifier_extension = true;
         let issuer = Issuer::new(ca, ca_key);
         let leaf_cert = leaf.signed_by(&leaf_key, &issuer).expect("leaf cert");
@@ -163,7 +164,7 @@ impl Standin {
             }
         });
         Self {
-            endpoint: format!("https://localhost:{}", addr.port()),
+            endpoint: format!("https://127.0.0.1:{}", addr.port()),
             bucket: opts.bucket,
             key_id: opts.key_id,
             secret: opts.secret,

@@ -19,6 +19,7 @@
 pub mod cli;
 pub mod dump;
 pub mod error;
+pub mod gzread;
 pub mod redact;
 pub mod retention;
 pub mod s3;

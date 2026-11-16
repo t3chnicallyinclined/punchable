@@ -2,11 +2,11 @@
 //! WAL-mode database is three files and a plain copy of a live one is not a consistent snapshot).
 
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use flate2::read::MultiGzDecoder;
+use crate::gzread::PyGzip;
 use flate2::{Compression, GzBuilder};
 use rusqlite::backup::{Backup, StepResult};
 use rusqlite::{Connection, OpenFlags};
@@ -111,7 +111,8 @@ pub fn check_gz(path: &Path, min_bytes: u64) -> Result<SqliteInfo> {
             |e: &dyn std::fmt::Display| BackupError(format!("{name}: not a complete gzip of a database ({e})"));
         let (mut n, mut head) = (0u64, Vec::<u8>::new());
         {
-            let mut g = MultiGzDecoder::new(File::open(path).map_err(|e| incomplete(&e))?);
+            let f = File::open(path).map_err(|e| incomplete(&e))?;
+            let mut g = PyGzip::new(BufReader::new(f));
             let mut out = File::create(&tmp).map_err(|e| incomplete(&e))?;
             let mut buf = vec![0u8; CHUNK];
             loop {
@@ -172,6 +173,8 @@ pub fn check_gz(path: &Path, min_bytes: u64) -> Result<SqliteInfo> {
 
 #[cfg(test)]
 mod tests {
+    use flate2::read::MultiGzDecoder;
+
     use super::*;
 
     fn make(dir: &Path, rows: usize) -> (Connection, PathBuf) {
