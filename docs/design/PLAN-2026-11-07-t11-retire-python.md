@@ -310,4 +310,354 @@ Lead's defaults:
 Still open, for later and not blocking T11:
 - **N1.** gsync keeps running on the PC after round 4, because the port is as-is. The standing direction is
   phone plus server, with no home PC. Moving gsync onto the server means keeping his Google sign-in token on the
-  server, which needs a security review (`gw-security`) first.
+  server, which needs a security review (`gw-security`) first. **Picked up on 2026-11-16: section 8.**
+
+## 8. Nothing on the PC (plan, 2026-11-16)
+
+Status: **plan only; nothing built.** Owner, 2026-11-16: nothing of Punchable should rely on his PC, as its own
+rounds of the Rust port, starting with a security review for moving the Google Docs sync to the server. Written by
+the architect on main `7e3f623`; part A's design for keeping the Google sign-in was reviewed by `gw-security` the same day (8.4). New code
+is Rust (`CLAUDE.md`).
+
+Tags: CONFIRMED = read in the code at `file:line` on main `7e3f623`, or checked on the owner's PC on 2026-11-16;
+INFERRED = follows from what was read, not run; UNKNOWN = nobody has checked. Nothing here was run against
+production.
+
+### 8.1 What still runs on the PC
+
+| # | Piece | Today | Tag |
+|---|---|---|---|
+| L1 | **Google Docs sync** (`pk-gsync`, Rust) | A scheduled task on the PC, one pass a minute. It holds his Google sign-in and a Keycloak offline token as files in his home folder (`rust/crates/pk-gsync/src/config.rs:194-206`), keeps its state as files (`store.rs:66-76`: `map.json`, `units.json`, the logs, `mirror/`), and reads his private legal rules file (`config.rs:119-121`). | CONFIRMED (lead's check of the task; code) |
+| L2 | **Drive voice memos** | `pk-gsync` lists and downloads audio from a Drive folder (`memos.rs:252-280`), then starts a Python processor that needs ffmpeg and faster-whisper on the PC's GPU (`gsync/memos.py:1-19`; `pk-gsync/README.md` "What is different"). | CONFIRMED |
+| L3 | **Laugh detection** | Ran on the PC (`tools/laughs/detect_laughs.py` through `engine/laughs_runner.py`, a torch model). The PC worker task is disabled; the laugh map of every set is frozen (`docs/HANDOVER.md` open item 6). | CONFIRMED (lead's check; handover) |
+
+Facts that shape the design:
+
+- **Where the Drive access really lives.** The refresh token with the full `drive` scope is only in the PC's token
+  file. Sign-in through Keycloak has asked Google for basic scopes only since 2026-10-26, so the token Keycloak
+  stores no longer carries Drive (`infra/keycloak/realm-punchable.yaml:126-132`). The app's "Reconnect Google"
+  comment still says it renews Drive access (`app/src/app/(tabs)/(rant)/settings.tsx:117-119`). INFERRED: today's
+  Reconnect button does not renew Drive access; if Google ever refused the PC's token, the only repair is a
+  command on the PC.
+- **gsync borrows the worker's identity.** It calls `/api/worker/*` with the worker's own client secret
+  (`punchable.rs:61-80`), and the API's rule is one role plus a path prefix (`pk-api/src/auth/mod.rs:72-80`).
+  CONFIRMED.
+- **Most of the state is already copied to the database.** Five state files and the run log are posted as `srcfile`
+  rows (`punchable.rs:28,507-539`), and pk-api reads them for Settings, memos and merges (`routes/status.rs:213-215`).
+  `mirror/` stays on the PC. CONFIRMED.
+- **The legal rules are already on the server.** The same private file is the Secret `punchable-legal-rules`, mounted
+  in pk-api and pk-worker, which refuse to start when it is set and unreadable (`pk-api/src/lib.rs:600-617`;
+  `infra/ship.sh:58-62`). CONFIRMED.
+- **gsync's own legal check is weaker than the servers'.** Four faults, all live on the PC today:
+  1. A missing, unreadable or broken rules file silently becomes the generic rules (`rules.rs:120-128`). CONFIRMED.
+  2. With no owner address configured the "not his doc" net is off (`rules.rs:159-167`). CONFIRMED.
+  3. A parent folder Drive does not return is recorded as having no parents, so the folder net passes the doc, and
+     that answer is cached (`sync.rs:470-479`). CONFIRMED by reading; not run.
+  4. The check order is metadata first, with nothing opened (`sync.rs:494-507`), then export and a second check on the
+     text (`:592-600`). A legal doc the metadata net misses **is opened**, then dropped. Eight more places export or
+     download without their own check (`sync.rs:533, 869, 1060, 1168, 1222, 1401, 1445`; `memos.rs:453`), and two of
+     them store the text with no content check (`:869`, `:1060`). CONFIRMED by `gw-security`.
+- **Voice memos from Drive have gone quiet.** On the PC every listed memo is done, none is waiting, and the state
+  file last changed on 2026-10-27, four days before memos moved onto the phone (ADR 0012, decided 2026-10-31).
+  CONFIRMED (the PC's `memos.json`, counts only).
+
+### 8.2 Part A: the Docs sync on the server
+
+**Problem.** Run the sync where the rest of Punchable runs, without making the server a way into his court and legal
+documents, and without him needing a PC to set it up, repair it or reconnect Google.
+
+**Where it runs.**
+
+| Option | For | Against |
+|---|---|---|
+| **Its own Deployment** `punchable-gsync`, one replica, `Recreate`, running `pk-gsync serve` (recommended) | Its secrets are in one pod that does nothing else. Nothing public reaches it. It can finish the Google sign-in. The loop and its token cache stay warm. | One more pod (small: no database client, no model). |
+| A CronJob | No standing process. A failed run is a failed Job. | A pod a minute. Nowhere to finish a Google sign-in, so a second component is needed anyway. |
+| A loop inside pk-worker | No new pod. | The worker pod holds the model provider's key and runs prompts over imported text; it would then also hold the Drive token. A sync fault would restart the AI worker. Against "one worker, one spend ledger" (ADR 0011). Rejected. |
+
+The pod follows the worker's manifest: non-root, read-only root, no service-account token, default-deny
+NetworkPolicy (`infra/k8s/35-worker.yaml`, `10-networkpolicy.yaml`). In: pk-api (two calls, below) and Prometheus.
+Out: pk-api, Keycloak's token endpoint, and TCP 443 to public ranges (Google).
+
+**How the Google sign-in gets there, with no PC.**
+
+1. A **new Google OAuth client used only for Drive**, in the Google Cloud project he already has (its consent
+   screen is already "In production", `gsync/SETUP.md` step 3.3, so refresh tokens do not lapse weekly; INFERRED
+   that a second client in the same project inherits that). Its one redirect address is a callback path on
+   punchable.io. Login keeps its own client, so rotating one never breaks the other.
+2. Settings on the web gets a real **Connect Google Docs** button (the phone shows the status and where to go, as
+   now). pk-api `POST /api/google/connect` checks that the caller is the owner by a pinned subject, not merely
+   signed in, then asks the gsync pod for a Google address to send the browser to. gsync makes a single-use `state`
+   (10 minutes, bound to the owner's subject and to a short-lived `__Host-` cookie) and a PKCE verifier it keeps.
+3. Google sends the browser back to `GET /api/google/callback` on pk-api, which only passes `code` and `state` to
+   gsync and answers with a redirect to a fixed Settings address (`no-store`, `no-referrer`; neither value logged).
+4. gsync redeems the code with the client secret and the verifier. It refuses, and revokes what it was given, unless
+   Google itself says the account is his (verified address on first use, Google's stable subject id from then on)
+   and the scopes granted are exactly the scopes asked for.
+5. **Reconnect** when Google has expired or revoked the access is the same button. The previous token is revoked
+   explicitly; a new consent alone leaves the old one valid.
+
+pk-api never holds the client secret, the verifier or the token.
+
+**Which Secret, who can read it.**
+
+| Thing | Where it rests | Who can read it |
+|---|---|---|
+| Drive client id and secret, the sealing key (32 random bytes made on the server, never anywhere else), the state-signing key | Secret `punchable-gsync-google` | the gsync pod only |
+| The Google refresh token | One row in the database, **sealed** (ChaCha20-Poly1305 from the crypto stack already in the tree; a version byte; the row id, key id, Google subject and scope bound in as associated data). A new row per reconnect. | Ciphertext: pk-api, the database, the nightly backups. Plaintext: the gsync pod only. |
+| gsync's Punchable credential: a new Keycloak client `pk-gsync-svc` with **its own role** | Secret `punchable-gsync` | the gsync pod only |
+| The legal rules | Secret `punchable-legal-rules` (exists) | pk-api, pk-worker, gsync |
+
+Considered for the token: a Kubernetes Secret the pod can update (needs a service-account token and API-server
+egress in a pod with internet egress, which no pod here has), and a file on a small volume (acceptable to
+`gw-security`, adds nothing against root on the node). The sealed row keeps the pod diskless and the backups useless
+to a thief without the key.
+
+What goes away at the switch: the Keycloak offline token and device client `pk-gsync`, the `broker/read-token`
+mapping and default role, `storeToken` on the Google provider (`realm-punchable.yaml:117-118,283-287`), and the
+worker secret in gsync's hands.
+
+**Scopes.** The read-only trial (below) uses a token with `drive.readonly` only, so it cannot write even with a
+bug. At the switch: **narrow** (`drive.readonly` plus `drive.file`; the mode exists, `config.rs:17`). The server can
+then read his Drive and change only the docs Punchable itself made. What narrow costs: a merge no longer moves his
+old docs into the merged folder, and docs the Claude connector made are re-made by Punchable so it can keep
+updating them (INFERRED from `drive.rs:1-9`, `sync.rs:284-302`; the engineer lists the exact writes). Full `drive`
+would be a later, explicit owner decision (8.4, 8.7 Q1).
+
+Also considered: a service identity that sees only a folder he shares with it. Court documents would be
+unreachable by construction and nothing would ever expire. It changes how he works (a doc outside that folder is
+never seen; today gsync finds comedy docs anywhere in his Drive, `sync.rs:345-349`), and whether such an identity
+can create Docs in a personal Drive is UNKNOWN (`gw-security` believes it cannot). Not recommended now (8.7 Q2).
+
+**Rotation.**
+
+| Secret | When | How |
+|---|---|---|
+| Google refresh token | Reconnect; any suspicion | The button. The old token is revoked at Google. |
+| Sealing key, state-signing key, `pk-gsync-svc` secret | Any suspicion, any exposure of the node or a backup, and once a year | `ship.sh` step that makes a new value on the server; gsync re-seals under the new key id on its next start. |
+| Drive client secret | Any suspicion | New secret in the Google console, then reconnect: rotating it does not revoke tokens already issued. |
+
+**Blast radius if the server is compromised.**
+
+- *Root on the node, or code running in the gsync pod:* the refresh token and the client secret. Under narrow that
+  is **every file in his Drive readable, court documents included**, and Punchable-made docs changeable, until he
+  removes Punchable's access in his Google account. Under full `drive` it would also be change and deletion of any
+  file. The legal rules file is exposed too (it already is on the server).
+- *Code running in pk-api only:* ciphertext, and a `code` it cannot redeem. **This holds only after must-fix 1 in
+  8.4**: as the code stands, whoever can write the state rows can name any Drive file as a Punchable-made doc, and
+  gsync will export it and (under full `drive`) overwrite it.
+- *A stolen backup:* ciphertext, doc ids and titles of his comedy docs. Not the token.
+- *The worker's secret:* nothing of gsync's, once the worker role can no longer read or write gsync's rows.
+
+**Where state lives.** The same JSON documents gsync writes today, as rows read and written through pk-api, not
+files: no pod disk, the differential tapes keep proving the logic, and pk-api's readers do not change. `mirror/`
+moves into rows too. Rules for the hosted store:
+
+- A read that fails stops the pass. A missing `map.json` row is a refusal, not an empty map (`store.rs:80-87` starts
+  empty today), unless the pod was started with an explicit bootstrap flag.
+- Every write carries the hash of what it replaces, so two writers cannot interleave.
+- Every state document carries a MAC under the state-signing key. A document that fails the check is refused. The
+  state is an input the pod must not trust (must-fix 1).
+- Proper tables instead of documents: later, only if a measurement asks for it. It would rewrite a proven path and
+  pk-api's readers (principle: port as-is).
+
+**The legal check: court and legal docs are never opened; fails closed.**
+
+1. **Rules required.** With `PUNCHABLE_LEGAL_RULES` set (always, on the server and in the PC task): an unreadable or
+   unparsable file, no owner address, or no private entry means the program does not start. pk-api's rule
+   (`load_legal`), ported.
+2. **Fingerprint.** Logged at start, exported as a metric, and pinned: a fingerprint other than the accepted one
+   stops the loop until it is accepted. `fingerprint()` exists and nothing calls it (`rules.rs:214`).
+3. **Unknown means excluded.** A parent folder that cannot be read excludes the doc and is not cached. An error
+   inside the legal check excludes the doc; today it is retried next pass (`sync.rs:444-454`).
+4. **No export without clearance.** `export` and `download` take a clearance value that only a passing metadata
+   check on **fresh** metadata for that file id can make. It is a type, so no call site can skip it. Every site
+   named in 8.1 goes through it. The write gate checks the doc's own "made by Punchable" tag on fresh metadata at
+   every write and never trusts the map alone.
+5. **The content net runs before anything else touches the text**: before it is hashed, stored, mirrored or sent,
+   at every site, including the two that skip it today.
+6. **A dropped doc leaves nothing behind.** Its text is never logged, stored or sent. The `excluded` set only grows.
+   What is recorded is the reason's kind (`folder`, `kw`), never the keyword that hit (`sync.rs:499` stores the
+   keywords today, and they reach the database and the backups). Run records carry a hash, not the id, of a
+   skipped legal doc, and titles stay out of the pod's log.
+7. **A content-net hit is an alert.** It means the metadata net missed a legal doc and the doc was opened in
+   memory. He adds its folder to the rules so the next one is never opened.
+8. **Second line.** pk-api's own legal check on everything gsync posts stays (`pk-api/src/lib.rs:600`). What it
+   covers for `edits.jsonl` text is UNKNOWN.
+
+What cannot be promised: "never opened" is exact for every doc the metadata rules name (folder, id, owner, title).
+A legal doc that none of those rules name is opened once in the pod's memory and dropped by the content net. That
+is true on the PC today; on the server the alert in item 7 makes each such case visible.
+
+**How it is proven.**
+
+1. *In the repo.* The recorded tapes replay against the hosted store and must give the same requests and the same
+   documents. New tests, each with a red arm: no rules file means no start; an unreadable parent folder means the doc
+   is skipped; a state document with a bad MAC is refused; a map row naming a doc without Punchable's tag cannot be
+   exported or written; a stale hash on a write is refused; a callback with a wrong `state`, a second use of a
+   `state`, or another Google account is refused.
+2. *Read-only beside the PC.* The pod runs in shadow mode on the server with the `drive.readonly` token and clients
+   that refuse every write (as a dry run does, `pk-gsync/README.md`). Each pass writes its plan to its own rows. The
+   PC keeps doing the real work. The two plans are compared pass by pass over a period that includes a real edit, a
+   new doc, a merge, and a legal-looking doc in a throwaway folder, which both must report as `skip_legal`. The
+   rules fingerprints must be equal. A difference is a finding, not noise.
+3. *`gw-security` reads the built code* (the callback, the sealing, the state MAC, the role) before the switch.
+4. *The switch* (owner's go): disable the PC task first (one writer), reconnect with the narrow scopes, turn shadow
+   mode off, watch one real edit go through.
+
+**Rollback.** Scale `punchable-gsync` to 0 and enable the PC task again; the state documents are the same ones. The
+PC's own token is left alone during the window, which has an end date set at the switch. When it closes: the PC's
+token is revoked at Google, the task and the token files are removed, and the Keycloak pieces above are deleted.
+
+**How it fails and how he finds out.**
+
+| Failure | Seen how |
+|---|---|
+| Google refuses the token | Alert on refresh failure; Settings shows "Reconnect Google Docs" |
+| The rules file is missing or changed | The pod does not start, or the loop stops on the fingerprint; alert |
+| The pod is down or a pass has not finished lately | Alert on the last-pass age metric; Settings shows the last sync time |
+| The state rows were tampered with or lost | The pass refuses (MAC or missing row); alert |
+| A legal doc slipped the metadata net | Alert on the content-net counter |
+
+### 8.3 Parts B and C
+
+**B. Drive voice memos without the PC's GPU.**
+
+| Option | Cost | Quality | Notes |
+|---|---|---|---|
+| A hosted speech API, called by a server job | Well under a cent a minute at list prices as recalled; INFERRED, check on the day. A new key and a new egress. | About today's (the same family of model). | His audio goes to another company. Against "the audio stays on his phone" (owner, 2026-10-31) in spirit, though these files already sit in Google Drive. |
+| A CPU model on the server | No money. A large model wants several GiB of memory and roughly real time or slower on shared cores; the worker pod has 1 CPU and 1 GiB (`35-worker.yaml:100-102`). Spare capacity on the node is UNKNOWN. | Today's with the same model; clearly worse with one small enough to be cheap (INFERRED). | A new pod, a model in the image, an audio decoder in Rust. The most work of the three. |
+| **Drop the Drive-folder path** (recommended) | Nothing to build; code to delete. | The phone's on-device recogniser, which he already uses for every new memo. | The phone records and transcribes its own memos, and "Import from Files" on the phone takes audio files, several at once (`app/src/lib/recordings.native.ts:324-328`). The Drive folder has had nothing waiting since 2026-10-27. |
+
+**Recommendation: drop it.** The path existed to bring in a backlog, and the backlog is done. An old memo that turns
+up later comes in through the phone. This also removes the last reason the Python `gsync/` package must stay
+(`pk-gsync/README.md`), **which round 11 needs**: it deletes `gsync/` while `pk-gsync` still starts
+`python -m gsync.memos process`. The memo list keeps showing what was already imported.
+
+**C. Laugh detection on the server.**
+
+Known:
+- The detector is a pretrained audio-tagging network plus a pass that lines events up with the transcript
+  (`engine/audio.py:111`). It has a CPU switch (`engine/laughs_runner.py:21`). CONFIRMED.
+- Its output is one `laughs_auto.json` per set, and pk-api already takes that file from a worker and turns it into
+  laugh rows (`pk-api/src/writes/srcpaths.rs:20`). No schema change is needed to receive laughs. CONFIRMED.
+- A recording sent with `POST /api/upload` waits in R2 for at most 7 days and is deleted when its job ends
+  (ADR 0015). Nothing on the server claims that job (ADR 0012).
+
+UNKNOWN:
+- Whether a set taped in the app has yet reached R2 from his phone (no real app upload was made at the round 2
+  deploy, journal 2026-11-07).
+- How well the detector does on phone recordings; it was run on other tapes. There is no answer key, only two
+  detectors compared with each other (`tools/laughs/agreement.py`).
+- Whether the transcript pass works with the phone's transcripts, which carry times per segment, not per word
+  (`infer/laughs.py:36-47` reads word times).
+- Whether the network gives the same events when run from Rust through ONNX Runtime (already in the tree for
+  search), and its time and memory on the server's CPU.
+- Whether he wants laughs on app recordings at all (owner, 2026-11-16: decided after he has used Tapes).
+
+**Smallest first step (C0): a measurement, nothing deployed.** A `pk-audio` crate that decodes a recording, runs
+the network and writes events. It is compared with the laugh maps already stored for a few existing sets, using
+the measures `agreement.py` defines, and with invented audio in CI (no tape in the repo). It reports agreement,
+seconds per minute of audio and peak memory on a named CPU-only machine. Red arm: shift the input features by one
+band and agreement must collapse. C0 answers three of the unknowns and commits the server to nothing.
+
+**C1, only after C0 and his decision:** a small audio pod that claims a new `laughs` job, fetches the recording
+through the route the transcriber would use, and posts `laughs_auto.json`. It needs a new job kind, so it cannot
+ship inside the T11 rollback window (section 5), and an ADR that amends ADR 0012 for laughs only.
+
+### 8.4 `gw-security` on part A (2026-11-16)
+
+**Verdict: approve with must-fixes.** The shape is sound: its own pod, a separate Drive client, a sealed token, a
+read-only shadow. The review was of the design and of the code on main; nothing was run.
+
+Must-fix, all before the switch:
+
+1. **The state rows are authority over Drive.** The map can mark any doc id as Punchable-made and gsync then
+   write-allows it without checking the doc's tag (`sync.rs:286-302`), exports it with no legal check
+   (`:1168, 1222, 1401, 1445`) and stores the text (`:1401-1415`). Any worker-role token may write that row
+   (`pk-api/src/writes/srcpaths.rs:23`). On his disk this is merely unvalidated; in the database it is exploitable.
+   Fix: authenticate each state document with a key only gsync holds; legal check and tag check on fresh metadata at
+   every export and write; take `kb/gsync/*` away from the worker role.
+2. **Clearance at every site**, the memo download included, and the content net before any text is hashed, stored
+   or sent.
+3. **A new role, not the worker role**, with a route allow-list; the worker loses gsync's state and the sealed row.
+4. **"Owner session" means a pinned subject**: any non-worker token is the comic today (`auth/mod.rs:4-6`).
+5. **The callback** is a browser redirect and carries no bearer token: bind `state` to the subject and a `__Host-`
+   cookie, answer only with a redirect to a fixed address, keep `code` and `state` out of logs.
+6. **The account check** comes from Google itself, pins Google's subject id after the first connect, and refuses
+   scopes other than those asked for.
+7. **Fail-closed additions:** the unreadable parent folder, the rules loader, and an error in the legal check.
+8. **Private keywords stay in the rules file**: store the reason's kind only.
+
+Should-fix: the seal framing as in 8.2; **narrow scopes at the switch** ("full `drive` on an internet-facing node
+turns a compromise from disclosure into destruction of court documents"); the rotation table in 8.2; hashed ids for
+legal skips and no titles in the pod's log; alerts on refresh failure and fingerprint change; an end date on the
+rollback window.
+
+UNKNOWN, to settle in the build: whether a second client keeps the consent screen's production status; whether the
+web app and `/api` share one origin (the cookie needs it); whether the ingress access log records the callback's
+query string; what pk-api's ingest check covers for `edits.jsonl`.
+
+All eight must-fixes and the should-fixes are folded into 8.2 and assigned to rounds below.
+
+### 8.5 The rounds
+
+Ordered by risk: the live gaps first, then the pieces that delete or only measure, then the build, then the trial,
+and the switch last.
+
+| Round | What | Size | Its own proof |
+|---|---|---|---|
+| **A0** | **gsync fails closed** (pk-gsync crate only; ships to the PC task, which is live). Rules required when the variable is set; owner address required; unreadable parent folder and legal-check errors exclude; clearance type on every export and download site; content net first everywhere; tag check on fresh metadata at every write; reason kind only in the map; fingerprint logged. Must-fixes 2, 7, 8 and the code half of 1. | medium | The tape differential stays green for every scenario whose behaviour is unchanged; each changed behaviour has a Rust test with a red arm (the old code path turns it red). Any tape that must change is listed in the round's report with the reason. |
+| **B1** | **Drop the Drive-memo path** (owner Q3). `pk-gsync` stops listing, downloading and starting the Python processor; the "PC is low on disk" wording goes (`pk-api/src/routes/memos.rs:141`); the memo list keeps its rows. Must land before round 11. | small | A tape of a pass with memos enabled shows no Drive memo request and no process start (red arm: the old call). The memo list answers the same rows as before. |
+| **C0** | **Laugh detector measurement** (8.3). New crate, nothing deployed. | medium | The numbers, on a named machine, with the red arm. |
+| **A1** | **gsync's own identity and authority in pk-api**, behind a setting that is off by default (as `PK_UPLOAD_R2` was): role and client `pk-gsync-svc`, route allow-list, the worker loses `kb/gsync/*`, the pinned owner subject, the opaque sealed-row route, write-with-expected-hash. Must-fixes 3, 4 and the API half of 1. | medium | With the setting off both differentials are unchanged. With it on: the worker's token is refused on gsync's rows, gsync's token is refused off its list, a stale hash is refused (red arm each). |
+| **A2** | **Hosted mode of `pk-gsync`**: `serve`, the store over pk-api rows with MACs, `mirror/` in rows, shadow mode, metrics, the image, the manifest and NetworkPolicy (prepared, not applied). | medium-large | The tapes replay against the hosted store: same requests, same documents. Shadow mode makes no write request (tape check, as the dry run's). Bad MAC and missing map row refuse (red arms). |
+| **A3** | **Connect Google Docs**: the Drive client, the two pk-api routes, the exchange, the account and scope checks, sealing, reconnect with revocation, the Settings row. Must-fixes 5, 6. Then `gw-security` reads A1 to A3 as built. | medium | Tests against a stand-in Google: wrong `state`, reused `state`, missing cookie, other account, extra scope are each refused; the sealed row opens only with the key and the right associated data (red arm: change one bound field). |
+| **A4** | **Shadow on the server** (SRE; owner's go). `drive.readonly`. Plans compared with the PC's. | small build, real waiting | 8.2 "How it is proven", step 2: zero unexplained differences, equal fingerprints, the throwaway legal doc skipped on both. |
+| **A5** | **The switch and the clean-up** (owner's go at each step): PC task off, narrow reconnect, shadow off; after the window, revoke the PC's token, remove the task and files, delete the Keycloak device client, `read-token` and `storeToken`, drop file mode from `pk-gsync`, update the Settings wording ("your PC", `routes/status.rs:127`). | small-medium | One real edit end to end. The realm test shows no client may read a broker token. Nothing named "Punchable" is left in the PC's scheduled tasks. |
+| **C1** | **Laughs on the server**, only if C0 and the owner say yes (8.3). | medium-large | Decided after C0. |
+
+**What can run beside the remaining T11 rounds (5, 6, 8, 9, 10, 11).**
+
+- **Now, in parallel:** A0 (its own crate), B1 (pk-gsync and one pk-api wording line), C0 (a new crate), A2 (its own
+  crate), and the building of A1 and A3 on branches. They share only `rust/Cargo.toml` and `Cargo.lock` (add lines,
+  never reorder).
+- **Watch round 9:** it freezes the tapes, gsync's included. A0 and B1 change gsync's behaviour on purpose, so they
+  land **before** the tapes are frozen, or each edits the frozen tape in its own commit with the reason (section 3).
+  A1 stays off by default so the frozen API tapes are unaffected.
+- **Watch round 10:** it rewrites the manifests and NetworkPolicies. A2's manifest is a prepared file until then and
+  joins `infra/k8s/` after round 10 merges.
+- **Before round 11:** B1 must be merged, or round 11 keeps `gsync/memos.py` out of its deletion.
+- **After the T11 rollback window closes (round 11):** turning A1 on, deploying A3's sealed row if it needs a table
+  (no new table inside the window, section 5), A4 and A5. Until then the PC task keeps running, which the T11
+  rollback needs anyway (section 5: the Python gsync stays installable on the PC for the window). So "nothing on
+  the PC" is finished after T11, not during it.
+- **C1** is outside T11 and waits for the owner.
+
+### 8.6 What the owner does by hand
+
+- In the Google Cloud console: add one OAuth client for Drive with the callback address (A3). The secret goes
+  straight into the server's Secret through a `ship.sh` step that reads it without showing it, as the login
+  client's did.
+- Press **Connect Google Docs** on punchable.io: once for the read-only trial, once at the switch.
+- After the window: remove the old "Punchable" access entry in his Google account if the revocation did not.
+
+### 8.7 Questions for the owner
+
+1. **How much of your Google Drive may the server change?** Recommended: *read everything, change only the docs
+   Punchable made.* If the server were ever broken into, your other documents could be read but not altered or
+   deleted. The cost: when you merge bits, the old Docs stay where they are, and a few Docs made earlier through
+   Claude get re-made by Punchable.
+2. **Would you keep all comedy Docs in one folder you share with Punchable?** Then the server could never see a
+   court document at all. Recommended: *not now.* It changes how you work (a Doc outside that folder would not be
+   picked up) and Google may not allow that kind of access to create new Docs in a personal Drive. Worth revisiting
+   if you would rather file that way.
+3. **Stop importing voice memos from the Drive folder?** Recommended: *yes.* Every memo from that folder is in, none
+   has arrived since the phone started recording memos, and an old recording can still be brought in with "Import
+   from Files" on the phone.
+4. **May we measure laugh detection now, before you decide on laughs?** Recommended: *yes.* It deploys nothing, and
+   it tells you whether laughs on app recordings would be good enough to want.
+5. **The Docs sync stays on your PC until the Python is retired and its two-week fallback has passed.** Recommended:
+   *accept this order.* The safety fixes (A0) reach the PC straight away; the move itself is the riskiest step and
+   should not overlap the cutover.
+6. **Connecting Google stays a button on the website, not in the phone app** (as Google sign-in is today).
+   Recommended: *yes.*
