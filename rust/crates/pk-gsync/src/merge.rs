@@ -301,9 +301,15 @@ fn apply(s: &mut Sync<'_>, mid: &str, rec: &Value) -> Result<()> {
             s.store.m["merges"][mid]["left"][&did] = json!("gone from Drive");
             continue;
         };
-        let anc = s.ancestors(&meta)?;
         let excluded = s.store.m["excluded"].as_object().cloned().unwrap_or_else(Map::new);
-        if excluded.contains_key(&did) || s.rules.legal_reason(&meta, &anc, &excluded).is_some() {
+        // a folder Drive does not return closes the doc, as a legal folder does
+        let anc = s.legal_ancestors(&meta)?.ok();
+        let legal = excluded.contains_key(&did)
+            || anc
+                .as_ref()
+                .is_none_or(|anc| s.rules.legal_reason(&meta, anc, &excluded).is_some());
+        let anc = anc.unwrap_or_default();
+        if legal {
             let skipped = &mut s.store.m["merges"][mid]["skipped_legal"];
             if !skipped.as_array().is_some_and(|a| a.iter().any(|x| x == did.as_str())) {
                 skipped

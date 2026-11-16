@@ -24,7 +24,7 @@ use crate::auth::Creds;
 use crate::config::{DOC_MIME, FOLDER_MIME};
 use crate::error::{GsError, HttpError, Result};
 use crate::http::{Http, Response, quote_plus};
-use crate::rules::Rules;
+use crate::rules::{Clearance, Rules};
 use crate::services::Services;
 
 /// The metadata fields every call asks for.
@@ -172,8 +172,10 @@ impl<'a> GoogleDrive<'a> {
         Ok(())
     }
 
-    /// The text of a doc in the given export format. Reading is never gated.
-    pub fn export(&mut self, fid: &str, mime: &str) -> Result<String> {
+    /// The text of a doc in the given export format. Reading needs a [`Clearance`]: the legal rules have looked at this
+    /// file's metadata and let it through.
+    pub fn export(&mut self, clearance: &Clearance, mime: &str) -> Result<String> {
+        let fid = clearance.id();
         self.stats.exports += 1;
         if let Some(t) = self.last_export {
             let gap = self.export_gap.saturating_sub(t.elapsed());
@@ -244,8 +246,7 @@ impl<'a> GoogleDrive<'a> {
             return Err(GsError::WriteBlocked(format!("gsync only moves Google Docs: {fid}")));
         }
         if let Some(why) = self.rules.legal_reason(&meta, ancestors, &Map::new()) {
-            let head = why.split(':').next().unwrap_or_default();
-            return Err(GsError::WriteBlocked(format!("never touched (legal: {head}): {fid}")));
+            return Err(GsError::WriteBlocked(format!("never touched (legal: {why}): {fid}")));
         }
         let rm: Vec<&str> = remove_parents
             .iter()
@@ -266,8 +267,10 @@ impl<'a> GoogleDrive<'a> {
         )
     }
 
-    /// Read-only: copy a file's bytes (an audio file he saved to Drive) to `dest`. Returns the byte count.
-    pub fn download(&mut self, fid: &str, dest: &Path) -> Result<u64> {
+    /// Read-only: copy a file's bytes (an audio file he saved to Drive) to `dest`. Returns the byte count. Needs a
+    /// [`Clearance`] for the file, as `export` does.
+    pub fn download(&mut self, clearance: &Clearance, dest: &Path) -> Result<u64> {
+        let fid = clearance.id();
         self.stats.downloads += 1;
         let mut f = fs::File::create(dest)?;
         let mut progress: u64 = 0;

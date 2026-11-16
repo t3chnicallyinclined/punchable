@@ -1,7 +1,7 @@
 # pk-gsync: gsync in Rust
 
 `pk-gsync` is the program on the owner's PC that pulls his Google Docs into Punchable (and writes the docs Punchable makes
-back to Drive). It is a port **as-is** of `gsync/` (Python): the same command line, the same requests in the same order,
+back to Drive). It is a port **as-is** of `gsync/` (Python), except where the Python's legal check failed open (round A0, below): the same command line, the same requests in the same order,
 the same state files, the same token files, the same words in the log. T11 round 4. The Python stays installed, and its
 scheduled task stays registered (disabled), until the T11 rollback window closes.
 
@@ -43,6 +43,40 @@ Build: `cd rust && cargo build --release -p pk-gsync` (it is the lightest binary
   `urllib`'s). The Python traceback in a `run` error record (`trace`) is a fixed sentence. Google's own token endpoint is
   not retried on 5xx (google-auth retries with backoff); the next pass tries again in 60 s.
 
+### Court and legal documents: the check fails closed (T11 round A0)
+
+The Python's legal check had places where a problem switched a net off and the doc went through. They are closed here,
+and each is a departure from the "port as-is" rule, on purpose (`gw-security` must-fixes 2, 7 and 8 of the T11 plan,
+section 8). In every case the doc is excluded or left closed, and the log and the state say the **kind** of reason
+(`denylist`, `folder`, `owner`, `kw`, `filing`, `content`, `parent`, `check_error`), never a word from his private rules.
+
+| The Python | pk-gsync | Test (`tests/legal.rs`) |
+|---|---|---|
+| A rules file that is missing, unreadable or not JSON became the generic rules only. | **`run` refuses to start** and says which file and why (nothing printed from inside it); no request is made. The file is always required (`PUNCHABLE_LEGAL_RULES`, else `legal_rules.json` in the home folder). `status` and `undo` do not read it. In `--watch` the file is read again before **every** pass, so an edit takes effect at once and a file that goes missing or broken stops the loop (exit 1; the task restarts it each minute and it refuses until the file is back). | `a_missing_rules_file_stops_run_before_any_request`, `an_unusable_rules_file_stops_run_...`, `a_rules_file_that_goes_missing_between_passes_stops_the_loop` |
+| With no owner address the "not his doc" net was off. | No owner address (in the file or `PUNCHABLE_OWNER_EMAIL`) is a refusal to start; and in the check itself, with no owner known every doc is `owner`, so it is closed. A rules file with none of his own folders, doc ids or keywords is also refused. | `an_unusable_rules_file_stops_run_...`, `a_doc_by_anyone_is_closed_when_no_owner_is_known`, `the_owner_address_may_come_from_the_environment` |
+| A parent folder Drive did not return was cached as "no parents", so the folder net passed the doc. | The doc is excluded (`parent`) and nothing is cached for the missing folder. | `a_parent_folder_drive_does_not_return_closes_the_doc_and_is_not_cached` |
+| An error inside the legal check was retried next pass, with Drive's error text in the run record. | The doc stays closed that pass, is looked at again next pass (the failure may be a dropped connection), and the record says only `legal check failed: <error kind>`. A folder Drive answers 404 for is final (`parent`); a transient error is not. | `an_error_inside_the_legal_check_opens_nothing_and_records_only_its_kind` |
+| The reason stored in `map.json` (copied to the database and to the backups) included the words that matched, `kw:<his keyword>`. | Only the kind is stored (`kw`). A map written by the Python or an older pk-gsync is cut to kinds the next time a pass opens it. | `the_keyword_that_matched_never_reaches_the_map_or_the_state_sent_to_the_database` |
+| Export and download had no clearance; a doc was opened first and looked at after, and some sites never checked the text. | `GoogleDrive::export` and `download` take a `Clearance`, which only `Rules::clear` makes, from the file's metadata read just now. No call site can skip it. Every site goes through it: the pull, the three kinds of doc gsync tracks (AI drafts, mixed, merged), the baseline of an adopted doc, a doc gsync just made, an app edit, a storyboard doc, and every voice-memo download (its metadata is read again before the bytes are fetched). | the tests below, and the type |
+| The content net (two or more court markers in the text) ran at one site, after export. | It runs on every export, **before** the text is hashed, stored in `edits.jsonl` or the mirror, or sent: pull, baseline, AI drafts, merged docs, docs gsync made, board docs. A doc it drops is recorded as `content`; its text is kept nowhere. | `an_ai_draft_doc_...`, `a_merged_doc_...`, `an_adopted_doc_...` |
+| gsync read back and rewrote its own docs (a joke's doc, a storyboard doc) without a legal check. | The check runs on fresh metadata first. A doc the rules close (for example one moved into a legal folder) is neither read nor written, and is recorded as excluded. | `a_doc_gsync_just_made_is_not_read_back_...`, `an_app_edit_is_not_written_...`, `a_board_doc_is_neither_read_nor_rewritten_...`, `a_listed_voice_memo_in_a_legal_folder_is_not_downloaded` |
+
+What an owner sees when the rules file is missing or broken: the scheduled task's log (`gsync.log`) and `pk-gsync run`'s
+stderr say, for example, `the legal rules file <path> cannot be read (...); pk-gsync will not run without it`, and the
+program exits 1 before it asks Google or Punchable for anything. The task stays registered and tries again at its next
+start; nothing is synced until the file is back.
+
+Not in round A0 (the plan's later rounds): the write gate still trusts the map's list of docs gsync made (`adopt` in
+`sync.rs`; A1 and A2 authenticate the state), and the rules fingerprint is not yet logged or pinned.
+
+### The recorded tapes were edited, on purpose
+
+The tapes are the Python's recording. Two places differ now, listed with their reasons in
+`rust/tools/gsync_tape_edits.py` (the generator applies them after recording, so `--check` holds the tapes to "the
+Python's recording plus exactly these edits"): (E1) a legal doc's `excluded` reason in `map.json` is the kind only; (E2) a
+voice memo's metadata is read once more before its bytes are downloaded, and the run record's `drive.calls` grows by that
+count. Every other recorded request, answer and file is unchanged.
+
 ## The proof
 
 `tests/differential.rs` replays tapes the Python recorded. `rust/tools/gen_gsync_tapes.py` runs the real Python gsync
@@ -57,7 +91,8 @@ Regenerate (the Python is frozen, so only when a scenario changes):
 Everything in the tapes is invented: tokens, Doc ids and titles, texts. The Doc host name is stored as `{GDOCS_HOST}` so
 no Doc URL is in the repo.
 
-Red arms (each changes one thing and must make the replay fail): a changed recorded POST body, a weaker legal rule (a
+`tests/legal.rs` covers what the Python got wrong and the tapes therefore cannot show (the table above), on small invented
+servers. Red arms of the tapes (each changes one thing and must make the replay fail): a changed recorded POST body, a weaker legal rule (a
 blocked doc is exported), a changed recorded file, a request the tape lacks, a request pk-gsync does not make.
 `tests/behaviour.rs` covers what a tape cannot: a dry run cannot write, the command line's refusals, chunked downloads,
 no token value printed.
