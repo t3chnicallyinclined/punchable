@@ -16,11 +16,50 @@ use tower::ServiceExt;
 const ORIGIN: &str = "https://punchable.io";
 
 fn state(auth: bool) -> AppState {
+    state_with(auth, None)
+}
+
+/// A state whose Python is a stand-in that answers every request 502 with the fallback's own text: a request that is
+/// forwarded shows as 502, so a test can tell "forwarded" (502) from "answered here" (401 and the like) from "unknown
+/// path" (the standalone fallback). (A closed port would do, but Windows takes seconds to refuse a loopback connect.)
+fn fwd_state(auth: bool) -> AppState {
+    let l = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let url = format!("http://{}", l.local_addr().expect("addr"));
+    std::thread::spawn(move || {
+        use std::io::{Read, Write};
+        for c in l.incoming().flatten() {
+            std::thread::spawn(move || {
+                let mut c = c;
+                let mut buf = [0u8; 4096];
+                let mut seen = Vec::new();
+                while !seen.windows(4).any(|w| w == b"\r\n\r\n") {
+                    match c.read(&mut buf) {
+                        Ok(0) | Err(_) => return,
+                        Ok(n) => seen.extend_from_slice(&buf[..n]),
+                    }
+                }
+                let body = br#"{"error":"the API is restarting; try again in a moment"}"#;
+                let head = format!(
+                    "HTTP/1.1 502 Bad Gateway\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = c.write_all(head.as_bytes());
+                let _ = c.write_all(body);
+            });
+        }
+    });
+    state_with(auth, Some(&url))
+}
+
+fn state_with(auth: bool, python: Option<&str>) -> AppState {
     let mut env = vec![
         ("SURREAL_PASS", "x"),
         ("PUBLIC_URL", "https://punchable.io/"),
         ("HOST", "127.0.0.1"),
     ];
+    if let Some(u) = python {
+        env.push(("PK_PYTHON_URL", u));
+    }
     if auth {
         env.push(("OIDC_ISSUER", "https://auth.example/realms/punchable"));
     } else {
@@ -138,7 +177,7 @@ async fn the_preflight_is_fixed_and_needs_no_token() {
 async fn a_write_on_a_moved_path_is_never_answered_here() {
     // no PK_PYTHON_URL in this test: the fallback answers the Python's 404, which proves the POST did not reach a
     // GET handler (with the Python configured, it is forwarded: the differential writes through it)
-    let st = state(false);
+    let st = fwd_state(false);
     for m in ["POST", "PATCH", "PUT", "DELETE"] {
         let req = Request::builder()
             .method(m)
@@ -146,17 +185,17 @@ async fn a_write_on_a_moved_path_is_never_answered_here() {
             .body(Body::empty())
             .unwrap();
         let (s, _, b) = send(&st, req).await;
-        assert_eq!((s, error_of(&b).as_str()), (StatusCode::NOT_FOUND, "not found"), "{m}");
+        assert_eq!((s, error_of(&b).as_str()), (StatusCode::BAD_GATEWAY, "the API is restarting; try again in a moment"), "{m}");
     }
     let (s, _, _) = send(&st, get("/api/notes").body(Body::empty()).unwrap()).await;
-    assert_eq!(s, StatusCode::NOT_FOUND);
+    assert_eq!(s, StatusCode::BAD_GATEWAY);
 }
 
 /// Recordings in R2 are off unless `PK_UPLOAD_R2=1` (docs/adr/0015): a moved `/api/upload` refuses loudly, and
 /// the inbox is the Python's (forwarded; with no Python configured here the answer is its 404).
 #[tokio::test]
 async fn upload_is_refused_while_recordings_in_r2_are_off() {
-    let st = state(false);
+    let st = fwd_state(false);
     let req = Request::builder()
         .method("POST")
         .uri("/api/upload")
@@ -169,7 +208,7 @@ async fn upload_is_refused_while_recordings_in_r2_are_off() {
     let (s, _, b) = send(&st, get("/api/inbox").body(Body::empty()).unwrap()).await;
     assert_eq!(
         (s, error_of(&b).as_str()),
-        (StatusCode::NOT_FOUND, "not found"),
+        (StatusCode::BAD_GATEWAY, "the API is restarting; try again in a moment"),
         "forwarded to the Python"
     );
 }
@@ -177,7 +216,7 @@ async fn upload_is_refused_while_recordings_in_r2_are_off() {
 #[tokio::test]
 async fn search_similar_and_the_hybrid_list_are_answered_here() {
     // no PK_PYTHON_URL: forwarded = the fallback's 404; answered here = this service's own auth layer's 401
-    let st = state(true);
+    let st = fwd_state(true);
     for p in [
         "/api/jokes?q=dog&mode=hybrid",
         "/api/jokes?q=dog",
@@ -191,7 +230,7 @@ async fn search_similar_and_the_hybrid_list_are_answered_here() {
         assert_eq!(s, StatusCode::UNAUTHORIZED, "{p}");
     }
     let (s, _, _) = send(&st, get("/api/jokes/a/b/similar").body(Body::empty()).unwrap()).await;
-    assert_eq!(s, StatusCode::NOT_FOUND, "an id with a slash is forwarded");
+    assert_eq!(s, StatusCode::BAD_GATEWAY, "an id with a slash is forwarded");
 }
 
 #[tokio::test]
@@ -267,7 +306,8 @@ fn write_methods(path: &str) -> &'static [&'static str] {
         | "/api/venues/{id}"
         | "/api/mysets/{id}"
         | "/api/topics/{id}" => &["PATCH"],
-        "/api/ask/chats/{id}" => &["POST", "PATCH"],
+        "/api/ask/chats/{id}" => &["POST", "PATCH", "PUT"],
+        "/api/me" => &["DELETE"],
         "/api/profile/voice" | "/api/worker/profile/voice" => &["PUT"],
         _ => &["POST"],
     }
@@ -296,7 +336,7 @@ async fn every_moved_path_is_answered_here() {
 /// read route too (else forwarded: the Python has no such GET), and the paths beside them stay forwarded.
 #[tokio::test]
 async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
-    let st = state(true);
+    let st = fwd_state(true);
     let patterns: Vec<(&str, String)> = pk_api::OWN_WRITE_PATTERNS
         .iter()
         .map(|p| (*p, p.replace("{id}", "joke:a%2Fb").replace("{id2}", "try:x")))
@@ -307,20 +347,20 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         .chain(patterns)
     {
         let p = p.as_str();
-        for m in ["POST", "PATCH", "PUT"] {
+        for m in ["POST", "PATCH", "PUT", "DELETE"] {
             let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
             let (s, _, b) = send(&st, r).await;
             if write_methods(pattern).contains(&m) {
                 assert_eq!(s, StatusCode::UNAUTHORIZED, "{m} {p}: {}", String::from_utf8_lossy(&b));
             } else {
-                assert_eq!(s, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
+                assert_eq!(s, StatusCode::BAD_GATEWAY, "{m} {p} is forwarded");
             }
         }
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
         if read_here(pattern) {
             assert_eq!(s, StatusCode::UNAUTHORIZED, "GET {p} is answered here too");
         } else {
-            assert_eq!(s, StatusCode::NOT_FOUND, "GET {p} is forwarded");
+            assert_eq!(s, StatusCode::BAD_GATEWAY, "GET {p} is forwarded");
         }
         let options = Request::builder()
             .method("OPTIONS")
@@ -342,14 +382,14 @@ async fn every_moved_write_path_is_answered_here_for_its_own_methods_only() {
         "/api/worker/jobs/x/file",
     ] {
         let post = Request::builder().method("POST").uri(p).body(Body::empty()).unwrap();
-        assert_eq!(send(&st, post).await.0, StatusCode::NOT_FOUND, "{p} is forwarded");
+        assert_eq!(send(&st, post).await.0, StatusCode::BAD_GATEWAY, "{p} is forwarded");
     }
 }
 
 #[tokio::test]
 async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
     // no Python configured in these tests: anything forwarded is the fallback's 404, never the auth check's 401
-    let st = state(true);
+    let st = fwd_state(true);
     for p in [
         "/api/sets/set:x/clips/x",
         "/api/jokes/a/b",
@@ -358,7 +398,7 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         "/api/mysets/s/x",
     ] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
-        assert_eq!(s, StatusCode::NOT_FOUND, "{p}");
+        assert_eq!(s, StatusCode::BAD_GATEWAY, "{p}");
     }
     let post = Request::builder()
         .method("POST")
@@ -367,12 +407,12 @@ async fn the_creative_and_model_halves_under_an_id_are_not_answered_here() {
         .unwrap();
     assert_eq!(
         send(&st, post).await.0,
-        StatusCode::NOT_FOUND,
+        StatusCode::BAD_GATEWAY,
         "a POST under a moved id path is forwarded"
     );
     for (m, p) in [("POST", "/api/mysets/match"), ("PUT", "/api/mysets/s")] {
         let r = Request::builder().method(m).uri(p).body(Body::empty()).unwrap();
-        assert_eq!(send(&st, r).await.0, StatusCode::NOT_FOUND, "{m} {p} is forwarded");
+        assert_eq!(send(&st, r).await.0, StatusCode::BAD_GATEWAY, "{m} {p} is forwarded");
     }
     // round 2: a set list's PATCH is answered here (the auth check's 401), beside its GET
     let r = Request::builder()
@@ -405,14 +445,20 @@ async fn metrics_are_open_and_count_by_route_pattern() {
 /// Red arm: `instrument` recording without looking at `Uncounted` fails the second assertion.
 #[tokio::test]
 async fn a_route_that_forwards_while_its_feature_is_off_is_not_counted() {
-    let st = state(false);
+    let st = fwd_state(false);
     for p in ["/api/notes", "/api/export", "/api/inbox"] {
         let (s, _, _) = send(&st, get(p).body(Body::empty()).unwrap()).await;
-        assert_eq!(s, StatusCode::NOT_FOUND, "{p} is forwarded (no Python here: its 404)");
+        assert_eq!(s, StatusCode::BAD_GATEWAY, "{p} is forwarded (the test's Python is a closed port)");
     }
     let _ = send(&st, get("/api/labels").body(Body::empty()).unwrap()).await;
     let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
     let text = String::from_utf8(b).unwrap();
+    // the request metrics only: the forward counter names the forwarded routes, by design
+    let text: String = text
+        .lines()
+        .filter(|l| !l.starts_with("pk_api_forwarded_total"))
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(
         text.contains(r#"route="/api/labels""#),
         "an answered route is counted: {text}"
@@ -481,4 +527,83 @@ fn a_required_legal_rules_file_that_cannot_be_used_refuses_the_start() {
     let l = pk_api::load_legal(&cfg(None)).expect("unset is fine");
     assert_eq!(l.len(), pk_core::legal::GENERIC_MARKERS.len());
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ------------------------------------------------------------------------------------- T11 round 3: no Python
+
+fn req(m: &str, p: &str) -> axum::http::request::Builder {
+    Request::builder().method(m).uri(p)
+}
+
+/// With no Python the fallback answers what the Python answers to a path it does not know, in the Python's order:
+/// the 501 page for a verb it has no handler for (before auth), then auth, then the booting 503, `?backend=`, a POST's
+/// body, and `404 not found` last. Red arm: a fallback that answers 404 first fails the 401 and 503 cases.
+#[tokio::test]
+async fn an_unknown_path_is_answered_the_pythons_way() {
+    // signed out: auth first
+    let st = state(true);
+    for m in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
+        let (s, h, b) = send(&st, req(m, "/api/no-such-route").header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
+        assert_eq!((s, error_of(&b).as_str()), (StatusCode::UNAUTHORIZED, "sign in required"), "{m}");
+        assert_eq!(h[header::WWW_AUTHENTICATE], r#"Bearer realm="punchable", error="invalid_token""#);
+        assert_eq!(h[header::ACCESS_CONTROL_ALLOW_ORIGIN], ORIGIN);
+    }
+    // no auth, no data yet: the booting 503 comes before the 404
+    let st = state(false);
+    for m in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
+        let (s, h, _) = send(&st, req(m, "/api/no-such-route").body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{m}");
+        assert_eq!(h[header::CACHE_CONTROL], "no-store");
+    }
+    // the preflight is the fixed 204 on any path
+    let (s, h, _) = send(&st, req("OPTIONS", "/api/no-such-route").header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+    assert_eq!(h[header::ACCESS_CONTROL_ALLOW_METHODS], pk_api::cors::ALLOW_METHODS);
+}
+
+/// A verb the Python's handler has no `do_*` for is `BaseHTTPRequestHandler`'s 501 page, before auth and with no CORS.
+#[tokio::test]
+async fn a_verb_the_python_does_not_have_is_its_501_page() {
+    let st = state(true);
+    for (m, p) in [("TRACE", "/api/no-such-route"), ("BREW", "/api/labels")] {
+        let (s, h, b) = send(&st, req(m, p).header(header::ORIGIN, ORIGIN).body(Body::empty()).unwrap()).await;
+        assert_eq!(s, StatusCode::NOT_IMPLEMENTED, "{m}");
+        assert_eq!(h[header::CONTENT_TYPE], "text/html;charset=utf-8");
+        assert!(h.get(header::ACCESS_CONTROL_ALLOW_ORIGIN).is_none());
+        let text = String::from_utf8(b).unwrap();
+        assert!(text.contains(&format!("<p>Message: Unsupported method ('{m}').</p>")), "{text}");
+    }
+}
+
+/// Every request the fallback sees is counted by method and route pattern, with the Python or without it.
+/// Red arm: take the `count` call out of `forward` and both assertions fail.
+#[tokio::test]
+async fn the_fallback_counts_every_request_it_sees() {
+    let st = state(false);
+    let _ = send(&st, get("/api/no-such-route").body(Body::empty()).unwrap()).await;
+    let _ = send(&st, req("POST", "/api/other/joke:abc").body(Body::empty()).unwrap()).await;
+    let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
+    let text = String::from_utf8(b).unwrap();
+    assert!(text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="none"} 1"#), "{text}");
+    assert!(text.contains(r#"pk_api_forwarded_total{method="POST",route="/api/other/{id}",to="none"} 1"#), "{text}");
+    assert!(!text.contains(r#"to="python""#), "nothing was passed to a Python: {text}");
+    let st = fwd_state(false);
+    let _ = send(&st, get("/api/no-such-route").body(Body::empty()).unwrap()).await;
+    let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
+    let text = String::from_utf8(b).unwrap();
+    assert!(text.contains(r#"pk_api_forwarded_total{method="GET",route="/api/no-such-route",to="python"} 1"#), "{text}");
+}
+
+/// A scanner walking made-up paths cannot grow the series without bound.
+#[tokio::test]
+async fn the_forward_counter_keeps_a_bounded_number_of_routes() {
+    let st = state(false);
+    for i in 0..200 {
+        let word: String = [i / 26 % 26, i % 26].iter().map(|c| char::from(b'a' + *c as u8)).collect();
+        let _ = send(&st, get(&format!("/scan/{word}")).body(Body::empty()).unwrap()).await;
+    }
+    let (_, _, b) = send(&st, get("/metrics").body(Body::empty()).unwrap()).await;
+    let text = String::from_utf8(b).unwrap();
+    let n = text.lines().filter(|l| l.starts_with("pk_api_forwarded_total{")).count();
+    assert!(n <= 65, "{n} series");
 }

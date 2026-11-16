@@ -472,8 +472,8 @@ pub async fn create(
     Ok(json_response(StatusCode::CREATED, &out))
 }
 
-/// One conversation: `GET` (settled), `POST {question}` (a follow-up), `PATCH {title?, deleted?}`. Any other method
-/// on the path is forwarded (the Python answers a `PUT` with its 405, `DELETE` with its 404).
+/// One conversation: `GET` (settled), `POST {question}` (a follow-up), `PATCH {title?, deleted?}`. A `PUT` is the Python's
+/// 405 (its 404 first for a conversation that is not there); any other method falls to the fallback (`DELETE`: 404).
 pub async fn one(
     State(st): State<AppState>,
     Extension(_caller): Extension<Caller>,

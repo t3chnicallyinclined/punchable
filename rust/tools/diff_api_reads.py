@@ -893,6 +893,158 @@ def coverage(py: str, app: dict) -> list[str]:
     return out
 
 
+# ---------------------------------------------------------------- T11 round 3: the answers to what no route owns
+# pk-api with no PK_PYTHON_URL answers a path or a method it does not own the way the Python does. Each request below is
+# sent to both servers; the status, the headers the app reads, the Content-Type and the body bytes must be equal.
+RAW_HEADERS = HEADERS + ("content-length", "connection")
+
+
+def rawcall(base: str, method: str, path: str, headers: dict | None = None, body: bytes | None = None,
+            declared: int | None = None):
+    """One request over http.client: `declared` is the Content-Length to announce (the body may be shorter: the
+    servers refuse a body that is too large before they read it)."""
+    import http.client
+    u = urllib.parse.urlsplit(base)
+    c = http.client.HTTPConnection(u.hostname, u.port, timeout=60)
+    try:
+        c.putrequest(method, path, skip_accept_encoding=True)
+        h = dict(headers or {})
+        if body is not None:
+            h["Content-Length"] = str(declared if declared is not None else len(body))
+        for k, v in h.items():
+            c.putheader(k, v)
+        c.endheaders(body if body is not None else None)
+        r = c.getresponse()
+        return r.status, {k.lower(): v for k, v in r.getheaders()}, r.read()
+    finally:
+        c.close()
+
+
+def fallback_requests(app: dict, worker: dict) -> list[tuple]:
+    """(label, method, path, headers, body, declared) for the matrix."""
+    j = {"Content-Type": "application/json"}
+    org = {"Origin": ORIGIN}
+    none: dict = {}
+    reqs: list[tuple] = []
+    for m in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"):
+        body = b"{}" if m in ("POST", "PUT", "PATCH", "DELETE") else None
+        for who, hd in (("app", app), ("signed out", none), ("worker", worker)):
+            for p in ("/api/no-such-route", "/api/worker/no-such-route", "/api/labels/x/y", "/nothing", "/", "/api",
+                      "/api/", "/api/jokes/", "/api/me/x"):
+                reqs.append((f"{m} {p} ({who})", m, p, {**hd, **org, **(j if body else {})}, body, None))
+    # the verbs that are not the Python's: its 501 page (before auth, no CORS)
+    for m in ("TRACE", "BREW", "CONNECT", "LOCK"):
+        for hd in (app, none):
+            reqs.append((f"{m} /api/no-such-route", m, "/api/no-such-route", {**hd, **org}, None, None))
+            reqs.append((f"{m} /api/labels", m, "/api/labels", {**hd, **org}, None, None))
+    # a path the Python knows on a method it does not take, and the other way round
+    for m, p in (("DELETE", "/api/labels"), ("PUT", "/api/labels"), ("PATCH", "/api/decisions"), ("DELETE", "/api/decision"),
+                 ("GET", "/api/decision"), ("PUT", "/api/ideas"), ("DELETE", "/api/upload"), ("PUT", "/api/upload"),
+                 ("PATCH", "/api/me"), ("PUT", "/api/me"), ("POST", "/api/me"), ("GET", "/api/me"),
+                 ("POST", "/api/mysets/match"), ("PATCH", "/api/mysets/match"), ("GET", "/api/mysets/match"),
+                 ("PUT", "/api/mysets/x"), ("DELETE", "/api/mysets/x"), ("DELETE", "/api/boards/x"),
+                 ("PUT", "/api/boards/x"), ("DELETE", "/api/topics/x"), ("PUT", "/api/topics/x"),
+                 ("POST", "/api/topics/x"), ("PUT", "/api/ask/chats/x"), ("DELETE", "/api/ask/chats/x"),
+                 ("PUT", "/api/venues/x"), ("POST", "/api/venues/x"), ("DELETE", "/api/venues/x"),
+                 ("GET", "/api/audio/x"), ("GET", "/api/audio/x/y"), ("POST", "/api/audio/x"),
+                 ("GET", "/api/jokes/a/b"), ("POST", "/api/jokes/a/b/c"), ("GET", "/api/jokes/a/versions"),
+                 ("GET", "/api/sets/a/b/c"), ("POST", "/api/sets/x/analysis"), ("PUT", "/api/profile/voice/learn"),
+                 ("GET", "/api/worker/claim"), ("PUT", "/api/worker/claim"), ("POST", "/api/worker/decisions"),
+                 ("DELETE", "/api/worker/files"), ("PATCH", "/api/worker/files"), ("PUT", "/api/worker/jobs/x/file"),
+                 ("POST", "/api/worker/jobs/x/file"), ("GET", "/api/worker/jobs/x/result"), ("GET", "/api/live/x"),
+                 ("POST", "/api/live"), ("GET", "/api/health/x"), ("POST", "/api/health"), ("GET", "/api/tonight"),
+                 ("GET", "/api/undo"), ("GET", "/api/ideas"), ("GET", "/api/rant/line"), ("GET", "/api/rant/draft"),
+                 ("GET", "/api/say"), ("GET", "/api/ask"), ("GET", "/api/facts"), ("GET", "/api/riff"),
+                 ("PUT", "/api/settings"), ("POST", "/api/settings"), ("DELETE", "/api/settings")):
+        body = b"{}" if m != "GET" else None
+        for who, hd in (("app", app), ("worker", worker)):
+            reqs.append((f"{m} {p} ({who})", m, p, {**hd, **org, **(j if body else {})}, body, None))
+    # the query and the body, in the Python's order: ?backend= before the body; the body before the 404
+    reqs += [
+        ("GET unknown ?backend=files", "GET", "/api/no-such-route?backend=files", {**app, **org}, None, None),
+        ("POST unknown ?backend=files", "POST", "/api/no-such-route?backend=files", {**app, **org, **j}, b"{}", None),
+        ("GET unknown ?backend=surreal", "GET", "/api/no-such-route?backend=surreal", {**app, **org}, None, None),
+        ("GET unknown ?include_hidden=1", "GET", "/api/no-such-route?include_hidden=1", {**app, **org}, None, None),
+        ("POST unknown body not JSON", "POST", "/api/no-such-route", {**app, **org, **j}, b"not json", None),
+        ("POST unknown body a list", "POST", "/api/no-such-route", {**app, **org, **j}, b"[1,2]", None),
+        ("POST unknown body empty", "POST", "/api/no-such-route", {**app, **org, **j}, b"", None),
+        ("POST unknown no body", "POST", "/api/no-such-route", {**app, **org}, None, None),
+        ("POST unknown body 300 KiB", "POST", "/api/no-such-route", {**app, **org, **j}, b"{", 300 * 1024),
+        ("POST unknown body 256 KiB", "POST", "/api/no-such-route", {**app, **org, **j}, b"{}", 256 * 1024 + 1),
+        ("PUT unknown body not JSON", "PUT", "/api/no-such-route", {**app, **org, **j}, b"not json", None),
+        ("PATCH unknown body not JSON", "PATCH", "/api/no-such-route", {**app, **org, **j}, b"not json", None),
+        ("DELETE unknown body not JSON", "DELETE", "/api/no-such-route", {**app, **org, **j}, b"not json", None),
+        ("GET unknown with a body", "GET", "/api/no-such-route", {**app, **org, **j}, b"{}", None),
+        ("GET bad token", "GET", "/api/no-such-route", {"Authorization": "Bearer nonsense", **org}, None, None),
+        ("POST bad token", "POST", "/api/no-such-route", {"Authorization": "Bearer nonsense", **org, **j}, b"{}", None),
+        ("GET other origin", "GET", "/api/no-such-route", {**app, "Origin": "https://evil.example"}, None, None),
+        ("GET loopback origin", "GET", "/api/no-such-route", {**app, "Origin": "http://localhost:8081"}, None, None),
+        ("OPTIONS unknown", "OPTIONS", "/api/no-such-route", {**org}, None, None),
+        ("OPTIONS unknown other origin", "OPTIONS", "/api/no-such-route", {"Origin": "https://evil.example"}, None, None),
+        ("GET encoded path", "GET", "/api/no%2Dsuch%2Froute", {**app, **org}, None, None),
+        ("GET dotdot", "GET", "/api/../api/no-such-route", {**app, **org}, None, None),
+        ("GET double slash", "GET", "//api/no-such-route", {**app, **org}, None, None),
+        ("GET long path", "GET", "/api/" + "a" * 3000, {**app, **org}, None, None),
+        ("GET metrics POST", "POST", "/metrics", {**org}, b"{}", None),
+        ("GET metrics DELETE", "DELETE", "/metrics", {**org}, b"{}", None),
+        ("GET metrics PUT", "PUT", "/metrics", {**org}, b"{}", None),
+    ]
+    return reqs
+
+
+def fallback_compare(label: str, py: tuple, rs: tuple) -> list[str]:
+    bad = []
+    if py[0] != rs[0]:
+        bad.append(f"{label}: status python {py[0]} rust {rs[0]}")
+    as_json = "json" in (py[1].get("content-type") or "") and "json" in (rs[1].get("content-type") or "")
+    for h in RAW_HEADERS:
+        a, b = py[1].get(h), rs[1].get(h)
+        if h == "connection" and a is None and b == "keep-alive":
+            continue  # HTTP/1.1 default; the Python states it only when it closes
+        if h == "content-length" and as_json:
+            continue  # JSON is compared as a parsed value (ADR 0007): the Python spaces its separators, serde does not
+        if a != b:
+            bad.append(f"{label}: header {h}: python {a!r} rust {b!r}")
+    if as_json:
+        try:
+            if json.loads(py[2] or b"null") != json.loads(rs[2] or b"null"):
+                bad.append(f"{label}: body python {py[2][:160]!r} rust {rs[2][:160]!r}")
+        except ValueError:
+            bad.append(f"{label}: body is not JSON on one side: python {py[2][:80]!r} rust {rs[2][:80]!r}")
+    elif py[2] != rs[2]:
+        bad.append(f"{label}: body python {py[2][:160]!r} rust {rs[2][:160]!r}")
+    return bad
+
+
+def fallback_matrix(py: str, rs: str, app: dict, worker: dict) -> tuple[list[str], int]:
+    bad, n = [], 0
+    for label, m, p, h, b, declared in fallback_requests(app, worker):
+        try:
+            pyr = rawcall(py, m, p, h, b, declared)
+        except Exception as e:  # noqa: BLE001
+            pyr = (0, {}, repr(e).encode())
+        try:
+            rsr = rawcall(rs, m, p, h, b, declared)
+        except Exception as e:  # noqa: BLE001
+            rsr = (0, {}, repr(e).encode())
+        got = fallback_compare(label, pyr, rsr)
+        bad += got
+        n += not got
+    return bad, n
+
+
+def forwarded_to_python(rs: str) -> float:
+    """The sum of `pk_api_forwarded_total{to="python"}`: what this run passed on to the Python."""
+    text = rawcall(rs, "GET", "/metrics")[2].decode()
+    return sum(float(ln.rsplit(" ", 1)[1]) for ln in text.splitlines()
+               if ln.startswith("pk_api_forwarded_total{") and 'to="python"' in ln)
+
+
+def pk_api_env(a, extra: dict, py_url: str) -> dict:
+    """pk-api's environment: the Python's address only when this run is not --standalone."""
+    return {**extra, **({} if a.standalone else {"PK_PYTHON_URL": py_url})}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pk-api", required=True, type=Path)
@@ -900,6 +1052,9 @@ def main() -> int:
     ap.add_argument("--bench", type=int, default=0, help="requests per route group per server for the timing (0 = none)")
     ap.add_argument("--report", type=Path, default=None)
     ap.add_argument("--keep", action="store_true", help="keep the temp folder (logs)")
+    ap.add_argument("--standalone", action="store_true",
+                    help="start pk-api with NO PK_PYTHON_URL (T11 round 3): the Python still runs, as the reference; "
+                         "unknown paths and methods are compared too, and nothing may reach it")
     a = ap.parse_args()
 
     tmp = Path(tempfile.mkdtemp(prefix="pk-t9-"))
@@ -963,7 +1118,7 @@ def main() -> int:
         pp = start([sys.executable, str(ROOT / "api" / "entry.py")], {**auth_env, "PORT": str(py_port)}, "python-api")
         wait_http(py + "/api/health?ready=1", pp, "python api")
         standin = Standin(start, a.s3_standin or a.pk_api.with_name("pk-s3-standin" + a.pk_api.suffix))
-        rp = start([str(a.pk_api)], {**auth_env, **standin.env(), "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, "pk-api")
+        rp = start([str(a.pk_api)], pk_api_env(a, {**auth_env, **standin.env(), "PORT": str(rs_port), "RUST_LOG": os.environ.get("RUST_LOG", "info")}, py), "pk-api")
         wait_http(rs + "/api/health?ready=1", rp, "pk-api")
 
         now = time.time()
@@ -1328,6 +1483,18 @@ def main() -> int:
         call(rs, "GET", "/api/no-such-route", app)
         if counted() != n0:
             problems.append("pk-api counted a forwarded request (/api/no-such-route): the fallback must count nothing")
+        if a.standalone:
+            # T11 round 3: what no route owns is answered here the way the Python answers it, and nothing was passed on
+            got, n_fb = fallback_matrix(py, rs, app, tok(realm_access={"roles": ["worker"]}))
+            problems += got
+            report["fallback_requests"] = n_fb + len(got)
+            report["fallback_equal"] = n_fb
+            sent = forwarded_to_python(rs)
+            if sent:
+                problems.append(f"standalone: pk-api passed {sent:g} request(s) to the Python (pk_api_forwarded_total)")
+            if 'to="none"' not in call(rs, "GET", "/metrics")[2].decode():
+                problems.append("standalone: the fallback counted nothing (pk_api_forwarded_total{to=\"none\"} is absent)")
+            report["forwarded_to_python"] = sent
         # and the model was used here: pk-api's own search answered with vectors, not words only
         if not json.loads(call(rs, "GET", "/api/search?q=dog", app)[2]).get("vectors"):
             problems.append("pk-api searched on words only: the model did not load (PK_BGE_DIR)")
@@ -1367,8 +1534,8 @@ def main() -> int:
         py2, rs2 = f"http://127.0.0.1:{free_port()}", f"http://127.0.0.1:{free_port()}"
         pp2 = start([sys.executable, str(ROOT / "api" / "entry.py")], {**auth_env, "PORT": py2.rsplit(":", 1)[1]}, "python-api-words")
         wait_http(py2 + "/api/health?ready=1", pp2, "python api (no model)")
-        rp2 = start([str(a.pk_api)], {**auth_env, "PORT": rs2.rsplit(":", 1)[1], "PK_PYTHON_URL": py2,
-                                      "RUST_LOG": os.environ.get("RUST_LOG", "info")}, "pk-api-words")
+        rp2 = start([str(a.pk_api)], pk_api_env(a, {**auth_env, "PORT": rs2.rsplit(":", 1)[1],
+                                                    "RUST_LOG": os.environ.get("RUST_LOG", "info")}, py2), "pk-api-words")
         wait_http(rs2 + "/api/health?ready=1", rp2, "pk-api (no model)")
         words = [("no model: " + p, "GET", p, app) for p in search + similar + hybrid]
         got, n_words = matrix(py2, rs2, words)

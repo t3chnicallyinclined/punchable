@@ -40,7 +40,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::handler::Handler;
 use axum::middleware::from_fn_with_state;
-use axum::routing::{MethodRouter, get, patch, post};
+use axum::routing::{MethodRouter, delete, get, patch, post};
 use tower::ServiceBuilder;
 
 pub use config::ApiConfig;
@@ -134,7 +134,7 @@ pub const OWN_PATTERNS: [&str; 24] = [
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 37] = [
+pub const OWN_WRITE_PATHS: [&str; 38] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -173,6 +173,8 @@ pub const OWN_WRITE_PATHS: [&str; 37] = [
     "/api/rant/draft",
     // the Rant tab's script (spec §12.7)
     "/api/rant/line",
+    // T11 round 3: DELETE (the Python has no other method on it)
+    "/api/me",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
@@ -249,10 +251,29 @@ fn preflight(st: &AppState) -> impl Handler<((),), AppState> {
     )
 }
 
+/// The layers around the fallback when there is no Python (T11 round 3), outermost first: the Python's 501 page for a
+/// verb it has no handler for, CORS and the preflight, then auth. It answers an unknown path the way the Python does,
+/// behind the same refusals the Python makes first. No request metrics (a scanner's made-up paths must not become
+/// series): `pk_api_forwarded_total` counts them, with a bounded label. A macro because the layer stack's type cannot be
+/// named.
+macro_rules! standalone_layers {
+    ($st:expr) => {
+        ServiceBuilder::new()
+            .layer(axum::middleware::from_fn(proxy::unsupported_method))
+            .layer(from_fn_with_state($st.clone(), cors::cors))
+            .layer(from_fn_with_state($st.clone(), auth::authorize))
+    };
+}
+
 /// The methods a path answers here, finished: OPTIONS is the preflight, and any other method goes to the Python
 /// (an Ingress path moved here must never swallow a write it does not answer).
 fn finish(st: &AppState, methods: MethodRouter<AppState>) -> MethodRouter<AppState> {
-    methods.options(preflight(st)).fallback(proxy::forward)
+    let methods = methods.options(preflight(st));
+    if st.config().python_url.is_some() {
+        methods.fallback(proxy::forward)
+    } else {
+        methods.fallback(proxy::forward.layer(standalone_layers!(st)))
+    }
 }
 
 /// A read route: GET (and HEAD) answered here.
@@ -393,7 +414,7 @@ pub fn app(st: AppState) -> Router {
             "/api/workingsets/{id}/bits/{id2}",
             read_route(&st, routes::sets_detail::ws_bit),
         )
-        .route("/metrics", get(routes::metrics::metrics).fallback(proxy::forward))
+        .route("/metrics", metrics_route(&st))
         // T10 group 1: what the app does most
         .route("/api/ideas", write_route(&st, writes::ideas::ideas))
         .route("/api/sets/transcript", write_route(&st, writes::transcript::transcript))
@@ -496,7 +517,8 @@ pub fn app(st: AppState) -> Router {
                 &st,
                 get(guarded_write(&st, writes::chats::one))
                     .post(guarded_write(&st, writes::chats::one))
-                    .patch(guarded_write(&st, writes::chats::one)),
+                    .patch(guarded_write(&st, writes::chats::one))
+                    .put(guarded_write(&st, writes::chats::one)),
             ),
         )
         // T10 round 5, group B: the rooms and the map's pins (his moves and renames are the PATCH)
@@ -548,10 +570,27 @@ pub fn app(st: AppState) -> Router {
         )
         .route("/api/rant/line", write_route(&st, writes::rant::line))
         .route("/api/rant/draft", write_route(&st, writes::rant::draft))
-        .route("/api/rants", read_route(&st, writes::rant::rants));
+        .route("/api/rants", read_route(&st, writes::rant::rants))
+        // T11 round 3: "delete my material" (the Python's `delete_me`: records a request, deletes nothing)
+        .route("/api/me", finish(&st, delete(guarded_write(&st, writes::me::delete_me))));
     #[cfg(feature = "diagnostics")]
     let r = r.route("/api/_t9/summaries", read_route(&st, routes::kb::summaries));
-    r.fallback(proxy::forward).with_state(st)
+    if st.config().python_url.is_some() {
+        r.fallback(proxy::forward).with_state(st)
+    } else {
+        let layers = standalone_layers!(st);
+        r.fallback(proxy::forward.layer(layers)).with_state(st)
+    }
+}
+
+/// `/metrics`: open (in-cluster only), a GET; any other method is the fallback's.
+fn metrics_route(st: &AppState) -> MethodRouter<AppState> {
+    let m = get(routes::metrics::metrics);
+    if st.config().python_url.is_some() {
+        m.fallback(proxy::forward)
+    } else {
+        m.fallback(proxy::forward.layer(standalone_layers!(st)))
+    }
 }
 
 /// The court-material rule for this process (see [`state`]).
