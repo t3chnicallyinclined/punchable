@@ -161,6 +161,18 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0h. **The redesign: Bits · Sets · Tapes (owner 2026-11-16: "ok lets get all this in, maps on the roadmap to figure
+   out"). Spec only, nothing built: `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`** (branch `docs/redesign-spec`,
+   not merged, not pushed). Nine slices in its §8, each its own TestFlight build: 1 Around this bit, In these sets
+   and the multi-tick Add to a set → 2 Write as a line editor → 3 marks and redlines → 4 sets with bullet notes →
+   5 the one walk-through (sound or video) with a split per bit → 6 rants become sets and the tabs become Bits ·
+   Sets · Tapes → 7 a tape as its transcript cut by bit → 8 a Google Doc as written → 9 the Record control. The
+   joke map is untouched and on the roadmap (its §9). **Waiting on owner:** the seven questions in its §7 (where
+   Record sits, highlighting words, laughs on phone tapes, the rant draft tool, which version a doc-sorted bit
+   shows, old rants as sets, removing unreachable screens). **Found by reading, not run (its §2.7, §5):** a set
+   transcribed on the phone may never reach the Sets list (the worker writes `rows`, the graph sync wants `jokes`);
+   one scratch-database run settles it. The four platform questions (its §4) ride as a Device checks screen in
+   Slice 1's build; the device checks of builds 22-26 are still unanswered and several slices depend on them.
 0g. **The Rant tab as his creative space (owner on build 25, 2026-11-07: "i added a topic i see it says 12 bits but i
    cant see them on the screen, i cant edit/list them i can't work with them"): TestFlight build 26, branch
    `app/rant-workspace` (not merged, not pushed, not built, not deployed).** `docs/design/SPEC-2026-11-06-rant-tab.md`
