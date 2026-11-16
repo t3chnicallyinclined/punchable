@@ -162,8 +162,15 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 ## Open, in order
 
 0h. **The redesign: Bits · Sets · Tapes (owner 2026-11-16: "ok lets get all this in, maps on the roadmap to figure
-   out"). Spec only, nothing built: `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`** (branch `docs/redesign-spec`,
-   not merged, not pushed). Nine slices in its §8, each its own TestFlight build: 1 Around this bit, In these sets
+   out"): `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`. Slice 1 is built on branch `app/redesign-slice1` (not
+   merged, not pushed, not deployed, no phone build): the bit page's "Around this bit" and "In these sets", the
+   multi-tick Add to a set, `GET /api/jokes/<id>/around`, the `links` store with `POST /api/links/dismiss` and
+   `/undismiss`, and nine device checks under Settings › About. Its thirteen calls against the spec are in §8 Slice 1
+   "Built". **Deploy order: pk-api first** (the new image, then re-apply the Ingresses of
+   `infra/k8s/prepared/t10-api-rs.yaml`: one regex path `/api/jokes/[^/]+/around$`, two exact paths
+   `/api/links/dismiss` and `/api/links/undismiss`), **then the phone build.** No new job kind and no schema change,
+   so nothing else is ordered: the Python and pk-worker replay no `links` rows (INFERRED for the Python, spec B5), and the nightly backup carries them like every creative event. A phone build that meets a
+   server without the route draws the page without the two rows. The slices after it are spec only. Nine slices in its §8, each its own TestFlight build: 1 Around this bit, In these sets
    and the multi-tick Add to a set → 2 Write as a line editor → 3 marks and redlines → 4 sets with bullet notes →
    5 the one walk-through (sound or video) with a split per bit → 6 rants become sets and the tabs become Bits ·
    Sets · Tapes → 7 a tape as its transcript cut by bit → 8 a Google Doc as written → 9 the Record control. The

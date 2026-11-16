@@ -1,6 +1,6 @@
 # SPEC 2026-11-16: Bits, Sets, Tapes (the redesign) and the build slices
 
-Status: **spec only, nothing built.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
+Status: **Slice 1 is built on a branch (§8 Slice 1 "Built"); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
 the roadmap to figure out". This file turns that mockup into an inventory, the data and API changes, the platform
 verdicts, the risks and nine slices. The mockup is an HTML sketch kept outside this repo; every joke in it and in
 this file is invented.
@@ -595,7 +595,50 @@ sets at once.
 - **Owner's phone checks:** a bit shows "Around this bit · N" and "In these sets · N"; each card shows a line of his
   and AI or Yours; "Not connected" removes it and it stays gone after a reload, Undo brings it back; "Same bit,
   merge" keeps every word; To a set shows ticks on the sets it is already in, tick two more, Done → "Added to 2
-  sets · Undo"; untick removes; the four device checks, one line each on which way they went.
+  sets · Undo"; untick removes; the four device checks, one line each on which way they went. (As built, the merge
+  button reads "Merge into this bit": call 13 below.)
+- **Built 2026-11-16 (branch `app/redesign-slice1`; not merged, not pushed, not deployed, no phone build).** Server:
+  `pk-creative/src/reducers/links.rs`, `pk-creative/src/around.rs`, `pk-api/src/routes/around.rs`,
+  `pk-api/src/writes/links.rs`; one regex Ingress path and two exact ones in `infra/k8s/prepared/t10-api-rs.yaml`.
+  App: `rules/aroundRules.ts`, `lib/Around.tsx`, `lib/SetPicker.tsx`, the routes `/around` and `/setpick` (form
+  sheets), `lib/deviceChecks.ts`, three check pages. The calls made against this spec:
+  1. **"Not connected" on a card with no stored edge always goes to `links`, the Same idea cards too** (§3.1's table
+     said `POST /api/merge/dismiss`). That route has no undo and the check above asks for one. `/around` also leaves
+     out a pair he dismissed on the merge screen. **Not done:** `GET /api/merge/candidates` and the same-idea banner
+     do not read `links`, so a pair the judge calls the same bit and he dismissed here is still counted there
+     (the fix: the merge state gains the `links` pairs and the groups' cache key the store's length).
+  2. **A card carries two fields more than §3.1's example:** `connect {kind, src, dst}` (the edge Connect or Link
+     adds when the card has none) and `attach` (the record of a note filed under the bit; "Not this bit" is
+     `POST /api/merge/undo`). `kind` is `bit | line | moment | wording | note | idea`; `does` is drawn from
+     `merge | add | use | connect | link | attach | dismiss`.
+  3. **`line` (the anchor) is word overlap only:** two shared content words and half of the smaller side. The cosine
+     leg and the threshold from a private eval are **not done** and move to Slice 3, which draws the pip: one
+     embedding per line and per card on every read was not worth it for a field nothing shows yet.
+  4. **`sets` leaves out the app's drafts** as well as archived and deleted lists (the picker lists the same ones).
+  5. **"Link something…" (§3.1) is not built:** it is not in this slice's list and needs its own search-and-pick
+     sheet. A tie he makes by hand is still Merge with… or the map.
+  6. **The join is its own module** (`around.rs`), reading `connections::joke_connections`, not a part of
+     `connections.rs` (a golden port of the Python).
+  7. **The half sheet and the picker are routes**, so the phone draws them as native form sheets (medium detent,
+     grabber); their screens are `lib/Around.tsx` and `lib/SetPicker.tsx` as listed. **To a set in the bit's bar now
+     opens the picker**; the one-tap add to the current list stays on the other surfaces.
+  8. **"Use this wording" replaces the line the card belongs to only while that line still says the same** (B1);
+     otherwise the wording is added at the end and nothing is replaced. The sheet says which before he taps.
+  9. **Every write from a card has two Undos:** the snack, and a non-timed one on the row (Versions for a new
+     version, Around this bit for the rest).
+  10. **Nine device checks**, not six: the three of 3c (unanswered) stay on the screen. The switches for where Record
+      sits are held in memory only; the trailing-slot one needs a route file, `(tabs)/recslot`.
+  11. **No differential:** the route has no Python twin. Proof is hand-written cases in `around.rs` and
+      `links.rs`, and `pk-api/tests/writes.rs` on a scratch database, with two red arms run once each (the join
+      ignoring `links`; `sets` counting an archived list): unit and scratch test both failed, exit 101, then passed.
+  12. **On tape no longer opens for "sounds like it" alone:** those two lists are groups of Around this bit.
+  13. **From the two reviews (iOS design, iOS dev; both "ship with fixes", every must-fix landed):** the buttons
+      read **Merge into this bit**, **Add this line**, **Use this wording**, **Connect**, **This tape is this bit**,
+      **File under this bit**, **Not connected** (a filed note: **Not this bit**), so the mockup's "Same bit, merge"
+      and "Pull this line in" are not on the phone; Merge is never the filled button (it asks once more in an action
+      sheet); the picker does not swipe away while a tick or a name is staged, and Cancel then asks Discard changes
+      or Keep editing; a sheet that was swiped away while its request ran pops nothing; the two rows are drawn
+      while the read is on its way; on an empty bit the Pile leads.
 
 ### Slice 2: Write as a line editor
 
