@@ -52,6 +52,17 @@ fn env_in(root: &Path, extra: &[(&str, &str)]) -> Env {
     Env::from_map(vars).with_home(root.join("home"))
 }
 
+/// Invented legal rules with an owner and a folder of his own, as `run` now requires.
+fn write_rules(root: &Path) {
+    let home = root.join("home");
+    fs::create_dir_all(&home).expect("mkdir");
+    fs::write(
+        home.join("legal_rules.json"),
+        r#"{"owner": "owner@example.com", "legal_parents": ["sample-legal-folder-1"]}"#,
+    )
+    .expect("write");
+}
+
 fn creds() -> Creds {
     let mut c = Creds::new(
         "fake-refresh",
@@ -65,6 +76,7 @@ fn creds() -> Creds {
 }
 
 fn cli_run(root: &Path, extra: &[(&str, &str)], args: &[&str]) -> (i32, String, String) {
+    write_rules(root);
     let args: Vec<String> = args.iter().map(ToString::to_string).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let code = cli::run(&args, &env_in(root, extra), &services(CLOSED), &mut out, &mut err);
@@ -223,6 +235,7 @@ GOOGLE_CLIENT_SECRET=b
 fn run_without_online_first_stops_with_the_reason_after_the_token_and_makes_no_other_request() {
     let dir = tempfile::tempdir().expect("tmp");
     signed_in_home(dir.path());
+    write_rules(dir.path());
     let (base, hits) = token_server();
     let args = vec!["run".to_string()];
     let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -243,6 +256,7 @@ fn run_without_online_first_stops_with_the_reason_after_the_token_and_makes_no_o
 fn run_without_a_worker_secret_says_where_it_looked() {
     let dir = tempfile::tempdir().expect("tmp");
     signed_in_home(dir.path());
+    write_rules(dir.path());
     let (base, hits) = token_server();
     let args = vec!["run".to_string()];
     let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -380,11 +394,14 @@ Content-Length: {}
         raw
     });
     let svc = services(&base);
-    let rules = Rules::new(&json!({}), None);
+    let rules = Rules::new(&json!({"owner": "owner@example.com"}), None);
     let mut drive = GoogleDrive::new(creds(), &svc, &rules, true);
     let folder = tempfile::tempdir().expect("tmp");
     let dest = folder.path().join("memo.part");
-    let got = drive.download("aud-1", &dest).expect("downloads");
+    let file =
+        json!({"id": "aud-1", "name": "a.m4a", "owners": [{"emailAddress": "owner@example.com"}], "parents": ["p"]});
+    let leave = rules.clear(&file, &[], &serde_json::Map::new()).expect("cleared");
+    let got = drive.download(&leave, &dest).expect("downloads");
     assert_eq!(got as usize, total);
     assert_eq!(fs::read(&dest).expect("read"), data);
     let asks = seen.lock().expect("lock").clone();

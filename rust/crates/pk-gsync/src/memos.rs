@@ -28,6 +28,7 @@ use serde_json::{Map, Value, json};
 use crate::config::{Config, FOLDER_MIME, MEMO_FOLDER_NAME};
 use crate::error::{GsError, Result};
 use crate::pyjson::{self, INDENT1_SORTED};
+use crate::rules::Clearance;
 use crate::services::Services;
 use crate::store::write_atomic;
 use crate::sync::Sync;
@@ -358,11 +359,14 @@ fn list_new(s: &mut Sync<'_>, store: &MemoStore<'_>, folder: &str) -> Result<()>
         if known.contains_key(&id) {
             continue;
         }
-        let anc = s.ancestors(&f)?;
         let excluded = Map::new();
-        if let Some(why) = s.rules.legal_reason(&f, &anc, &excluded) {
-            // metadata only: never downloaded; only the id and the reason are kept
-            let why = why.split(':').next().unwrap_or_default().to_string();
+        let verdict = match s.legal_ancestors(&f)? {
+            Ok(anc) => s.rules.clear(&f, &anc, &excluded).map(|_| ()),
+            Err(kind) => Err(kind),
+        };
+        if let Err(why) = verdict {
+            // metadata only: never downloaded; only the id and the reason's kind are kept
+            let why = why.to_string();
             new.push((
                 id.clone(),
                 json!({"id": id, "source": "drive", "drive_id": id, "status": "skipped_legal", "why": why, "tries": 0}),
@@ -399,6 +403,15 @@ fn list_new(s: &mut Sync<'_>, store: &MemoStore<'_>, folder: &str) -> Result<()>
         })?;
     }
     Ok(())
+}
+
+/// The legal rules' leave to download one Drive file: its metadata read again now, then the same check as for a doc.
+/// A file Drive no longer returns is closed (`gone`).
+fn fresh_clearance(s: &mut Sync<'_>, drive_id: &str) -> Result<std::result::Result<Clearance, &'static str>> {
+    let Some(meta) = s.drive.get(drive_id)? else {
+        return Ok(Err("gone"));
+    };
+    s.clearance(&meta)
 }
 
 #[allow(clippy::many_single_char_names)] // the Python's own names
@@ -446,11 +459,28 @@ fn download_batch(s: &mut Sync<'_>, store: &MemoStore<'_>) -> Result<()> {
         );
         let dest = inbox.join(&fname);
         let part = inbox.join(format!("{fname}.part"));
+        // the legal rules look at the file's metadata again, fresh, before a byte of it is downloaded
+        let leave = match fresh_clearance(s, it["drive_id"].as_str().unwrap_or_default()) {
+            Ok(Ok(c)) => Ok(c),
+            Ok(Err(kind)) => {
+                store.set_item(
+                    &id,
+                    vec![
+                        ("status", Some(json!("skipped_legal"))),
+                        ("why", Some(json!(kind))),
+                        ("file", None),
+                    ],
+                )?;
+                s.act("memo_skip_legal", &[("doc", json!(id)), ("why", json!(kind))]);
+                continue;
+            }
+            Err(e @ GsError::Exit(_)) => return Err(e),
+            Err(e) => Err(e),
+        };
         // claim the file name first, so the processor never mistakes it for a file he dropped by hand
         store.set_item(&id, vec![("file", Some(json!(fname)))])?;
-        let got = s
-            .drive
-            .download(it["drive_id"].as_str().unwrap_or_default(), &part)
+        let got = leave
+            .and_then(|clr| s.drive.download(&clr, &part))
             .and_then(|g| fs::rename(&part, &dest).map(|()| g).map_err(GsError::from));
         let got = match got {
             Ok(g) => g,

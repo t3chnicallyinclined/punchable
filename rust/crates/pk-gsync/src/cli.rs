@@ -342,7 +342,9 @@ pub fn run(args: &[String], env: &Env, svc: &Services, out: &mut dyn Write, err:
             watch,
             interval,
         } => {
-            let rules = Rules::load(&cfg.legal_rules_path, cfg.owner_email.as_deref());
+            // the legal rules are required: a missing or unusable file stops the run before anything is read
+            let rules = Rules::try_load(&cfg.legal_rules_path, cfg.owner_email.as_deref())
+                .map_err(|e| GsError::Exit(e.to_string()))?;
             loop {
                 let rec = run_once(dry_run, &cfg, env, svc, &rules)?;
                 let _ = writeln!(out, "{}", summary(&rec));

@@ -115,6 +115,10 @@ pub enum GsError {
     /// `RefreshError`: Google refused the refresh token.
     #[error("{0}")]
     Refresh(String),
+    /// Drive did not return a folder above a doc, so the legal folder rule cannot be applied to that doc. The doc is
+    /// treated as excluded; nothing is cached for the missing folder.
+    #[error("{0}")]
+    UnknownParent(String),
     /// `SystemExit(message)`: stop the program, message to stderr, exit 1.
     #[error("{0}")]
     Exit(String),
@@ -146,6 +150,7 @@ impl GsError {
             Self::AuthMissing(_) => "AuthMissing",
             Self::Http(_) => "HttpError",
             Self::Refresh(_) => "RefreshError",
+            Self::UnknownParent(_) => "UnknownParent",
             Self::Exit(_) => "SystemExit",
             Self::Other { name, .. } => name,
         }

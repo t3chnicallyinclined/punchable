@@ -13,7 +13,7 @@ use crate::config::{Config, DOC_MIME, FOLDER_MIME};
 use crate::drive::GoogleDrive;
 use crate::error::{GsError, Result};
 use crate::punchable::{GDOCS, Hosted, read_text};
-use crate::rules::Rules;
+use crate::rules::{Clearance, Rules};
 use crate::services::Services;
 use crate::store::Store;
 use crate::units::{h, mirror_name, mirror_text, norm, split_units};
@@ -88,6 +88,14 @@ impl<'a> Sync<'a> {
         for k in ["docs", "boards", "excluded", "skipped", "pending", "folders"] {
             if !store.m.as_object().is_some_and(|o| o.contains_key(k)) {
                 store.m[k] = json!({});
+            }
+        }
+        // maps written before the reason was cut to its kind kept the words that matched ("kw:..."): only the kind stays
+        if let Some(ex) = store.m["excluded"].as_object_mut() {
+            for v in ex.values_mut() {
+                if let Some((kind, _)) = v.as_str().and_then(|t| t.split_once(':')) {
+                    *v = json!(kind);
+                }
             }
         }
         Ok(Self {
@@ -469,10 +477,15 @@ impl<'a> Sync<'a> {
             }
             out.push(p.clone());
             if self.store.m["folders"].get(&p).is_none() {
-                let fm = self.drive.get(&p)?;
+                // a folder Drive does not return is UNKNOWN, not "has no parents": the doc is not cleared and nothing
+                // is cached for it
+                let Some(fm) = self.drive.get(&p)? else {
+                    return Err(GsError::UnknownParent(
+                        "Drive did not return a folder above the doc".into(),
+                    ));
+                };
                 let parents = fm
-                    .as_ref()
-                    .and_then(|f| f.get("parents"))
+                    .get("parents")
                     .filter(|v| py::truthy(Some(v)))
                     .cloned()
                     .unwrap_or(json!([]));
@@ -489,23 +502,72 @@ impl<'a> Sync<'a> {
         self.store.m["excluded"].as_object().cloned().unwrap_or_default()
     }
 
+    /// Every folder above the doc, or the kind of reason the doc cannot be cleared when Drive does not return one.
+    pub fn legal_ancestors(&mut self, meta: &Value) -> Result<std::result::Result<Vec<String>, &'static str>> {
+        match self.ancestors(meta) {
+            Ok(a) => Ok(Ok(a)),
+            Err(GsError::UnknownParent(_)) => Ok(Err("parent")),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// The legal check on `meta` (which the caller has just read from Drive): leave to open the file, or the kind of
+    /// reason it is legal. A failure inside the check is the caller's error, and the file stays closed.
+    pub fn clearance(&mut self, meta: &Value) -> Result<std::result::Result<Clearance, &'static str>> {
+        let anc = match self.legal_ancestors(meta)? {
+            Ok(a) => a,
+            Err(kind) => return Ok(Err(kind)),
+        };
+        Ok(self.rules.clear(meta, &anc, &self.excluded()))
+    }
+
+    /// Record a legal doc: the KIND of reason only (his keywords never reach the map, the database or a backup). The
+    /// `excluded` set only grows. Nothing of the doc's text is kept.
+    fn exclude_doc(&mut self, fid: &str, kind: &str) {
+        let m = &mut self.store.m;
+        if m["excluded"].get(fid).is_none() {
+            m["excluded"][fid] = json!(kind);
+        }
+        if m["docs"].get(fid).is_some() {
+            m["docs"][fid]["excluded"] = json!(true);
+        }
+        self.pending_pop(fid);
+        self.act("skip_legal", &[("doc", json!(fid)), ("why", json!(kind))]);
+    }
+
+    /// The content net on text just read from Drive. On a hit the doc is dropped and the caller must return at once:
+    /// before the text is hashed, stored, mirrored or sent.
+    fn content_hit(&mut self, fid: &str, text: &str) -> bool {
+        if !self.rules.content_is_legal(text) {
+            return false;
+        }
+        self.exclude_doc(fid, "content");
+        true
+    }
+
     fn handle(&mut self, meta: &Value, bootstrap: bool) -> Result<()> {
         let fid = pstr(meta, "id");
         // 1. legal: metadata only, before anything is exported
-        let anc = self.ancestors(meta)?;
-        if let Some(why) = self.rules.legal_reason(meta, &anc, &self.excluded()) {
-            let m = &mut self.store.m;
-            if m["excluded"].get(&fid).is_none() {
-                m["excluded"][&fid] = json!(why);
+        let verdict = match self.legal_ancestors(meta) {
+            Ok(Ok(anc)) => self.rules.clear(meta, &anc, &self.excluded()),
+            Ok(Err(kind)) => Err(kind),
+            Err(e @ (GsError::ApiDown(_) | GsError::Exit(_))) => return Err(e),
+            Err(e) => {
+                // an error inside the legal check: the doc stays closed this pass and is looked at again next pass
+                // (the failure may be a dropped connection), and what is recorded is the error's kind, not its text
+                self.store.m["pending"][&fid] = json!("legal_check");
+                self.error(json!({"doc": fid, "error": format!("legal check failed: {}", e.type_name())}));
+                self.act("skip_legal", &[("doc", json!(fid)), ("why", json!("check_error"))]);
+                return Ok(());
             }
-            if m["docs"].get(&fid).is_some() {
-                m["docs"][&fid]["excluded"] = json!(true);
+        };
+        let clr = match verdict {
+            Ok(c) => c,
+            Err(kind) => {
+                self.exclude_doc(&fid, kind);
+                return Ok(());
             }
-            self.pending_pop(&fid);
-            let reason = why.split(':').next().unwrap_or_default().to_string();
-            self.act("skip_legal", &[("doc", json!(fid)), ("why", json!(reason))]);
-            return Ok(());
-        }
+        };
         let e = self.store.m["docs"].get(&fid).filter(|v| py::truthy(Some(v))).cloned();
         let origin = e.as_ref().and_then(|e| sget(e, "origin")).map(str::to_string);
         let origin = origin.as_deref();
@@ -514,9 +576,9 @@ impl<'a> Sync<'a> {
             return Ok(());
         }
         match origin {
-            Some("ai_draft") => return self.ai_draft(meta),
-            Some("mixed") => return self.mixed(meta),
-            Some("merged" | "merged_undone") => return self.merged_doc(meta),
+            Some("ai_draft") => return self.ai_draft(meta, &clr),
+            Some("mixed") => return self.mixed(meta, &clr),
+            Some("merged" | "merged_undone") => return self.merged_doc(meta, &clr),
             _ => {}
         }
         if let Some(e) = &e {
@@ -530,7 +592,11 @@ impl<'a> Sync<'a> {
                     Some(j) => self.pk.joke(j)?,
                     None => None,
                 };
-                let doc_hash = h(&self.drive.export(&fid, "text/plain")?);
+                let raw = self.drive.export(&clr, "text/plain")?;
+                if self.content_hit(&fid, &norm(&raw)) {
+                    return Ok(());
+                }
+                let doc_hash = h(&raw);
                 let app_hash = cur
                     .as_ref()
                     .map_or(Value::Null, |c| json!(h(sget(c, "summary").unwrap_or_default())));
@@ -589,14 +655,8 @@ impl<'a> Sync<'a> {
             }
         }
         // 5. export, then the content net
-        let plain = norm(&self.drive.export(&fid, "text/plain")?);
-        if self.rules.content_is_legal(&plain) {
-            self.store.m["excluded"][&fid] = json!("content");
-            if e.is_some() {
-                self.store.m["docs"][&fid]["excluded"] = json!(true);
-            }
-            self.pending_pop(&fid);
-            self.act("skip_legal", &[("doc", json!(fid)), ("why", json!("content"))]);
+        let plain = norm(&self.drive.export(&clr, "text/plain")?);
+        if self.content_hit(&fid, &plain) {
             return Ok(());
         }
         if e.is_none() && plain.is_empty() && untitled(sget(meta, "name")) {
@@ -606,9 +666,12 @@ impl<'a> Sync<'a> {
         }
         let md = self
             .drive
-            .export(&fid, "text/markdown")?
+            .export(&clr, "text/markdown")?
             .replace('\u{feff}', "")
             .replace("\r\n", "\n");
+        if self.content_hit(&fid, &md) {
+            return Ok(());
+        }
         if e.is_some() {
             self.edited(meta, &plain, &md)?;
         } else {
@@ -851,7 +914,7 @@ impl<'a> Sync<'a> {
         Ok(t.is_none_or(|t| ((self.svc.now() - t).num_milliseconds() as f64 / 1000.0) >= self.cfg.settle_s as f64))
     }
 
-    fn ai_draft(&mut self, meta: &Value) -> Result<()> {
+    fn ai_draft(&mut self, meta: &Value, clr: &Clearance) -> Result<()> {
         let fid = pstr(meta, "id");
         let e = self.store.m["docs"][&fid].clone();
         if e["version"].is_null() {
@@ -866,7 +929,10 @@ impl<'a> Sync<'a> {
             self.store.m["pending"][&fid] = json!("settling");
             return Ok(());
         }
-        let plain = norm(&self.drive.export(&fid, "text/plain")?);
+        let plain = norm(&self.drive.export(clr, "text/plain")?);
+        if self.content_hit(&fid, &plain) {
+            return Ok(());
+        }
         if json!(h(&plain)) != e["doc_hash"] && !self.dry {
             // his edit to a doc that holds AI drafts: stored as his edit, never as an idea or a his-words unit
             let rec = self.owner_edit(vec![
@@ -905,7 +971,7 @@ impl<'a> Sync<'a> {
         n >= 3
     }
 
-    fn mixed(&mut self, meta: &Value) -> Result<()> {
+    fn mixed(&mut self, meta: &Value, clr: &Clearance) -> Result<()> {
         // A Punchable-made doc: his verbatim words above the first horizontal rule, AI notes (ai_draft) below.
         // Only the part above the rule is his text; gsync never writes this doc.
         let fid = pstr(meta, "id");
@@ -938,7 +1004,7 @@ impl<'a> Sync<'a> {
         }
         let md = self
             .drive
-            .export(&fid, "text/markdown")?
+            .export(clr, "text/markdown")?
             .replace('\u{feff}', "")
             .replace("\r\n", "\n");
         if self.rules.content_is_legal(&md) {
@@ -1045,7 +1111,7 @@ impl<'a> Sync<'a> {
         Ok(None)
     }
 
-    fn merged_doc(&mut self, meta: &Value) -> Result<()> {
+    fn merged_doc(&mut self, meta: &Value, clr: &Clearance) -> Result<()> {
         // A consolidated doc gsync wrote for a merge. Our own write is skipped by version; his later edits are kept
         // verbatim in edits.jsonl (by: owner) and never turned into an idea.
         let fid = pstr(meta, "id");
@@ -1057,7 +1123,10 @@ impl<'a> Sync<'a> {
             self.store.m["pending"][&fid] = json!("settling");
             return Ok(());
         }
-        let plain = norm(&self.drive.export(&fid, "text/plain")?);
+        let plain = norm(&self.drive.export(clr, "text/plain")?);
+        if self.content_hit(&fid, &plain) {
+            return Ok(());
+        }
         if json!(h(&plain)) != e["doc_hash"] && !self.dry {
             let rec = self.owner_edit(vec![
                 ("doc_id", json!(fid)),
@@ -1165,7 +1234,20 @@ impl<'a> Sync<'a> {
                 };
                 let mid = pstr(&meta, "id");
                 self.drive.allow(&mid);
-                let doc_hash = h(&self.drive.export(&mid, "text/plain")?);
+                // the doc is ours, but it is read back only with the legal check's leave, on the metadata just
+                // returned; a doc the rules close is recorded as excluded, with no hash of its text
+                let raw = match self.clearance(&meta)? {
+                    Ok(clr) => self.drive.export(&clr, "text/plain")?,
+                    Err(kind) => {
+                        self.record_own_closed(&mid, &meta, &jid, &title, &text, kind)?;
+                        continue;
+                    }
+                };
+                if self.rules.content_is_legal(&norm(&raw)) {
+                    self.record_own_closed(&mid, &meta, &jid, &title, &text, "content")?;
+                    continue;
+                }
+                let doc_hash = h(&raw);
                 self.store.m["docs"][&mid] = json!({"origin": "app", "joke_id": jid, "title": title,
                                                     "version": meta.get("version"), "modified": meta.get("modifiedTime"),
                                                     "doc_hash": doc_hash, "app_hash": h(&text)});
@@ -1213,13 +1295,27 @@ impl<'a> Sync<'a> {
                 self.act("push_edit", &[("joke", json!(jid)), ("doc", json!(did))]);
                 continue;
             }
+            // nothing is written to a doc the legal rules close, on the metadata just read
+            let clr = match self.clearance(&meta)? {
+                Ok(c) => c,
+                Err(kind) => {
+                    self.exclude_doc(&did, kind);
+                    self.save()?;
+                    continue;
+                }
+            };
             let new_name = if title == e["title"] {
                 None
             } else {
                 Some(py::str(&title))
             };
             let new = self.drive.update_doc(&did, &text, new_name.as_deref())?;
-            let doc_hash = h(&self.drive.export(&did, "text/plain")?);
+            let raw = self.drive.export(&clr, "text/plain")?;
+            if self.content_hit(&did, &norm(&raw)) {
+                self.save()?;
+                continue;
+            }
+            let doc_hash = h(&raw);
             self.upd(
                 &did,
                 vec![
@@ -1255,6 +1351,24 @@ impl<'a> Sync<'a> {
             }
         }
         Ok(())
+    }
+
+    /// A doc gsync just made, whose metadata or text the legal rules close: it is written to the map as excluded (so
+    /// the next pass does not make a second one), with no hash of its text.
+    fn record_own_closed(
+        &mut self,
+        mid: &str,
+        meta: &Value,
+        jid: &str,
+        title: &Value,
+        text: &str,
+        kind: &str,
+    ) -> Result<()> {
+        self.store.m["docs"][mid] = json!({"origin": "app", "joke_id": jid, "title": title,
+                                            "version": meta.get("version"), "modified": meta.get("modifiedTime"),
+                                            "doc_hash": null, "app_hash": h(text)});
+        self.exclude_doc(mid, kind);
+        self.save()
     }
 
     fn own_doc(&mut self, did: &str, cur: &Value, text: &str) -> Result<()> {
@@ -1372,7 +1486,10 @@ impl<'a> Sync<'a> {
                 }
                 continue;
             }
-            if be.as_ref().is_some_and(|be| tr(be, "doc_trashed")) {
+            if be
+                .as_ref()
+                .is_some_and(|be| tr(be, "doc_trashed") || tr(be, "excluded"))
+            {
                 continue;
             }
             let text = self.board_text(&b)?;
@@ -1388,6 +1505,7 @@ impl<'a> Sync<'a> {
             }
             let name = format!("{} (board)", pstr(&b, "title"));
             let mut new: Option<Value> = None;
+            let mut clr: Option<Clearance> = None;
             let mut be = be;
             if let Some(cur_be) = be.clone().filter(|be| tr(be, "doc_id")) {
                 let doc_id = pstr(&cur_be, "doc_id");
@@ -1397,8 +1515,23 @@ impl<'a> Sync<'a> {
                     self.act("gone", &[("doc", json!(doc_id)), ("kind", json!("board"))]);
                     continue;
                 };
+                // no read and no write of a board doc the legal rules close, on the metadata just read
+                let leave = match self.clearance(&meta)? {
+                    Ok(c) => c,
+                    Err(kind) => {
+                        self.exclude_doc(&doc_id, kind);
+                        self.store.m["boards"][&sb]["excluded"] = json!(true);
+                        self.save()?;
+                        continue;
+                    }
+                };
                 if cur_be["version"].is_null() || pstr(&meta, "version") != py::str(&cur_be["version"]) {
-                    let prior = norm(&self.drive.export(&doc_id, "text/plain")?);
+                    let prior = norm(&self.drive.export(&leave, "text/plain")?);
+                    if self.content_hit(&doc_id, &prior) {
+                        self.store.m["boards"][&sb]["excluded"] = json!(true);
+                        self.save()?;
+                        continue;
+                    }
                     if json!(h(&prior)) != cur_be["doc_hash"] {
                         let by = if tr(&cur_be, "version") {
                             self.cfg.owner_id.clone()
@@ -1415,6 +1548,7 @@ impl<'a> Sync<'a> {
                         self.store.log("edits.jsonl", &rec)?;
                     }
                 }
+                clr = Some(leave);
                 match self.drive.update_doc(&doc_id, &text, Some(&name)) {
                     Ok(n) => new = Some(n),
                     Err(e @ (GsError::WriteBlocked(_) | GsError::Exit(_))) => return Err(e),
@@ -1442,7 +1576,28 @@ impl<'a> Sync<'a> {
             };
             let mut be = be.expect("a board entry exists by now");
             let doc_id = pstr(&be, "doc_id");
-            let doc_hash = h(&self.drive.export(&doc_id, "text/plain")?);
+            // the leave for the doc read back: the one from before the update, or a fresh check of the doc just made
+            let leave = match clr.filter(|c| c.id() == doc_id) {
+                Some(c) => c,
+                None => match self.clearance(&new)? {
+                    Ok(c) => c,
+                    Err(kind) => {
+                        self.store.m["boards"][&sb] = be;
+                        self.store.m["boards"][&sb]["excluded"] = json!(true);
+                        self.exclude_doc(&doc_id, kind);
+                        self.save()?;
+                        continue;
+                    }
+                },
+            };
+            let raw = self.drive.export(&leave, "text/plain")?;
+            if self.content_hit(&doc_id, &norm(&raw)) {
+                self.store.m["boards"][&sb] = be;
+                self.store.m["boards"][&sb]["excluded"] = json!(true);
+                self.save()?;
+                continue;
+            }
+            let doc_hash = h(&raw);
             be["hash"] = json!(h(&text));
             be["version"] = new.get("version").cloned().unwrap_or(Value::Null);
             be["doc_hash"] = json!(doc_hash);

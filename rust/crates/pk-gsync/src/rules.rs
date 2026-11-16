@@ -59,6 +59,40 @@ static NOT_COMEDY_TITLE: LazyLock<Regex> = LazyLock::new(|| {
     .expect("regex")
 });
 
+/// Why the legal rules cannot be used. The text names the file, never anything inside it.
+#[derive(Debug, thiserror::Error)]
+pub enum RulesError {
+    /// The file is missing or cannot be read.
+    #[error("the legal rules file {0} cannot be read ({1}); pk-gsync will not run without it")]
+    Unreadable(String, String),
+    /// The file is not a JSON object.
+    #[error("the legal rules file {0} is not a JSON object; pk-gsync will not run without it")]
+    NotRules(String),
+    /// No owner address in the file or in `PUNCHABLE_OWNER_EMAIL`.
+    #[error(
+        "the legal rules name no owner address (the file {0} has no \"owner\" and PUNCHABLE_OWNER_EMAIL is not set); without it nothing can be told apart from other people's docs, so pk-gsync will not run"
+    )]
+    NoOwner(String),
+    /// The file names none of his folders, ids or keywords.
+    #[error(
+        "the legal rules file {0} names none of his own folders, doc ids or keywords; pk-gsync will not run on the generic rules alone"
+    )]
+    NoPrivateEntries(String),
+}
+
+/// Leave to open one file: made by [`Rules::clear`] from that file's metadata, and nothing else makes one.
+#[derive(Debug)]
+pub struct Clearance {
+    id: String,
+}
+
+impl Clearance {
+    /// The file this clearance is for.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
 /// The legal rules in force.
 #[derive(Debug, Clone)]
 pub struct Rules {
@@ -82,7 +116,8 @@ fn strings(local: &Value, key: &str) -> Vec<String> {
 }
 
 impl Rules {
-    /// The rules from his private file's parsed text (`{}` when there is none) and `PUNCHABLE_OWNER_EMAIL`.
+    /// The rules from his private file's parsed text and `PUNCHABLE_OWNER_EMAIL`. `run` goes through [`Rules::try_load`],
+    /// which refuses a file that gives no owner or none of his own entries; this one only builds what it is given.
     pub fn new(local: &Value, owner_env: Option<&str>) -> Self {
         let own_kw: Vec<String> = strings(local, "keywords").iter().map(|k| k.to_lowercase()).collect();
         let mut kw: Vec<String> = GENERIC_KW.iter().map(ToString::to_string).collect();
@@ -117,24 +152,48 @@ impl Rules {
         }
     }
 
-    /// Read `legal_rules.json` from `path`; a missing or unreadable file is an empty one (the generic rules only).
-    pub fn load(path: &Path, owner_env: Option<&str>) -> Self {
-        let local = std::fs::read_to_string(path)
+    /// Read `legal_rules.json` from `path`, or say why the rules cannot be trusted. There is no fallback to the generic
+    /// rules: a file that is missing, unreadable, not a JSON object, that names no owner address (neither in the file
+    /// nor in `owner_env`) or none of his own folders, ids or keywords is a refusal, because every one of those would
+    /// quietly switch one of the nets off. The message never repeats anything from the file.
+    pub fn try_load(path: &Path, owner_env: Option<&str>) -> Result<Self, RulesError> {
+        let shown = path.display().to_string();
+        let text =
+            std::fs::read_to_string(path).map_err(|e| RulesError::Unreadable(shown.clone(), e.kind().to_string()))?;
+        let local = serde_json::from_str::<Value>(&text)
             .ok()
-            .and_then(|t| serde_json::from_str::<Value>(&t).ok())
             .filter(Value::is_object)
-            .unwrap_or(Value::Object(Map::new()));
-        Self::new(&local, owner_env)
+            .ok_or_else(|| RulesError::NotRules(shown.clone()))?;
+        let rules = Self::new(&local, owner_env);
+        if rules.owner.is_none() {
+            return Err(RulesError::NoOwner(shown));
+        }
+        if rules.legal_parents.is_empty()
+            && rules.legal_folders_extra.is_empty()
+            && rules.legal_ids.is_empty()
+            && rules.own_kw.is_empty()
+        {
+            return Err(RulesError::NoPrivateEntries(shown));
+        }
+        Ok(rules)
     }
 
-    /// Metadata-only check: why a doc is legal, or `None`. Never needs the doc's text. `ancestors` is every folder
-    /// above the doc; `extra_ids` the ids already excluded.
-    pub fn legal_reason(&self, meta: &Value, ancestors: &[String], extra_ids: &Map<String, Value>) -> Option<String> {
+    /// Metadata-only check: the KIND of reason a doc is legal (`denylist`, `folder`, `owner`, `kw`, `filing`), or
+    /// `None`. Never needs the doc's text, and never returns the word that matched: the reason is stored in the map
+    /// and copied to the database, and his own keywords must not travel with it. `ancestors` is every folder above
+    /// the doc; `extra_ids` the ids already excluded. With no owner address known nothing is his: every doc is
+    /// `owner`.
+    pub fn legal_reason(
+        &self,
+        meta: &Value,
+        ancestors: &[String],
+        extra_ids: &Map<String, Value>,
+    ) -> Option<&'static str> {
         let did = meta.get("id").and_then(Value::as_str);
         if let Some(d) = did
             && (self.legal_ids.contains(d) || extra_ids.contains_key(d))
         {
-            return Some("denylist".into());
+            return Some("denylist");
         }
         let parents = meta
             .get("parents")
@@ -148,23 +207,18 @@ impl Rules {
             .unwrap_or_default();
         for p in parents.iter().chain(ancestors) {
             if self.legal_parents.contains(p) || self.legal_folders_extra.contains(p) {
-                return Some("folder".into());
+                return Some("folder");
             }
         }
         let first_owner = meta
             .get("owners")
             .and_then(Value::as_array)
             .and_then(|a| a.first())
-            .map(|o| o.get("emailAddress").and_then(Value::as_str));
-        match first_owner {
-            None => return Some("owner".into()),
-            Some(email) => {
-                if let Some(owner) = &self.owner
-                    && email != Some(owner.as_str())
-                {
-                    return Some("owner".into());
-                }
-            }
+            .and_then(|o| o.get("emailAddress"))
+            .and_then(Value::as_str);
+        match (&self.owner, first_owner) {
+            (Some(owner), Some(email)) if email == owner => {}
+            _ => return Some("owner"),
         }
         let t = meta
             .get("name")
@@ -173,20 +227,29 @@ impl Rules {
             .to_lowercase();
         let own_only = did.is_some_and(|d| self.own_kw_only_ids.contains(d)) && !self.own_kw.is_empty();
         let list = if own_only { &self.own_kw } else { &self.kw };
-        let hit: Vec<&str> = list
-            .iter()
-            .filter(|k| t.contains(k.as_str()))
-            .map(String::as_str)
-            .collect();
-        if !hit.is_empty() {
-            return Some(format!("kw:{}", hit.join(",")));
+        if list.iter().any(|k| t.contains(k.as_str())) {
+            return Some("kw");
         }
-        let filing: Vec<&str> = FILING_KW.iter().copied().filter(|k| t.contains(k)).collect();
-        if !filing.is_empty() || FILING_WORDS.is_match(&t) {
-            let names = if filing.is_empty() { vec!["osc"] } else { filing };
-            return Some(format!("filing:{}", names.join(",")));
+        if FILING_KW.iter().any(|k| t.contains(k)) || FILING_WORDS.is_match(&t) {
+            return Some("filing");
         }
         None
+    }
+
+    /// The clearance to open this doc, or the kind of reason it is legal. The only way to make a [`Clearance`]; the
+    /// Drive client takes one for every export and download, so no call site can read a file without having asked.
+    pub fn clear(
+        &self,
+        meta: &Value,
+        ancestors: &[String],
+        extra_ids: &Map<String, Value>,
+    ) -> Result<Clearance, &'static str> {
+        let id = meta.get("id").and_then(Value::as_str).filter(|s| !s.is_empty());
+        let Some(id) = id else { return Err("noid") };
+        match self.legal_reason(meta, ancestors, extra_ids) {
+            Some(kind) => Err(kind),
+            None => Ok(Clearance { id: id.to_string() }),
+        }
     }
 
     /// The second net, on exported text: two or more markers and the doc is dropped at once.
@@ -243,32 +306,14 @@ mod tests {
         let r = rules();
         let none = Map::new();
         let why = |m: &Value| r.legal_reason(m, &[], &none);
-        assert_eq!(
-            why(&doc("bad", "x", "me@example.com", &[])).as_deref(),
-            Some("denylist")
-        );
-        assert_eq!(
-            why(&doc("a", "x", "me@example.com", &["lf"])).as_deref(),
-            Some("folder")
-        );
-        assert_eq!(why(&doc("a", "x", "you@example.com", &[])).as_deref(), Some("owner"));
-        assert_eq!(why(&json!({"id": "a", "name": "x"})).as_deref(), Some("owner"));
-        assert_eq!(
-            why(&doc("a", "My Petition", "me@example.com", &[])).as_deref(),
-            Some("kw:petition")
-        );
-        assert_eq!(
-            why(&doc("a", "sample person bit", "me@example.com", &[])).as_deref(),
-            Some("kw:sample person")
-        );
-        assert_eq!(
-            why(&doc("a", "Q&A prep", "me@example.com", &[])).as_deref(),
-            Some("filing:q&a prep")
-        );
-        assert_eq!(
-            why(&doc("a", "the OSC", "me@example.com", &[])).as_deref(),
-            Some("filing:osc")
-        );
+        assert_eq!(why(&doc("bad", "x", "me@example.com", &[])), Some("denylist"));
+        assert_eq!(why(&doc("a", "x", "me@example.com", &["lf"])), Some("folder"));
+        assert_eq!(why(&doc("a", "x", "you@example.com", &[])), Some("owner"));
+        assert_eq!(why(&json!({"id": "a", "name": "x"})), Some("owner"));
+        assert_eq!(why(&doc("a", "My Petition", "me@example.com", &[])), Some("kw"));
+        assert_eq!(why(&doc("a", "sample person bit", "me@example.com", &[])), Some("kw"));
+        assert_eq!(why(&doc("a", "Q&A prep", "me@example.com", &[])), Some("filing"));
+        assert_eq!(why(&doc("a", "the OSC", "me@example.com", &[])), Some("filing"));
         assert_eq!(why(&doc("a", "Airport", "me@example.com", &[])), None);
         // a doc listed in own_keywords_only_ids is checked against his keywords alone
         assert_eq!(why(&doc("ill", "illegal parking", "me@example.com", &[])), None);
@@ -279,8 +324,7 @@ mod tests {
         let mut ex = Map::new();
         ex.insert("a".into(), json!("content"));
         assert_eq!(
-            r.legal_reason(&doc("a", "x", "me@example.com", &[]), &[], &ex)
-                .as_deref(),
+            r.legal_reason(&doc("a", "x", "me@example.com", &[]), &[], &ex),
             Some("denylist")
         );
     }

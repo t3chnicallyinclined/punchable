@@ -11,6 +11,9 @@ nothing leaves the machine. Run it with the gsync venv (google-api-python-client
     ~/.venvs/gsync/Scripts/python.exe rust/tools/gen_gsync_tapes.py            # write the tapes
     ~/.venvs/gsync/Scripts/python.exe rust/tools/gen_gsync_tapes.py --check    # record again, fail when a tape differs
 
+The tapes are the Python's recording plus the edits listed in gsync_tape_edits.py (round A0: places where pk-gsync fails
+closed and the Python did not); `--check` holds them to exactly that.
+
 Not part of CI's goldens-current: the tapes are frozen at the Python's last commit (round 9 turns them into fixtures)."""
 from __future__ import annotations
 
@@ -30,6 +33,9 @@ import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gsync_tape_edits import apply as apply_edits  # the edits made on purpose in round A0 (see that file)
 
 REPO = Path(__file__).resolve().parents[2]
 TAPES = REPO / "rust" / "crates" / "pk-gsync" / "tests" / "tapes"
@@ -999,7 +1005,7 @@ def main():
             continue
         w = World()
         w.start()
-        tape = build(w)
+        tape = apply_edits(build(w))
         w.srv.shutdown()
         text = json.dumps(tape, ensure_ascii=False, indent=1) + "\n"
         p = TAPES / f"{tape['name']}.json"
