@@ -19,4 +19,8 @@ compiles C of our choosing (SQLite's public-domain amalgamation; ONNX Runtime ar
 outside `pk-fts` and `libsqlite3-sys` outside `rusqlite`. Red arm, run 2026-11-02: `rusqlite` in `pk-creative`'s
 dependencies fails `cargo deny check bans` ("crate 'rusqlite = 0.41.1' is explicitly banned").
 
+Amended 2026-11-16 (T11 round 7): `pk-backup` may also depend on `rusqlite`, for sqlite3's online backup of the
+Bugsink database (what the Python backup job did with `sqlite3`). `deny.toml` names the two crates; every other crate
+is still banned from it.
+
 **Red arm.** Adding `pk-store` to `pk-creative`'s dependencies must fail the gate.
