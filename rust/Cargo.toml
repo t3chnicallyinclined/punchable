@@ -14,6 +14,7 @@ members = [
     "crates/pk-wire",
     "crates/pk-engine",
     "crates/pk-fts",
+    "crates/pk-backup",
     "xtask",
     "tools/pk-load",
 ]
@@ -100,6 +101,10 @@ rusqlite = { version = "0.41", default-features = false, features = ["bundled"] 
 # so no second stack (default features would add RustCrypto). `bytes` is the buffer type of axum, hyper and reqwest.
 rusty-s3 = { version = "0.11", default-features = false, features = ["full", "aws-lc-rs"] }
 bytes = "1"
+# pk-backup (T11 round 7): the gzip the Python writes (level 6, mtime 0), and the test certificate / TLS server config
+flate2 = "1"
+rcgen = { version = "0.14", default-features = false, features = ["aws_lc_rs", "pem"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
 # tests
 insta ={ version = "1", features = ["json"] }
 proptest = "1"
