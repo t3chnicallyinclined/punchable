@@ -2,6 +2,7 @@
 //! does: the data (or the 503 while booting), then `?backend=` (only `surreal` exists here) and
 //! `?include_hidden=`, then the route.
 
+pub mod around;
 pub mod cloud;
 pub mod creative;
 pub mod health;

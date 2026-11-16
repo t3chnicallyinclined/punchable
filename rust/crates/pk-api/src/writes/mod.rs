@@ -34,6 +34,7 @@ pub mod ideas;
 pub mod ingest;
 pub mod jobs;
 pub mod learned;
+pub mod links;
 pub mod me;
 pub mod merge;
 pub mod mysets;

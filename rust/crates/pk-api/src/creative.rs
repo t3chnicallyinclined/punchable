@@ -319,6 +319,8 @@ pub struct Stores {
     pub script: Replayed,
     /// What he said on the input bar and how it was read (`POST /api/say`).
     pub intents: Replayed,
+    /// The pairs he said are not connected (Around this bit; Rust only).
+    pub links: Replayed,
 }
 
 impl Default for Stores {
@@ -336,6 +338,7 @@ impl Default for Stores {
             topics: Replayed::new("topics"),
             script: Replayed::new("script"),
             intents: Replayed::new("intents"),
+            links: Replayed::new("links"),
         }
     }
 }
@@ -356,6 +359,7 @@ impl Stores {
             "topics" => &self.topics,
             "script" => &self.script,
             "intents" => &self.intents,
+            "links" => &self.links,
             _ => return None,
         })
     }

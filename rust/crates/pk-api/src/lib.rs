@@ -103,7 +103,7 @@ pub const OWN_PATHS: [&str; 42] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 24] = [
+pub const OWN_PATTERNS: [&str; 25] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -129,12 +129,14 @@ pub const OWN_PATTERNS: [&str; 24] = [
     "/api/topics/{id}/material",
     "/api/worker/jokes/{id}",
     "/api/audio/{id}",
+    // the redesign, slice 1 (SPEC 2026-11-16 §3.1): everything tied to one bit
+    "/api/jokes/{id}/around",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 38] = [
+pub const OWN_WRITE_PATHS: [&str; 40] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -175,6 +177,9 @@ pub const OWN_WRITE_PATHS: [&str; 38] = [
     "/api/rant/line",
     // T11 round 3: DELETE (the Python has no other method on it)
     "/api/me",
+    // the redesign, slice 1 (SPEC 2026-11-16 §3.1): "not connected", remembered, and its Undo
+    "/api/links/dismiss",
+    "/api/links/undismiss",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
@@ -571,6 +576,10 @@ pub fn app(st: AppState) -> Router {
         .route("/api/rant/line", write_route(&st, writes::rant::line))
         .route("/api/rant/draft", write_route(&st, writes::rant::draft))
         .route("/api/rants", read_route(&st, writes::rant::rants))
+        // the redesign, slice 1 (Rust only): around one bit, and the pairs he said are not connected
+        .route("/api/jokes/{id}/around", read_route(&st, routes::around::around))
+        .route("/api/links/dismiss", write_route(&st, writes::links::dismiss))
+        .route("/api/links/undismiss", write_route(&st, writes::links::undismiss))
         // T11 round 3: "delete my material" (the Python's `delete_me`: records a request, deletes nothing)
         .route(
             "/api/me",

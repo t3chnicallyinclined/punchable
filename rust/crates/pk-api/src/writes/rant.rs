@@ -348,7 +348,7 @@ fn q_hidden(raw: Option<&str>) -> bool {
 
 /// A bit's versions now (a `part_of` edge that is not rejected, the unit not hidden), oldest first by date, a day's
 /// versions in the order they were added (the app's stepper: rules/bitLines).
-pub(super) fn versions_of<'a>(view: &'a View, jid: &str) -> Vec<(&'a str, &'a pk_kb::Rec)> {
+pub(crate) fn versions_of<'a>(view: &'a View, jid: &str) -> Vec<(&'a str, &'a pk_kb::Rec)> {
     let mut vs: Vec<(&str, &pk_kb::Rec)> = view
         .joke_units
         .get(jid)
