@@ -38,6 +38,7 @@ struct Inner {
     config: ApiConfig,
     verifier: Option<Verifier>,
     metrics: ApiMetrics,
+    forwards: crate::proxy::Forwards,
     http: reqwest::Client,
     proxy_permits: Arc<tokio::sync::Semaphore>,
     db: RwLock<Option<Arc<Store>>>,
@@ -152,11 +153,13 @@ impl AppState {
             });
         let recordings_ok = std::sync::atomic::AtomicBool::new(config.uploads.is_none());
         let model = crate::embed::Model::new(config.embedder.clone());
+        let forwards = crate::proxy::Forwards::new(metrics.registry());
         Self(Arc::new(Inner {
             model,
             config,
             verifier,
             metrics,
+            forwards,
             http,
             proxy_permits: Arc::new(tokio::sync::Semaphore::new(PROXY_CONCURRENCY)),
             db: RwLock::new(None),
@@ -304,6 +307,11 @@ impl AppState {
     /// The token check, when auth is on.
     pub fn verifier(&self) -> Option<&Verifier> {
         self.0.verifier.as_ref()
+    }
+
+    /// The fallback's counter (`pk_api_forwarded_total`).
+    pub fn forwards(&self) -> &crate::proxy::Forwards {
+        &self.0.forwards
     }
 
     /// The metrics registry.

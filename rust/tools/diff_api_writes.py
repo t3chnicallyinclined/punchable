@@ -2236,6 +2236,77 @@ def export_phase() -> None:
                and set(j_["creative"]) == {"storyboards", "workingsets", "venues", "account"}, json.dumps(list(j_))[:200])
 
 
+a_standalone = False
+
+
+def me_phase() -> None:
+    """T11 round 3: DELETE /api/me on both servers. The refusals equal to the letter; the right phrase answers 202
+    `requested` with the same list (what + count; only WHERE it looks differs by design: the Python named its pod's
+    folders, pk-api names database tables) and records one `deletion` request each, in the one shared store; and
+    nothing is deleted by it."""
+    global n_equal
+    def deletions() -> list:
+        j_ = body(R.call(rs, "GET", "/api/export", app))
+        return (((j_.get("creative") or {}).get("account") or {}).get("items") or {}).get("deletion", {}).get("requests", [])
+    def table_counts() -> tuple:
+        # the decisions' total on each server and the whole Bits list (hidden too): a deletion would change either
+        return (body(R.call(rs, "GET", "/api/decisions?limit=1", app))["total"],
+                body(R.call(py, "GET", "/api/decisions?limit=1", app))["total"],
+                R.call(rs, "GET", "/api/jokes?limit=5000&include_hidden=1", app)[2])
+    for label, b_, h_ in [("no phrase", {}, None), ("empty", {"confirm": ""}, None), ("wrong", {"confirm": "yes"}, None),
+                          ("longer", {"confirm": "delete my material please"}, None), ("falsy 0", {"confirm": 0}, None),
+                          ("a number", {"confirm": 5}, None), ("a list", {"confirm": [1]}, None), ("null", {"confirm": None}, None),
+                          ("a list body", [1], None), ("no token", {"confirm": "delete my material"}, {}),
+                          ("the worker's token", {"confirm": "delete my material"}, worker_tok)]:
+        same_write(f"me: {label}", "DELETE", "/api/me", b_, headers=h_)
+    same_write("me: a backend that is not here", "DELETE", "/api/me?backend=files", {"confirm": "delete my material"})
+    for m in ("POST", "PUT", "PATCH"):
+        same_write(f"me: {m}", m, "/api/me", {"confirm": "delete my material"})
+    same_write("me: GET", "GET", "/api/me", None)
+    before_t = table_counts()
+    n0 = len(deletions())
+    lists = {}
+    for who, base in (("python", py), ("rust", rs)):
+        for phrase in ("delete my material", "  DELETE My Material"+chr(10)):
+            st, hd, raw = R.call(base, "DELETE", "/api/me", app, {"confirm": phrase})
+            r = json.loads(raw)
+            ok(f"me: {who} answers 202 requested for {phrase!r}",
+               st == 202 and r.get("status") == "requested" and r.get("deleted") is False and r["note"] ==
+               "Your request is recorded. The owner deletes it by hand and tells you when it is done.", f"{st} {raw[:200]!r}")
+            lists[who] = r.get("would_delete") or []
+            ok(f"me: {who}'s answer carries the no-store and content-type headers", hd.get("cache-control") == "no-store"
+               and hd.get("content-type") == "application/json; charset=utf-8", str(hd))
+    py_l, rs_l = lists["python"], lists["rust"]
+    ok("me: the same lines in the same order", [x["what"] for x in py_l] == [x["what"] for x in rs_l],
+       f"{[x['what'] for x in py_l]} / {[x['what'] for x in rs_l]}")
+    for a_, b_ in zip(py_l, rs_l):
+        # the Python counts what its pod holds (its copy of each log, its folders), pk-api counts the database's rows: they
+        # differ while the Python's copy lags the database, and for the recordings (R2 there, the pod's folder here)
+        ok(f"me: the count of '{a_['what'][:40]}'", a_["count"] == b_["count"] or a_["what"].startswith(
+            ("your tapes", "uploads waiting", "your sets", "storyboards", "workingsets", "venues", "account", "jobs")),
+           f"python {a_['count']} rust {b_['count']}")
+    ok("me: pk-api names no pod folder", all(not str(x["where"]).startswith("/") and ":\\" not in str(x["where"]) for x in rs_l),
+       str([x["where"] for x in rs_l]))
+    reqs = deletions()
+    ok("me: four requests were recorded (two each), in the shared account log", len(reqs) == n0 + 4, f"{n0} -> {len(reqs)}")
+    ok("me: each names the caller's sub and its list", all(r_.get("status") == "requested" and r_.get("by_sub") and r_.get("would_delete")
+                                                         for r_ in reqs[n0:]), json.dumps(reqs[n0:])[:300])
+    ok("me: the last two (pk-api's) carry pk-api's list", [x["what"] for x in reqs[-1]["would_delete"]] == [x["what"] for x in rs_l])
+    ok("me: nothing was deleted", table_counts() == before_t, f"{before_t} -> {table_counts()}")
+
+
+def fallback_phase() -> None:
+    """T11 round 3: what no route owns, the same on both servers (status, headers, body bytes)."""
+    global n_equal
+    got, n_ok = R.fallback_matrix(py, rs, app, worker_tok)
+    problems.extend(got)
+    n_equal += n_ok
+    if a_standalone:
+        sent = R.forwarded_to_python(rs)
+        ok("standalone: nothing was passed on to the Python (pk_api_forwarded_total{to=python})", sent == 0, f"{sent:g} forwarded")
+        ok("standalone: the fallback counted what it answered", 'to="none"' in R.call(rs, "GET", "/metrics")[2].decode())
+
+
 # ---------------------------------------------------------------- the run
 def main() -> int:
     global app, py, rs, worker_tok
@@ -2245,7 +2316,12 @@ def main() -> int:
     ap.add_argument("--report", type=Path, default=None)
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--conc", type=int, default=8)
+    ap.add_argument("--standalone", action="store_true",
+                    help="start pk-api with NO PK_PYTHON_URL (T11 round 3): the Python still runs, as the reference; "
+                         "DELETE /api/me and what no route owns are compared too, and nothing may reach the Python")
     a = ap.parse_args()
+    global a_standalone
+    a_standalone = a.standalone
 
     tmp = Path(tempfile.mkdtemp(prefix="pk-t10-"))
     comedy, data, home = tmp / "comedy", tmp / "data", tmp / "home"
@@ -2311,7 +2387,7 @@ def main() -> int:
             py, rs = f"http://127.0.0.1:{py_port}", f"http://127.0.0.1:{rs_port}"
             pp_ = start([sys.executable, str(ROOT / "api" / "entry.py")], {**e, "PORT": str(py_port)}, f"python-api-{name}")
             R.wait_http(py + "/api/health?ready=1", pp_, "python api")
-            rp_ = start([str(a.pk_api)], {**e, **standin.env(), "PORT": str(rs_port), "PK_PYTHON_URL": py, "RUST_LOG": os.environ.get("RUST_LOG", "info")}, f"pk-api-{name}")
+            rp_ = start([str(a.pk_api)], {**e, **standin.env(), "PORT": str(rs_port), **({} if a.standalone else {"PK_PYTHON_URL": py}), "RUST_LOG": os.environ.get("RUST_LOG", "info")}, f"pk-api-{name}")
             R.wait_http(rs + "/api/health?ready=1", rp_, "pk-api")
             return pp_, rp_
 
@@ -2416,6 +2492,12 @@ def main() -> int:
         except (Exception, SystemExit) as e:  # noqa: BLE001
             import traceback
             problems.append(f"export_phase crashed: {traceback.format_exc()[-900:]}")
+        for phase_ in (me_phase, fallback_phase):
+            try:
+                phase_()
+            except (Exception, SystemExit):  # noqa: BLE001
+                import traceback
+                problems.append(f"{phase_.__name__} crashed: {traceback.format_exc()[-900:]}")
         live_phase(app["Authorization"].split(" ", 1)[1], worker_tok["Authorization"].split(" ", 1)[1])
         report["python_sync_after_pk_api_decisions"] = python_full_load_demo(port, pw)
         mtext = R.call(rs, "GET", "/metrics")[2].decode()
@@ -2456,10 +2538,12 @@ def main() -> int:
                                       # round 5, group B: the rooms
                                       ("GET", "/api/venues", 200), ("GET", "/api/{id}", 200),  # `venues.geojson` is a label with an {id}: the dot is no word
                                       ("PATCH", "/api/venues/{id}", 200), ("PATCH", "/api/venues/{id}", 400),
-                                      ("PATCH", "/api/venues/{id}", 404)):
+                                      ("PATCH", "/api/venues/{id}", 404),
+                                      # T11 round 3
+                                      ("DELETE", "/api/me", 202), ("DELETE", "/api/me", 400)):
             ok(f"metrics: pk-api answered {method} {route} ({status}) itself", f'method="{method}",route="{route}",status="{status}"' in mtext)
         ok("metrics: /api/live is not a counted request (its sockets are pk_live_clients)",
-           'route="/api/live"' not in mtext and "pk_live_clients 0" in mtext, mtext[:0])
+           'route="/api/live"' not in "".join(ln for ln in mtext.splitlines() if ln.startswith("pk_http_requests_total")) and "pk_live_clients 0" in mtext, mtext[:0])
         n0 = sum(float(ln.rsplit(" ", 1)[1]) for ln in mtext.splitlines() if ln.startswith("pk_http_requests_total{"))
         R.call(rs, "POST", "/api/no-such-route", app, {"question": "x"})
         mtext2 = R.call(rs, "GET", "/metrics")[2].decode()

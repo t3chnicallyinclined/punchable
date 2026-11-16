@@ -1795,3 +1795,249 @@ async fn the_topic_page_material_script_and_line() {
         assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (400, msg), "{b}");
     }
 }
+
+/// `AppState` over the same scratch database as [`setup`], with the token check on (a verifier whose key set cannot be
+/// fetched: this test never sends a token, it hands the handler the caller it would have found).
+async fn signed_in(env: &Env, port: u16) -> AppState {
+    use pk_api::auth::verifier::{Clock, Fetch, Jwks, Verifier};
+    let cfg = Config::scratch(env, port, "punchable_test", "t_writes").expect("config");
+    let api_env = Env::from_map(vec![
+        ("SURREAL_PASS", "x"),
+        ("PUBLIC_URL", "https://punchable.io/"),
+        ("HOST", "127.0.0.1"),
+        ("OIDC_ISSUER", "https://auth.example/realms/punchable"),
+        ("PK_OWNER_ID", "owner"),
+    ]);
+    let fetch: Fetch = Arc::new(|| Box::pin(async { Err("no Keycloak in this test".to_string()) }));
+    let clock: Clock = Arc::new(|| 0.0);
+    let verifier = Verifier::new(
+        "https://auth.example/realms/punchable",
+        "pk-api",
+        Jwks::with_fetch(fetch, clock.clone()),
+        clock,
+    );
+    let st = AppState::new(
+        ApiConfig::from_env(&api_env).expect("api config"),
+        Some(verifier),
+        pk_obs::ApiMetrics::new("0.1.0", "").expect("metrics"),
+        reqwest::Client::new(),
+    );
+    st.set_store(Some(Store::connect(cfg).await.expect("connect")));
+    st.data().await.expect("first load");
+    st
+}
+
+async fn row_count(w: &Store, t: &str) -> i64 {
+    let rows = w
+        .last(&format!("SELECT count() AS n FROM {t} GROUP ALL;"), vars([]))
+        .await
+        .expect("count");
+    pk_store::store::rows_of(rows)
+        .into_iter()
+        .map(pk_store::from_db)
+        .next()
+        .and_then(|r| r.get("n").and_then(Value::as_i64))
+        .unwrap_or(0)
+}
+
+/// `DELETE /api/me` (T11 round 3), ported from `server.py` `delete_me`: a wrong or missing phrase is the 400 and records
+/// nothing; the right phrase (any case, any outer space) signed out is a dry run, signed in is a 202 that records ONE
+/// `deletion` request in his `account` log naming the caller's `sub`; and in every case nothing is deleted. The inventory
+/// names database tables and counts their rows. Red arm: a handler that deletes (or records on a wrong phrase) fails.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[allow(clippy::many_single_char_names)]
+async fn delete_me_records_a_request_and_deletes_nothing() {
+    use axum::Extension;
+    use axum::extract::{RawQuery, State};
+    use pk_api::auth::{Caller, Principal};
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (writer, st) = setup(&env, port).await;
+    let d0 = st.data().await.expect("data");
+    let n_dec = d0.decisions().len();
+    let n_jokes = d0.view(true).await.expect("view").jokes.len();
+    let (jokes0, units0, decs0, events0) = (
+        row_count(&writer, "joke").await,
+        row_count(&writer, "unit").await,
+        row_count(&writer, "decision").await,
+        row_count(&writer, "creative_event").await,
+    );
+
+    // signed out (a loopback dev server): the refusals first, in the Python's order
+    for (b, why) in [
+        (json!({}), "no phrase"),
+        (json!({"confirm": ""}), "empty"),
+        (json!({"confirm": "yes"}), "wrong"),
+        (json!({"confirm": "delete my material please"}), "longer"),
+        (json!({"confirm": 0}), "falsy"),
+    ] {
+        let (s, r) = send(&st, "DELETE", "/api/me", b).await;
+        assert_eq!(
+            (s, r["error"].as_str().unwrap_or("")),
+            (
+                StatusCode::BAD_REQUEST,
+                "type \"delete my material\" as {\"confirm\": \"...\"} to ask for deletion"
+            ),
+            "{why}"
+        );
+    }
+    let (s, r) = send(&st, "DELETE", "/api/me", json!({"confirm": 5})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap_or("")),
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "AttributeError: 'int' object has no attribute 'strip'"
+        )
+    );
+    // a body that is not an object is the body_json 400 first
+    let bytes = b"[1]".to_vec();
+    let req = Request::builder()
+        .method("DELETE")
+        .uri("/api/me")
+        .header(header::CONTENT_LENGTH, bytes.len())
+        .body(Body::from(bytes))
+        .unwrap();
+    let r = app(st.clone()).oneshot(req).await.expect("infallible");
+    assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+    let (s, r) = send(
+        &st,
+        "DELETE",
+        "/api/me?backend=files",
+        json!({"confirm": "delete my material"}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap_or("")),
+        (
+            StatusCode::BAD_REQUEST,
+            "backend 'files' is not available (have: surreal)"
+        )
+    );
+    // a POST on the path is not this route (the Python answers its 404)
+    let (s, _) = send(&st, "POST", "/api/me", json!({"confirm": "delete my material"})).await;
+    assert_eq!(s, StatusCode::NOT_FOUND);
+
+    // the right phrase, signed out: a dry run
+    let (s, r) = send(&st, "DELETE", "/api/me", json!({"confirm": "  Delete MY Material \n"})).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(
+        (r["status"].as_str(), r["deleted"].as_bool()),
+        (Some("dry_run"), Some(false))
+    );
+    assert_eq!(
+        r["note"],
+        "Local dev: nothing is ever deleted by the API. This is what a deletion would cover."
+    );
+    let would = r["would_delete"].as_array().expect("a list");
+    let whats: Vec<&str> = would.iter().map(|x| x["what"].as_str().unwrap()).collect();
+    assert_eq!(
+        whats,
+        [
+            "your decisions (every confirm, edit, rating, idea)",
+            "your jokes, versions and labels (the knowledge graph)",
+            "the database copy of all of it",
+            "storyboards (append-only log + snapshot)",
+            "workingsets (append-only log + snapshot)",
+            "venues (append-only log + snapshot)",
+            "account (append-only log + snapshot)",
+            "jobs (append-only log + snapshot)",
+            "your sets: transcripts, laughs, analyses, clips",
+            "your tapes (audio)",
+            "uploads waiting in the inbox",
+        ]
+    );
+    assert_eq!(would[0]["count"], n_dec);
+    assert_eq!(would[1]["count"], n_jokes);
+    assert!(would[2]["count"].is_null());
+    assert_eq!(would[9]["count"], 0);
+    for w in would {
+        let place = w["where"].as_str().unwrap();
+        assert!(
+            !place.contains(":\\") && !place.starts_with('/'),
+            "a pod folder is not named any more: {place}"
+        );
+    }
+    assert_eq!(
+        row_count(&writer, "creative_event").await,
+        events0,
+        "a dry run writes no event"
+    );
+
+    // signed in: a request is recorded once per ask, answered 202
+    let st2 = signed_in(&env, port).await;
+    let ask = |st: AppState, sub: Option<&'static str>, b: Value| async move {
+        let mut claims = serde_json::Map::new();
+        if let Some(s) = sub {
+            claims.insert("sub".into(), json!(s));
+        }
+        let bytes = serde_json::to_vec(&b).unwrap();
+        let mut h = axum::http::HeaderMap::new();
+        h.insert(header::CONTENT_LENGTH, bytes.len().to_string().parse().unwrap());
+        let r = pk_api::writes::me::delete_me(
+            State(st),
+            Extension(Caller(Some(Principal { claims }))),
+            h,
+            RawQuery(None),
+            Body::from(bytes),
+        )
+        .await;
+        match r {
+            Ok(resp) => {
+                let (p, body) = resp.into_parts();
+                let b = axum::body::to_bytes(body, 1 << 20).await.unwrap();
+                (p.status, serde_json::from_slice::<Value>(&b).unwrap())
+            }
+            Err(e) => (e.status, json!({"error": e.msg})),
+        }
+    };
+    let (s, _) = ask(st2.clone(), Some("u-1"), json!({"confirm": "nope"})).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        row_count(&writer, "creative_event").await,
+        events0,
+        "a wrong phrase records nothing"
+    );
+    let (s, r) = ask(st2.clone(), Some("u-1"), json!({"confirm": "delete my material"})).await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    assert_eq!(
+        (r["status"].as_str(), r["deleted"].as_bool()),
+        (Some("requested"), Some(false))
+    );
+    assert_eq!(
+        r["note"],
+        "Your request is recorded. The owner deletes it by hand and tells you when it is done."
+    );
+    assert_eq!(
+        row_count(&writer, "creative_event").await,
+        events0 + 1,
+        "one request, one event"
+    );
+    let cr = Creative::new(st2.clone());
+    let items = cr.items("account").await.unwrap();
+    let reqs = items["deletion"]["requests"].as_array().expect("requests");
+    assert_eq!(reqs.len(), 1);
+    assert_eq!(reqs[0]["by_sub"], "u-1");
+    assert_eq!(reqs[0]["status"], "requested");
+    assert_eq!(reqs[0]["would_delete"].as_array().unwrap().len(), 11);
+    assert_eq!(reqs[0]["would_delete"][0]["what"], would[0]["what"]);
+    // a second ask is a second request; a caller with no sub is recorded with a null
+    let (s, _) = ask(st2.clone(), None, json!({"confirm": "delete my material"})).await;
+    assert_eq!(s, StatusCode::ACCEPTED);
+    let items = cr.items("account").await.unwrap();
+    let reqs = items["deletion"]["requests"].as_array().unwrap();
+    assert_eq!((reqs.len(), reqs[1]["by_sub"].is_null()), (2, true));
+    // the account log's own lines are counted in the next inventory
+    let (_, r) = ask(st2.clone(), Some("u-1"), json!({"confirm": "delete my material"})).await;
+    assert_eq!(r["would_delete"][6]["count"], 2, "{r}");
+
+    // nothing was deleted, by any of it
+    assert_eq!(
+        (
+            row_count(&writer, "joke").await,
+            row_count(&writer, "unit").await,
+            row_count(&writer, "decision").await
+        ),
+        (jokes0, units0, decs0)
+    );
+}
