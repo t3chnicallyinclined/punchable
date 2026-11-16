@@ -224,6 +224,18 @@ fn handler_refusal(method: &Method, path: &str) -> Option<Refusal> {
         "/api/profile/voice" | "/api/worker/profile/voice" if !get && *method != Method::PUT => {
             Some(refuse(not_allowed, "GET or PUT"))
         }
+        // `mysets_api` reads "match" as a set id on a PATCH (its GET route is the match): the set is not there
+        "/api/mysets/match" if *method == Method::PATCH => Some(Refusal {
+            body_first: true,
+            status: StatusCode::NOT_FOUND,
+            msg: "no such working set",
+        }),
+        // a bit's page under an id with a slash in it (`^/api/jokes/(.+)$`, `.../similar`): no such bit
+        _ if get && path.strip_prefix("/api/jokes/").is_some_and(|rest| rest.contains('/')) => {
+            Some(refuse(StatusCode::NOT_FOUND, "no such joke"))
+        }
+        // `memos_api.handle` takes every GET under the prefix; the routes it knows are answered before this
+        _ if get && path.starts_with("/api/memos") => Some(refuse(StatusCode::NOT_FOUND, "no such memos route")),
         "/api/say" if *method != Method::POST => Some(refuse(not_allowed, "method not allowed")),
         "/api/tonight/screen" if !get => Some(refuse(not_allowed, "method not allowed")),
         _ if path.starts_with("/api/ask/chats") => {
@@ -308,5 +320,12 @@ mod tests {
         assert_eq!(said(Method::PATCH, "/api/ask/chats"), Some((404, "no such conversation", true)));
         assert_eq!(said(Method::PUT, "/api/ask/chats"), Some((404, "no such conversation", false)));
         assert_eq!(said(Method::PUT, "/api/labels"), None);
+        assert_eq!(said(Method::PATCH, "/api/mysets/match"), Some((404, "no such working set", true)));
+        assert_eq!(said(Method::GET, "/api/jokes/a/b"), Some((404, "no such joke", false)));
+        assert_eq!(said(Method::GET, "/api/jokes/a/b/similar"), Some((404, "no such joke", false)));
+        assert_eq!(said(Method::GET, "/api/jokes/a"), None);
+        assert_eq!(said(Method::GET, "/api/memos/x/y"), Some((404, "no such memos route", false)));
+        assert_eq!(said(Method::POST, "/api/memos/x/y"), None, "only a GET goes to the memos handler");
+        assert_eq!(said(Method::POST, "/api/jokes/a/b"), None);
     }
 }

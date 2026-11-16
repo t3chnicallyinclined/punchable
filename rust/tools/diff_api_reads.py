@@ -955,7 +955,19 @@ def fallback_requests(app: dict, worker: dict) -> list[tuple]:
                  ("POST", "/api/live"), ("GET", "/api/health/x"), ("POST", "/api/health"), ("GET", "/api/tonight"),
                  ("GET", "/api/undo"), ("GET", "/api/ideas"), ("GET", "/api/rant/line"), ("GET", "/api/rant/draft"),
                  ("GET", "/api/say"), ("GET", "/api/ask"), ("GET", "/api/facts"), ("GET", "/api/riff"),
-                 ("PUT", "/api/settings"), ("POST", "/api/settings"), ("DELETE", "/api/settings")):
+                 ("PUT", "/api/settings"), ("POST", "/api/settings"), ("DELETE", "/api/settings"),
+                 ("GET", "/api/jokes/a/b/similar"), ("HEAD", "/api/jokes/a/b"), ("PATCH", "/api/ask/chats"),
+                 ("PUT", "/api/ask/chats"), ("PUT", "/api/ask/chats/chat:0123abcd"), ("PUT", "/api/ask/chats/bad%20id"),
+                 ("GET", "/api/ask/chats/bad%20id"), ("POST", "/api/ask/chatsX"), ("GET", "/api/ask/chats/"),
+                 ("POST", "/api/ask/chats/a/b"), ("HEAD", "/api/say"), ("HEAD", "/api/profile/voice/learn"),
+                 ("PUT", "/api/tonight/screen"), ("POST", "/api/worker/profile/voice"), ("PATCH", "/api/mysets/match"),
+                 ("POST", "/api/worker/no-such"), ("PUT", "/api/worker/ideas"), ("GET", "/api/worker/ideas"),
+                 ("GET", "/api/worker/decision"), ("DELETE", "/api/worker/state"), ("POST", "/api/worker/state"),
+                 ("GET", "/api/memos/x/y"), ("POST", "/api/memos"), ("PUT", "/api/memos/x"), ("POST", "/api/memos/x/audio"),
+                 ("POST", "/api/backend"), ("POST", "/api/ai/worker"), ("POST", "/api/map"), ("PUT", "/api/connections"),
+                 ("POST", "/api/notes"), ("POST", "/api/export"), ("POST", "/api/inbox"), ("PATCH", "/api/search"),
+                 ("POST", "/api/sets"), ("POST", "/api/sets/x/review"), ("POST", "/api/jokes"), ("POST", "/api/today"),
+                 ("POST", "/api/rants"), ("PUT", "/api/rants"), ("PUT", "/api/topics"), ("GET", "/api/rant/line")):
         body = b"{}" if m != "GET" else None
         for who, hd in (("app", app), ("worker", worker)):
             reqs.append((f"{m} {p} ({who})", m, p, {**hd, **org, **(j if body else {})}, body, None))
@@ -1001,8 +1013,8 @@ def fallback_compare(label: str, py: tuple, rs: tuple) -> list[str]:
         a, b = py[1].get(h), rs[1].get(h)
         if h == "connection" and a is None and b == "keep-alive":
             continue  # HTTP/1.1 default; the Python states it only when it closes
-        if h == "content-length" and as_json:
-            continue  # JSON is compared as a parsed value (ADR 0007): the Python spaces its separators, serde does not
+        if h == "content-length" and (as_json or py[0] == 204):
+            continue  # a 204 has no body and hyper drops its Content-Length: 0; JSON is compared as a parsed value (ADR 0007): the Python spaces its separators, serde does not
         if a != b:
             bad.append(f"{label}: header {h}: python {a!r} rust {b!r}")
     if as_json:
