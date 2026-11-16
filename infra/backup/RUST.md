@@ -69,7 +69,9 @@ A night **matches** when, for the same date:
 - both Jobs succeeded (`kubectl -n punchable get jobs`);
 - both prefixes hold a `daily/punchable-main-<stamp>.surql.gz` (and on a Sunday a `weekly/` copy), and the Bugsink
   prefixes a `daily/bugsink-db-<stamp>.sqlite3.gz`;
-- the gz sizes are within a few bytes of each other (different gzip implementations; the SurrealQL inside is identical
+- the SQL sizes are within a few hundred bytes of each other when nothing was written in between (measured on the first
+  live run: the gz sizes differ by about 0.8%, because the two gzip implementations compress differently, so compare the
+  SQL, not the gz) (different gzip implementations; the SurrealQL inside is identical
   when nothing was written between the two runs, 30 minutes apart, so a few KB of difference after a busy evening is
   the writes, not the job);
 - the count of `daily/` keys is equal until 14 nights exist, then stays at 14 in each prefix.
@@ -124,7 +126,8 @@ database in the pod, `restore_check`) and compares every table with the live one
    (count 0): a backup carries their definitions and never their rows (ADR 0014). Any other difference is a failed
    drill: a table the export missed. A table present live and absent in `tables.txt` is the same failure.
 4. **Definitions and indexes.** `INFO FOR DB;` on both sides must list the same tables with the same definition text
-   (including `CHANGEFEED 30d INCLUDE ORIGINAL` on `decision`, `joke`, `performance`, `set`, `label`, `list`, `performed_as`);
+   (including `CHANGEFEED 30d INCLUDE ORIGINAL` on `decision`, `joke`, `performance`, `set`, `label`, `list`, `performed_as`, `creative_event`; SurrealDB prints
+   the 30 days as `4w2d`);
    a full-text query (`unit.text @@ '<word>'`) and a KNN query (`embedding <|5,64|> $v`) must answer.
 5. Stop the scratch server and delete `restore.surql*`, `*.counts`, `tables.txt`. Record in the deploy log: the backup
    key, the date, "N tables, counts equal, upload tables defined and empty".

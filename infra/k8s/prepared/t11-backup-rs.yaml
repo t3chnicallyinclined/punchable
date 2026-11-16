@@ -15,7 +15,7 @@
 #     PunchableBackupMissed watches only the Python CronJob; add the rs one at the cutover, not for the 3 nights.
 #
 # Placeholder: __IMAGE_REF__ is the pk-backup image digest (<registry>/punchable-backup-rs@sha256:...), filled by
-# infra/render.sh like the other manifests (it refuses any __NAME__ left in its output):
+# infra/render.sh like the other manifests (it refuses any double-underscore placeholder left in its output):
 #     bash infra/render.sh infra/k8s/prepared/t11-backup-rs.yaml <registry>/punchable-backup-rs@sha256:<digest>
 #
 # Rollback: `kubectl -n punchable delete cronjob punchable-backup-rs` (the Python CronJob is not touched). The objects it
