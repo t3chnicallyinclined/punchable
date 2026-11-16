@@ -406,6 +406,67 @@ fn the_owner_address_may_come_from_the_environment() {
     assert_eq!(o.code, 0, "{} {}", o.out, o.err);
 }
 
+#[test]
+fn a_rules_file_that_goes_missing_between_passes_stops_the_loop() {
+    let c = Case::new();
+    let rules = c.root().join("home/legal_rules.json");
+    let (base, root) = (c.base.clone(), c.root());
+    let mut vars: Vec<(String, String)> = vec![
+        (
+            "PUNCHABLE_HOME".into(),
+            root.join("home").to_string_lossy().into_owned(),
+        ),
+        ("PK_ONLINE_FIRST".into(), "1".into()),
+        ("PK_WORKSPACE".into(), root.join("ws").to_string_lossy().into_owned()),
+        ("PK_API".into(), base.clone()),
+        ("PK_TOKEN_URL".into(), format!("{base}/wtoken")),
+        ("PK_AUTH_URL".into(), format!("{base}/kc/realms/punchable")),
+        ("PUNCHABLE_API".into(), base.clone()),
+        ("PK_WORKER_SECRET".into(), "fake-worker-secret".into()),
+    ];
+    vars.extend(c.extra_env.clone());
+    let env = Env::from_map(vars).with_home(root.join("home"));
+    let sleeps = Arc::new(Mutex::new(0usize));
+    let counted = sleeps.clone();
+    let svc = Services {
+        clock: Box::new(Fixed::parse("2026-10-26T12:00:00+00:00").expect("time")),
+        // the pause between two passes: the rules file is removed during it
+        sleep: Box::new(move |_| {
+            let n = {
+                let mut n = counted.lock().expect("lock");
+                *n += 1;
+                *n
+            };
+            assert!(n < 3, "the loop went on after its rules file was removed");
+            let _ = fs::remove_file(&rules);
+        }),
+        opener: Box::new(|_| {}),
+        spawn: Box::new(|_| Ok(())),
+        free_mb: Box::new(|_| 50_000),
+        restrict: Box::new(|_| true),
+        google_token_uri: format!("{base}/google/token"),
+        drive_root: base.clone(),
+    };
+    let args: Vec<String> = ["run", "--watch", "--dry-run"]
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let code = cli::run(&args, &env, &svc, &mut out, &mut err);
+    let err = String::from_utf8_lossy(&err).into_owned();
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("cannot be read"), "{err}");
+    assert_eq!(
+        *sleeps.lock().expect("lock"),
+        1,
+        "one pass ran, then the pause, then the refusal"
+    );
+    assert!(
+        String::from_utf8_lossy(&out).contains("[pull DRY RUN]"),
+        "the first pass ran"
+    );
+}
+
 // ---- a folder Drive does not return ------------------------------------------------------------------------------------
 #[test]
 fn a_parent_folder_drive_does_not_return_closes_the_doc_and_is_not_cached() {
