@@ -95,7 +95,10 @@ pub async fn candidates(State(st): State<AppState>, RawQuery(raw): RawQuery) -> 
 }
 
 /// Pair scoring is CPU work: off the async threads, one build at a time across the service (the CPU permit).
-async fn blocking<T: Send + 'static>(st: &AppState, f: impl FnOnce() -> T + Send + 'static) -> Result<T, ApiError> {
+pub(super) async fn blocking<T: Send + 'static>(
+    st: &AppState,
+    f: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, ApiError> {
     let permit = st
         .cpu()
         .acquire_owned()

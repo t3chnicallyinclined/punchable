@@ -41,6 +41,8 @@ check(!fileOf("/stage/x").startsWith("(tabs)") && !fileOf("/record").startsWith(
 check(!fileOf("/film/x").startsWith("(tabs)") && !fileOf("/take/x").startsWith("(tabs)"), "the camera (Film it) and the take player are root-level full-screen modals (SPEC 2026-11-03)");
 check(!fileOf("/add/x").startsWith("(tabs)"), "the form sheet (add a joke) is a root-level route that covers the tab bar");
 check(fileOf("/create") === "", "no /create route: the \"+\" acts at once (SPEC 2026-10-30), the create sheet is gone");
+check(fileOf("/around") === "around.tsx" && fileOf("/setpick") === "setpick.tsx", "a card of Around this bit and Add to a set are root-level form sheets (SPEC 2026-11-16 Slice 1)");
+check(fileOf("/bit/x") === "(tabs)/(bits)/bit/[id].tsx", "/bit/<id> still opens (it redirects to the bit page: the old workspace is gone)");
 check(!fileOf("/login").startsWith("(tabs)") && !fileOf("/auth/callback").startsWith("(tabs)") && !fileOf("/auth/logout").startsWith("(tabs)"), "login and the auth routes stay at the root, outside the tabs");
 
 console.log(fails.length ? `${fails.length} FAILED` : "ALL PASS");

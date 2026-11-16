@@ -278,6 +278,9 @@ spec:
           - { path: /api/rants, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # T11 round 3: "delete my material" (DELETE; records a request, deletes nothing)
           - { path: /api/me, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the redesign, slice 1 (SPEC 2026-11-16 §3.1; Rust only): "not connected", remembered (POST), and its Undo (POST)
+          - { path: /api/links/dismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/links/undismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -363,6 +366,8 @@ spec:
           # the Rant tab: one topic (GET the page; PATCH ranted, delete, undelete, rename, keep, drop, unmark, jot, script) and its material (GET; spec §12.7)
           - { path: "/api/topics/[^/]+$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: "/api/topics/[^/]+/material$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the redesign, slice 1 (SPEC 2026-11-16 §3.1; Rust only): everything tied to one bit (GET)
+          - { path: "/api/jokes/[^/]+/around$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a), T11 round 2: POST /api/upload, the phone's recording (at most 1 GiB, the Python's cap; pk-api
 # answers 400 `upload missing or over 1 GB` from Content-Length, so nginx's limit sits at the same 1g). The Python's own

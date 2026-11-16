@@ -288,8 +288,8 @@ export default function SettingsPage() {
         <T v="eb">About</T>
         <List>
           <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
-          {/* the three device checks for the bit page (SPEC 2026-11-03 §4.1); phone only; Slice 1 only, removed in Slice 2 */}
-          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Three checks for the next bit page" onPress={() => router.push('/spike' as any)} />}
+          {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4); phone only; removed once they are answered */}
+          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Nine checks for the next builds" onPress={() => router.push('/spike' as any)} />}
         </List>
       </Card>
       <Card style={{ gap: 10 }}>

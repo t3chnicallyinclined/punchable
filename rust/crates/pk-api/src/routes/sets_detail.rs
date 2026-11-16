@@ -40,7 +40,7 @@ fn live<'a>(items: &'a Items, id: &str, missing: &str) -> Result<&'a Obj, ApiErr
 }
 
 /// `str(v).isdigit() and lo <= int(v) <= hi`, else the 400 with `msg`.
-fn digits_in(v: &str, lo: u64, hi: u64, msg: &str) -> Result<u64, ApiError> {
+pub(super) fn digits_in(v: &str, lo: u64, hi: u64, msg: &str) -> Result<u64, ApiError> {
     if v.is_empty() || !v.bytes().all(|b| b.is_ascii_digit()) {
         return Err(ApiError::bad_request(msg));
     }

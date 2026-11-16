@@ -80,7 +80,7 @@ export async function hearEvidence(ev: WhyEvidence, key: string) {
 /** Open the doc paragraph (written versions) or the set at that moment. */
 export function openEvidence(ev: WhyEvidence) {
   const unit = ev.node.match(/^unit:/);
-  if (unit && ev.jokeId) return router.push(`/bit/${encodeURIComponent(ev.jokeId)}?tab=versions&unit=${encodeURIComponent(ev.node)}` as any);
+  if (unit && ev.jokeId) return router.push(`/joke/${encodeURIComponent(ev.jokeId)}` as any);
   const seg = ev.node.match(/^seg:(.+)#(\d+)$/);
   if (seg) return router.push(`/set/${encodeURIComponent(`set:${seg[1]}`)}?row=${seg[2]}` as any);
   const perf = ev.node.match(/^perf:(.+)@(\d+)$/);

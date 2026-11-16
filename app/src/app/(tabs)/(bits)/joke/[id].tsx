@@ -7,11 +7,16 @@
 // (POST /api/jokes/<id>/versions, the old ones stay) with Undo in the snack and, non-timed, in the Versions row.
 // Slice 1 has no outbox (D4): Write and To a set grey with the offline line until Slice 2. The Punch action waits for
 // Slice 3 (line_meta); Sessions and the Claude line are hidden until they exist.
+// The redesign, Slice 1 (SPEC 2026-11-16 §3.1, §4.5, §4.6): two more collapsed rows under the lines, "Around this bit"
+// (everything tied to the bit in five groups, his words on every card, a half sheet to act on one: lib/Around) and
+// "In these sets" (lib/Around SetsList), both from one read, GET /api/jokes/<id>/around; and "To a set" in the bar
+// opens the multi-tick picker (lib/SetPicker). The rows are not drawn while that read has no answer (a server
+// without the route), so the page works either way.
 // Film it's rant half (SPEC 2026-11-03 D10, D11, §2.5, §2.6; build 24): a version is the stage cut or a rant cut (its
 // `source`, rules/bitLines cutOf). The body shows the newest STAGE version; the stepper walks every version and says
 // the cut; on a rant version a "Rant cut" row sits above the lines and Write / Restore write that cut. The sparkle
 // opens the sessions sheet (/session/[bit]) with its two rows, Make it a rant and Pick a hook, on the version shown.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
@@ -33,6 +38,8 @@ import { IdeaLine } from '@/lib/IdeaLine';
 import { VersionStepper } from '@/lib/VersionStepper';
 import { BitLines, type LineAction } from '@/lib/BitLines';
 import { Pile } from '@/lib/Pile';
+import { AroundList, SetsList, aroundChanged, aroundPath } from '@/lib/Around';
+import * as AR from '@/rules/aroundRules';
 import { DragList } from '@/lib/DragList';
 
 type V = R.BitVersion;
@@ -55,6 +62,12 @@ export default function BitPage() {
   const d = useApi<any>(`/api/jokes/${enc(id)}`, { poll: 30000 });
   const sim = useApi<SimilarResult>(`/api/jokes/${enc(id)}/similar?limit=5`);
   const cand = useApi<{ history?: { notes?: Note[] } }>(`/api/merge/candidates?joke=${enc(id)}`, { cache: false });
+  // everything tied to the bit, and the sets it is in (one read; the half sheet reads the same path from the cache)
+  const ar = useApi<AR.Around>(aroundPath(id));
+  const [aroundOpen, setAroundOpen] = useState(false);
+  const [setsOpen, setSetsOpen] = useState(false);
+  // the last write from a card's sheet: its non-timed Undo sits on the Around row (HIG.md §7)
+  const [lastAround, setLastAround] = useState<{ undo: () => Promise<void> } | null>(null);
   // which version is shown: null = the newest stage version (home), 'rant' = the newest rant cut (after a rant write),
   // a number = the one he stepped to
   const [pos, setPos] = useState<number | 'rant' | null>(null);
@@ -76,7 +89,17 @@ export default function BitPage() {
   }, [p.edit, d.data, openedFresh, editing]);
   const [saving, setSaving] = useState(false);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
-  const reloadAll = useCallback(() => { d.reload(); sim.reload(); cand.reload(); }, [d.reload, sim.reload, cand.reload]); // eslint-disable-line react-hooks/exhaustive-deps
+  const reloadAll = useCallback(() => { d.reload(); sim.reload(); cand.reload(); ar.reload(); }, [d.reload, sim.reload, cand.reload, ar.reload]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a card's sheet or the picker wrote something about this bit: read again; a new version shows its Undo on the
+  // Versions row, any other write on the Around row
+  const versionCount = useRef(0);
+  useEffect(() => { versionCount.current = versions.length; });
+  useEffect(() => aroundChanged.subscribe((c) => {
+    if (c.bit !== id) return;
+    if (c.indexes) { setPos(null); setSel(null); setLastWrite({ indexes: c.indexes, n: versionCount.current + 1 }); }
+    setLastAround(c.undo ? { undo: c.undo } : null);
+    reloadAll();
+  }), [id, reloadAll]);
   // voice memos on this phone that are on this bit: started here, or filed here (SPEC 2026-10-31 §6)
   const recs = useRecordings();
   const memos = useMemo(() => recs.filter((r) => r.kind === 'memo' && (r.bit?.id === id || r.filed_on?.id === id)), [recs, id]);
@@ -173,6 +196,12 @@ export default function BitPage() {
   const addScrap = (s: R.Scrap) => void writeLines(R.insertAfter(lines, sel, s.words), 'added from the pile', 'Added');
   const restore = () => { if (v) void writeLines(R.linesOf(v.text), `restored ${v.label}`, `Restored ${v.label} as v${versions.length + 1}`); };
   const toSet = () => afterWrite(() => boards.add(id, title), (ok) => ok, haptics);
+  // the bar's To a set: the picker, with a tick on every set the bit is already in (SPEC 2026-11-16 §4.5)
+  const pickSets = () => boards.pick(id, shortName);
+  const undoAround = async () => {
+    if (!lastAround) return;
+    try { await lastAround.undo(); setLastAround(null); reloadAll(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); }
+  };
   // a memo started here is filed on this bit (lib/recordings: POST /api/merge/attach after the idea)
   const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
   // Film it (SPEC 2026-11-03 §2.1): the front camera with the newest version's lines on the band; phone only
@@ -248,8 +277,8 @@ export default function BitPage() {
   const aiIdea = !!d.data?.ai?.summary_ai && !d.data?.ai?.summary_confirmed;
   const nights = sim.data?.performed.length || 0;
   const killed = R.killedCount((sim.data?.performed || []) as { rating?: string | null }[]);
-  const echoes = (sim.data?.like.moments.length || 0) + (sim.data?.like.bits.length || 0);
-  const tape = R.tapeMeta(nights, killed, echoes, takes.length);
+  // what sounds like it is a group of "Around this bit" now (SPEC 2026-11-16 §2.2), so it no longer opens On tape
+  const tape = R.tapeMeta(nights, killed, 0, takes.length);
   // collapsed, the row reads the newest stage version (Film it §2.6: "unchanged"); right after a write, "just now"
   const vmeta = { count: versions.length - home, newestDate: versions[home]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
   // the line's actions (Slice 1: Move · Cut; Punch waits for its home in Slice 3, the Claude asks for Slice 4). Move is
@@ -258,13 +287,19 @@ export default function BitPage() {
     ...(lines.length > 1 ? [{ label: 'Move', testID: 'line-move', onPress: startReorder }] : []),
     { label: 'Cut', testID: 'line-cut', onPress: (i: number) => cut(i) },
   ];
+  const aroundShown = !!ar.data || !ar.rawError;
+  const pileRow = (
+    <SectionRow testID="row-pile" kind="inline" label="Pile" meta={String(scraps.length)} open={pileIsOpen} onPress={() => setPileOpen(!pileIsOpen)}>
+      <Pile testID="pile" scraps={scraps} recs={memos} lines={lines} onAdd={addScrap} />
+    </SectionRow>
+  );
   // More, in frequency order, the destructive item last (§3.8); the same list on the web as a sheet
   const webMenu = (): MenuItem[] => [
     { label: 'Reorder lines', onPress: startReorder, disabled: !canWrite || lines.length < 2, testID: 'menu-reorder' },
     { label: 'Record a memo', onPress: recordMemo, disabled: true },
     { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => void toSet(), disabled: !barOn || !boards.current },
     { label: 'Rant on this…', onPress: () => void rantOn(), disabled: !online, testID: 'menu-rant-on' },
-    { label: 'Pick a set list…', onPress: () => boards.pick(id, title) },
+    { label: 'Add to a set…', onPress: pickSets, disabled: !barOn || !online, testID: 'menu-sets' },
     { label: 'Merge with…', onPress: () => router.push('/merge' as any) },
     { label: 'Share…', onPress: () => void share() },
     { label: 'Rename short name…', onPress: () => setRename(true) },
@@ -286,7 +321,7 @@ export default function BitPage() {
         <Stack.Toolbar placement="right">
           {/* Ask Claude: the sessions sheet (Film it's two rows until 3c Slice 4 adds the rest); off with its reason */}
           <Stack.Toolbar.Button icon="sparkles" disabled={!canAsk} accessibilityLabel="Ask Claude" accessibilityHint={!online ? 'Offline' : !lines.length ? 'Nothing to read' : 'Make it a rant, or pick a hook'} onPress={openSessions} />
-          <Stack.Toolbar.Button icon="text.badge.plus" disabled={!barOn || !online} accessibilityLabel="To a set" accessibilityHint={online ? `Adds it to ${boards.current?.title || 'a set list'}` : 'Offline'} onPress={() => void toSet()} />
+          <Stack.Toolbar.Button icon="text.badge.plus" disabled={!barOn || !online} accessibilityLabel="Add to a set" accessibilityHint={online ? 'Tick the sets it belongs in' : 'Offline'} onPress={pickSets} />
           <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More">
             <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
@@ -294,7 +329,6 @@ export default function BitPage() {
             <Stack.Toolbar.MenuAction icon="video" disabled={!lines.length} subtitle={lines.length ? undefined : 'nothing to read'} onPress={filmIt}>Film it…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="megaphone" disabled={!online} subtitle={online ? undefined : 'offline'} onPress={() => void rantOn()}>Rant on this…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.Menu inline>
-              <Stack.Toolbar.MenuAction icon="list.bullet" onPress={() => boards.pick(id, title)}>Pick a set list…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="arrow.triangle.merge" onPress={() => router.push('/merge' as any)}>Merge with…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={() => void share()}>Share…</Stack.Toolbar.MenuAction>
             </Stack.Toolbar.Menu>
@@ -372,9 +406,23 @@ export default function BitPage() {
       )}
 
       <View testID="bit-rows" style={{ borderTopWidth: 1, borderTopColor: C.hairline }}>
-        <SectionRow testID="row-pile" kind="inline" label="Pile" meta={String(scraps.length)} open={pileIsOpen} onPress={() => setPileOpen(!pileIsOpen)}>
-          <Pile testID="pile" scraps={scraps} recs={memos} lines={lines} onAdd={addScrap} />
-        </SectionRow>
+        {/* an empty bit opens on its one real action, the Pile: it leads there (the two rows below it hold nothing yet) */}
+        {lines.length === 0 && pileRow}
+        {/* drawn while the read is on its way too (no count, not tappable), so the rows under them do not jump when it
+            lands; gone only when the read failed with nothing cached (a server without the route) */}
+        {aroundShown && (
+          <SectionRow testID="row-around" kind="inline" label="Around this bit" meta={ar.data ? AR.countMeta(AR.aroundCount(ar.data)) : null} disabled={!ar.data} open={!!ar.data && aroundOpen} onPress={() => setAroundOpen((o) => !o)}
+            right={lastAround ? <TextBtn testID="row-around-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last change around this bit" onPress={() => void undoAround()} /> : undefined}
+            extraActions={lastAround ? [{ label: 'Undo the last change around this bit', onPress: () => void undoAround() }] : undefined}>
+            {!!ar.data && <AroundList testID="around" around={ar.data} onOpen={(it) => router.push({ pathname: '/around', params: { bit: id, item: it.id } } as any)} />}
+          </SectionRow>
+        )}
+        {aroundShown && (
+          <SectionRow testID="row-sets" kind="inline" label="In these sets" meta={ar.data ? AR.countMeta(ar.data.sets.length) : null} disabled={!ar.data} open={!!ar.data && setsOpen} onPress={() => setSetsOpen((o) => !o)}>
+            {!!ar.data && <SetsList testID="sets" sets={ar.data.sets} canAdd={barOn && online} onAdd={pickSets} />}
+          </SectionRow>
+        )}
+        {lines.length > 0 && pileRow}
         {versions.length > 1 && (
           <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
             accessibilityLabel={vi !== home ? `Versions, reading ${R.stepperValue(vi, versions.length, v?.date, v)}` : R.versionsLabel(vmeta)}

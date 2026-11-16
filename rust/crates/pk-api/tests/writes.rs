@@ -116,10 +116,14 @@ fn graph() -> Value {
 /// A loaded scratch database (the graph, `meta:state` with a bundle, the graph as a `srcfile` row so the notebook
 /// builds) and the state over it, auth off.
 async fn setup(env: &Env, port: u16) -> (Store, AppState) {
+    setup_with(env, port, graph()).await
+}
+
+/// [`setup`] over the graph given (the fixture's with a test's own nodes and edges added).
+async fn setup_with(env: &Env, port: u16, g: Value) -> (Store, AppState) {
     let cfg = Config::scratch(env, port, "punchable_test", "t_writes").expect("config");
     let writer = Store::connect(cfg.clone()).await.expect("connect");
     assert!(writer.apply_schema(false).await.expect("schema"));
-    let g = graph();
     writer.load_graph(&g).await.expect("load");
     let text = serde_json::to_string(&g).expect("graph text");
     let key = pk_api::tape::srcfile_key("kb/v0/graph.json");
@@ -2040,4 +2044,404 @@ async fn delete_me_records_a_request_and_deletes_nothing() {
         ),
         (jokes0, units0, decs0)
     );
+}
+
+/// The ids of one group of `GET /api/jokes/<id>/around`.
+fn around_refs(body: &Value, group: &str) -> Vec<String> {
+    body["groups"]
+        .as_array()
+        .expect("groups")
+        .iter()
+        .find(|g| g["key"] == group)
+        .unwrap_or_else(|| panic!("no group {group} in {body}"))["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter_map(|i| i["ref"].as_str().map(str::to_string))
+        .collect()
+}
+
+/// One card of `GET /api/jokes/<id>/around`, by its ref.
+fn around_item(body: &Value, r: &str) -> Value {
+    body["groups"]
+        .as_array()
+        .expect("groups")
+        .iter()
+        .flat_map(|g| g["items"].as_array().expect("items"))
+        .find(|i| i["ref"] == r)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {r} in {body}"))
+}
+
+/// The redesign, slice 1 (SPEC 2026-11-16 §3.1; Rust only: no Python twin, so the statuses and words are this test's):
+/// `GET /api/jokes/<id>/around` over a scratch graph answers each group from its own source (the stored edges, what
+/// sounds like the bit, the taped moment that is no bit's yet, the note filed under it), every card with his words;
+/// "Not connected" through `POST /api/links/dismiss` takes a computed card away and it stays away on the next read,
+/// `undismiss` brings it back; a stored edge goes when the edge is rejected; `sets` lists his live set lists that hold
+/// the bit and leaves the archived one out.
+///
+/// The red arms (each run once by hand, see the slice's report): with `Fill::dismissed` in `pk_creative::around`
+/// answering false, the three "gone" assertions fail; with the `archived` filter of `sets_of` removed, the `sets`
+/// equality fails.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn around_a_bit_each_group_from_its_source_and_a_dismissed_pair_stays_gone() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    // the fixture, plus: a written bit and a typed idea that say the meters bit's words, a taped moment that says them
+    // and is no bit's, and a same-shape tie the AI proposed
+    let mut scratch_graph = graph();
+    let said = "The meter asked for my pronouns before my card";
+    for node in [
+        json!({"id": "joke:echo", "type": "joke", "title": "Meter, again (2025)", "stage": "idea", "summary": ""}),
+        json!({"id": "unit:e1", "type": "unit", "text": format!("{said} then it asked for a tip\nI tipped it"),
+               "date": "2025-02-02", "kind": "bit"}),
+        json!({"id": "joke:jot", "type": "joke", "title": "Meter jot", "stage": "idea",
+               "summary": format!("{said} and I just stood there")}),
+        json!({"id": "perf:p3", "type": "performance", "set": "set:s1", "start_ms": 180_000, "end_ms": 200_000,
+               "text": format!("{said} and the whole street heard it"), "kind": "bit"}),
+    ] {
+        scratch_graph["nodes"].as_array_mut().expect("nodes").push(node);
+    }
+    for edge in [
+        json!({"id": "e:bbbbbbbbbbb1", "kind": "part_of", "src": "unit:e1", "dst": "joke:echo", "status": "confirmed",
+               "confidence": 0.9}),
+        json!({"id": "e:bbbbbbbbbbb2", "kind": "same_shape", "src": "joke:meters", "dst": "joke:talks",
+               "status": "proposed", "confidence": 0.6}),
+    ] {
+        scratch_graph["edges"].as_array_mut().expect("edges").push(edge);
+    }
+    let (_writer, st) = setup_with(&env, port, scratch_graph).await;
+    let around = "/api/jokes/joke:meters/around";
+
+    // the refusals, in the order of the other id pages
+    for (path, status, msg) in [
+        ("/api/jokes/joke:meters/around?cap=0", 400, "cap must be 1-20"),
+        ("/api/jokes/joke:meters/around?cap=21", 400, "cap must be 1-20"),
+        ("/api/jokes/joke:nope/around", 404, "no such joke"),
+        ("/api/jokes/unit:m1/around", 404, "no such joke"),
+        (
+            "/api/jokes/joke:meters/around?backend=files",
+            400,
+            "backend 'files' is not available (have: surreal)",
+        ),
+    ] {
+        let (s, r) = get_path(&st, path).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{path}");
+    }
+
+    // every group from its source
+    let (s, r) = get_path(&st, around).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["joke"], "joke:meters");
+    assert_eq!(r["unit"], "unit:m1", "the newest version");
+    let keys: Vec<&str> = r["groups"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|grp| grp["key"].as_str())
+        .collect();
+    assert_eq!(keys, ["same_idea", "callbacks", "on_stage", "loose", "same_shape"]);
+    assert_eq!(r["sets"], json!([]), "in no set yet");
+    // what sounds like it (no model here: its first words, searched): the written bit is the same idea, the typed idea
+    // with no version a loose scrap
+    assert!(around_refs(&r, "same_idea").contains(&"joke:echo".to_string()), "{r}");
+    let echo = around_item(&r, "joke:echo");
+    assert_eq!(echo["title"], "Meter, again", "the title up to its parenthesis");
+    assert_eq!(
+        echo["words"],
+        json!([format!("{said} then it asked for a tip"), "I tipped it"]),
+        "his words, line by line"
+    );
+    assert_eq!(
+        (
+            &echo["kind"],
+            &echo["source"],
+            &echo["edge"],
+            &echo["does"],
+            &echo["meta"]
+        ),
+        (
+            &json!("bit"),
+            &json!("ai"),
+            &Value::Null,
+            &json!(["merge", "add", "dismiss"]),
+            &json!("never on stage")
+        )
+    );
+    assert_eq!(
+        echo["line"],
+        json!({"i": 0, "text": said}),
+        "it opens on the line it shares"
+    );
+    assert!(around_refs(&r, "loose").contains(&"joke:jot".to_string()), "{r}");
+    let jot = around_item(&r, "joke:jot");
+    assert_eq!(
+        (&jot["kind"], &jot["does"]),
+        (&json!("idea"), &json!(["attach", "add", "dismiss"]))
+    );
+    // the taped moment that says it and is no bit's; the one already linked to this bit is not a suggestion
+    let stage = around_refs(&r, "on_stage");
+    assert!(stage.contains(&"perf:p3".to_string()), "{r}");
+    assert!(!stage.contains(&"perf:p1".to_string()), "p1 is this bit's already: {r}");
+    let moment = around_item(&r, "perf:p3");
+    assert_eq!(
+        (&moment["kind"], &moment["connect"], &moment["does"]),
+        (
+            &json!("moment"),
+            &json!({"kind": "performed_as", "src": "perf:p3", "dst": "joke:meters"}),
+            &json!(["link", "add", "dismiss"])
+        )
+    );
+    // the AI's same-shape edge: his to connect
+    assert_eq!(around_refs(&r, "same_shape"), ["joke:talks"], "{r}");
+    let shape = around_item(&r, "joke:talks");
+    assert_eq!(
+        (&shape["source"], &shape["edge"], &shape["does"], &shape["words"]),
+        (
+            &json!("ai"),
+            &json!("e:bbbbbbbbbbb2"),
+            &json!(["connect", "add", "dismiss"]),
+            &json!(["The meter talks back"])
+        ),
+        "a typed idea shows its idea"
+    );
+    assert!(
+        shape.get("connect").is_none(),
+        "a stored edge is confirmed, never added again"
+    );
+    assert!(around_refs(&r, "callbacks").is_empty(), "{r}");
+
+    // Connect = the edge confirmed: the card is his
+    let (s, wrote) = post(
+        &st,
+        "/api/decision",
+        json!({"target": "edge", "id": "e:bbbbbbbbbbb2", "action": "confirm"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{wrote}");
+    let (_, r) = get_path(&st, around).await;
+    let shape = around_item(&r, "joke:talks");
+    assert_eq!(
+        (&shape["source"], &shape["does"]),
+        (&json!("his"), &json!(["add", "dismiss"]))
+    );
+
+    // a callback he makes: an edge added, shown with its direction; rejected, it is gone
+    let (s, wrote) = post(
+        &st,
+        "/api/decision",
+        json!({"target": "edge", "action": "add", "reason": "Callbacks",
+               "after": {"src": "joke:meters", "dst": "joke:cat", "kind": "callback_to"}}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{wrote}");
+    let (_, r) = get_path(&st, around).await;
+    assert_eq!(around_refs(&r, "callbacks"), ["joke:cat"], "{r}");
+    let cb = around_item(&r, "joke:cat");
+    assert_eq!(
+        (&cb["source"], &cb["why"], &cb["words"]),
+        (
+            &json!("his"),
+            &json!("This bit calls back to it"),
+            &json!(["An app for dating my cat"])
+        )
+    );
+    let edge = cb["edge"].as_str().expect("the edge's id").to_string();
+    let (s, wrote) = post(
+        &st,
+        "/api/decision",
+        json!({"target": "edge", "id": edge, "action": "reject"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{wrote}");
+    let (_, r) = get_path(&st, around).await;
+    assert!(around_refs(&r, "callbacks").is_empty(), "a rejected edge is gone: {r}");
+
+    // "Not connected" on a computed card: remembered, gone on the next read, back after Undo
+    let (s, dis) = post(
+        &st,
+        "/api/links/dismiss",
+        json!({"a": "joke:meters", "b": "joke:echo", "group": "same_idea", "reason": " different turn "}),
+    )
+    .await;
+    assert_eq!((s, dis["ok"].as_bool()), (StatusCode::OK, Some(true)), "{dis}");
+    let lid = dis["id"].as_str().expect("the pair's id").to_string();
+    assert!(lid.starts_with("lk:"));
+    let (_, again) = post(
+        &st,
+        "/api/links/dismiss",
+        json!({"a": "joke:echo", "b": "joke:meters", "group": "same_shape"}),
+    )
+    .await;
+    assert_eq!(
+        (again["id"].as_str(), again["already"].as_bool()),
+        (Some(lid.as_str()), Some(true)),
+        "the same pair, either end first, is one record"
+    );
+    let (_, dis2) = post(
+        &st,
+        "/api/links/dismiss",
+        json!({"a": "perf:p3", "b": "joke:meters", "group": "on_stage"}),
+    )
+    .await;
+    assert_eq!(dis2["ok"], true, "{dis2}");
+    let links = Creative::new(st.clone()).items("links").await.unwrap();
+    assert_eq!(links.len(), 2, "two pairs, the repeat wrote nothing: {links:?}");
+    assert_eq!(
+        (&links[&lid]["reason"], &links[&lid]["by"], &links[&lid]["group"]),
+        (&json!("different turn"), &json!("owner"), &json!("same_idea"))
+    );
+    let (_, r) = get_path(&st, around).await;
+    // the red arm of the dismissal: these three fail when the join ignores the `links` store
+    assert!(
+        !around_refs(&r, "same_idea").contains(&"joke:echo".to_string()),
+        "the echo is gone: {r}"
+    );
+    assert!(
+        !around_refs(&r, "on_stage").contains(&"perf:p3".to_string()),
+        "the moment is gone: {r}"
+    );
+    assert!(!r.to_string().contains("joke:echo"), "nowhere on the page: {r}");
+    assert!(
+        around_refs(&r, "loose").contains(&"joke:jot".to_string()),
+        "the other cards stay: {r}"
+    );
+    // a pair is one statement about two things: the echo's own page no longer offers the meters bit either
+    let (_, other) = get_path(&st, "/api/jokes/joke:echo/around").await;
+    assert!(!other.to_string().contains("\"ref\":\"joke:meters\""), "{other}");
+    let (s, und) = post(&st, "/api/links/undismiss", json!({"id": lid})).await;
+    assert_eq!((s, und["ok"].as_bool()), (StatusCode::OK, Some(true)), "{und}");
+    let (_, und2) = post(&st, "/api/links/undismiss", json!({"id": lid})).await;
+    assert_eq!(und2["already"], true, "Undo twice writes nothing: {und2}");
+    let (_, r) = get_path(&st, around).await;
+    assert!(
+        around_refs(&r, "same_idea").contains(&"joke:echo".to_string()),
+        "Undo brings it back: {r}"
+    );
+    assert!(
+        !around_refs(&r, "on_stage").contains(&"perf:p3".to_string()),
+        "the other pair stays gone"
+    );
+
+    // the refusals of the two writes
+    for (body, status, msg) in [
+        (
+            json!({}),
+            400,
+            "a and b must each be a bit, a taped moment, a line or a taped night",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "label:x", "group": "loose"}),
+            400,
+            "a and b must each be a bit, a taped moment, a line or a taped night",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "joke:meters", "group": "loose"}),
+            400,
+            "a pair needs two different ends",
+        ),
+        (
+            json!({"a": "perf:p1", "b": "perf:p3", "group": "on_stage"}),
+            400,
+            "one end of the pair must be a bit",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "joke:cat", "group": "next"}),
+            400,
+            "group must be one of same_idea, callbacks, on_stage, loose, same_shape",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "joke:cat", "group": "loose", "reason": "x".repeat(301)}),
+            400,
+            "a reason is at most 300 characters",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "joke:nope", "group": "loose"}),
+            404,
+            "unknown joke:nope",
+        ),
+        (
+            json!({"a": "joke:meters", "b": "perf:nope", "group": "on_stage"}),
+            404,
+            "unknown perf:nope",
+        ),
+    ] {
+        let (s, r) = post(&st, "/api/links/dismiss", body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{body}");
+    }
+    for (body, status, msg) in [
+        (json!({}), 400, "id is required (a dismissed pair)"),
+        (json!({"id": "joke:meters"}), 400, "id is required (a dismissed pair)"),
+        (json!({"id": "lk:0000000000000000"}), 404, "no such pair"),
+    ] {
+        let (s, r) = post(&st, "/api/links/undismiss", body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{body}");
+    }
+    assert_eq!(
+        Creative::new(st.clone()).lines("links").await.unwrap().len(),
+        3,
+        "two dismissals and one undo; a refusal writes nothing"
+    );
+
+    // a note he files under the bit: a loose scrap that is his, with the record that takes it off again
+    let (s, att) = post(
+        &st,
+        "/api/merge/attach",
+        json!({"note": "joke:jot", "into": "joke:meters"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{att}");
+    let (_, r) = get_path(&st, around).await;
+    let note = around_item(&r, "joke:jot");
+    assert_eq!(
+        (&note["kind"], &note["source"], &note["attach"], &note["does"]),
+        (
+            &json!("note"),
+            &json!("his"),
+            &att["merge_id"],
+            &json!(["add", "dismiss"])
+        )
+    );
+    assert_eq!(note["words"], json!([format!("{said} and I just stood there")]));
+
+    // the sets: his live lists that hold the bit, with where it sits; the archived one is left out
+    let mk = |title: &str, ids: Value| json!({"title": title, "joke_ids": ids});
+    let (s, b1) = post(
+        &st,
+        "/api/boards",
+        mk("Friday late show", json!(["joke:cat", "joke:meters"])),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{b1}");
+    let (_, b2) = post(&st, "/api/boards", mk("Put away", json!(["joke:meters"]))).await;
+    let (_, b3) = post(&st, "/api/boards", mk("Cats", json!(["joke:cat"]))).await;
+    assert!(b3["board"]["id"].is_string(), "{b3}");
+    let put_away = b2["board"]["id"].as_str().expect("a board id").to_string();
+    let (_, r) = get_path(&st, around).await;
+    assert_eq!(
+        r["sets"].as_array().map(Vec::len),
+        Some(2),
+        "both lists that hold it: {r}"
+    );
+    let (s, arch) = send(
+        &st,
+        "PATCH",
+        &format!("/api/boards/{put_away}"),
+        json!({"archive": true}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{arch}");
+    let (_, r) = get_path(&st, around).await;
+    // the red arm of the membership: this fails when an archived list, or a list without the bit, is counted
+    assert_eq!(
+        r["sets"],
+        json!([{"board": b1["board"]["id"], "title": "Friday late show", "position": 2, "count": 2, "notes": []}]),
+        "{r}"
+    );
+    // the cap cuts every group
+    let (_, r) = get_path(&st, "/api/jokes/joke:meters/around?cap=1").await;
+    for grp in r["groups"].as_array().unwrap() {
+        assert!(grp["items"].as_array().unwrap().len() <= 1, "{grp}");
+    }
 }

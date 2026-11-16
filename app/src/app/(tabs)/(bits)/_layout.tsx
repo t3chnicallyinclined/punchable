@@ -15,8 +15,9 @@ export default function BitsStack() {
       <Stack.Screen name="bits" options={{ title: t('Bits') }} />
       <Stack.Screen name="joke/[id]" options={{ title: t('Joke') }} />
       <Stack.Screen name="joke/[id]/tape" options={{ title: t('On tape') }} />
-      {/* the three device checks for the bit page (SPEC 2026-11-03 §4.1); Slice 1 only, removed in Slice 2 */}
+      {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4): removed once the owner has answered them */}
       <Stack.Screen name="spike" options={{ title: t('Device checks') }} />
+      <Stack.Screen name="spike-select" options={{ title: t('Selection mock') }} />
       <Stack.Screen name="merge" options={{ title: t('Merge') }} />
       {/* "N to sort" lives on Bits now (SPEC 2026-11-06 R2): its inbox is pushed in this stack, so Back is Bits */}
       <Stack.Screen name="inbox" options={{ title: t('Inbox') }} />
