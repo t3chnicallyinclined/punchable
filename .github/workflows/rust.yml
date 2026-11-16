@@ -340,3 +340,39 @@ jobs:
           path: punchable-worker-rs.tar.gz
           retention-days: 14
           compression-level: 0
+
+  backup-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build rust/Dockerfile.backup (no push)
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: |
+          docker build -f rust/Dockerfile.backup --build-arg PK_BUILD_SHA="$GITHUB_SHA" -t punchable-backup-rs:ci .
+
+      - name: The image runs as uid 10001, not root
+        run: |
+          docker image inspect punchable-backup-rs:ci --format 'id={{.Id}} size={{.Size}} user={{.Config.User}}'
+          test "$(docker image inspect punchable-backup-rs:ci --format '{{.Config.User}}')" = "10001:10001"
+
+      - name: The binary starts and refuses a bad command with status 2
+        run: |
+          set +e
+          docker run --rm punchable-backup-rs:ci frobnicate
+          test "$?" = 2
+
+      - name: Save the image (gzip) and print its id and archive hash
+        run: |
+          docker save punchable-backup-rs:ci | gzip -6 > punchable-backup-rs.tar.gz
+          echo "image id: $(docker image inspect punchable-backup-rs:ci --format '{{.Id}}')"
+          echo "archive:  $(sha256sum punchable-backup-rs.tar.gz) ($(stat -c %s punchable-backup-rs.tar.gz) bytes)"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: punchable-backup-rs-image-${{ github.sha }}
+          path: punchable-backup-rs.tar.gz
+          retention-days: 14
+          compression-level: 0

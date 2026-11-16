@@ -1,0 +1,39 @@
+[package]
+name = "pk-backup"
+description = "The nightly backup job: SurrealDB export and Bugsink's SQLite to an S3-compatible bucket, ported as-is from infra/backup/backup.py (T11 round 7)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pk-backup"
+path = "src/main.rs"
+
+[dependencies]
+base64 = { workspace = true }
+chrono = { workspace = true }
+# gzip, level 6 and mtime 0 like Python's GzipFile; the pure-Rust backend (no C zlib in the image)
+flate2 = { workspace = true }
+hex = { workspace = true }
+regex = { workspace = true }
+# blocking: the job is one thread that does one request after another, as the Python does
+reqwest = { workspace = true, features = ["blocking"] }
+# sqlite3's online backup API for Bugsink's database (the Python's `Connection.backup`)
+rusqlite = { workspace = true, features = ["backup"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# the tests' HTTPS S3 stand-in and stub SurrealDB: a throwaway certificate made at test time (never a committed key)
+rcgen = { workspace = true }
+rustls = { workspace = true }
+
+[lints]
+workspace = true

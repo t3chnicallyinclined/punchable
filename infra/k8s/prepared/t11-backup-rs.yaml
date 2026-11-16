@@ -1,0 +1,91 @@
+# PREPARED, NOT APPLIED (lane T11 round 7, 2026-11-16). Nothing in infra/ship.sh reads this folder; applying it is the
+# owner's call, after the image is built off the node (rust.yml job backup-image, rust/Dockerfile.backup) and its digest
+# is in the private deploy log. The steps, the checks and the rollback are in infra/backup/RUST.md.
+#
+# The Rust backup job (pk-backup) beside the Python one (60-backup.yaml) for 3 nights, never instead of it:
+#   - its own CronJob `punchable-backup-rs`, 04:47 UTC (the Python runs at 04:17), the same Secret punchable-r2-backup
+#     used by reference (envFrom; no value is in this file), the same database login (Secret punchable-api, keys
+#     SURREAL_API_USER / SURREAL_API_PASS), the same Bugsink PVC.
+#   - its own PREFIXES, surreal-rs/ and bugsink-rs/, so the two jobs never see each other's objects: the Python's
+#     retention cannot delete a Rust backup and the Rust's cannot delete a Python one, and the sizes of one night's
+#     pair can be compared with `list`. (BACKUP_PREFIX must match surreal[a-z0-9-]*/; the job refuses anything else.)
+#   - the pod label app=punchable-backup, so the existing NetworkPolicy `punchable-backup` (out to surrealdb:8000 and
+#     TCP 443 on the public internet only) and SurrealDB's ingress rule already admit it; no policy is added here.
+#   - the Job names start with punchable-backup, so PunchableBackupFailed (60-observability.yaml) already covers it.
+#     PunchableBackupMissed watches only the Python CronJob; add the rs one at the cutover, not for the 3 nights.
+#
+# Placeholder: __IMAGE_REF__ is the pk-backup image digest (<registry>/punchable-backup-rs@sha256:...), filled by
+# infra/render.sh like the other manifests (it refuses any __NAME__ left in its output):
+#     bash infra/render.sh infra/k8s/prepared/t11-backup-rs.yaml <registry>/punchable-backup-rs@sha256:<digest>
+#
+# Rollback: `kubectl -n punchable delete cronjob punchable-backup-rs` (the Python CronJob is not touched). The objects it
+# wrote stay under surreal-rs/ and bugsink-rs/ until deleted by hand or by their own retention.
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: punchable-backup-rs, namespace: punchable, labels: { app: punchable-backup-rs, impl: rust } }
+spec:
+  schedule: "47 4 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata: { labels: { app: punchable-backup-rs, impl: rust } }
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        # app=punchable-backup is what the NetworkPolicy selects; app.kubernetes.io/name tells the two jobs apart
+        metadata: { labels: { app: punchable-backup, app.kubernetes.io/name: punchable-backup-rs, impl: rust } }
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          # uid 14237 = Bugsink's own user (70-bugsink.yaml): a WAL-mode reader creates db.sqlite3-shm/-wal owned by
+          # whoever opened it, so any other uid leaves Bugsink unable to write its own database (seen 2026-10-28).
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 14237
+            runAsGroup: 14237
+            fsGroup: 14237
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: backup
+              image: __IMAGE_REF__
+              args: ["run"]
+              env:
+                - { name: SURREAL_URL, value: "http://surrealdb:8000" }
+                - { name: SURREAL_NS, value: punchable }
+                - { name: SURREAL_DB, value: main }
+                - { name: SURREAL_AUTH_LEVEL, value: database }
+                - name: SURREAL_USER
+                  valueFrom: { secretKeyRef: { name: punchable-api, key: SURREAL_API_USER } }
+                - name: SURREAL_PASS
+                  valueFrom: { secretKeyRef: { name: punchable-api, key: SURREAL_API_PASS } }
+                - { name: R2_REGION, value: auto }
+                - { name: BACKUP_PREFIX, value: surreal-rs/ }
+                - { name: BACKUP_KEEP_DAILY, value: "14" }
+                - { name: BACKUP_KEEP_WEEKLY, value: "8" }
+                - { name: BACKUP_WEEKLY, value: auto }
+                - { name: BACKUP_TMP, value: /tmp }
+                - { name: BUGSINK_DB_PATH, value: /bugsink/db.sqlite3 }
+                - { name: BUGSINK_PREFIX, value: bugsink-rs/ }
+              envFrom:
+                - secretRef: { name: punchable-r2-backup }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { cpu: 500m, memory: 256Mi }
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+                - { name: bugsink, mountPath: /bugsink, readOnly: false }
+          volumes:
+            - name: tmp
+              emptyDir: { sizeLimit: 2Gi }
+            - name: bugsink
+              persistentVolumeClaim: { claimName: punchable-bugsink-data }

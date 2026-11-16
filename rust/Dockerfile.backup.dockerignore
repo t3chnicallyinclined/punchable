@@ -1,0 +1,5 @@
+# BuildKit reads <Dockerfile>.dockerignore: send only what rust/Dockerfile.backup copies (never rust/target, never
+# app/node_modules, never data, never a .env).
+*
+!rust/
+rust/target/

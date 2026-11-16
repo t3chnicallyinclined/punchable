@@ -1,0 +1,32 @@
+# Punchable's nightly backup job, the Rust one (pk-backup, T11 round 7). Build context = the repo root:
+#   docker build -f rust/Dockerfile.backup -t punchable-backup-rs .
+# Built OFF the production node (docs/ARCHITECTURE.md section 6): in CI (rust.yml, job backup-image), then
+# `docker save` | ssh | `docker load`, exactly as the pk-api and pk-worker images travel (docs/RUST_WORKSTREAM.md
+# "Deploying the images"). Not wired into infra/deploy.sh: the manifest is infra/k8s/prepared/t11-backup-rs.yaml, and
+# applying it is the owner's call (infra/backup/RUST.md).
+#
+# What is in it: one binary (rustls, no OpenSSL; SQLite compiled from its amalgamation for Bugsink's online backup) on
+# distroless cc (glibc, libgcc), uid 10001 by default (the CronJob runs it as Bugsink's uid so the WAL side files stay
+# Bugsink's), read-only root filesystem; it writes only to BACKUP_TMP (the emptyDir). No shell: the command is the
+# ENTRYPOINT plus the subcommand (run | list | fetch | restore-check | export).
+#
+# Bases pinned by digest, the same two the worker image pins (multi-arch index digests, resolved with
+# `docker buildx imagetools inspect`). Move a pin only on purpose, with the build log's digest in the deploy log.
+FROM rust:1.99.1-slim-trixie@sha256:7eab7ce19273ce785e0ca7578bdf7bc1fcbae621775a8197379a04c9f6e03cd5 AS build
+# the C parts (aws-lc, SQLite) are built by the cc crate; the slim image has gcc but no g++
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends g++ \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY rust/ rust/
+WORKDIR /src/rust
+RUN cargo build --release --locked -p pk-backup \
+ && cp target/release/pk-backup /pk-backup
+
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
+COPY --from=build /pk-backup /pk-backup
+ARG PK_BUILD_SHA=dev
+ENV PK_BUILD_SHA=$PK_BUILD_SHA \
+    BACKUP_TMP=/tmp
+USER 10001:10001
+ENTRYPOINT ["/pk-backup"]
