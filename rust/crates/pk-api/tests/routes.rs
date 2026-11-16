@@ -661,3 +661,67 @@ async fn the_forward_counter_keeps_a_bounded_number_of_routes() {
         .count();
     assert!(n <= 65, "{n} series");
 }
+
+/// The 501 page for a verb the Python has no handler for goes out with `Connection: close` and the connection is
+/// closed after it, as `BaseHTTPRequestHandler.send_error` does (read on the wire: a router test cannot see what the
+/// HTTP layer does with a hop-by-hop header). The CI differential on Linux saw the header missing.
+#[tokio::test]
+async fn the_501_page_closes_the_connection_as_the_python_does() {
+    use axum::serve::Listener as _;
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let st = state(true);
+    let l = pk_api::bind("127.0.0.1:0").await.expect("bind");
+    let addr = l.local_addr().expect("addr");
+    tokio::spawn(async move {
+        let _ = axum::serve(l, app(st)).await;
+    });
+    for verb in ["TRACE", "BREW", "LOCK"] {
+        let mut c = tokio::net::TcpStream::connect(addr).await.expect("connect");
+        c.write_all(format!("{verb} /api/labels HTTP/1.1\r\nHost: x\r\n\r\n").as_bytes())
+            .await
+            .expect("send");
+        let mut got = Vec::new();
+        // read_to_end returns only when the server closes the connection
+        tokio::time::timeout(std::time::Duration::from_secs(5), c.read_to_end(&mut got))
+            .await
+            .unwrap_or_else(|_| panic!("{verb}: the server kept the connection open"))
+            .expect("read");
+        let text = String::from_utf8_lossy(&got).to_ascii_lowercase();
+        let head = text.split("\r\n\r\n").next().unwrap_or_default();
+        assert!(head.starts_with("http/1.1 501"), "{verb}: {head}");
+        assert!(
+            head.contains("\r\nconnection: close"),
+            "{verb}: no Connection: close in {head}"
+        );
+    }
+}
+
+/// With a Python configured, a verb it has no handler for is still the 501 page, answered here: the page's
+/// `Connection: close` is hop-by-hop and the forward strips it, so a forwarded 501 differs from the Python's on the wire
+/// (the CI differential found it). Red arm: forwarding the request instead answers the stand-in's 502.
+#[tokio::test]
+async fn the_501_page_is_answered_here_even_with_a_python_configured() {
+    let st = fwd_state(true);
+    for (m, p) in [
+        ("TRACE", "/api/no-such-route"),
+        ("BREW", "/api/labels"),
+        ("LOCK", "/metrics"),
+    ] {
+        let (s, h, b) = send(&st, req(m, p).body(Body::empty()).unwrap()).await;
+        assert_eq!(
+            s,
+            StatusCode::NOT_IMPLEMENTED,
+            "{m} {p}: {}",
+            String::from_utf8_lossy(&b)
+        );
+        assert_eq!(h[header::CONNECTION], "close", "{m} {p}");
+        assert_eq!(h[header::CONTENT_TYPE], "text/html;charset=utf-8");
+    }
+    // and the forward is untouched for the verbs it has: a request to a path nobody here owns still reaches the Python
+    let (s, _, _) = send(&st, get("/api/no-such-route").body(Body::empty()).unwrap()).await;
+    assert_eq!(
+        s,
+        StatusCode::BAD_GATEWAY,
+        "an ordinary unknown path is still forwarded"
+    );
+}
