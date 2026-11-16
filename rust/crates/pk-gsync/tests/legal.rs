@@ -11,6 +11,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use pk_core::Env;
@@ -46,6 +47,8 @@ struct World {
     seen: Vec<String>,
     /// The body of every `POST /api/worker/files` (the state sent to the database).
     posted: Vec<String>,
+    /// Connections accepted.
+    conns: usize,
 }
 
 type Shared = Arc<Mutex<World>>;
@@ -192,14 +195,37 @@ fn serve_connection(stream: TcpStream, world: &Shared) {
     }
 }
 
-fn start(world: &Shared) -> String {
+/// The most connections and requests one `run` may make to the fake servers. A pass makes a few dozen requests; a
+/// client that loops (a retry with no backoff, a watch loop that never ends) hits these and the test fails at once.
+const MAX_CONNECTIONS: usize = 150;
+const MAX_REQUESTS: usize = 400;
+
+/// Starts the fake servers. The listener thread ends when `stop` is set (the `Case` sets it when it is dropped, also
+/// when the test panics) and by itself once the ceiling is passed; connection threads end on a 5 s read timeout.
+fn start(world: &Shared, stop: &Arc<AtomicBool>) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    listener.set_nonblocking(true).expect("nonblocking");
     let base = format!("http://127.0.0.1:{}", listener.local_addr().expect("addr").port());
-    let world = world.clone();
+    let (world, stop) = (world.clone(), stop.clone());
     std::thread::spawn(move || {
-        for stream in listener.incoming().flatten() {
-            let world = world.clone();
-            std::thread::spawn(move || serve_connection(stream, &world));
+        while !stop.load(Ordering::SeqCst) {
+            match listener.accept() {
+                Ok((stream, _)) => {
+                    let over = {
+                        let mut w = world.lock().expect("lock");
+                        w.conns += 1;
+                        w.conns > MAX_CONNECTIONS * 4 || w.seen.len() > MAX_REQUESTS * 4
+                    };
+                    if over {
+                        return; // a runaway client: stop listening, the test's ceiling fails it
+                    }
+                    let _ = stream.set_nonblocking(false);
+                    let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(5)));
+                    let world = world.clone();
+                    std::thread::spawn(move || serve_connection(stream, &world));
+                }
+                Err(_) => std::thread::sleep(std::time::Duration::from_millis(5)),
+            }
         }
     });
     base
@@ -224,6 +250,13 @@ struct Case {
     world: Shared,
     base: String,
     extra_env: Vec<(String, String)>,
+    stop: Arc<AtomicBool>,
+}
+
+impl Drop for Case {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+    }
 }
 
 impl Case {
@@ -237,7 +270,8 @@ impl Case {
             w.files.insert(LEGAL_FOLDER.into(), folder(LEGAL_FOLDER, &["root0"]));
             w.boards = json!({});
         }
-        let base = start(&world);
+        let stop = Arc::new(AtomicBool::new(false));
+        let base = start(&world, &stop);
         let r = dir.path();
         write(r, "home/legal_rules.json", &rules_text());
         write(r, "home/secrets.env", "PK_WORKER_SECRET=fake-worker-secret\n");
@@ -267,6 +301,7 @@ impl Case {
             world,
             base,
             extra_env: vec![("PK_GSYNC_MEMOS".into(), "0".into())],
+            stop,
         }
     }
 
@@ -323,6 +358,12 @@ impl Case {
         let (mut out, mut err) = (Vec::new(), Vec::new());
         let code = cli::run(&args, &env, &svc, &mut out, &mut err);
         let w = self.world.lock().expect("lock");
+        assert!(
+            w.conns <= MAX_CONNECTIONS && w.seen.len() <= MAX_REQUESTS,
+            "a run made {} connections and {} requests: more than a pass should (a loop with no bound?)",
+            w.conns,
+            w.seen.len()
+        );
         Outcome {
             code,
             out: String::from_utf8_lossy(&out).into_owned(),
