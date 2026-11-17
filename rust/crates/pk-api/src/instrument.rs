@@ -41,6 +41,8 @@ pub async fn instrument(State(st): State<AppState>, req: Request, next: Next) ->
     if r.extensions().get::<crate::proxy::Uncounted>().is_none() {
         m.record(&method, &path, i64::from(status), secs);
     }
+    // the usage meter: a counter in memory, written once a minute by `usage::run`
+    st.usage().note(&method, &path, status);
     tracing::debug!(
         method = %method,
         route = %pk_obs::route_pattern(&path),

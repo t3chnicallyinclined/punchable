@@ -78,6 +78,45 @@ pub async fn authorize(State(st): State<AppState>, mut req: Request, next: Next)
         };
         return ApiError::forbidden(msg).into_response();
     }
-    req.extensions_mut().insert(Caller(Some(p)));
+    let caller = Caller(Some(p));
+    // every owner-only route, whether or not its handler checks too (a new one that forgets is still closed)
+    if path.starts_with(ADMIN_PREFIX)
+        && let Err(e) = owner_only(&st, &caller)
+    {
+        return e.into_response();
+    }
+    req.extensions_mut().insert(caller);
     next.run(req).await
+}
+
+/// The owner-only routes' prefix ([`owner_only`] runs on every path under it, in [`authorize`]).
+pub const ADMIN_PREFIX: &str = "/api/admin/";
+
+/// The words of the owner gate's refusals (the app maps them to its screen).
+pub const NOT_OWNER: &str = "this page is the owner's only";
+/// The owner gate's refusal when the server has no owner pinned (`PK_OWNER_SUB` unset): fail closed.
+pub const OWNER_NOT_PINNED: &str = "the owner is not pinned on this server (PK_OWNER_SUB)";
+
+/// The owner-only routes (`/api/admin/*`, SPEC 2026-11-17 §13): the token's `sub` must be the pinned `PK_OWNER_SUB`.
+/// Stricter than every other app route, which takes any valid non-worker token as him (single tenant): these pages
+/// will show every account's usage once testers exist, so they are pinned now. With auth off (a loopback dev server,
+/// `config` refuses anything else) there is no token and the caller is the comic, as on every route. A worker token
+/// never gets here (`authorize` keeps it to `/api/worker/*`), and is refused here too.
+pub fn owner_only(st: &AppState, caller: &Caller) -> Result<(), ApiError> {
+    if st.verifier().is_none() {
+        return Ok(());
+    }
+    let Some(p) = &caller.0 else {
+        return Err(ApiError::unauthorized("sign in required"));
+    };
+    if p.is_worker() {
+        return Err(ApiError::forbidden("a worker token cannot use the app's routes"));
+    }
+    let Some(owner) = st.config().owner_sub.as_deref() else {
+        return Err(ApiError::forbidden(OWNER_NOT_PINNED));
+    };
+    match p.claims.get("sub").and_then(Value::as_str) {
+        Some(sub) if sub == owner => Ok(()),
+        _ => Err(ApiError::forbidden(NOT_OWNER)),
+    }
 }

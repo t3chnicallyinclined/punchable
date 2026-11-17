@@ -29,7 +29,8 @@ pub use error::{ObsError, ObsResult};
 pub use labels::{JobStats, job_stats, kind_label, model_label, route_pattern, status_class};
 pub use log::init_tracing;
 pub use metrics::{
-    ApiMetrics, BudgetStatus, CONTENT_TYPE, CallbackGauge, JobTimer, Series, Usage, WorkerMetrics, render,
+    ApiMetrics, BudgetStatus, CONTENT_TYPE, CallbackGauge, JobTimer, Series, Usage, UsageGauges, UsageSource,
+    WorkerMetrics, render,
 };
 pub use scrub::{REDACTED, SENSITIVE_KEYS, scrub_event, scrub_text, scrub_value, scrub_value_by, sensitive_key};
 

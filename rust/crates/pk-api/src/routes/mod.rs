@@ -19,6 +19,7 @@ pub mod sets_detail;
 pub mod status;
 pub mod stores;
 pub mod today;
+pub mod usage;
 pub mod venues;
 
 use std::sync::Arc;

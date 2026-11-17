@@ -558,9 +558,10 @@ async fn run_scenario(name: &str, sc: &Value) {
             );
         }
     }
+    // the usage meter's posts are pk-api only (the Python worker never had them): checked on their own below
     let mut effect: Vec<Value> = received
         .iter()
-        .filter(|r| r.url.path() != "/api/worker/claim")
+        .filter(|r| r.url.path() != "/api/worker/claim" && r.url.path() != pk_worker::usage::PATH)
         .map(|r| {
             json!({"method": r.method.as_str(), "path": r.url.path(), "query": r.url.query().unwrap_or(""),
                    "body": body_of(r)})
@@ -594,6 +595,31 @@ async fn run_scenario(name: &str, sc: &Value) {
         .map(body_of)
         .collect();
     same(&Value::Array(calls), &expect["anthropic"], "anthropic", name);
+
+    // the usage meter: every model answer the budget charged is posted once, with this job's id and kind, and
+    // nothing else is (a call not recorded, or one recorded twice, fails here)
+    let posted: Vec<Value> = received
+        .iter()
+        .filter(|r| r.url.path() == pk_worker::usage::PATH)
+        .flat_map(|r| body_of(r)["calls"].as_array().cloned().unwrap_or_default())
+        .collect();
+    let answered = anthropic.received_requests().await.unwrap().len();
+    assert_eq!(
+        posted.len(),
+        answered,
+        "{name}: usage calls posted vs model answers (a refusal and a cut answer are billed too)"
+    );
+    let ids: std::collections::BTreeSet<&str> = posted.iter().filter_map(|c| c["call_id"].as_str()).collect();
+    assert_eq!(ids.len(), posted.len(), "{name}: a call posted twice");
+    if let Some(job) = sc.get("job").filter(|j| j.is_object()) {
+        for c in &posted {
+            assert_eq!(
+                (&c["job"], &c["kind"]),
+                (&job["id"], &job["kind"]),
+                "{name}: the call's job"
+            );
+        }
+    }
 }
 
 /// On the runtime the binary ships with (current-thread).

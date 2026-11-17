@@ -18,12 +18,14 @@
 //! | `POST events` | [`creative::EventRequest`] | [`creative::EventResponse`] |
 //! | `GET profile/voice` | | [`voice::VoiceProfile`] |
 //! | `PUT profile/voice` | [`voice::VoicePut`] | [`voice::VoiceProfileApp`] (the app's shape, see there) |
+//! | `POST usage` | [`usage::UsagePost`] | [`usage::UsagePostResponse`]; 400 [`ErrorBody`]. pk-api only (SPEC 2026-11-17 §13) |
 //!
 //! Every refusal on every route is [`ErrorBody`] with the status the Python picked.
 
 pub mod creative;
 pub mod files;
 pub mod kb;
+pub mod usage;
 pub mod voice;
 
 use serde::{Deserialize, Serialize};

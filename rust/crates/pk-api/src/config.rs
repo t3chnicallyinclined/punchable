@@ -22,6 +22,13 @@ pub struct ApiConfig {
     pub flags: Map<String, Value>,
     /// `PK_OWNER_ID` (default `owner`): the actor on his own edits.
     pub owner_id: String,
+    /// `PK_OWNER_SUB`: his Keycloak subject. The owner-only routes (`/api/admin/*`, SPEC 2026-11-17 §13) answer only
+    /// a token whose `sub` is this one; unset, they answer 403 to every token (fail closed). With auth off (a loopback
+    /// dev server) they answer as every other route does. Also the start of the spec's round 4a pin.
+    pub owner_sub: Option<String>,
+    /// `PK_USAGE_FLUSH_S` (default 60): how often the usage meter writes its counters and recomputes the day's AI
+    /// totals; `0` = never on a timer (a test calls the flush itself).
+    pub usage_every: Option<std::time::Duration>,
     /// `PK_DATA` (default `/tmp/punchable`): only for the paths `/api/health` names, as the Python pod names them.
     pub data: PathBuf,
     /// `PK_PYTHON_URL`: where every request this service does not answer goes during T9 (deleted at T10). `None` =
@@ -196,6 +203,16 @@ impl ApiConfig {
             origins,
             flags,
             owner_id: env.opt("PK_OWNER_ID").unwrap_or(pk_kb::DEFAULT_OWNER_ID).to_string(),
+            owner_sub: env
+                .opt("PK_OWNER_SUB")
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string),
+            usage_every: match env.f64("PK_USAGE_FLUSH_S")? {
+                None => Some(crate::usage::DEFAULT_EVERY),
+                Some(s) if s > 0.0 => Some(std::time::Duration::from_secs_f64(s)),
+                Some(_) => None,
+            },
             data: env.path("PK_DATA").unwrap_or_else(|| PathBuf::from("/tmp/punchable")),
             python_url: env
                 .opt("PK_PYTHON_URL")

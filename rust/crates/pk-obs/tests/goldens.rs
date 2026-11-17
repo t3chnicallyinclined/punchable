@@ -230,7 +230,28 @@ fn api_exposition_matches_the_python_registry() {
     let jobs = g["api"]["jobs"].as_array().unwrap().clone();
     api.set_jobs_source(move || jobs.clone());
     let text = api.render().unwrap();
-    same("api", &json!(parse_exposition(&text)), &g["api"]["metrics"]);
+    // the usage meter's gauges are pk-api's own (SPEC 2026-11-17 §13; the Python never had them): out of the
+    // comparison, and checked here instead (registered, no labels but `kind`, zero before any rollup)
+    let mut families = parse_exposition(&text);
+    let rust_only: Vec<String> = families
+        .keys()
+        .filter(|k| k.starts_with("pk_usage_"))
+        .cloned()
+        .collect();
+    // the per-kind two have no series until a rollup names a kind
+    assert_eq!(
+        rust_only,
+        [
+            "pk_usage_active_days_month",
+            "pk_usage_ai_usd_month",
+            "pk_usage_requests_today"
+        ]
+    );
+    for k in &rust_only {
+        let f = json!(families.remove(k));
+        assert!(f["labels"] == json!([]) || f["labels"] == json!(["kind"]), "{k}: {f}");
+    }
+    same("api", &json!(families), &g["api"]["metrics"]);
     assert!(text.contains("pk_jobs_waiting_transcriber_oldest_seconds "), "{text}");
     assert!(
         text.contains(r#"pk_build_info{sha="0123456789ab",version="0.1.0"} 1"#),

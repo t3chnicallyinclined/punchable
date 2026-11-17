@@ -67,6 +67,10 @@ spec:
             # only the paths /api/health names; pk-api writes nothing to disk
             - { name: PK_DATA, value: /tmp/punchable }
             - { name: PK_OWNER_ID, value: "__PK_OWNER_ID__" }
+            # his Keycloak subject (PK_OWNER_SUB in infra/config.env): the owner-only routes (/api/admin/usage) answer
+            # only a token with this `sub`; empty, they refuse every token (fail closed). Not a secret, but personal:
+            # it lives in the private config, never here.
+            - { name: PK_OWNER_SUB, value: "__PK_OWNER_SUB__" }
             - { name: PUBLIC_URL, value: "https://__PK_DOMAIN__" }
             - { name: OIDC_ISSUER, value: "https://__PK_AUTH_HOST__/realms/__PK_REALM__" }
             - { name: OIDC_AUDIENCE, value: pk-api }
@@ -285,6 +289,11 @@ spec:
           - { path: /api/links/undismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           # the redesign, slice 3 (SPEC 2026-11-16 §3.2; Rust only): every bit with a redline round open (GET)
           - { path: /api/redlines, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the usage meter (SPEC 2026-11-17 §13; Rust only): the owner's page (GET, pinned to PK_OWNER_SUB) and the
+          # worker's model calls (POST, worker token)
+          - { path: /api/admin/usage, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/usage/access, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: /api/worker/usage, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each

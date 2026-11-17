@@ -140,6 +140,25 @@ where
 /// `created_at`), as JSON objects.
 pub type JobsSource = Arc<dyn Fn() -> Vec<Value> + Send + Sync>;
 
+/// The usage meter's aggregates (pk-api `usage`, SPEC 2026-11-17 §13), as its last rollup left them: never per
+/// account (one series per job kind at most), so a person never becomes a label.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct UsageGauges {
+    /// Today's (UTC) AI spend in USD, by job kind (a bounded set: the queue's kinds and `other`).
+    pub usd_today: Vec<(String, f64)>,
+    /// Today's model calls, by job kind.
+    pub calls_today: Vec<(String, f64)>,
+    /// This month's (UTC) AI spend in USD.
+    pub usd_month: f64,
+    /// Days this month with at least one app request.
+    pub active_days_month: f64,
+    /// App requests today.
+    pub requests_today: f64,
+}
+
+/// Where the API's usage gauges read from at scrape time.
+pub type UsageSource = Arc<dyn Fn() -> UsageGauges + Send + Sync>;
+
 /// What the hosted API measures (`GET /metrics`, open inside the cluster only).
 ///
 /// ```text
@@ -152,6 +171,11 @@ pub type JobsSource = Arc<dyn Fn() -> Vec<Value> + Send + Sync>;
 /// pk_jobs_waiting_transcriber_oldest_seconds           gauge: age of the oldest of those (0 when none)
 /// pk_db_query_duration_seconds                         histogram: every SurrealDB round trip
 /// pk_build_info{version,sha}                           gauge = 1
+/// pk_usage_ai_usd_today{kind}                          gauge: today's AI spend (UTC), from the usage meter's rollup
+/// pk_usage_ai_calls_today{kind}                        gauge: today's model calls
+/// pk_usage_ai_usd_month                                gauge: this month's AI spend
+/// pk_usage_active_days_month                           gauge: days this month with an app request
+/// pk_usage_requests_today                              gauge: app requests today
 /// ```
 pub struct ApiMetrics {
     registry: Registry,
@@ -168,6 +192,7 @@ pub struct ApiMetrics {
     /// `1`, labelled with the version and the git sha of this image.
     pub build_info: IntGaugeVec,
     jobs: Arc<RwLock<Option<JobsSource>>>,
+    usage: Arc<RwLock<Option<UsageSource>>>,
 }
 
 impl std::fmt::Debug for ApiMetrics {
@@ -249,6 +274,46 @@ impl ApiMetrics {
             move || vec![(Vec::new(), stats().oldest_waiting_s)],
         )?))?;
 
+        let usage: Arc<RwLock<Option<UsageSource>>> = Arc::new(RwLock::new(None));
+        let read = {
+            let usage = Arc::clone(&usage);
+            move || shared(&usage).map(|src| src()).unwrap_or_default()
+        };
+        let r = read.clone();
+        registry.register(Box::new(CallbackGauge::new(
+            "pk_usage_ai_usd_today",
+            "Today's AI spend in USD (UTC day), by job kind, from the usage meter",
+            &["kind"],
+            move || r().usd_today.into_iter().map(|(k, v)| (vec![k], v)).collect(),
+        )?))?;
+        let r = read.clone();
+        registry.register(Box::new(CallbackGauge::new(
+            "pk_usage_ai_calls_today",
+            "Today's model calls (UTC day), by job kind",
+            &["kind"],
+            move || r().calls_today.into_iter().map(|(k, v)| (vec![k], v)).collect(),
+        )?))?;
+        let r = read.clone();
+        registry.register(Box::new(CallbackGauge::new(
+            "pk_usage_ai_usd_month",
+            "This month's AI spend in USD (UTC month)",
+            &[],
+            move || vec![(Vec::new(), r().usd_month)],
+        )?))?;
+        let r = read.clone();
+        registry.register(Box::new(CallbackGauge::new(
+            "pk_usage_active_days_month",
+            "Days this month with at least one app request",
+            &[],
+            move || vec![(Vec::new(), r().active_days_month)],
+        )?))?;
+        registry.register(Box::new(CallbackGauge::new(
+            "pk_usage_requests_today",
+            "App requests answered today (UTC day)",
+            &[],
+            move || vec![(Vec::new(), read().requests_today)],
+        )?))?;
+
         Ok(Self {
             registry,
             http_requests,
@@ -258,6 +323,7 @@ impl ApiMetrics {
             db_duration,
             build_info,
             jobs,
+            usage,
         })
     }
 
@@ -287,6 +353,11 @@ impl ApiMetrics {
         let out = f();
         self.db_duration.observe(t.elapsed().as_secs_f64());
         out
+    }
+
+    /// Install where the usage gauges read from at scrape time (the usage meter's last rollup).
+    pub fn set_usage_source(&self, f: impl Fn() -> UsageGauges + Send + Sync + 'static) {
+        *self.usage.write().unwrap_or_else(PoisonError::into_inner) = Some(Arc::new(f));
     }
 
     /// Install where the job gauges read from at scrape time (the job store's items).
