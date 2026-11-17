@@ -21,6 +21,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import secrets
 import shutil
 import socket
@@ -717,6 +718,12 @@ def diff(a, b, path="$", out=None):
     return out
 
 
+# Redesign slice 4 (Rust only, no Python twin by the owner's Rust-first rule): pk-api's build read carries his set
+# notes and the seam's source; the Python never gains them. Allowed only where the Python has NO such field, so a
+# value the two servers both answer is still compared.
+RUST_ONLY_BUILD = re.compile(r"^\$\.steps\[\d+\]\.(notes|notes_from|transition_in\.same_shape|transition_in\.source)$")
+
+
 def compare(label: str, py: tuple, rs: tuple) -> list[str]:
     bad = []
     if py[0] != rs[0] and (label, "status") not in ALLOW:
@@ -736,6 +743,8 @@ def compare(label: str, py: tuple, rs: tuple) -> list[str]:
                 continue
             if ("/similar" in label and p.rsplit(".", 1)[-1] in ("distance", "score")
                     and isinstance(x, (int, float)) and isinstance(y, (int, float)) and abs(x - y) <= VECTOR_TOLERANCE):
+                continue
+            if RUST_ONLY_BUILD.search(p) and "/api/boards/" in label and "/build" in label and x == "<absent>":
                 continue
             if (label, p) not in ALLOW:
                 bad.append(f"{label}: {p}: python {json.dumps(x)[:120]} rust {json.dumps(y)[:120]}")
