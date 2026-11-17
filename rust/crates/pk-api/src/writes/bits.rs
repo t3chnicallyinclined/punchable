@@ -24,6 +24,12 @@ use crate::state::AppState;
 static SOURCE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\A[a-z_]{1,24}\n?\z").unwrap_or_else(|e| unreachable!("constant regex: {e}")));
 
+/// A version of a bit, at most, in code points (`pk_kb::MAX_UNIT_CHARS`: the unit it becomes). A bit is a document
+/// of several ideas on one topic (owner, 2026-11-16), so a version is a page of text, not a line: 40,000, where an
+/// idea jotted (`writes::ideas`) and the input bar (`writes::say`) keep 4,000. The whole body still has to fit the
+/// app routes' 256 KiB (`MAX_BODY`): 40,000 characters are 160 KB at four bytes each.
+pub const MAX_VERSION_CHARS: usize = pk_kb::MAX_UNIT_CHARS;
+
 /// `POST /api/jokes/<id>/versions {text, reason?, source?, draft?}`.
 pub async fn versions(
     State(st): State<AppState>,
@@ -42,8 +48,10 @@ pub async fn versions(
         Some(Value::String(s)) => py::strip(s).to_string(),
         _ => String::new(),
     };
-    if text.is_empty() || py::len(&text) > 4000 {
-        return Err(ApiError::bad_request("text is required (up to 4000 characters)"));
+    if text.is_empty() || py::len(&text) > MAX_VERSION_CHARS {
+        return Err(ApiError::bad_request(format!(
+            "text is required (up to {MAX_VERSION_CHARS} characters)"
+        )));
     }
     refuse_legal(&st, [text.as_str()])?;
     let reason = match b.get("reason") {

@@ -460,9 +460,27 @@ a document does, and the unknown about Backspace only exists because of them. No
   footnote line has the screen's ground, so it is never drawn over his words, and the caret is kept clear of it.
 - **Reorder** is its own mode from More (the existing drag list): the rows are the document's lines and one "Blank
   line" row per gap between ideas, which can be dragged too.
-- **Limit.** A version takes 4000 characters (`pk-api/src/writes/bits.rs`). A longer document stays on the phone
-  with "Too long to save · 4,120 of 4,000" in the footnote. Raising the route's limit is a server change and is
-  **not in this slice**; a bit that holds several ideas will reach it (about 700 words).
+- **Limit.** A version takes **40,000 characters** (raised from 4,000 on 2026-11-16, owner: "a bit is a document,
+  it just has a bunch of ideas for the same topic"): `pk_kb::MAX_UNIT_CHARS` / `kb.MAX_UNIT_CHARS` (a unit),
+  `pk-api/src/writes/bits.rs` and `api-dev/server.py` (the route, both servers, the same words), `rules/lineRules.ts`
+  `MAX_DOC` (the app). A longer document stays on the phone with "Too long to save · 40,120 of 40,000" in the
+  footnote. An idea jotted and the input bar keep 4,000. What a 40,000-character version meets (read in code
+  2026-11-16, not measured):
+  - **The write:** at most 160 KB of text in a 256 KiB body; one decision line and one unit hold it whole.
+  - **Search by meaning and "sounds like it":** the vector is made from the first 2,000 characters only
+    (`pk-embed` `MAX_CHARS`, then 512 tokens), so the lower part of a long document is found by its words (the
+    full-text index covers all of it) and not by its meaning. Cut, never refused.
+  - **The worker:** Make it a rant, Pick a hook and punch-up are handed the version's lines whole (INFERRED: no cap
+    on the way in was found); a full document is about ten times the tokens of an old one, inside the daily budget.
+    Draft a rant from a topic reads the first 4,000 characters of each source.
+  - **Lists and search rows** show a cut line, and the decisions list is paged; backups dump whole tables.
+  - **What grows:** every save is a whole new version. `GET /api/jokes/<id>` sends every version's text, and each
+    one is a row in the decision log and a node in pk-api's memory, which already runs close to its limit under
+    load (journal 2026-11-16). Twenty-five saves of a full document are 1 MB of text for one bit. Not a problem at
+    one write; the thing to watch as documents get long. Follow-ups, none done: versions sent without their text
+    until asked for, and the memory limit.
+  - **On the phone:** one multiline field holds the whole text and the local draft is rewritten after each pause in
+    typing; how that feels at several thousand words is a device check.
 - **Fallback:** the older page (lines as 44-pt rows, the bottom Write button, the one-box editor with Save), behind
   Settings › This device › "Write button on a bit".
 
@@ -763,7 +781,7 @@ nothing" as a button's rule (it is the autosave's rule now).
       tap under a short bit moves the caret to its end instead of landing on nothing.
   16. **The shell (`lib/Screen*`) gained** `scrollWatch` (scroll position, height, the dismiss mode), `offlineNote`,
       and a ground behind the bottom footnote line.
-  17. **Not done, needs a server change:** the 4000-character limit of a version (§4.3 Limit). **Not done, by
+  17. **Done after the slice (2026-11-16):** a version's limit is 40,000 characters (§4.3 Limit). **Not done, by
       design:** the punch mark and the folded tags are not drawn in the document (no read carries `line_meta` yet,
       3c Slice 3); they are still drawn in the fallback.
   18. **`lineRules` gained `anchorsOf` and `findAnchor`** (a place in the document found by the line's own words,
@@ -865,7 +883,8 @@ those notes on stage on today's Record screen.
       length (`HIG.md` §7). A save that fails keeps his words with "Not saved · Try again", for as long as the app
       runs. **Offline he cannot write notes** ("Add a note · offline"); there is no queue.
   11. **The derived words are shown under "From the bit", muted, and are never saved:** the editor opens empty and
-      they stay in sight until his first note is saved (`tests/setNoteRules.test.mjs --red` pins it).
+      they stay in sight until his first note is saved (`tests/setNoteRules.test.mjs --red` pins it). Each derived
+      note is cut at 300 characters (a version can be a 40,000-character document; the step's `text` has it whole).
   12. **The row lost its quote line** (the notes are under it), the footer hint line is gone, and "Add a joke" reads
       **"Add a bit"** on the list and on the add sheet.
   13. **The Sets card is a system card** (name, "4 bits · 6:10", the bits' names on one run, "Tonight · 7:00 slot ·

@@ -29,6 +29,20 @@ const SHAPE_MIN_SHARED: usize = 2;
 /// A label counts for a bit from this weight.
 const SHAPE_MIN_WEIGHT: f64 = 0.55;
 
+/// A derived note, at most (code points). A version can be a document of 40,000 characters and its setup most of
+/// it; the set page shows two lines of a derived note, and the whole text is on the step already (`text`).
+pub const MAX_DERIVED_CHARS: usize = 300;
+
+/// A derived note cut to [`MAX_DERIVED_CHARS`], with an ellipsis where it was cut.
+fn clip(t: &str) -> String {
+    if py::len(t) <= MAX_DERIVED_CHARS {
+        t.to_string()
+    } else {
+        let head: String = t.chars().take(MAX_DERIVED_CHARS - 1).collect();
+        format!("{}…", py::strip(&head))
+    }
+}
+
 fn text_of<'a>(v: Option<&'a Value>, k: &str) -> Option<&'a str> {
     v.and_then(|x| x.get(k))
         .and_then(Value::as_str)
@@ -43,7 +57,7 @@ pub fn derived(step: &Map<String, Value>) -> Vec<String> {
     let text = step.get("text");
     let split: Vec<String> = ["setup", "reveal"]
         .iter()
-        .filter_map(|k| text_of(text, k).map(str::to_string))
+        .filter_map(|k| text_of(text, k).map(clip))
         .collect();
     let written = text.and_then(|t| t.get("from")).is_some_and(|f| !f.is_null());
     if written && !split.is_empty() {
@@ -56,11 +70,11 @@ pub fn derived(step: &Map<String, Value>) -> Vec<String> {
             .filter(|t| !t.is_empty())
     };
     if let Some(idea) = own("idea") {
-        return vec![idea.to_string()];
+        return vec![clip(idea)];
     }
     if let Some(q) = own("quote") {
         let cut = |k: &str| if py::truthy(step.get(k)) { "…" } else { "" };
-        return vec![format!("{}{q}{}", cut("cut_start"), cut("cut_end"))];
+        return vec![clip(&format!("{}{q}{}", cut("cut_start"), cut("cut_end")))];
     }
     split
 }
@@ -222,6 +236,19 @@ mod tests {
             Vec::<String>::new()
         );
         assert_eq!(derived(&step(&json!({}))), Vec::<String>::new());
+        // a version that is a whole document: the note is its first 300 characters, cut with an ellipsis
+        let page = "meter ".repeat(2000);
+        let long = derived(&step(
+            &json!({"text": {"setup": page, "reveal": "short", "from": "unit:a"}}),
+        ));
+        assert_eq!(long.len(), 2);
+        assert_eq!(py::len(&long[0]), MAX_DERIVED_CHARS);
+        assert!(
+            long[0].starts_with("meter meter") && long[0].ends_with('…'),
+            "{}",
+            long[0]
+        );
+        assert_eq!(long[1], "short");
     }
 
     /// Four bits: the fridge and the GPS share two moves, the doorbell shares one with them, the closer shares none;

@@ -296,6 +296,45 @@ async fn the_writes_land_and_are_read_back_at_once() {
         (StatusCode::CONFLICT, "already undone")
     );
 
+    // a version is a document of several ideas: 40,000 characters are taken (the unit holds them all), one more is
+    // refused and writes nothing; an idea jotted keeps its 4,000. The red arm (run once by hand): with
+    // `pk_kb::MAX_UNIT_CHARS` back at 4,000 the first of these is a 400.
+    let page = "meter".repeat(8000);
+    let (s, r) = post(&st, &format!("/api/jokes/{joke}/versions"), json!({"text": page})).await;
+    assert_eq!(s, StatusCode::OK, "a version of exactly 40,000 characters: {r}");
+    let unit = r["unit"].as_str().expect("the new unit").to_string();
+    let v = st.data().await.expect("data").view(false).await.expect("view");
+    assert_eq!(
+        v.node(&unit)
+            .and_then(|n| n.get("text"))
+            .and_then(Value::as_str)
+            .map(str::len),
+        Some(40_000),
+        "the whole text is stored"
+    );
+    let decisions_before = v.decisions.len();
+    let (s, r) = post(
+        &st,
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": format!("{page}s")}),
+    )
+    .await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (StatusCode::BAD_REQUEST, "text is required (up to 40000 characters)")
+    );
+    let v = st.data().await.expect("data").view(false).await.expect("view");
+    assert_eq!(v.decisions.len(), decisions_before, "a refusal writes nothing");
+    let (s, r) = post(&st, "/api/ideas", json!({"text": "x".repeat(4001)})).await;
+    assert_eq!(
+        (s, r["error"].as_str().unwrap()),
+        (
+            StatusCode::BAD_REQUEST,
+            "an idea needs its text (up to 4000 characters)"
+        ),
+        "an idea is still a jot"
+    );
+
     // the refusals the Python answers with, to the letter
     let (s, r) = post(&st, "/api/ideas", json!({"text": "   "})).await;
     assert_eq!(

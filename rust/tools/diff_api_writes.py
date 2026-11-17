@@ -563,7 +563,8 @@ def refusals() -> None:
         ("transcript: bad venue", "POST", "/api/sets/transcript", {"segments": [{"text": "a"}], "venue": "v" * 121}, None),
         ("transcript: bad duration", "POST", "/api/sets/transcript", {"segments": [{"text": "a"}], "duration_s": -3}, None),
         ("versions: no text", "POST", "/api/jokes/joke:a/versions", {}, None),
-        ("versions: too long", "POST", "/api/jokes/joke:a/versions", {"text": long}, None),
+        # a version is a document (40,000 characters since 2026-11-16; an idea keeps 4,000): one over is refused
+        ("versions: too long", "POST", "/api/jokes/joke:a/versions", {"text": "x" * 40001}, None),
         ("versions: no such joke", "POST", "/api/jokes/joke:nope/versions", {"text": "a line"}, None),
         ("versions: a unit", "POST", "/api/jokes/unit:a1/versions", {"text": "a line"}, None),
         ("versions: hidden bit", "POST", "/api/jokes/joke:g/versions", {"text": "a line"}, None),

@@ -111,7 +111,7 @@ if (red) {
 check(savesOnlyWords(L.saveDecision), "a save is a new version only when the words changed: not for trailing spaces, blank ends, line-end style or an empty document; a removed gap between ideas IS a change");
 check(L.docText("\n\n  My fridge.  \r\nIt has wifi.\n\n\n") === "  My fridge.  \nIt has wifi." && L.docText(null) === "", "the text sent keeps his spacing and blank lines; only the blank ends and the line-end style go");
 check(L.sameDoc("a \nb", "a\nb\n") && !L.sameDoc("a\nb", "a\n\nb") && !L.sameDoc("a b", "a  b"), "two texts are the same when only trailing space differs; a blank line or a space inside a line is a difference");
-check(L.tooLongNote("x".repeat(4120)) === "Too long to save · 4,120 of 4,000", "the one reason a long document is not saved says both numbers");
+check(L.MAX_DOC === 40000 && L.tooLongNote("x".repeat(40120)) === "Too long to save · 40,120 of 40,000", "the one reason a long document is not saved says both numbers (the limit is the server’s: 40,000 characters)");
 
 // ---- structure read out of the text
 check(keepsIdeas(L.rowsOf, L.textOf), "a blank line separates ideas, a run of blank lines is one gap, and rows -> text -> rows is the same document");
@@ -147,7 +147,7 @@ check(eq(L.parseBitDraft(JSON.stringify(d)), { v: 1, bit: "joke:fridge", cut: "r
 check(L.parseBitDraft('{"v":1,"bit":"joke:x","cut":"stage","text":') === null && L.parseBitDraft("") === null && L.parseBitDraft('{"v":2,"bit":"joke:x","cut":"stage","text":"a"}') === null && L.parseBitDraft('{"v":1,"bit":"joke:x","cut":"web","text":"a"}') === null && L.parseBitDraft('{"v":1,"bit":"","cut":"stage","text":"a"}') === null, "a half-written file, another format, an unknown cut or no bit is no draft");
 check(L.draftName("joke:fridge", "stage") === "joke:fridge" && L.draftName("joke:fridge", "rant") === "joke:fridge~rant", "one draft per bit and cut");
 const dr = (text) => L.bitDraft("joke:fridge", "stage", "unit:f3", text, "");
-check(L.flushPlan(dr(DOC + "\nTyped offline."), DOC) === "save" && L.flushPlan(dr(DOC + " "), DOC) === "drop" && L.flushPlan(dr(""), DOC) === "drop" && L.flushPlan(dr("x".repeat(5000)), DOC) === "keep", "a draft found at launch is saved when it says something new, dropped when the bit says it or it is empty, kept when too long");
+check(L.flushPlan(dr(DOC + "\nTyped offline."), DOC) === "save" && L.flushPlan(dr(DOC + " "), DOC) === "drop" && L.flushPlan(dr(""), DOC) === "drop" && L.flushPlan(dr("x".repeat(L.MAX_DOC + 1)), DOC) === "keep", "a draft found at launch is saved when it says something new, dropped when the bit says it or it is empty, kept when too long");
 check(L.flushPlan(dr("Typed offline."), "The bit moved on elsewhere.") === "save", "his draft is saved even when the bit moved on elsewhere: it becomes the newest version, nothing is dropped");
 check(L.flushPlan(dr("An older wording."), "A newer wording, from the laptop.", ["A newer wording, from the laptop.", "An older wording. "]) === "drop", "a draft that an OLDER version already says is dropped: its save landed and only the answer was lost");
 check(L.pauseSaves(1000, null) && !L.pauseSaves(1000 + L.PAUSE_GAP_MS - 1, 1000) && L.pauseSaves(1000 + L.PAUSE_GAP_MS, 1000) && L.PAUSE_GAP_MS > L.PAUSE_MS, "a pause saves a version at most once per gap; the first pause always may");

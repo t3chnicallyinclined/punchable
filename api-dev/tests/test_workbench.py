@@ -65,7 +65,11 @@ def test_unit_add_validates_text_and_id():
     with pytest.raises(K.DecisionError):
         kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "   "}})
     with pytest.raises(K.DecisionError):
-        kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "x" * 4001}})
+        kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "x" * (K.MAX_UNIT_CHARS + 1)}})
+    # a unit is a version of a bit, and a bit is a document: exactly the limit (40,000) is built whole
+    assert K.MAX_UNIT_CHARS == 40000
+    page = kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "x" * K.MAX_UNIT_CHARS}})
+    assert len(page["after"]["text"]) == K.MAX_UNIT_CHARS
     with pytest.raises(K.DecisionError):
         kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "ok", "id": "unit:taken"}})
     d = kb._build(V(), {"target": "node", "action": "add", "after": {"type": "unit", "text": "ok", "id": "unit:draft-abc", "date": "2024-02-03", "doc_title": "Notes"}})

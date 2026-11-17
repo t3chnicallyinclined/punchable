@@ -169,9 +169,10 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    straight into (`lib/BitDoc`), it keeps a draft on the phone and saves versions by itself (`rules/lineRules`,
    `lib/bitDraft`), and Around this bit and In these sets are drawn on the page under the text (`lib/Around`
    `AroundInline`). The older Write button is behind Settings › This device. **Nothing was run on a phone:** whether
-   the caret stays above the keyboard in a long bit is the open question (checks 2, 3 and 9). **Known limit:** a
-   version takes 4000 characters; a longer bit stays on the phone until the route's limit is raised (a server
-   change, not done).
+   the caret stays above the keyboard in a long bit is the open question (checks 2, 3 and 9). **The limit of a version is 40,000
+   characters** (was 4,000; on branch `app/redesign-slice4`, with Slice 4: pk-kb, pk-api, the Python API and the
+   app's `MAX_DOC` together, so **the API images ship before the phone build that allows the longer text**; spec
+   §4.3 "Limit" says what a long version meets).
 0h. **The redesign: Bits · Sets · Tapes (owner 2026-11-16: "ok lets get all this in, maps on the roadmap to figure
    out"): `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`. Slice 1 is built on branch `app/redesign-slice1` (not
    merged, not pushed, not deployed, no phone build): the bit page's "Around this bit" and "In these sets", the
