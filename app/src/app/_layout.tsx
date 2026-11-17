@@ -195,6 +195,9 @@ function RootLayout() {
                     detent first, large on drag; dimmed behind (the page must not change under a choice being made) */}
                 <Stack.Screen name="around" options={{ ...sheet([0.5, 1]), title: t('Around this bit'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="setpick" options={{ ...sheet([0.5, 1]), title: t('Add to a set'), contentStyle: { backgroundColor: C.surface } }} />
+                {/* The redesign, Slice 3 (SPEC 2026-11-16 §3.2): the marks tray. Medium detent first (the bit stays in sight
+                    above it), large on drag; dimmed behind (a note being typed is about the words he marked) */}
+                <Stack.Screen name="marks" options={{ ...sheet([0.5, 1]), title: t('Marks'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

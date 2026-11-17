@@ -52,7 +52,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 42] = [
+pub const OWN_PATHS: [&str; 43] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -95,6 +95,8 @@ pub const OWN_PATHS: [&str; 42] = [
     "/api/export",
     "/api/topics",
     "/api/rants",
+    // the redesign, slice 3 (SPEC 2026-11-16 §3.2): every bit with a redline round open (Bits: "Waiting for you")
+    "/api/redlines",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -103,7 +105,7 @@ pub const OWN_PATHS: [&str; 42] = [
 /// one of these paths is answered here only when the pattern is in [`OWN_WRITE_PATTERNS`] too (PATCH
 /// `/api/boards/<id>`), else forwarded (PATCH `/api/mysets/<id>`); `/api/mysets/match` (the Python's route, not a
 /// set id) is forwarded whatever the method.
-pub const OWN_PATTERNS: [&str; 25] = [
+pub const OWN_PATTERNS: [&str; 26] = [
     "/api/jokes/{id}",
     "/api/jokes/{id}/similar",
     "/api/sets/{id}/analysis",
@@ -131,6 +133,8 @@ pub const OWN_PATTERNS: [&str; 25] = [
     "/api/audio/{id}",
     // the redesign, slice 1 (SPEC 2026-11-16 §3.1): everything tied to one bit
     "/api/jokes/{id}/around",
+    // the redesign, slice 3 (SPEC 2026-11-16 §3.2): the redline round open on a bit (GET; POST sends one)
+    "/api/jokes/{id}/redline",
 ];
 
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
@@ -184,7 +188,7 @@ pub const OWN_WRITE_PATHS: [&str; 40] = [
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 21] = [
+pub const OWN_WRITE_PATTERNS: [&str; 23] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -207,6 +211,9 @@ pub const OWN_WRITE_PATTERNS: [&str; 21] = [
     "/api/topics/{id}",
     // the redesign, slice 4 (SPEC 2026-11-16 §3.3): his bullet notes under a bit of a set list
     "/api/boards/{id}/notes",
+    // the redesign, slice 3 (SPEC 2026-11-16 §3.2): his marks sent once, and the round closed (used, discarded, Undo)
+    "/api/jokes/{id}/redline",
+    "/api/jokes/{id}/redline/resolve",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -587,6 +594,19 @@ pub fn app(st: AppState) -> Router {
         .route("/api/jokes/{id}/around", read_route(&st, routes::around::around))
         .route("/api/links/dismiss", write_route(&st, writes::links::dismiss))
         .route("/api/links/undismiss", write_route(&st, writes::links::undismiss))
+        // the redesign, slice 3 (Rust only): the redline round on a bit, its close, and the bits waiting on him
+        .route(
+            "/api/jokes/{id}/redline",
+            finish(
+                &st,
+                get(guarded(&st, writes::redline::one)).post(guarded_write(&st, writes::redline::send)),
+            ),
+        )
+        .route(
+            "/api/jokes/{id}/redline/resolve",
+            write_route(&st, writes::redline::resolve),
+        )
+        .route("/api/redlines", read_route(&st, writes::redline::list))
         // T11 round 3: "delete my material" (the Python's `delete_me`: records a request, deletes nothing)
         .route(
             "/api/me",

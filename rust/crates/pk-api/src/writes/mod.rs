@@ -39,6 +39,7 @@ pub mod me;
 pub mod merge;
 pub mod mysets;
 pub mod rant;
+pub mod redline;
 pub mod review;
 pub mod say;
 pub mod setnotes;

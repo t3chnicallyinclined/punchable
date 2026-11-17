@@ -161,6 +161,20 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0j. **Redesign Slice 3: the Redline loop on a bit (owner 2026-11-17: "lets make it a whole new draft", and marking up
+   the draft and sending again: "yes possibly"). Built on branch `app/redesign-slice3` (not merged, not pushed, not
+   deployed, no phone build).** `docs/design/SPEC-2026-11-16-bits-sets-tapes.md` §3.2 and §8 Slice 3 "Built" (nineteen
+   calls, the cost table, ten phone checks). He marks words Change, Ask or Keep (or Copy to… a set or a new bit) from a
+   bar on the keyboard; the marks wait on the phone; Send sends them once; a `redline` job (pk-worker, Rust only) makes
+   a whole new draft and answers his Asks; Use this draft is a new version with Undo; round two marks the draft.
+   **Deploy order: the Python API image first** (its `JOB_KINDS` gains `redline`: it replays the shared jobs store and
+   stops every creative route on an unknown kind), **then pk-api** (routes, the `redline` store, the kind; re-apply the
+   Ingresses of `infra/k8s/prepared/t10-api-rs.yaml`: `/api/redlines` exact, `/api/jokes/[^/]+/redline$` and
+   `/api/jokes/[^/]+/redline/resolve$` regex), **then pk-worker** (an older pk-api refuses a claim that lists
+   `redline`, for every kind), then the phone build. An older pk-worker is safe beside the new pk-api: it never claims
+   `redline` and does not replay the jobs or redline stores; rounds wait queued. Rolling pk-api or the Python back below
+   this release once a `redline` job exists needs those job rows dropped first.
+
 0i. **Redesign Slice 2: the bit is a document (owner 2026-11-16: "a bit is a document ... it should be as easy as
    editing a google doc on your phone"). Built on branch `app/redesign-slice2` (not merged, not pushed, no phone
    build; app only, no server change).** `docs/design/SPEC-2026-11-16-bits-sets-tapes.md` B11, §4.3 and §8 Slice 2:

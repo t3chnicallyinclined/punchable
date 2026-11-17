@@ -21,8 +21,8 @@ fn request_bodies_equal_what_the_python_sdk_sent() {
     let cases = g["cases"].as_array().expect("cases");
     assert_eq!(
         cases.len(),
-        56,
-        "three cases per hosted task (creative_rant and creative_hook added for Film it)"
+        59,
+        "three cases per hosted task (creative_rant and creative_hook added for Film it, creative_redline for slice 3)"
     );
     for case in cases {
         let name = case["name"].as_str().unwrap();

@@ -78,6 +78,14 @@ effort = "high"
 offline = true
 fallbacks = ["default"]
 
+[tasks.creative_redline]     # a bit's redline round: his marks in, a whole new draft out (pk-worker kinds/redline.rs, Rust only)
+providers = ["anthropic"]
+models = { anthropic = "claude-opus-5-5" }
+effort = "high"
+max_tokens = 32000           # a whole draft: a bit of up to 12,000 characters is about 3,000 tokens, with thinking on top
+offline = true
+fallbacks = ["default"]
+
 # text-only set analysis (engine/inbox.py over a transcript; the audio parts stay on the phone)
 [tasks.split]
 providers = ["anthropic"]

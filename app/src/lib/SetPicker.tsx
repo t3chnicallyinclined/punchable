@@ -32,15 +32,17 @@ const enc = encodeURIComponent;
 const native = Platform.OS !== 'web';
 const send = (c: A.Call) => (c.method === 'POST' ? post<any>(c.path, c.body) : patch<any>(c.path, c.body));
 
-/** Open the picker for a bit (the route /setpick). */
-export function openSetPicker(bit: string, title?: string) {
-  router.push({ pathname: '/setpick', params: { bit, ...(title ? { title } : {}) } } as any);
+/** Open the picker for a bit (the route /setpick). `note` = words he took from the bit (Slice 3, Take it elsewhere):
+ *  they go under it as a note in each set it is added to. */
+export function openSetPicker(bit: string, title?: string, note?: string) {
+  router.push({ pathname: '/setpick', params: { bit, ...(title ? { title } : {}), ...(note ? { note } : {}) } } as any);
 }
 
 export function SetPicker() {
-  const p = useLocalSearchParams<{ bit: string; title?: string }>();
+  const p = useLocalSearchParams<{ bit: string; title?: string; note?: string }>();
   const bit = decodeURIComponent(String(p.bit || ''));
   const name = String(p.title || '');
+  const note = String(p.note || '');
   const ui = useUI();
   const online = useOnline();
   const bs = useApi<{ boards: BoardListItem[] }>('/api/boards', { cache: false });
@@ -74,7 +76,7 @@ export function SetPicker() {
     const out: A.PickDone = { added: [], removed: [], created: [] };
     const titles: Record<string, string> = Object.fromEntries(boards.map((b) => [b.id, b.title]));
     let failed = '';
-    for (const call of A.pickerCalls(bit, diff, typed)) {
+    for (const call of A.pickerCalls(bit, diff, typed, note)) {
       try {
         const r = await send(call);
         if (call.path === '/api/boards') {
@@ -105,6 +107,12 @@ export function SetPicker() {
   const body = (
     <View style={{ gap: 4 }}>
       {!!name && <T v="mut" style={{ marginBottom: 4 }}>{name}</T>}
+      {!!note && (
+        // Take it elsewhere (Slice 3): the words he picked travel with the bit, as its note in each set he ticks now
+        <Text testID="setpick-note" maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 15, lineHeight: 21, color: C.mut2, paddingBottom: 6 }}>
+          With the note “{note}” in each set you tick (a set you make here gets the bit without it).
+        </Text>
+      )}
       {!ready && <T v="mut" testID="setpick-loading">{bs.rawError ? 'Can’t reach Punchable.' : 'Loading your sets…'}</T>}
       {ready && rows.length === 0 && <T v="mut" testID="setpick-none">No set of yours yet. Name one below.</T>}
       {ready && rows.map((r) => (
