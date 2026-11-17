@@ -2,13 +2,14 @@ import { wrapRoot } from '@/lib/crashReporting'; // first: starts crash reportin
 import { Stack, router, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Appearance, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { GestureRoot } from '@/lib/GestureRoot';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
-import { leaving, useSession } from '@/lib/auth'; // importing it registers the bearer with api.ts; off on a local API
+import { leaving, loginHeld, setRoutePath, useSession } from '@/lib/auth'; // importing it registers the bearer with api.ts; off on a local API
+import { isRecording, onRecording } from '@/lib/audioBusy';
 import { isPublicPath, loginHref } from '@/lib/session';
 import { SignInBtn, UIProvider, useUI } from '@/lib/ui';
 
@@ -101,20 +102,28 @@ function PhotosBadge() {
   return null;
 }
 
+/** Re-render the gate when a tape starts or stops (lib/audioBusy). */
+const onTape = (changed: () => void) => onRecording(() => changed());
+
 /**
  * Hosted: every page but /login, /auth/callback, /privacy and /terms needs him signed in. A signed-out visitor who opens
  * a deep link (punchable.io/joke/…) goes to /login?next=/joke/… and lands back on that page after signing in.
  * While the stored sign-in is being checked, the page is covered so nothing private flashes.
+ * A session that ends mid-take does not move him (rules/signinRules loginHolds): no redirect and no cover while a tape
+ * runs or he is on a take screen, so he can still press Stop and the screen saves the take; leaving it sends him on.
  */
 function AuthGate() {
   const sess = useSession();
   const pathname = usePathname();
+  const tape = useSyncExternalStore(onTape, isRecording, isRecording);
   const open = !sess.enabled || isPublicPath(pathname);
+  const held = !open && !sess.signedIn && loginHeld(pathname);
+  useEffect(() => setRoutePath(pathname), [pathname]);
   useEffect(() => {
-    if (open || sess.checking || sess.signedIn || leaving) return;
+    if (open || sess.checking || sess.signedIn || leaving || held) return;
     router.replace(loginHref(pathname, ((globalThis as any).location?.search as string) || '') as any);
-  }, [open, sess.checking, sess.signedIn, pathname]);
-  if (open || sess.signedIn) return null;
+  }, [open, sess.checking, sess.signedIn, pathname, held, tape]);
+  if (open || sess.signedIn || held) return null;
   return (
     <View testID="auth-gate" style={[StyleSheet.absoluteFill, { zIndex: 50, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }]}>
       {sess.checking ? (

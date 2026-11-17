@@ -1,18 +1,24 @@
 // You (from the avatar): who is signed in, how, and Sign out. Settings, Connections and Learned are one tap down.
 // Name, email and photo come from the ID token's claims (src/lib/session.ts); nothing here calls the API.
+// Sign out waits while a tape runs (rules/signinRules signOutGate): greyed out, with the reason under it.
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { signOut, useSession } from '@/lib/auth';
+import { signOut, signOutBlocked, useSession } from '@/lib/auth';
+import { onRecording } from '@/lib/audioBusy';
 import { C } from '@/lib/theme';
 import { Btn, Card, Face, List, ListRow, SignInBtn, T } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
+
+/** Re-render when a tape starts or stops (lib/audioBusy): Sign out greys out while one runs. */
+const onTape = (changed: () => void) => onRecording(() => changed());
 
 export default function ProfilePage() {
   const sess = useSession();
   const p = sess.profile;
   const [leavingNow, setLeavingNow] = useState(false);
+  const blocked = useSyncExternalStore(onTape, signOutBlocked, signOutBlocked);
 
   return (
     <Screen title="You" back testID="profile">
@@ -58,12 +64,16 @@ export default function ProfilePage() {
 
       {sess.enabled && sess.signedIn && (
         <View style={{ gap: 8 }}>
-          <Btn testID="sign-out" label={leavingNow ? 'Signing out…' : 'Sign out'} disabled={leavingNow}
+          <Btn testID="sign-out" label={leavingNow ? 'Signing out…' : 'Sign out'} disabled={leavingNow || !!blocked}
             onPress={() => {
               setLeavingNow(true);
               signOut().finally(() => setLeavingNow(false));
             }} />
-          <T v="small" style={{ textAlign: 'center' }}>Signs you out on this device and on auth.punchable.io. Your material stays where it is.</T>
+          {blocked ? (
+            <T v="small" testID="sign-out-blocked" style={{ textAlign: 'center' }} accessibilityRole="alert">{blocked}</T>
+          ) : (
+            <T v="small" style={{ textAlign: 'center' }}>Signs you out on this device and on auth.punchable.io. Your material stays where it is. Recordings and bit drafts not sent yet stay on this iPhone and go in when you sign back in.</T>
+          )}
         </View>
       )}
     </Screen>

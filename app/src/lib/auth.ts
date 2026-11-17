@@ -10,7 +10,11 @@
 //   - sends the token as the first message on /api/live (never in the URL),
 //   - sends him to /login?next=<the page he was on> on any 401 from the API.
 // Session state for screens: useSession() (signed in? who? from the ID token's claims). signOut() ends the Keycloak
-// session too (RP-initiated logout with id_token_hint, back to https://punchable.io/).
+// session too (RP-initiated logout with id_token_hint, back to https://punchable.io/). Neither signOut() nor the trip
+// to /login when the session ends happens while a tape runs or he is on a take screen (lib/audioBusy,
+// rules/signinRules loginHolds; the root layout's AuthGate tells this module the path): the take is saved first.
+// Signing out forgets the tokens only: recordings, their upload queue and the bit and script drafts stay on the phone
+// and go in after he signs back in.
 // Local dev (the API on 127.0.0.1) has no auth: all of this stays off, unless the tab was opened with ?auth=on
 // (the e2e test uses it to see the signed-out behaviour; the switch can only turn sign-in ON, never off).
 import { useEffect, useState } from 'react';
@@ -22,6 +26,8 @@ import { Platform } from 'react-native';
 import { API_URL, setAuthHeaderProvider } from './api';
 import { Profile, endSessionUrl, loginHref, originSlash, profileFrom } from './session';
 import { retry } from '@/rules/retry';
+import { loginHolds, signOutGate } from '@/rules/signinRules';
+import { isRecording } from './audioBusy';
 import { Tokens } from './tokenMachine';
 
 if (Platform.OS === 'web') WebBrowser.maybeCompleteAuthSession(); // web only: the popup's /auth/callback hands the code back to the opener
@@ -124,6 +130,22 @@ const machine = new Tokens({
   store: { load: loadRefresh, save: saveRefresh },
   log: (m) => console.warn('[auth]', m),
 });
+// Signed in at some point in this launch: a session that ends under him on a take screen holds the trip to sign-in
+// (rules/signinRules loginHolds); a signed-out visitor who opens a take screen by link is not held.
+let hadSession = false;
+machine.onChange((on) => {
+  if (on) hadSession = true;
+});
+/** Whether the trip to sign-in waits right now (a tape runs, or he is on a take screen after his session ended). */
+export function loginHeld(path: string): boolean {
+  return loginHolds({ recording: isRecording(), path, hadSession: hadSession || machine.signedIn });
+}
+let routePath = '/';
+/** The root layout's AuthGate tells this module where he is (goLogin cannot read the router's path on the phone). */
+export function setRoutePath(p: string) {
+  routePath = p;
+  if (p === '/login' && !machine.signedIn) hadSession = false; // he reached sign-in: a take screen opened next is not held
+}
 
 /** A valid access token, refreshed when it has under 60 s left; null when signed out. A network problem keeps the
  *  session and returns the stale token (the API decides; a 401 then goes through handle401, not straight to /login). */
@@ -208,21 +230,30 @@ export async function completeSignIn(code: string, codeVerifier: string | undefi
   await machine.accept(r);
 }
 
+/** Why Sign out has to wait right now (a tape is running), or null when it can go. */
+export function signOutBlocked(): string | null {
+  const g = signOutGate({ recording: isRecording() });
+  return g.ok ? null : g.reason;
+}
+
 /**
  * Sign out of Punchable AND end the Keycloak session (otherwise the next "Continue with Google" signs him straight back
  * in without asking). Web: the browser goes to Keycloak's end_session endpoint with id_token_hint and comes back to
  * https://punchable.io/, signed out. Phone: the same URL in an auth session, back to punchable://auth/logout.
- * If Keycloak can't be reached, the refresh token is revoked instead; this device forgets it either way.
+ * On the phone the refresh token is then revoked as well (he may have cancelled the sheet, or Keycloak may have had
+ * no session to end); this device forgets it either way. Refused (resolves false, nothing changes) while a tape runs.
  */
-export async function signOut(): Promise<void> {
+export async function signOut(): Promise<boolean> {
+  if (signOutBlocked()) return false;
   const idToken = machine.tokens?.idToken ?? null;
   const rt = machine.tokens?.refresh ?? (await loadRefresh());
   leaving = true;
   await machine.clear();
+  hadSession = false; // signed out on purpose: a take screen opened later is not a session that ended under him
   if (!AUTH_ENABLED) {
     leaving = false;
     goLogin();
-    return;
+    return true;
   }
   let d: AuthSession.DiscoveryDocument | null = null;
   try {
@@ -234,30 +265,40 @@ export async function signOut(): Promise<void> {
     const url = endSessionUrl(d.endSessionEndpoint, { idToken, redirect: POST_LOGOUT_URI, clientId: CLIENT_ID });
     if (Platform.OS === 'web') {
       (globalThis as any).location.assign(url);
-      return;
+      return true;
     }
     try {
       await WebBrowser.openAuthSessionAsync(url, POST_LOGOUT_URI);
     } catch {
-      /* he closed the sheet: this device is signed out anyway */
-    }
-  } else if (rt && d?.revocationEndpoint) {
-    try {
-      await AuthSession.revokeAsync({ clientId: CLIENT_ID, token: rt }, d);
-    } catch {
-      /* already gone */
+      /* the sheet failed: revoked below; this device is signed out anyway */
     }
   }
+  // Always, after the sheet: he may have cancelled iOS's "wants to use … to Sign In" alert, or Keycloak found no hint
+  // and no cookie to end. Revoking pk-mobile's refresh token removes its client session, and the SSO session with it
+  // when no other client holds one (Keycloak 26.5.2 TokenRevocationEndpoint); revoking a dead token is a 200.
+  await revoke(rt, d);
   leaving = false;
   goLogin();
+  return true;
+}
+async function revoke(rt: string | null, d: AuthSession.DiscoveryDocument | null) {
+  if (!rt || !d?.revocationEndpoint) return;
+  try {
+    await AuthSession.revokeAsync({ clientId: CLIENT_ID, token: rt }, d);
+  } catch {
+    /* already gone, or offline: the token is forgotten here either way */
+  }
 }
 /** True while the browser is on its way to Keycloak's sign-out page (nothing should redirect meanwhile). */
 export let leaving = false;
 
 let redirecting = false;
-/** To /login, remembering the page he was on (web), so he lands back on it after signing in. */
+/** To /login, remembering the page he was on (web), so he lands back on it after signing in. Not while the trip is
+ *  held (a tape runs, or he is on a take screen): replacing the screens would stop the recorder mid-set. The root
+ *  layout's AuthGate sends him once he has left the take screen (it re-runs on every path change while signed out). */
 export function goLogin() {
   if (redirecting || leaving) return;
+  if (loginHeld(routePath)) return;
   redirecting = true;
   setTimeout(() => {
     redirecting = false;
