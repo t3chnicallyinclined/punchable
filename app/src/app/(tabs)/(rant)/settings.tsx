@@ -119,9 +119,10 @@ function ConnectionsCard() {
   useEffect(() => {
     if (AUTH_ENABLED && RECONNECT_ON_WEB) getDiscovery().then(setDiscovery, () => {}); // local copy: no sign-in server to ask; phone: no request at all
   }, []);
-  // "Reconnect Google": the same sign-in as the login screen's Google button, but prompt=login makes Keycloak go to
-  // Google again even with a live session, so Google grants Drive access afresh (realm IdP: offline + consent) and
-  // Keycloak stores the new token that gsync reads.
+  // "Reconnect Google" (web only): the login screen's Google request, but prompt=login makes Keycloak go to Google
+  // again even with a live session, and Keycloak stores the new Google token (realm IdP storeToken). Since 2026-10-26
+  // the realm asks Google for basic scopes only (openid, email, profile; no offline access, no consent), so this
+  // renews sign-in and nothing for Drive: Docs sync holds its own Google token on his PC (pk-gsync README; T11 §8.1).
   const [req, res, prompt] = AuthSession.useAuthRequest(authRequestConfig({ kc_idp_hint: 'google', prompt: 'login' }), discovery);
   // The code -> tokens, once per result (lib/useCodeExchange: a rebuilt request cannot re-exchange the same code).
   useCodeExchange(res, req, () => {
@@ -294,7 +295,7 @@ export default function SettingsPage() {
         <List>
           <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
           {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4); phone only; removed once they are answered */}
-          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Six checks for the next builds" onPress={() => router.push('/spike' as any)} />}
+          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Seven checks for the next builds" onPress={() => router.push('/spike' as any)} />}
         </List>
       </Card>
       <Card style={{ gap: 10 }}>

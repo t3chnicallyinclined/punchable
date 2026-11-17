@@ -13,6 +13,8 @@
 //   7    recording while the walk-through shows, then the camera on top, muted and unmuted (§4.4): /spike-run.
 //   8-9  two things seen in passing (§5 R11): whether the conversation's input bar is drawn on this phone, and
 //        whether localStorage survives closing the app (several small stores lean on it).
+//   10   Private sign-in (SPEC 2026-11-17 §9.2 step 7): the Google button in an ephemeral sheet. lib/deviceChecks,
+//        memory only like check 4; the login screen reads it.
 //
 // This page scrolls in the Bits stack so the system tab bar is beneath and minimises (check 1 and check 4 need that).
 // Removed, with its three sibling pages, the tab shell's two test controls and (tabs)/recslot, once the answers are in.
@@ -76,7 +78,7 @@ export default function SpikePage() {
           <Stack.Toolbar.Button icon="record.circle" tintColor={C.red} accessibilityLabel="Record (a test control: nothing is recorded)" onPress={() => deviceChecks.tapped('the top bar')} />
         </Stack.Toolbar>
       )}
-      <T v="mut">Six checks for the next builds. Each says what to do and what pass looks like; tell us which way each went, one line each. Checks 2, 3 and 6 are gone: a bit is one page you type into now, so there is nothing left to ask.</T>
+      <T v="mut">Seven checks for the next builds. Each says what to do and what pass looks like; tell us which way each went, one line each. Checks 2, 3 and 6 are gone: a bit is one page you type into now, so there is nothing left to ask.</T>
 
       <T v="eb" accessibilityRole="header">The bit page</T>
       {BIT_PAGE.map(([title, doIt, pass]) => (
@@ -127,6 +129,14 @@ export default function SpikePage() {
         <T v="mut">Read the line below. Close the app completely (swipe it away), open it and come back to this page.</T>
         <T v="semi" testID="check-storage-line">{stored}</T>
         <T v="small">Pass: after reopening, the line says it found the stamp you saw before. If it says “No stamp found” every time, the current set list and a few other choices are forgotten on every launch.</T>
+      </Card>
+
+      <T v="eb" accessibilityRole="header">Sign-in</T>
+      <Card style={{ gap: 6 }} testID="check-private-signin">
+        <T v="semi">10 · Private sign-in</T>
+        <T v="mut">Switch it on, then You › Sign out, then Sign in with Google.</T>
+        <SwitchRow testID="check-private-signin-switch" label="Private sign-in (Google asks for your password)" value={checks.privateSignIn} disabled={!native} onChange={(v) => deviceChecks.set({ privateSignIn: v })} />
+        <T v="small">With it on, Google asks for your password (and 2-step) every time, and iOS does not ask whether Punchable may use the site. With it off, Google shows its account chooser and you pick yours. Tell us whether to keep it off. Closing the app switches it off.</T>
       </Card>
 
       <T v="eb">Filler so the page scrolls</T>

@@ -1,11 +1,16 @@
 // Sign in (hosted only). The screen before Keycloak's page (infra/keycloak/theme, auth.punchable.io), matched to it:
-// the lockup, one line of what Punchable is, and the way in.
-//   Phone: ONE button, "Sign in". It opens Keycloak's page in the in-app browser sheet (expo-web-browser auth session,
-//          redirect punchable://auth/callback); that page offers Google and email. No Google button in the native
-//          app (owner decision; App Store guideline 4.8 would then require Sign in with Apple as an equal option).
-//   Web:   the same, plus "Sign in with Google" (kc_idp_hint=google: Keycloak hands straight to Google) when the realm
-//          offers the IdP (EXPO_PUBLIC_OIDC_GOOGLE=0 hides it). The email button is then "Sign in with email".
-// Both are the same authorization-code + PKCE request to Keycloak (src/lib/auth.ts, unchanged).
+// the lockup, one line of what Punchable is, and the way in. The buttons and their parameters are rules/signinRules
+// (ADR 0005 as amended 2026-11-17; SPEC 2026-11-17 Slice 1):
+//   "Sign in with Google" on the phone and the web: kc_idp_hint=google (Keycloak hands straight to Google) plus
+//          prompt=select_account (Google shows its account chooser). The chooser shows after a sign-out because
+//          signOut() ends the Keycloak session; a live Keycloak session would sign straight in without Google.
+//          EXPO_PUBLIC_OIDC_GOOGLE=0 hides it (a realm without the IdP). Phone: Settings › Device checks › Private
+//          sign-in opens it in an ephemeral sheet (nothing shared with Safari: Google asks for the password).
+//   "Sign in with email" (or "Sign in" when it is the only way): Keycloak's own page.
+// Both open in the system auth sheet on the phone (expo-web-browser auth session, redirect punchable://auth/callback)
+// and a popup on the web; both are the same authorization-code + PKCE request to Keycloak (src/lib/auth.ts).
+// Internal TestFlight only while Google is the only social way: App Store guideline 4.8 requires Sign in with Apple
+// as an equal option before any external tester (Slice 3).
 import * as AuthSession from 'expo-auth-session';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -14,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Lockup } from '@/lib/Brand';
 import { AUTH_ENABLED, ISSUER, authRequestConfig, getAccessToken, rememberWay } from '@/lib/auth';
+import { deviceChecks } from '@/lib/deviceChecks';
+import { FOOTER, emailLabel, paramsFor, promptOptions, signInWays } from '@/rules/signinRules';
 import { useCodeExchange } from '@/lib/useCodeExchange';
 import { safeNext } from '@/lib/session';
 import { C, F } from '@/lib/theme';
@@ -21,10 +28,12 @@ import { crashText, type CrashRecord } from '@/lib/crashlog';
 import { clearLastCrash, readLastCrash } from '@/lib/crashReport';
 import { copyOrShare } from '@/lib/CrashScreen';
 
-const BASE = authRequestConfig();
-const GOOGLE = authRequestConfig({ kc_idp_hint: 'google' });
-/** Google is a web-only shortcut; the realm offers it (realm-punchable.yaml identityProviders) unless the build says no. */
-const GOOGLE_OFFERED = Platform.OS === 'web' && (process.env as Record<string, string | undefined>).EXPO_PUBLIC_OIDC_GOOGLE !== '0';
+const BASE = authRequestConfig(paramsFor('email'));
+const GOOGLE = authRequestConfig(paramsFor('google'));
+/** The realm offers Google (realm-punchable.yaml identityProviders) unless the build says no. */
+const WAYS = signInWays(Platform.OS, (process.env as Record<string, string | undefined>).EXPO_PUBLIC_OIDC_GOOGLE === '0');
+const GOOGLE_OFFERED = WAYS.includes('google');
+const EMAIL_LABEL = emailLabel(WAYS);
 const PITCH = 'Every bit you’ve written, and how long they laughed.';
 
 type Way = 'google' | 'email';
@@ -86,7 +95,7 @@ export default function Login() {
     setWay(w);
     setCleared(w === 'google' ? gResult : eResult);
     setPopupErr(null);
-    (w === 'google' ? gPrompt : ePrompt)().catch((e) =>
+    (w === 'google' ? gPrompt : ePrompt)(promptOptions(w, deviceChecks.get().privateSignIn)).catch((e) =>
       setPopupErr(/popup/i.test(String(e?.message)) ? 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.' : plain(e?.message)),
     );
   };
@@ -142,13 +151,13 @@ export default function Login() {
           <Pressable
             testID="login-button"
             accessibilityRole="button"
-            accessibilityLabel={GOOGLE_OFFERED ? 'Sign in with email' : 'Sign in'}
+            accessibilityLabel={EMAIL_LABEL}
             accessibilityHint="Opens the sign-in page"
             accessibilityState={{ disabled: off, busy: busy && way === 'email' }}
             disabled={off}
             onPress={() => go('email')}
             style={({ pressed }) => [s.primary, { backgroundColor: amber }, off && s.off, pressed && { opacity: 0.9 }]}>
-            {busy && way === 'email' ? <ActivityIndicator color={ink} /> : <Text style={[s.primaryText, { color: ink }]}>{GOOGLE_OFFERED ? 'Sign in with email' : 'Sign in'}</Text>}
+            {busy && way === 'email' ? <ActivityIndicator color={ink} /> : <Text style={[s.primaryText, { color: ink }]}>{EMAIL_LABEL}</Text>}
           </Pressable>
           {!ready && !error ? <Text style={[s.note, { color: C.mut2 }]}>Reaching the sign-in server…</Text> : null}
           {error ? (
@@ -175,7 +184,7 @@ export default function Login() {
             </View>
           </View>
         ) : null}
-        <Text style={[s.foot, { color: C.dim }]}>Punchable is one comic’s notebook. There’s no sign-up.</Text>
+        <Text style={[s.foot, { color: C.dim }]}>{FOOTER}</Text>
       </View>
     </ScrollView>
   );

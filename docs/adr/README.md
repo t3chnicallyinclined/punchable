@@ -10,7 +10,7 @@ from `docs/HANDOVER.md`, `docs/RUST.md` and `docs/design/HIG.md`.
 | [0002](0002-popular-crates-only.md) | popular, maintained crates only |
 | [0003](0003-app-stays-typescript.md) | the app stays TypeScript |
 | [0004](0004-phone-and-frontier-models-only.md) | phone + frontier models only |
-| [0005](0005-testflight-only.md) | TestFlight only; email sign-in on the phone |
+| [0005](0005-testflight-only.md) | TestFlight only; email sign-in on the phone (amended 2026-11-17: email, Google, then Apple on the phone; internal TestFlight until Apple) |
 | [0006](0006-nothing-private-in-the-public-repo.md) | nothing private in the public repo |
 | [0007](0007-equality-is-parsed-json.md) | equality is of parsed JSON values |
 | [0008](0008-whitespace-is-unicode-white-space.md) | whitespace means Unicode White_Space |

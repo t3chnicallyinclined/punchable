@@ -12,12 +12,15 @@ export type DeviceChecks = {
   accessoryHidden: boolean;
   /** 4.1 fallback (a): a Record button in the tab bar's trailing slot. Turning it on or off reloads the tabs. */
   recordTab: boolean;
+  /** 10 (SPEC 2026-11-17 §9.2 step 7): "Private sign-in", the Google button in an ephemeral sheet (no cookies shared
+   *  with Safari), so Google asks for the password every time. Read by the login screen. */
+  privateSignIn: boolean;
   /** How many times a test Record control was tapped, and which one last. */
   taps: number;
   last: string;
 };
 
-let value: DeviceChecks = { accessory: false, accessoryHidden: false, recordTab: false, taps: 0, last: '' };
+let value: DeviceChecks = { accessory: false, accessoryHidden: false, recordTab: false, privateSignIn: false, taps: 0, last: '' };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
