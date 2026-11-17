@@ -139,6 +139,9 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 | Trap | Rule |
 |---|---|
 | A Python `set` on the path to a golden | Its order follows `PYTHONHASHSEED`, so the regenerated golden differs run to run and CI's `goldens-current` goes red while the gate stays green (`kb.py joke_scope`, 2026-10-29). Sort every set in the generator; where Python's order is the behaviour, normalise on both sides and say so. |
+| A new kind of row in a creative store (`creative_event`) | `/api/live` watches that table (`pk-store/src/live.rs:19`): every row pushes a change event to the phone, and every append replays the whole store. High-rate rows (the usage meter's calls) get their own table (2026-11-17). |
+| A refusal or a cut answer from the model | Billed and charged in the ledger before the error is raised (`pk-llm/src/backend.rs`). Its call record keeps the Python's fields (0 tokens, no USD: the `ask` result sums them and must match), and what it cost rides in `CallRecord.billed`, which the meter and the `pk_ai_*` metrics read. Putting the cost in the Python fields instead broke the worker differential once in three runs (`ask_plan_refused`, 2,400 vs 1,200 tokens). The differential now checks one recorded call per model answer. |
+| A file `include_str!`-ed into a Rust crate | Both `rust/Dockerfile.*` COPY lines and both `.dockerignore` allow-lists name each `db/*.surql` file one by one: a new one must be added to all four, or the image build fails (the gate does not build images). |
 | Saving a file on this Windows checkout (`core.autocrlf=true`) and committing with `autocrlf=false` | Stores CRLF and turns a 100-line change into a whole-file diff (three lanes did it on 2026-10-29). Write every file with LF (`newline="
 "`); the root `.gitattributes` (`* text=auto eol=lf`, 2026-10-29) now normalises on add. In a shared checkout commit by pathspec (`git commit -- <paths>`), never a bare commit over others' staged files. |
 | `python -I` on the owner's PC | Cannot see the user site (numpy lives there): run the golden generators with plain `python`. |
@@ -162,6 +165,29 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 | Never on the server | `docker run` (restarts the whole cluster), `ship.sh test`, touching other namespaces beyond the agreed Keycloak theme mount and the observability ConfigMaps. |
 
 ## Open, in order
+
+0l. **Usage metering, phase 1 (owner 2026-11-17: "lets make sure we monitor account usage so we can tell how much
+   users are using and how actinve/how much a user would cost or pay per month"). Built on branch
+   `app/usage-metering` (not merged, not pushed, not deployed, no phone build).**
+   `docs/design/SPEC-2026-11-17-social-sign-in-and-docs-import.md` §13 (what is measured, where, privacy, the calls,
+   the proof, the reviews, phase 2) and §11 (the owner's answers: "yes to all your recommendations"; Q8 the Google
+   project's publishing status and Q9 whether his Punchable email is his Gmail are **still open**).
+   - **What is built:**
+     - pk-api's meter writes three new tables (`db/schema_usage.surql`, pk-api's own file, outside the shared shas).
+     - `POST /api/worker/usage` takes the worker's charged calls.
+     - The owner-only `GET /api/admin/usage` (pinned to `PK_OWNER_SUB`, fail closed) and `GET /api/usage/access` serve
+       the app.
+     - Aggregate `pk_usage_*` gauges for Prometheus.
+     - Settings › About › Usage on the phone and the web.
+   - **Found and fixed on the way:** refused and cut-short answers were charged in the ledger but missing from the
+     call records and the `pk_ai_*` metrics. The price table is re-read 2026-11-17: Sonnet 5.5 cache hits are $0.10,
+     Haiku 5.5 has long-prompt prices, and the fallback is now the dearest model. It is one table, `pk_core::prices`,
+     with `engine/budget.py` and the budget golden kept equal.
+   - **The spend ledger is a file on the worker pod's emptyDir:** it survives a container restart, but not a pod
+     replacement (every rollout), and it is not per account.
+   - **Deploy order (§13.7):** set `PK_OWNER_SUB` in `infra/config.env` → pk-api plus the three new Exact Ingress
+     paths → pk-worker (an older pk-api 404s its posts; the calls wait) → the phone build. No Python change and no
+     shared schema change.
 
 0k. **Social sign-in Slice 1: Google sign-in and a real sign-out on the phone (owner 2026-11-17: "should we make the
    social log in too"). Built on branch `app/signin-google` (not merged, not pushed, no phone build; app only, no
