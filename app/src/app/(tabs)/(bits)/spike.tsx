@@ -1,13 +1,15 @@
 // Device checks: the questions only his phone can answer, each with what to do and what pass looks like. Reached from
 // Settings › About › Device checks. Sentences are allowed here: it is an instrument, not a screen.
 //
-//   1-3  the bit page (SPEC 2026-11-03 §4.1; still unanswered): the bottom toolbar against the tab bar (this page),
-//        the glass bar above the keyboard and dictation into per-line inputs (/spike-write).
+//   1    the bit page (SPEC 2026-11-03 §4.1; still unanswered): the bottom toolbar against the tab bar (this page).
+//        It decides where Slice 3's Send sits, and the older Write button behind the preference still uses it.
 //   4    where Record sits (SPEC 2026-11-16 §4.1, §7 Q1): a strip above the tab bar (the bottom accessory), a button
 //        at the end of the tab bar (the trailing slot), a button in the top bar (this page's own). The switches are
 //        lib/deviceChecks: memory only, off at every launch. No test control records anything.
 //   5    highlighting words in a line and our own marks row (§4.2): /spike-select.
-//   6    Backspace at the start of a line, the Join up key, the caret after a split and a join (§4.3): /spike-write.
+//   2, 3, 6  retired with the line editor mock (Slice 2): a bit is one document in one text field now, so the
+//        glass bar above the keyboard, dictation into per-line inputs and Backspace joining two inputs are no longer
+//        questions. The numbers of the other checks are kept, so an answer given on build 28 still names the same check.
 //   7    recording while the walk-through shows, then the camera on top, muted and unmuted (§4.4): /spike-run.
 //   8-9  two things seen in passing (§5 R11): whether the conversation's input bar is drawn on this phone, and
 //        whether localStorage survives closing the app (several small stores lean on it).
@@ -30,10 +32,6 @@ const LS_KEY = 'pk.devcheck.ls';
 const BIT_PAGE: [string, string, string][] = [
   ['1 · Bottom toolbar vs the tab bar', 'Scroll down (the tab bar shrinks), scroll up. Tap Write below. Then Back to Bits.',
     'Pass: Write floats above the tab bar in both states and is tappable (a message pops up at the bottom); the footnote line sits just above Write; no empty bar is left on Bits after Back.'],
-  ['2 · The glass bar above the keyboard', 'Open the line editor mock. Tap a line (keyboard up), move through the lines, hide the keyboard, bring it back.',
-    'Pass: a 56-pt glass bar sits flush on the keyboard with no gap or overlap, moves with it, and returns to the bottom edge on dismiss.'],
-  ['3 · Dictation into per-line inputs', 'In the line editor mock press the keyboard’s mic, say “line one, new line, line two”, stop. Then dictate and tap another line mid-sentence.',
-    'Pass: the words land in the focused line; “new line” becomes a new line (the log says which way it arrived); Return between typed lines moves the caret without a keyboard flash.'],
 ];
 
 let probed: string | null = null;
@@ -78,7 +76,7 @@ export default function SpikePage() {
           <Stack.Toolbar.Button icon="record.circle" tintColor={C.red} accessibilityLabel="Record (a test control: nothing is recorded)" onPress={() => deviceChecks.tapped('the top bar')} />
         </Stack.Toolbar>
       )}
-      <T v="mut">Nine checks for the next builds. Each says what to do and what pass looks like; tell us which way each went, one line each.</T>
+      <T v="mut">Six checks for the next builds. Each says what to do and what pass looks like; tell us which way each went, one line each. Checks 2, 3 and 6 are gone: a bit is one page you type into now, so there is nothing left to ask.</T>
 
       <T v="eb" accessibilityRole="header">The bit page</T>
       {BIT_PAGE.map(([title, doIt, pass]) => (
@@ -107,12 +105,6 @@ export default function SpikePage() {
         <T v="mut">Open the selection mock. Press and hold a word, drag the handles, tap a line once.</T>
         <T v="small">Pass: press and hold selects words; a row under the line names exactly those words; a short tap still opens the line. Say whether the Copy bubble shows and whether it is in the way, with the switch on and off.</T>
         <Btn testID="spike-open-select" label="Open the selection mock" onPress={() => router.push('/spike-select' as any)} />
-      </Card>
-      <Card style={{ gap: 6 }}>
-        <T v="semi">6 · Backspace joins two lines</T>
-        <T v="mut">Open the line editor mock. Put the cursor at the start of line 2 and press Backspace. Do the same on the empty last line. Press Return in the middle of a line. Try the Join up key.</T>
-        <T v="small">Pass: Backspace at the start joins the line to the one above, the cursor lands at the join, and no word is lost; Return splits at the cursor and the cursor starts the new line. If Backspace does nothing at the start of a line, say so: the log shows whether the key was reported, and Join up does the same job.</T>
-        <Btn testID="spike-open-write" label="Open the line editor mock (checks 2, 3 and 6)" v="primary" onPress={() => router.push('/spike-write' as any)} />
       </Card>
 
       <T v="eb" accessibilityRole="header">Recording</T>

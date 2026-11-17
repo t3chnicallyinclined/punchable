@@ -43,6 +43,11 @@ function DeviceCard() {
           <Switch testID="toggle-haptics" value={p.haptics} onValueChange={(b) => setPrefs({ haptics: b })} trackColor={{ true: C.amber, false: C.surface2 }} accessibilityLabel="Haptics" />
         </View>
       )}
+      {/* the fallback for a bit's page (SPEC 2026-11-16 Slice 2): off, a bit is a document he types straight into */}
+      <View style={[s.row, { minHeight: 56 }]}>
+        <View style={{ flex: 1 }}><T v="semi">Write button on a bit</T><T v="mut">Edit with Write and Save instead.</T></View>
+        <Switch testID="toggle-bit-editor" value={p.bitEditor === 'classic'} onValueChange={(b) => setPrefs({ bitEditor: b ? 'classic' : 'doc' })} trackColor={{ true: C.amber, false: C.surface2 }} accessibilityLabel="Write button on a bit" />
+      </View>
     </Card>
   );
 }
@@ -289,7 +294,7 @@ export default function SettingsPage() {
         <List>
           <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
           {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4); phone only; removed once they are answered */}
-          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Nine checks for the next builds" onPress={() => router.push('/spike' as any)} />}
+          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Six checks for the next builds" onPress={() => router.push('/spike' as any)} />}
         </List>
       </Card>
       <Card style={{ gap: 10 }}>

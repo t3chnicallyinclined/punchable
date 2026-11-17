@@ -21,6 +21,8 @@ import { SET_MIN_S } from '@/lib/importgroup';
 import { installCrashReporter, setCrashContext } from '@/lib/crashReport';
 import { CrashScreen } from '@/lib/CrashScreen';
 import { startRecordings } from '@/lib/recordings';
+import { useOnline } from '@/lib/api';
+import { flushBitDrafts } from '@/lib/bitDraft';
 import type { ErrorBoundaryProps } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -45,6 +47,18 @@ function RecordingsQueue() {
   useEffect(() => {
     if (!sess.enabled || sess.signedIn) startRecordings();
   }, [sess.enabled, sess.signedIn]);
+  return null;
+}
+
+/** Words typed into a bit that no version holds yet (lib/bitDraft, SPEC 2026-11-16 Slice 2: typed offline, or the app
+ *  died mid-sentence): sent as a version of their bit once he is signed in, and again whenever the connection comes
+ *  back. A bit whose page is open saves its own. */
+function BitDrafts() {
+  const sess = useSession();
+  const online = useOnline();
+  useEffect(() => {
+    if (online && (!sess.enabled || sess.signedIn)) void flushBitDrafts();
+  }, [online, sess.enabled, sess.signedIn]);
   return null;
 }
 
@@ -152,6 +166,7 @@ function RootLayout() {
               <PhotosBadge />
               <CrashContext />
               <RecordingsQueue />
+              <BitDrafts />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
                 {/* The three tabs, each its own stack: app/(tabs). Route groups keep every URL (/joke/x, /list/x, /inbox, ...). */}
                 <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
@@ -162,8 +177,6 @@ function RootLayout() {
                 <Stack.Screen name="film/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('Film it') }} />
                 <Stack.Screen name="take/[rec]" options={{ ...fullScreen, title: t('Filmed') }} />
                 <Stack.Screen name="review" options={{ ...fullScreen, title: t('Step through') }} />
-                {/* the focus-mode mock for device checks 2 and 3 (SPEC 2026-11-03 §4.1): Slice 1 only, removed in Slice 2 */}
-                <Stack.Screen name="spike-write" options={{ ...fullScreen, title: t('Line editor mock') }} />
                 {/* device check 7 (SPEC 2026-11-16 §4.4): a sound take under a walk-through, then the camera on top */}
                 <Stack.Screen name="spike-run" options={{ ...fullScreen, gestureEnabled: false, title: t('Walk-through mock') }} />
                 {/* Short tasks as form sheets: Add a joke at the large detent ("+" itself is no sheet: it acts, SPEC 2026-10-30) */}

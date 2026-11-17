@@ -8,6 +8,7 @@
 // computed suggestion with nothing to reject, so the pair is remembered (POST /api/links/dismiss). Each has an Undo.
 // tests/aroundRules.test.mjs holds the cases and a --red arm for that rule.
 import { inBit, insertAfter } from './bitLines.ts';
+import type { DocEdit } from './lineRules.ts';
 
 export type GroupKey = 'same_idea' | 'callbacks' | 'on_stage' | 'loose' | 'same_shape';
 export type AroundKind = 'bit' | 'line' | 'moment' | 'wording' | 'note' | 'idea';
@@ -27,7 +28,9 @@ export type Call = { method: 'POST' | 'PATCH'; path: string; body: Record<string
 /** What a button does: one call, or a new version of the bit (the page's own write), or nothing with its reason. */
 export type Plan =
   | { kind: 'call'; call: Call }
-  | { kind: 'version'; lines: string[]; reason: string }
+  /** `lines` = the bit's lines after it; `edit` = the same change as one edit of the document, which keeps the blank
+   *  lines between his ideas where they were (rules/lineRules applyEdit). */
+  | { kind: 'version'; lines: string[]; reason: string; edit: DocEdit }
   | { kind: 'none'; why: string };
 
 const enc = encodeURIComponent;
@@ -88,6 +91,8 @@ export function anchorIndex(lines: string[], item: Pick<AroundItem, 'line'>): nu
   const at = lines.indexOf(a.text);
   return at >= 0 ? at : null;
 }
+/** The line of a card he picked (the first when the pick is past the end). */
+const pickedWords = (item: Pick<AroundItem, 'words'>, pick: number): string => (item.words[pick] ?? item.words[0] ?? '').trim();
 /** "Add this line": the picked line goes after the line the card belongs to, else at the end. Null when the bit
  *  already says it (nothing to add). */
 export function pullLine(lines: string[], item: AroundItem, pick: number): string[] | null {
@@ -125,11 +130,13 @@ export function planFor(bit: string, group: Pick<AroundGroup, 'key' | 'title'>, 
       return { kind: 'call', call: { method: 'POST', path: '/api/links/dismiss', body: { a: bit, b: item.ref, group: group.key } } };
     case 'add': {
       const next = pullLine(lines, item, pick);
-      return next ? { kind: 'version', lines: next, reason: `pulled in from ${group.title}` } : { kind: 'none', why: 'The bit already says that' };
+      return next ? { kind: 'version', lines: next, reason: `pulled in from ${group.title}`, edit: { op: 'insert', at: anchorIndex(lines, item), words: pickedWords(item, pick) } } : { kind: 'none', why: 'The bit already says that' };
     }
     case 'use': {
       const next = swapWording(lines, item, pick);
-      return next ? { kind: 'version', lines: next, reason: 'the wording from the stage' } : { kind: 'none', why: 'The bit already says that' };
+      const at = anchorIndex(lines, item);
+      const words = pickedWords(item, pick);
+      return next ? { kind: 'version', lines: next, reason: 'the wording from the stage', edit: at == null ? { op: 'insert', at: null, words } : { op: 'replace', at, words } } : { kind: 'none', why: 'The bit already says that' };
     }
   }
 }
@@ -164,6 +171,39 @@ export function doneWord(item: Pick<AroundItem, 'kind' | 'title'>, action: Does)
     case 'attach': return 'Filed under this bit';
     case 'dismiss': return item.kind === 'note' ? 'Taken off this bit' : 'Not connected';
   }
+}
+
+// ------------------------------------------------------------------ Around this bit, drawn on the page itself
+// (owner on build 28: "when i open a bit i dont automatically see other connections"). Under the document each group
+// that holds something shows its header and its first cards; the rest are one tap away ("See all 5"). The server
+// decides the order of the groups and of the cards in each; nothing here re-sorts, adds or hides a card.
+
+/** How many cards of a group the page draws before "See all". */
+export const INLINE_CAP = 2;
+export type InlineGroup = {
+  key: GroupKey; title: string;
+  /** The cards drawn on the page: the group's first ones, in the server's order. */ cards: AroundItem[];
+  /** Every card in the group. */ total: number;
+  /** The count "See all" names; 0 when the page already shows them all (no such row). */ more: number;
+};
+/** The groups as the page draws them: an empty group is not there, a group shows at most `cap` cards. */
+export function inlineGroups(a: Around | null | undefined, cap = INLINE_CAP): InlineGroup[] {
+  const n = Math.max(1, Math.floor(cap));
+  return shownGroups(a).map((g) => ({ key: g.key, title: g.title, cards: g.items.slice(0, n), total: g.items.length, more: g.items.length > n ? g.items.length : 0 }));
+}
+/** "See all 5". */
+export const seeAllLabel = (n: number): string => `See all ${n}`;
+/** One group by its key (the sheet behind "See all"). */
+export function findGroup(a: Around | null | undefined, key: string): AroundGroup | null {
+  return (a?.groups || []).find((g) => g.key === key && g.items.length > 0) || null;
+}
+/** The one button a card carries on the page: its first action that is not the quiet one. `direct` = one tap does it
+ *  from the page; false when he must first pick which of the card's lines he means (the sheet has the picker). A card
+ *  with no such action has no button (its tap opens the sheet). */
+export function inlineAction(item: AroundItem): { key: Does; label: string; direct: boolean } | null {
+  const a = actionsFor(item).find((x) => !x.quiet);
+  if (!a) return null;
+  return { key: a.key, label: a.label, direct: !(writesLine(a.key) && item.words.length > 1) };
 }
 
 // ------------------------------------------------------------------ Add to a set: the multi-tick picker

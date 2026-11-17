@@ -4,6 +4,9 @@
 //   node --experimental-strip-types --no-warnings tests/aroundRules.test.mjs --red    the red arm: a planted rule that
 //       sends every "Not connected" to the links store (so a stored edge would stay standing and come straight back)
 //       must FAIL the same check the real rule passes
+//   node --experimental-strip-types --no-warnings tests/aroundRules.test.mjs --red=inline   the red arm for the cards
+//       drawn on the page: a planted rule that draws every card of every group (headers for empty groups too, no cap)
+//       must FAIL the check the real rule passes
 import * as A from "../src/rules/aroundRules.ts";
 
 const fails = [];
@@ -37,6 +40,30 @@ function dismissGoesToTheRightPlace(planFor) {
     && c.kind === "call" && c.call.path === "/api/links/dismiss" && eq(c.call.body, { a: BIT, b: "joke:doorbell", group: "same_idea" });
 }
 
+/** The rule under test for the page itself: each group that holds something, in the server's order, its first two
+ *  cards in the server's order, "See all N" only when there are more, and no header for an empty group. */
+function pageShowsTheFirstTwo(inlineGroups) {
+  const many = [1, 2, 3, 4, 5].map((n) => item({ g: "callbacks", ref: `joke:cb${n}`, title: `Callback ${n}` }));
+  const a = { joke: BIT, unit: null, sets: [], groups: [
+    { ...G.same, items: [] }, { ...G.cb, items: many }, { ...G.stage, items: [moment, said] }, { ...G.loose, items: [note] }, { ...G.shape, items: [] },
+  ] };
+  const g = inlineGroups(a);
+  return eq(g.map((x) => x.key), ["callbacks", "on_stage", "loose"])
+    && eq(g[0].cards.map((c) => c.title), ["Callback 1", "Callback 2"]) && g[0].total === 5 && g[0].more === 5
+    && eq(g[1].cards.map((c) => c.id), [moment.id, said.id]) && g[1].more === 0
+    && g[2].cards.length === 1 && g[2].more === 0
+    && inlineGroups(null).length === 0 && inlineGroups({ joke: BIT, unit: null, sets: [], groups: [{ ...G.same, items: [] }] }).length === 0;
+}
+
+if (process.argv.includes("--red=inline")) {
+  // a planted rule: every group gets a header and every card is drawn. The page would be a wall between him and the rows below.
+  const everything = (a) => (a?.groups || []).map((g) => ({ key: g.key, title: g.title, cards: g.items, total: g.items.length, more: 0 }));
+  const caught = !pageShowsTheFirstTwo(everything);
+  console.log(`${caught ? "PASS" : "FAIL"} red arm: a rule that draws every card of every group is caught (two cards a group, no empty headers)`);
+  console.log(`${pageShowsTheFirstTwo(A.inlineGroups) ? "PASS" : "FAIL"} the real inlineGroups passes the same check`);
+  process.exit(caught && pageShowsTheFirstTwo(A.inlineGroups) ? 0 : 1);
+}
+
 if (process.argv.includes("--red")) {
   // a planted rule: every dismissal is "remember the pair". The edge would still be in the graph and the card back.
   const lenient = (bit, group, it) => ({ kind: "call", call: { method: "POST", path: "/api/links/dismiss", body: { a: bit, b: it.ref, group: group.key } } });
@@ -55,6 +82,16 @@ check(A.aroundCount(around) === 6 && A.aroundCount(null) === 0 && A.countMeta(6)
 check(A.findItem(around, "callbacks:unit:t1")?.group.key === "callbacks" && A.findItem(around, "nope") === null && A.findItem(null, "x") === null, "a card is found by its id with its group");
 check(A.setPlace(around.sets[0]) === "bit 2 of 6", "a set row says where the bit sits");
 check(A.setNotesLine({ notes: [" wifi ", "", "standing in it"] }) === "wifi · standing in it" && A.setNotesLine({ notes: [] }) === "" && A.setNotesLine({}) === "", "his notes on one line; none is nothing (never 'no notes yet')");
+
+// ---- the page: what is drawn inline under the document
+check(pageShowsTheFirstTwo(A.inlineGroups), "on the page: groups in the server's order, the first two cards of each, See all only when there are more, no header for an empty group");
+check(A.INLINE_CAP === 2 && A.inlineGroups(around, 1)[1].cards.length === 1 && A.inlineGroups(around, 1)[1].more === 2 && A.inlineGroups(around, 0)[1].cards.length === 1, "the cap is two; a smaller cap still shows one card, never none");
+check(A.seeAllLabel(5) === "See all 5", "See all names the count");
+check(A.findGroup(around, "callbacks")?.items.length === 2 && A.findGroup(around, "same_shape") === null && A.findGroup(around, "nope") === null && A.findGroup(null, "callbacks") === null, "the sheet behind See all finds a group by its key; an empty or unknown one is none");
+check(eq(A.inlineAction(edged), { key: "connect", label: "Connect", direct: true }) && eq(A.inlineAction(moment), { key: "link", label: "This tape is this bit", direct: true }), "a card's one button on the page is its first action");
+check(eq(A.inlineAction(computed), { key: "merge", label: "Merge into this bit", direct: true }) && eq(A.inlineAction(note), { key: "add", label: "Add this line", direct: true }), "a one-line note adds its line in one tap; a merge is the first action of a same-idea bit (the page still asks once)");
+check(eq(A.inlineAction(item({ ref: "joke:two", does: ["add", "dismiss"] })), { key: "add", label: "Add this line", direct: false }), "a card with two lines to choose from is not a one-tap add: the sheet has the picker");
+check(A.inlineAction(item({ ref: "joke:q", does: ["dismiss"] })) === null && A.inlineAction(item({ ref: "joke:q2", does: [] })) === null, "Not connected is never the button on a card; a card with nothing else has none");
 
 // ---- the action per kind
 check(dismissGoesToTheRightPlace(A.planFor), "Not connected: an edge is rejected, a filed note is taken off, a computed card is remembered as a pair");
@@ -81,11 +118,13 @@ check(A.anchorIndex(["A new first line.", ...LINES], said) === 3, "after an edit
 check(A.anchorIndex(LINES, { line: { i: 2, text: "A line that is gone." } }) === null, "a line that changed is no anchor");
 const pulled = call(computed, G.same, "add", 1);
 check(pulled.kind === "version" && eq(pulled.lines, [...LINES, "It is always me."]) && pulled.reason === "pulled in from Same idea", "Add this line: the picked line goes at the end when the card has no line");
+check(eq(pulled.edit, { op: "insert", at: null, words: "It is always me." }), "the same add as one edit of the document (so the gaps between his ideas stay)");
 const anchored = A.pullLine(LINES, { ...computed, line: { i: 0, text: LINES[0] } }, 0);
 check(eq(anchored, [LINES[0], "My doorbell shows me who is at the door.", ...LINES.slice(1)]), "with an anchor the line goes right after it");
 check(call(item({ ref: "joke:same", words: ["my fridge has WIFI now"] }), G.same, "add", 0).kind === "none", "a line the bit already says is not added twice");
 const swapped = call(said, G.stage, "use", 0);
 check(swapped.kind === "version" && eq(swapped.lines, [LINES[0], LINES[1], "I know the door is open. I am IN it.", LINES[3]]) && swapped.lines.length === LINES.length, "Use this wording replaces exactly the line it belongs to");
+check(eq(swapped.edit, { op: "replace", at: 2, words: "I know the door is open. I am IN it." }) && eq(call({ ...said, line: { i: 2, text: "gone" } }, G.stage, "use", 0).edit, { op: "insert", at: null, words: "I know the door is open. I am IN it." }), "the same swap as one edit; when its line changed, an insert at the end");
 check(eq(A.swapWording(LINES, { ...said, line: { i: 2, text: "gone" } }, 0), [...LINES, "I know the door is open. I am IN it."]), "when that line changed, the wording is added at the end, nothing is replaced");
 check(A.pullLine(LINES, computed, 9)?.length === LINES.length + 1 && A.pullLine(LINES, item({ ref: "joke:e", words: [] }), 0) === null, "a pick past the end falls back to the first line; no words is nothing");
 
