@@ -102,7 +102,9 @@ writes them as a version of the main first.
   TypeScript (React Native); Rust goes on the phone only as a library when a feature needs it.
 
 - Phone + frontier models only. The home PC / GPU worker is retired, never proposed.
-- TestFlight-only distribution; email-only sign-in on the phone; Google sign-in on the web only.
+- TestFlight-only distribution. Sign-in: email, Google and then Apple on the phone and the web (ADR 0005 amended
+  2026-11-17; Google on the phone is item 0k; internal TestFlight only until Apple is in the build, guideline 4.8).
+  Sign-up opens invite-only, nobody invited before per-user data exists (SPEC 2026-11-17 §4.1).
 - Jots and questions are typed. Voice records sets AND voice memos (owner 2026-10-31, replaces "voice is for sets only"):
   memos are recorded in Punchable, the audio stays on his phone, the words go to the server. A cloud backup of the
   audio comes later as a paid add-on, so the same recordings play on the phone and the web/desktop (the words already
@@ -160,6 +162,16 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 | Never on the server | `docker run` (restarts the whole cluster), `ship.sh test`, touching other namespaces beyond the agreed Keycloak theme mount and the observability ConfigMaps. |
 
 ## Open, in order
+
+0k. **Social sign-in Slice 1: Google sign-in and a real sign-out on the phone (owner 2026-11-17: "should we make the
+   social log in too"). Built on branch `app/signin-google` (not merged, not pushed, no phone build; app only, no
+   server or realm change).** `docs/design/SPEC-2026-11-17-social-sign-in-and-docs-import.md` Slice 1. The login screen
+   shows Sign in with Google on the phone with `prompt=select_account` (`rules/signinRules`); Keycloak 26.5.2 forwards
+   it to Google (read on auth.punchable.io 2026-11-16, no realm change needed), and the chooser shows after a sign-out
+   because sign-out ends the Keycloak session (end_session, then the refresh token revoked). Sign out is refused while
+   a tape runs, and a session that ends mid-take no longer moves him off the take screen until it is saved (AuthGate
+   holds). Device check 10 "Private sign-in" (ephemeral sheet). **Internal TestFlight only** until Sign in with Apple is
+   in (ADR 0005 amended). Phone checks: spec §9.2 steps 1-7.
 
 0j. **Redesign Slice 3: the Redline loop on a bit (owner 2026-11-17: "lets make it a whole new draft", and marking up
    the draft and sending again: "yes possibly"). Built on branch `app/redesign-slice3` (not merged, not pushed, not
