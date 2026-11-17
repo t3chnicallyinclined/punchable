@@ -161,6 +161,17 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0i. **Redesign Slice 2: the bit is a document (owner 2026-11-16: "a bit is a document ... it should be as easy as
+   editing a google doc on your phone"). Built on branch `app/redesign-slice2` (not merged, not pushed, no phone
+   build; app only, no server change).** `docs/design/SPEC-2026-11-16-bits-sets-tapes.md` B11, §4.3 and §8 Slice 2:
+   the nineteen calls and the twelve phone checks are there (B12 records what the owner means by "redline": his
+   Redline review app's loop, which is Slice 3's marks; not suggestions drawn into his text). In short: a bit's page is one text field he types
+   straight into (`lib/BitDoc`), it keeps a draft on the phone and saves versions by itself (`rules/lineRules`,
+   `lib/bitDraft`), and Around this bit and In these sets are drawn on the page under the text (`lib/Around`
+   `AroundInline`). The older Write button is behind Settings › This device. **Nothing was run on a phone:** whether
+   the caret stays above the keyboard in a long bit is the open question (checks 2, 3 and 9). **Known limit:** a
+   version takes 4000 characters; a longer bit stays on the phone until the route's limit is raised (a server
+   change, not done).
 0h. **The redesign: Bits · Sets · Tapes (owner 2026-11-16: "ok lets get all this in, maps on the roadmap to figure
    out"): `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`. Slice 1 is built on branch `app/redesign-slice1` (not
    merged, not pushed, not deployed, no phone build): the bit page's "Around this bit" and "In these sets", the
