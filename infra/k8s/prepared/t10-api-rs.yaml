@@ -108,9 +108,11 @@ spec:
           # docs/RUST_WORKSTREAM.md); the T15 measurement sets the request
           # 2026-11-07: OOM-killed at 512Mi right after ONNX Runtime loaded bge-small on the first search (the server,
           # exit 137 at 05:34:38Z); with the model and the vector sweeper the server peak is above 512Mi (T15)
+          # 2026-11-17: 1Gi -> 1536Mi (owner's go). A scratch restore under sync + search + bit-page load peaked at 939-1,005
+          # MiB VmRSS (92-98% of 1Gi, journal gotcha 2026-11-16T23:35Z); the request stays 64Mi (node requests are at 98%).
           resources:
             requests: { cpu: 50m, memory: 64Mi }
-            limits: { cpu: "1", memory: 1Gi }
+            limits: { cpu: "1", memory: 1536Mi }
           readinessProbe:
             httpGet: { path: "/api/health?ready=1", port: 8080 }
             periodSeconds: 3
