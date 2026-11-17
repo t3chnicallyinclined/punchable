@@ -125,7 +125,10 @@ writes them as a version of the main first.
 python -m pytest creative engine gsync worker infer/tests tools/audio/tests api-dev/tests -q
 cd app && npx tsc --noEmit && npm run test:unit && npx expo-doctor
 # ship (from the repo root; each step logs to the private deploy log with a rollback line)
-bash infra/ship.sh build api && bash infra/ship.sh rollout api      # same for worker, web
+bash infra/ship.sh build api && bash infra/ship.sh rollout api <digest>   # same for worker, web; pass the digest `build` printed
+# ROLL WEB TOO: any merge that touches app/ also rolls web, in the same deploy as the server
+#   (bash infra/ship.sh build web && bash infra/ship.sh rollout web <digest>). The web app went 18 days stale
+#   (2026-10-30 to 2026-11-17, phone builds 28-32) because server deploys rolled only api and worker.
 # phone
 cd app && EAS_NO_VCS=1 npx eas-cli build --profile production --platform ios --non-interactive --auto-submit
 EXPO_PUBLIC_API_URL=https://punchable.io/api EXPO_PUBLIC_AUTH=1 npx expo start --dev-client --tunnel

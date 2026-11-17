@@ -21,6 +21,8 @@
 #   dbload packs Punchable's text/JSON data HERE (python db/push_remote.pack, no audio), copies the tarball to the server
 #   over the same ssh, and loads it from a pod there (infra/deploy.sh dbload). The tarball is deleted after a load.
 #   infra/ship.sh dns plan|apply|undo     runs HERE (Cloudflare API, token from ~/.punchable/cloudflare.env)
+#   DEPLOY CHECKLIST: any merge that touches app/ also rolls web, in the same deploy as the server
+#   (infra/ship.sh build web, then infra/ship.sh rollout web <digest>). Server-only deploys left the web app 18 days stale.
 # Ships `git archive HEAD` (only committed work) plus your config file as infra/config.env. The config is
 # $PK_INFRA_ENV, else infra/config.env, else ~/.punchable/infra.env (keep it there: it is never in git).
 # Set PK_SSH_HOST (user@host) and PK_SSH_KEY in it.
@@ -115,3 +117,6 @@ if [ "$STEP" = dbload ]; then
   ARG="\$HOME/$B $ARG"
 fi
 ssh -i "$KEY" "$HOST" "cd ~/$DIR && SHA=$SHA bash infra/deploy.sh $STEP $ARG $REF"
+if [ "$STEP" = rollout ] && [ "$ARG" != web ]; then
+  echo "** checklist: if this deploy carries any app/ change, roll web too: infra/ship.sh build web, then rollout web <digest>"
+fi

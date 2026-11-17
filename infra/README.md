@@ -17,7 +17,7 @@ Punchable on your own computer; see the top-level README for that.
 | `google-idp` | "Sign in with Google": the OAuth client id/secret from `~/.punchable/google-oauth.env`, over ssh stdin, into a Secret |
 | `keycloak` | the realm ConfigMap and its own import job (other realms are not touched) |
 | `keycloak-ingress` | the `auth.<domain>` Ingress and certificate |
-| `build api\|web\|worker` / `rollout api\|web\|worker` | build the images on the server, then roll out pinned to the digest |
+| `build api\|web\|worker` / `rollout api\|web\|worker <digest>` | build the images on the server, then roll out pinned to the digest. **Any merge that touches `app/` also rolls web, in the same deploy as the server** (`build web`, then `rollout web <digest>`) |
 | `ai-secret` | the `ANTHROPIC_API_KEY=` line of `~/.punchable/secrets.env`, over ssh stdin, into the Secret `punchable-anthropic` (the hosted worker's key) |
 | `worker-secret` | the `PK_WORKER_SECRET=` line of the same file (the `pk-worker` client secret), over ssh stdin, into the Secret `punchable-worker` |
 | `dbload [--check]` | pack your text/JSON data here (`db/push_remote.py`), load it into SurrealDB from a pod. Refused after the online-first cutover |
