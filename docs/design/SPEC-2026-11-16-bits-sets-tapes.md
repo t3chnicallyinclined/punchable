@@ -1,8 +1,8 @@
 # SPEC 2026-11-16: Bits, Sets, Tapes (the redesign) and the build slices
 
-Status: **Slice 1 is merged (§8 Slice 1 "Built"); Slice 2 is built on a branch (§8 Slice 2 "Built"), rewritten
-by an owner statement of 2026-11-16 (B11: the bit is a document); Slice 4 is built on a branch (§8 Slice 4
-"Built"); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
+Status: **Slices 1, 2 and 4 are merged (§8, each "Built"); Slice 2 was rewritten by an owner statement of 2026-11-16
+(B11: the bit is a document); Slice 3 is built on a branch (§8 Slice 3 "Built"), rewritten by the owner's rulings of
+2026-11-16 and 2026-11-17 (B12, a whole new draft); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
 the roadmap to figure out". This file turns that mockup into an inventory, the data and API changes, the platform
 verdicts, the risks and nine slices. The mockup is an HTML sketch kept outside this repo; every joke in it and in
 this file is invented.
@@ -12,7 +12,7 @@ and starts recording at once. A rant is a set you film, so the Rant tab goes. A 
 notes; one walk-through screen records sound or films video, with a Notes / Full lines switch and a tap per bit
 that marks where the bit ends on the recording. The bit page puts connections on the line they belong to, with
 **Around this bit** and **In these sets** under the lines. Marks (Change / Ask / Keep, on highlighted words or a
-whole line) are sent in one round and return as tracked changes to Keep or Skip. The bit's page is the document: he
+whole line) are sent in one round and return as a whole new draft, his questions answered (owner 2026-11-17; §3.2). The bit's page is the document: he
 types straight into it and it saves by itself (B11).
 "Add to a set" is a multi-tick picker. A Google Doc is shown as written, each blurb sorted into a bit or left
 loose. A tape is its transcript shown the same way, cut up by bit. The joke map stays where it is and goes on the
@@ -232,23 +232,29 @@ and `undismiss`. `POST /api/links/dismiss {a, b, group, reason?}` → `{ok, id}`
 **"Link something…"** is the existing search plus `POST /api/decision` edge add (a `reason` is required there; the
 app sends the group's name).
 
-### 3.2 Marks and the redline round (Slice 3)
+### 3.2 Marks and the redline round (Slice 3; rewritten 2026-11-17 to what was built)
 
-A **mark** is `{i, line, type: "change"|"ask"|"keep", span?: {text, start}, note?, chip?: "punch"|"tighten"|"tag"}`.
-`line` is the whole line as he saw it; `span` the highlighted words and where they start in it.
+**What changed from the first §3.2.** The owner ruled on 2026-11-17 that a round returns **"a whole new draft"**, not
+per-line tracked changes to keep or skip, and that marking up the draft and sending again is wanted (**"yes
+possibly"**). So there are no `changes`/`tags`/`kept` hunks, no Keep/Skip per hunk and no version per Keep (B4 is
+superseded for this loop: one version when he uses a draft). The loop is the owner's Redline (B12).
 
-| Piece | Shape |
+A **mark** (on the phone) is `{id, type: "change"|"ask"|"keep", text, at, note}`: `text` is his words exactly as they
+stand (the selected words with their outer spaces left out, or, with nothing selected, the whole line the caret is
+on), `at` where they started (a UTF-16 index, the phone's own count) as a hint only, `note` his note on a Change
+(optional) or his question on an Ask (required). A mark is found again by its words (B1): at its hint when the words
+still stand there, else the occurrence nearest the hint, else it is gone (shown in the tray, never sent).
+
+| Piece | Shape (as built) |
 |---|---|
-| Unsent marks | On the phone only, in the same local-draft file pattern as the script (`lib/scriptDraft*`), keyed by bit. |
-| Send | `POST /api/jokes/<id>/redline {unit, lines: [...], marks: [1-20], fresh?}` → `202 {status: "queued", job, poll}` or `200 {cached: true, …}` (the `rant` route's pattern, `pk-api/src/writes/jobs.rs:36-101`). `409` when `lines` are not the newest version's lines: the marks stay on the phone and the page says the bit changed. At least one mark must be Change or Ask. |
-| Job kind `redline` | New in `pk-worker/src/kinds/`, task `creative_redline` (Opus, as `creative_rant`), built from `rant.rs`, which already numbers lines and returns whole-line hunks. Python-first rollout of `JOB_KINDS`. |
-| Result | `{changes: [{i, was, now, why, mark}], tags: [{after, text, why, mark}], answers: [{i, text, mark}], kept: [i], dropped: [{mark, reason}]}` |
-| Checks on the answer (each with a red arm) | `was` equals line `i` word for word; **no change or cut touches a Keep line; a line with a Keep on some words still contains those words**; a Change on a span leaves the words outside the span as they were; a tag is one line and not already in the bit; a quote of him inside an answer passes the same word-for-word gate as `rant_draft.rs`'s `his_words`, or the quote is dropped. What fails is listed in `dropped`, never shown as his. |
-| Keeps that last | New store **`redline`**, keyed by joke: `keep {text, span?}` / `unkeep`, plus `round {unit, job, marks}` and `resolve {job, n, verdict}` so an open round shows on any device. A Keep is matched by its text: when he rewrites that line himself, the Keep goes with it. Every later `redline`, `rant` and `punchup` job gets the kept lines as lines it may not alter. |
-| Read | `GET /api/jokes/<id>/redline` → `{keeps: [...], open: {job, unit, marks, result, resolved} | null}`; `GET /api/redlines` → `{open: [{joke, title, n}]}` for "Waiting for you" on Bits. |
-| Keep / Skip | Client-side, as today: Keep = `POST /api/jokes/<id>/versions` with `source: "redline"`, `draft: true` (feeds the learning loop's kept lines); Skip = `POST /api/profile/voice/learn`; then `resolve`. The client finds the line by its `was` text, so a redline still applies after an earlier Keep made a new version (B1, B4). |
-
-Ask answers are AI text on the page with the badge; "Got it" resolves them. Nothing is written to the bit.
+| Unsent marks | On the phone only: `Documents/marks/<bit>.json` for his bit, `draft~<bit>.json` for the draft he is reading (the web: `localStorage`), one shared copy in memory (`lib/marks`). Marks live on the newest **stage** document only (not the rant cut, not an older version, not the older editor). At most 20. A Keep and a Change on overlapping words are refused on the phone and by the route. |
+| Send | `POST /api/jokes/<id>/redline {unit, marks: [{type, text, at?, note?}]}` (round one: `unit` = the version he marked, which must be the newest of its cut) or `{on: <job>, marks}` (round two: the round whose draft he marked). The text marked is read on the server, never sent by the phone: the version from the KB, the draft from that job's result. 1 to 20 marks, each quote 1 to 4,000 characters and in the text, each note at most 500, an Ask needs its question, at least one Change or Ask. In round two the Keeps of the round he marked ride along (`carried`, at most 40 marks in all). Legal rules on the text, his bit, every note and the title, each alone and read together (422). Always a new job (`fresh`); the same marks twice are one round. → `202 {status: "queued", job, poll, round}`. **409** when the bit has a newer version of that cut, a quote is not in the text, the draft is not the open round's, or the bit changed since the draft was made: nothing is written, the marks stay on the phone. |
+| Job kind `redline` | `pk-worker/src/kinds/redline.rs`, task `creative_redline` (Opus 5.5, effort high, `max_tokens` 32,000). Input `{joke, title, unit, on, n, base, bit, marks: [{type, text, start, at, note, carried}]}`; `bit` (his bit, for context) only in round two and only when it is at most 12,000 characters. Prompt: his voice profile, the learned block, the method, then the marks in Redline's own shape ("Review of his bit "…". 3 items, in document order. Please apply the CHANGEs, answer the QUESTIONs before revising, leave the KEEPs exactly as they are. Return the full revised bit …", each item `[n] CHANGE · idea 2` with its quote and note) and the bit between `<bit>` markers (`<draft>` in round two). A bit over 12,000 characters (`pk_creative::redline::WHOLE_CAP`) is still sent whole, but only the ideas a Change or an Ask is in, with one idea either side, are rewritten (`parts`) and put back by the server: every word outside them is his, byte for byte. |
+| Result | `{status: ok|refused|empty|provider_error, draft, answers: [{item, text, question, quote}], notes: [{item, was, why}], marks, mode: whole|parts, tries, dropped, refused?, tokens, model, …}`. |
+| Checks (each with a red arm) | A draft is **refused** when a Keep's words are not in it byte for byte, or an idea he did not mark (no Change or Ask in it) is gone: fewer than **50 %** of its content words (four letters or more; ideas with fewer than two are not judged) are anywhere in the draft (`KEPT_SHARE`, the lead's number, not measured on his material), or it is empty or over 40,000 characters. A refused draft is asked for once more with the reasons, then the result is `refused` with no draft: never shown. A change's `was` is kept only when it is his words exactly (the verbatim gate; in round two only his bit counts, never the model's own draft); a quotation of two words or more in an answer that is not his words exactly loses its quotation marks. |
+| Rounds | New store **`redline`**, keyed by joke: `send {job, unit, on, n, marks}` (replaces the open round) and `resolve {job, verdict: used|discarded|open, unit?}` (`open` = Undo of a close). The reducer checks shape only; a resolve that names no round is replayed as nothing. The draft is the job's row: a waiting draft survives any restart. |
+| Read | `GET /api/jokes/<id>/redline` → `{joke, newest, round: {job, status, unit, on, n, sent_at, marks, stale, newest, result, error} | null, last}`; `stale` = he saved a newer version of that cut since sending. `GET /api/redlines` → `{open: [{joke, title, short_name, job, status, state: waiting|ready|refused|failed, stale, sent_at}]}`. |
+| Use / Discard | Use this draft = `POST /api/jokes/<id>/versions {text: draft, source: "redline", draft: true}` (the learning loop's kept text) then `resolve used` with that unit; Undo = undo the version and `resolve open`. A stale draft asks first ("Your newer words stay in Versions"). Discard = `resolve discarded`, Undo = `resolve open`; it teaches the voice profile nothing. |
 
 ### 3.3 Set bullet notes (Slice 4)
 
@@ -522,7 +528,7 @@ time"). The bit page's bar button (3c D1) opens it.
 | The tab bar replaced by foot buttons on pushed screens | Tabs stay on pushes (`HIG.md` §10) | Earlier decision |
 | Six filter chips | No filter above the fold (3c §3.1) | Earlier decision (B3) |
 | Tap a line → Change / Ask / Keep + its connections | Punch · Tighten · Tag after; second tap opens Write (3c §3.2) | **Mockup**, on 3c's mechanics. Punch, Tighten and Tag after become Change's chips; "Edit" joins the row to replace the second tap. |
-| Redlines inline with Keep / Skip | Tracked changes in the session sheet | **Mockup** (HIG, Generative AI: controls "near generated content"). Keep is not a filled button on every block. |
+| Redlines inline with Keep / Skip | Tracked changes in the session sheet | **Neither, since 2026-11-17:** a whole new draft on its own screen, Use this draft or Discard (owner; §3.2, Slice 3 "Built"). |
 | "Around this bit" and "In these sets" as open cards | Collapsed section rows | **Mockup, since B11** (Slice 1 shipped the collapsed rows; the owner on build 28: "when i open a bit i dont automatically see other connections"): drawn on the page under the document, two cards a group, "See all N" |
 | No Pile, Versions, On tape rows | 3c §3.4-3.7 | Earlier decision: Loose scraps opens the Pile's content, On stage links to On tape, the stepper stays |
 | "Send 3 marks" swapping places with Write | The bottom holds Write alone | Write always trailing; Send leading |
@@ -550,7 +556,7 @@ Tabs: Bits `square.grid.2x2.fill`, Sets `list.bullet.rectangle.portrait.fill` (b
 | R7 | **Marks on a version that has moved on.** | Lines have no ids (B1). | The round is refused with 409 when the bit has a newer version; a redline is applied by its quoted `was`, so one that no longer matches a line is shown as "this line changed" and cannot be kept. |
 | R8 | **A new job kind can break the Python while it still runs.** | Its reducer raises on an unknown kind. | `redline` and `doc_sort` ship Python image first, as `rant_draft` and `rant_line` did; or after T11, when the rule goes. |
 | R9 | **The Rant tools lose their front door.** | Trending was specified and not built; "Draft a rant from a topic" is built and has no place in the mockup. | §3.6 keeps the draft in the set's More menu; §7 Q4. |
-| R10 | **The redline round's cost per send** is UNKNOWN. | Prices are in `pk-llm/src/budget.rs`; the token counts for a bit plus its marks are not measured. One round is one Opus call, where today's per-line ask is one call per line. | Slice 3 measures it on the eval pairs before shipping and reports it; the daily budget already caps spend. |
+| R10 | **The redline round's cost per send.** | Measured on synthetic bits (Slice 3 "Built", the cost table): about $0.06 to $0.12 at 4,000 characters, $0.08 to $0.15 at 40,000 (a long bit is rewritten around its marks only); thinking tokens and his voice profile are on top. | The daily budget caps spend; a refused draft is retried once at most. Not measured on his material: the private eval pairs were not run. |
 | R11 | **Possibly broken today, seen in passing (INFERRED):** the conversation's input bar may not be drawn on iOS 26 (`lib/SayBar.tsx:55-77` returns nothing when the accessory flag is on, and nothing puts the bar in the tab bar); several stores use `localStorage`, which may not persist on the phone. | Not part of the redesign. | One line each on Slice 1's Device checks screen. |
 
 ---
@@ -797,32 +803,129 @@ nothing" as a button's rule (it is the autosave's rule now).
       being overwritten, a failed save is tried again by itself, Done is prominent, VoiceOver hears which card a
       button acts on, the gap row is "Blank line", a new bit has one placeholder.
 
-### Slice 3: Marks and redlines (and the pips)
+### Slice 3: The Redline loop on a bit (rewritten 2026-11-17 to what was built; was "Marks and redlines (and the pips)")
 
-**Since B11 and B12:** the bit is one text field now, so "the marks row, the pip, the inline minis" on
-`lib/BitLines.tsx` below describe the fallback editor's component; how a mark is put on a line or on selected words
-of the document is this slice's first design question (§4.2). A mark's place is found with `rules/lineRules.ts`
-`findAnchor` (the line's own words, B1), which Slice 2 added for this. **Not started.**
+**The owner's words this slice is built on, word for word:** "remember a bit is a document, it just has a bunch of
+ideas for the same topic ... it should be as easy as editing a google doc on your phone, with the power of
+punchable"; "when i say redline, i mean our repo redline, our app we integrating into [another of his projects,
+named in the original] as well that idea"; asked whether a round returns changes in place with keep/skip or a whole
+new draft: "lets make it a whole new draft"; on marking up the AI's answer and sending again: "yes possibly".
 
-**After it he can:** mark several lines (or words) Change, Ask or Keep, send them once, and keep or skip each
-tracked change where it sits; kept lines are never touched again; a line shows how many things belong to it.
+**After it he can:** select words in his bit (or put the cursor on a line) and mark them Change, Ask or Keep from a bar
+on the keyboard, or Copy them to a set or a new bit; see the marks wait in a tray and as quiet highlights in his
+words, even after leaving the page; send them once; get back a whole new draft with his questions answered; flip
+between the draft and his words, use it (a new version, with Undo) or discard it; mark up the draft and send again.
+The draft waits if he closes the app, and Bits says "Waiting for you".
 
-- **Server:** `JOB_KINDS` in the Python image first; kind `redline` in `pk-creative/src/reducers/jobs.rs` and
-  `pk-worker/src/kinds/redline.rs`; store `redline`; `POST /api/jokes/<id>/redline`, `GET /api/jokes/<id>/redline`,
-  `GET /api/redlines`; kept lines passed to `rant` and `punchup`; `engine/config.hosted.toml` task
-  `creative_redline`.
-- **App:** `lib/BitLines.tsx` (the marks row, the pip, the inline minis from `/around`'s `line`), `lib/Redline.tsx`
-  (from `session/[bit].tsx`'s `HunkRow`), `rules/markRules.ts`, the bottom bar's Send beside Write, "Waiting for
-  you" row on Bits; word selection per §4.2 if its device check passed, else whole-line marks with a note; remove
-  `rant-line.tsx`.
-- **Tests:** `tests/markRules.test.mjs` with `--red` (a redline applies by its quoted line after an earlier Keep; a
-  stale one cannot be kept; a Keep mark never reaches the model as changeable); Rust: the worker's checks each with
-  a red arm (a change on a kept line, a span change that alters words outside the span, `was` not his line), a
-  golden prompt, the 409, `pk-creative/tests/goldens/store_jobs.json`. Private riff-eval pairs for the prompt.
-- **Owner's phone checks:** mark three lines (one of each), Send 3 marks → "Reading your marks…" then redlines under
-  the two lines and an answer under the third; Keep → "Saved as v10" with Undo, Skip removes it; the Keep line
-  shows Kept and comes back untouched from a second round and from Make it a rant; close the app mid-round and
-  reopen: the redlines are waiting, and Bits shows the row; a line with a pip opens its connections.
+- **Server:** `pk-creative/src/redline.rs` (the shared rules: locate by words, ideas, parts, the checks),
+  `pk-creative/src/reducers/redline.rs` (store `redline`), `JOB_KINDS` + `redline` (Rust and
+  `api-dev/creative_api.py`), `pk-worker/src/kinds/redline.rs` (kind `redline`, Rust only), `pk-api/src/writes/redline.rs`
+  (`POST`/`GET /api/jokes/<id>/redline`, `POST /api/jokes/<id>/redline/resolve`, `GET /api/redlines`),
+  `engine/config.hosted.toml` task `creative_redline`; two regex Ingress paths (`/api/jokes/[^/]+/redline$`,
+  `/api/jokes/[^/]+/redline/resolve$`) and one exact (`/api/redlines`) in `infra/k8s/prepared/t10-api-rs.yaml`.
+- **App:** `rules/markRules.ts`; `lib/marks.ts` (the tray on the phone), `lib/redline.ts` (the calls, the polled round),
+  `lib/redlineActions.ts` (Send, Copy to…), `lib/MarkBar.tsx` + `lib/DocMarkBar.tsx` + `lib/BarGround(.native).tsx` (the
+  bar), `lib/MarkTray.tsx` + `app/marks.tsx` (the tray, a form sheet), `lib/MarkedText.tsx` (the highlights, the
+  read-only document); `lib/BitDoc.tsx` (the selection, the highlights, room for the bar), `joke/[id].tsx` (the bar on
+  the keyboard, Send in the bottom bar, the round's row under the document), `joke/[id]/draft.tsx` (the draft),
+  `(bits)/bits.tsx` (Waiting for you), `lib/SetPicker.tsx` + `rules/aroundRules.ts` (a note on each add).
+- **Tests:** `tests/markRules.test.mjs` with `--red` (six arms: anchor, keep, stale, tint, target, gone);
+  `tests/aroundRules.test.mjs` (the note on an add); Rust: `pk-creative` redline and reducer tests (a red arm on the
+  drop share), `pk-worker` unit tests and `tests/redline.rs` (the golden prompt `tests/goldens/redline_prompt.txt`, a
+  Keep broken then fixed, refused twice never shown, a provider failure), `pk-api` route tests and
+  `tests/writes.rs` `the_redline_round_queues_waits_and_closes` on a scratch database; `store_jobs.json` and the
+  pk-llm `requests.json` regenerated by their Python generators.
+- **Owner's phone checks:**
+  1. Open a bit, tap once on a line: the bar is on the keyboard and its buttons are on at once; it reads "On “…” " with
+     that line.
+  2. Select three words, tap Keep: the keyboard stays, the bar says "Kept" and the Keep button reads Undo for a moment;
+     Undo takes it back.
+  3. Select other words, tap Change: the keyboard goes and the Marks sheet opens with the note field ready; type
+     "sharper". Tap Ask on another line and type a question. Close the sheet: the words show a highlight with an
+     underline (Change solid, Ask dotted, Keep double); "3 marks" sits in the bottom bar.
+  4. Leave the bit and come back, or close the app: the marks are still there.
+  5. Send 3 marks: "Reading your marks…" under the text; leave the app; reopen: Bits shows "Waiting for you · <bit>".
+  6. Open it: your question answered (with the AI badge), Draft · Yours flips, the changed lines are tinted, the kept
+     words are exactly yours. Use this draft: "Saved as v10" with Undo; Undo puts the old words back.
+  7. Send another round, then type in the bit before it comes back: the draft says it was made from the earlier words
+     and Use asks first.
+  8. On a draft, select words and mark them; Send: the next draft replaces it, and the earlier Keep is still kept.
+  9. Copy to… on a line: Add to a set shows the words as the note; the set shows them under the bit after Done. New
+     bit from these words makes a bit with Undo.
+  10. Discard a draft: Undo brings it back.
+- **Built 2026-11-17 (branch `app/redesign-slice3`; not merged, not pushed, not deployed, no phone build).** Nothing
+  was run on a phone. The calls made against this spec:
+  1. **A whole new draft, not tracked changes** (owner). No hunks, no Keep/Skip per line, no `lib/Redline.tsx` from
+     the session sheet's `HunkRow`, no version per Keep (B4). One version when he uses a draft, with Undo.
+  2. **The pips and the connections on a line are out** (owner, this slice's brief); connections stay under the
+     document. The cosine leg of the anchor (Slice 1 call 3) stays not done.
+  3. **A mark is `{type, text, at, note}`**, not `{i, line, span, chip}`: no line index, no Punch/Tighten/Tag chips.
+     With nothing selected a mark is on the caret's whole line.
+  4. **The bar is driven by the selection** (§4.2: no custom edit-menu items in RN 0.88). On the phone it is a plain
+     view on the keyboard's top, measured from the keyboard's frame (the `lib/KeyboardBar` pattern), not an
+     `InputAccessoryView`: that binds to its input once and never after the input is rebuilt, and it is deprecated in
+     RN 0.88 (iOS dev review, must-fix). On the web it is in the shell's bottom bar whenever the document is open
+     (a click on it blurs the text first). While it is on the keys it also carries the page's footnote line.
+  5. **"Fork" is "Copy to…"** (design review: a verb, and the bit is not changed): an action sheet with Add to a set,
+     as a note (the existing multi-tick picker; the words, cut to one line of 200 characters, go under the bit in each
+     set it is added to; a set made inside the picker gets the bit without the note) and New bit from these words.
+     **Not built:** Redline's "whole session" fork and a question asked about the words elsewhere (an Ask here covers it).
+  6. **Keep is made at once; Change and Ask open the tray at that mark's note.** The Keep button is its Undo for four
+     seconds (until his next mark while VoiceOver is on); the tray is the untimed path. Remove in the tray leaves a
+     "Removed … · Undo" row in place (a snack would sit behind the sheet).
+  7. **Marks live on the phone and on the newest stage document only**: not on the rant cut, an older version or the
+     older editor. The tray's file names put the marker first (`draft~<bit>`) so a long id cut to the file-name limit
+     cannot make two trays one.
+  8. **Send saves his typing first** (the marks are on the words he sees, which must be a version), one send at a time
+     from the first tap; a draft already waiting asks before it is replaced.
+  9. **The store's ops are `send` and `resolve`** (verdicts used, discarded, open), not `keep`/`unkeep`/`round`/
+     `resolve {n}`. **Keeps do not persist into later `rant` and `punchup` jobs** (not built): they ride along only into
+     the next round on the draft, at most 40 marks in all.
+  10. **The text marked is read on the server** in both rounds (the version from the KB, the draft from its job); a
+      quote not in it is a 409, as is a draft that is no longer the open round's. A double tap of Send is one round.
+  11. **A new task, `creative_redline`** (Opus 5.5, effort high, `max_tokens` 32,000), where `rant_draft` and
+      `rant_line` share `creative_rant`: a whole draft needs the room. The Python generator recorded its three routing
+      cases (59 in `requests.json`). Unlike the spec's R8, the Python image does change: **only `JOB_KINDS` gains the
+      name**, because the Python API still replays the shared `jobs` store and stops every creative route on a kind it
+      does not know. Everything else is Rust.
+  12. **A long bit is rewritten around its marks** (over 12,000 characters, `WHOLE_CAP`): the whole bit goes as context,
+      the model returns only the ideas with a Change or an Ask and one idea either side, and the server splices them in.
+      In that mode a Change cannot move words to an idea far away. In round two his bit goes along for context only up
+      to 12,000 characters (the draft carries the rest).
+  13. **The checks** are those of §3.2: Keep byte for byte, no unmarked idea dropped (the 50 % share of content words is
+      the lead's number), `was` his words (round two: his bit only, never the model's own draft; security review), a
+      misquote in an answer loses its quotation marks; refused, retried once, then never shown. Not built as a check:
+      "a Change on a span leaves the words outside the span" (a whole draft rewrites around a mark; the drop check is
+      the guard) and the tag checks (no tags).
+  14. **Stale is honest:** a draft made before his last save says so, Use asks first, and "Put my marks on what I
+      saved" puts the round's marks back on his bit (the round closes; Undo reopens it).
+  15. **Discard teaches the voice profile nothing** (the first spec's Skip did). Use teaches it the kept text, as every
+      kept AI draft does.
+  16. **Waiting for you on Bits lists ready drafts only**; `GET /api/redlines` also says waiting, refused and failed.
+  17. **`rant-line.tsx` is not removed**: the Rant script still opens it.
+  18. **From the reviews** (iOS design, iOS dev, security: each "ship with fixes"; every must-fix landed and went back
+      for a second look, whose must-fixes landed too): VoiceOver hears each mark and each change of the round
+      (`announceForAccessibilityWithOptions`, queued; never the first read); marks are told apart by more than colour
+      (Change underlined, Ask dotted, Keep double, the swatches as a legend, a themed `violetSoft`); the bar is one line
+      and one 44-pt row on Liquid Glass, labels capped at 1.3; the bar starts from the selection the focusing tap made;
+      offline is said in the bar; the tray's Send is in its trailing bar, off offline; an Ask's error shows only after
+      he leaves its field or tries to send; the draft hides its bottom bar while words are selected and makes Send
+      prominent when round-two marks wait; the court-material check reads the bit, the notes and the title together.
+  19. **Not done, each a follow-up:** pruning of finished jobs (each round's row holds the text marked, his bit and the
+      draft; tens of KB at a typical size); `/api/export` and the delete-me inventory do not list the `redline` store
+      (nor `links`, `setnotes`); marks on the rant cut.
+- **What a round costs** (measured 2026-11-17 with the Anthropic token counter on synthetic bits, three marks; Opus 5.5
+  at $4 in and $20 out per million tokens; his voice profile and the learned block come on top, cached, and their size
+  is his; thinking tokens are UNKNOWN until a real call, assumed 1,000 to 4,000):
+
+  | Bit | Mode | Tokens in | Draft tokens out | A round |
+  |---|---|---|---|---|
+  | 4,000 characters | whole | 2,096 | 1,265 | about $0.06 to $0.12 |
+  | 40,000 characters | parts (3 ideas rewritten) | 13,817 | 316 | about $0.08 to $0.15 |
+  | 40,000 characters, if it were rewritten whole | (not built) | 13,817 | about 12,700 | about $0.30 to $0.40, and past the default 16,000 `max_tokens` with thinking |
+
+  A refused draft is asked for once more: up to twice the cost. With the daily cap of $2.00 that is about 15 to 30
+  rounds a day.
 
 ### Slice 4: Sets with bullet notes
 
