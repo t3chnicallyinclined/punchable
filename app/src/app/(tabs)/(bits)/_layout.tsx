@@ -1,5 +1,5 @@
 // The Bits tab's stack: Bits, then the bit page, Merge review, the all-bits map, and the kept routes (the old joke
-// map and workspace, Notes, Notebook, Desk, Shows, Venue, Calendar, Write). `initialRouteName` gives a cold deep
+// map and workspace, Notes, Notebook, Desk, Shows, Venue, Calendar; /write redirects to Bits). `initialRouteName` gives a cold deep
 // link (/joke/x from a universal link) a Back to Bits.
 import React from 'react';
 import { Stack } from 'expo-router';

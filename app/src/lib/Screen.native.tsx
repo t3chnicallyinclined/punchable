@@ -25,7 +25,7 @@ export function Screen(p: ScreenProps) {
   );
 }
 
-function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, search, nativeHeader, offlineAt = 'top', footnote }: ScreenProps) {
+function Body({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, search, nativeHeader, offlineAt = 'top', footnote, offlineNote, scrollWatch }: ScreenProps) {
   const wide = useWide();
   const ui = useUI();
   const ins = useSafeAreaInsets();
@@ -95,7 +95,10 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
         {scroll ? (
           // the automatic inset lets the large title collapse and the content scroll under the Liquid Glass bars
           <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic"
-            keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled" keyboardDismissMode={scrollWatch?.keyboardDismissMode || 'on-drag'}
+            scrollEventThrottle={scrollWatch?.onScroll ? 16 : undefined}
+            onScroll={scrollWatch?.onScroll ? (e) => scrollWatch.onScroll?.(e.nativeEvent.contentOffset.y) : undefined}
+            onLayout={scrollWatch?.onHeight ? (e) => scrollWatch.onHeight?.(e.nativeEvent.layout.height) : undefined}
             contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: 12, paddingBottom: 24 + barH + dockH + noteH }}
             refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
             <View style={{ width: '100%', maxWidth: mw, alignSelf: 'center', gap: 16 }}>
@@ -106,8 +109,9 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
           <View style={{ flex: 1, paddingBottom: barH + dockH + noteH }}>{children}</View>
         )}
         {offlineAt === 'bottom' && noteOn && (
-          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom + barH + dockH, zIndex: 5 }}>
-            <OfflineStrip placement="bottom" note={footnote} />
+          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom + barH + dockH, zIndex: 5, backgroundColor: ground }}>
+            {/* on the screen's ground, never over his words (it sits above the keyboard while he types) */}
+            <OfflineStrip placement="bottom" note={footnote} offlineNote={offlineNote} />
           </View>
         )}
         {bar && (

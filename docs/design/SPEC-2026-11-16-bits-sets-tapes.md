@@ -1,6 +1,7 @@
 # SPEC 2026-11-16: Bits, Sets, Tapes (the redesign) and the build slices
 
-Status: **Slice 1 is built on a branch (§8 Slice 1 "Built"); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
+Status: **Slice 1 is merged (§8 Slice 1 "Built"); Slice 2 is built on a branch (§8 Slice 2 "Built"), rewritten
+by an owner statement of 2026-11-16 (B11: the bit is a document); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
 the roadmap to figure out". This file turns that mockup into an inventory, the data and API changes, the platform
 verdicts, the risks and nine slices. The mockup is an HTML sketch kept outside this repo; every joke in it and in
 this file is invented.
@@ -10,7 +11,8 @@ and starts recording at once. A rant is a set you film, so the Rant tab goes. A 
 notes; one walk-through screen records sound or films video, with a Notes / Full lines switch and a tap per bit
 that marks where the bit ends on the recording. The bit page puts connections on the line they belong to, with
 **Around this bit** and **In these sets** under the lines. Marks (Change / Ask / Keep, on highlighted words or a
-whole line) are sent in one round and return as tracked changes to Keep or Skip. Write is a plain line editor.
+whole line) are sent in one round and return as tracked changes to Keep or Skip. The bit's page is the document: he
+types straight into it and it saves by itself (B11).
 "Add to a set" is a multi-tick picker. A Google Doc is shown as written, each blurb sorted into a bit or left
 loose. A tape is its transcript shown the same way, cut up by bit. The joke map stays where it is and goes on the
 roadmap (§9).
@@ -42,7 +44,9 @@ specs decided and this one does not mention still stands.
 | B7 | **A topic becomes a set; a written rant stays a bit** and sits in that set. Nothing is deleted: the topic store stays as the record. | A rant is already a bit whose versions have a `rant*` source (CONFIRMED `pk-api/src/writes/film.rs:24-35`); a topic's kept material is the nearest thing to "the bits in a rant". Details §3.6. | A different mapping is a re-run of the migration tool. |
 | B8 | **A Next tap is his statement**: the stretch is filed under that bit as his, not as an AI guess. He can still say "Not this bit". | He tapped it. | File as AI with the badge. |
 | B9 | **Record lives in the tab bar's bottom accessory**, not in the tab bar itself (§4.1). | HIG: "Use a tab bar to support navigation, not to provide actions." | The trailing-slot button (against the HIG's letter, closest to the drawing). |
-| B10 | **Order of slices changed from the lead's suggestion in two places** (§8): the line editor ships before marks; Sets is three slices. | The editor is app-only and proves the keyboard questions the marks slice also needs; "Sets" as one slice was five features. | None. |
+| B10 | **Order of slices changed from the lead's suggestion in two places** (§8): the editor (Slice 2, since B11 the document) ships before marks; Sets is three slices. | The editor is app-only and proves the keyboard questions the marks slice also needs; "Sets" as one slice was five features. | None. |
+| B11 | **The bit is a document (owner, 2026-11-16, on build 28's Write-behind-a-button plan): "remember a bit is a document, it just has a bunch of ideas for the same topic, the bit is a topic basically it should be as easy as editing a google doc on your phone, with the power of punchable".** The bit's page IS the document: a tap anywhere in the text puts the caret there; there is no Write screen and no Save; one text field over the whole bit, so selection, paste, dictation and Backspace are the system's; a blank line separates two ideas; the words are kept on the phone as he types and a version is saved when he leaves or pauses. Around this bit and In these sets are drawn on the page under the document (owner on build 28: "when i open a bit i dont automatically see other connections") and are out of the way while he types. | The owner's statement. **Supersedes** §4.3 as first written (per-line inputs, the Join up key), Slice 2 as first written (`joke/[id]/write.tsx`, `lib/LineEditor.tsx`, drag grips inside the editor), the §4.6 rows "Around this bit and In these sets as open cards → collapsed section rows" and "Write in place …", and B2's "one prominent bottom item" for this page (the document needs no button). | The older Write button and one-box editor are kept behind a preference (Slice 2 "Built", call 12). |
+| B12 | **Punchable is Google-Doc-easy editing of the bit plus the Redline loop on it (owner, 2026-11-16, after B11): "maybe like punchable is the redline portion its a mix", and, on what he means by it: "when i say redline, i mean our repo redline, our app we integrating into [another of his projects, named in the original] as well that idea".** Redline is the owner's own review app (its README, "What it does" and "What the agent receives"): he selects any text and attaches a typed comment (Edit, Question, Keep or Fork); the comments collect in a tray; Send review batches them into one turn, in document order, each anchored to the text it quotes. That is the loop Slice 3's marks already come from (Change · Ask · Keep, sent once, §3.2); Fork maps to taking a line somewhere else (a set, a new bit). **It does not mean Punchable draws suggestions he did not ask for inside his text**, the way a shared Google Doc shows other people's suggestions: a first reading of the sentence said that, and it was wrong. | The owner's two statements. Nothing in the slices changes: Slice 2 is the easy editing, Slice 3 is the loop. What Slice 2 adds for Slice 3 is the anchor: a place in the document is found by the line's own words (`rules/lineRules.ts` `anchorsOf`, `findAnchor`; B1), so a mark and the tracked change that answers it survive a new version. | None. |
 
 ---
 
@@ -360,7 +364,7 @@ device checks ride in Slice 1's build so the answers arrive before the slice tha
 |---|---|---|---|---|---|
 | 4.1 | Record button in or beside the tab bar | **Against the HIG as drawn; works beside it** | The tab bar's bottom accessory | (a) trailing-slot button; (b) a toolbar button on each tab root | The accessory shows on all three roots and on pushed screens, survives the minimised bar, can be hidden on the bit page |
 | 4.2 | Actions on selected words | **Works with changes** | Each line a read-only input; our own action row for the selection | Whole-line marks plus a note | Long-press selects words; no system menu; a tap still opens the line |
-| 4.3 | Per-line inputs, Return splits, Backspace joins | **Works with changes** | Multiline inputs, all mounted; a Join up key as well | One multiline input | Backspace at the start of an empty and a non-empty line; caret after split and join; dictation |
+| 4.3 | The bit as one document he types straight into (B11; was: per-line inputs, Return splits, Backspace joins) | **Works; the scrolling is unproven on a phone** | One multiline input in the page's scroll view; our own caret follow | The older Write button and one-box editor, behind a preference | The Slice 2 build's checks (§8): tap deep in a long bit, type at the bottom, drag the keyboard down |
 | 4.4 | Recording while the walk-through shows | **Works with changes** | One screen, one recorder at a time | Sound keeps running, camera films muted | The camera mounted over a running sound take, muted and unmuted |
 | 4.5 | Add to a set as a multi-tick sheet | **Follows the HIG with changes** | Form sheet, checkmarks, Cancel / Done | Immediate writes, one Close | None |
 | 4.6 | The bit page as drawn | **Follows with changes** | 3c's skeleton, the mockup's content | — | 3c check 1 (still unanswered) |
@@ -413,29 +417,53 @@ device checks ride in Slice 1's build so the answers arrive before the slice tha
   words"). It is also the most standard: tap a row, inline actions. Word chips ("pick words") were rated weakest:
   a custom interaction for a standard task.
 
-### 4.3 The line editor
+### 4.3 The bit as a document (rewritten 2026-11-16 for B11)
 
-- **Multiline is the only choice** (a single-line field cannot wrap).
-- **Return is solved**: `multiline` with `submitBehavior="submit"` intercepts a lone newline and fires
-  `onSubmitEditing` (CONFIRMED `…/TextInput/RCTBackedTextInputDelegateAdapter.mm:283-294`); both `spike-write.tsx`
-  and `script.tsx` ship it.
-- **Backspace at the start of a line is UNKNOWN, for empty and non-empty lines alike.** The journal's gotcha
-  ("multiline never reports Backspace on an empty field") and 3c's row 5c both reason from
-  `RCTBackedTextInputDelegateAdapter.mm:150`, which is the single-line adapter. Multiline emits `onKeyPress` only
-  from `textView:shouldChangeTextInRange:`; whether UIKit calls that for a delete that changes nothing is not in
-  React Native's source. Only a phone settles it.
-- **Build so it works either way:** `onKeyPress` Backspace with the last selection at `{0,0}` joins; **and** the
-  keyboard bar shows a "Join up" key whenever the caret is at the start of a line. Keep every line mounted with
-  stable keys (the script mounts one input at a time, which risks a keyboard flash). Split from the caret reported
-  by `onSelectionChange`, read the text from a ref, and place the caret with `ref.setSelection()` after the commit:
-  a zero-length controlled `selection` sent with a text change is skipped (`RCTTextInputComponentView.mm:786-815`),
-  so a join would otherwise land the caret at the end.
-- **HIG changes to the drawing:** Cancel leading and **Done trailing in the top bar** ("If you provide a Done
-  button, always pair it with a Cancel button"; the mockup's bottom Done sits under the keyboard). **No ✕ on each
-  row**: a one-tap delete beside the text, in the dark; Backspace on an empty line and a swipe delete instead, with
-  Undo. A grip is fine, since Write is itself the edit mode. The set screen's bullet notes follow Reminders
-  (Return adds, Backspace on an empty one removes) and get the same fallback key.
-- **Fallback:** today's one multiline input.
+**What this replaces.** As first written this section specified a line editor: one multiline input per line, all
+mounted, Return splitting at the caret, Backspace at the start of a line joining (UNKNOWN on iOS, so a "Join up" key
+in a bar above the keyboard), grips to drag a line, Cancel and Done in the bar of a full-screen Write. The owner's
+statement (B11) retires all of it: per-line inputs cannot select across lines, paste or dictate several lines the way
+a document does, and the unknown about Backspace only exists because of them. None of it was built.
+
+- **One multiline input over the whole text**, uncontrolled (the text view owns the text; React never writes it
+  back while he types, so the caret, autocorrect and dictation are never disturbed), not scrolling by itself
+  (`scrollEnabled={false}`: it grows with the text inside the page's scroll view). Return, Backspace at the start of
+  a line, selection across lines, paste and dictation are the text view's own. CONFIRMED by reading
+  (`RCTTextInputComponentView.mm`): a `defaultValue` is never re-sent to the native text. INFERRED: a tap on the
+  unfocused field focuses it and places the caret at the tapped point in one tap (stock `UITextView`).
+- **Structure is read out of the text, never typed into it** (`rules/lineRules.ts`): a newline is a line; a blank
+  line separates two ideas; a run of blank lines is one gap. A reorder, a line put in from a card or the pile and a
+  swapped wording all keep the blank lines where they were.
+- **Saving.** A local draft a moment after each keystroke (the phone's Documents; nothing typed is lost offline or
+  if the app dies). A version (`POST /api/jokes/<id>/versions`) when he leaves the text (Done, which puts the
+  keyboard away), leaves the page, sends the app to the background, pauses (30 seconds without a keystroke, at most
+  once every three minutes), or gets his connection back; only when the words changed (trailing spaces and blank
+  ends are not words), never an empty one, one request at a time. `inactive` (Control Center, a system alert) does
+  not save. Offline the draft waits and is sent when the connection returns, from the page or at the next launch.
+- **The caret and the keyboard.** The shell's `KeyboardAvoidingView` shortens the scroll view. React Native's own
+  "scroll the focused input into view" runs only with `automaticallyAdjustKeyboardInsets` and only when the keyboard
+  frame changes (CONFIRMED `RCTScrollViewComponentView.mm` `_keyboardWillChangeFrame`), and falls back to the whole
+  field's frame when the selection has no rectangle (CONFIRMED `RCTTextInputComponentView.mm`
+  `reactUpdateResponderOffsetForScrollView`; INFERRED that a bare caret has none, which would scroll a long bit to
+  its end), so the page does not use it. Instead a hidden copy of the text up to the caret (to the end of the caret's
+  word, since a word wraps whole), laid out at the field's width and type, gives the caret's height, and
+  `caretScroll` moves the page only when the caret is under the keyboard or above the bar. UIKit may also scroll the
+  enclosing scroll view for a non-scrolling text view; nothing in React Native blocks that (CONFIRMED by the iOS dev
+  review), and whether the two disagree is UNKNOWN until a phone.
+- **HIG.** While the keyboard is up the bar's trailing side holds Done alone, prominent ("Use the .prominent style
+  for key actions such as Done"); nothing above the document changes when the keyboard comes up, so a tap lands
+  where he aimed it; everything under the document is unmounted. A save is not announced while he is on the page
+  ("people typically expect their action or task to succeed, they only need to know when it doesn't"): the footnote
+  line reads "Saved as v9" for a moment and the Versions row, directly under the document, carries the non-timed
+  Undo. A save made as he leaves the page is a snack with Undo, because that row is no longer in front of him. The
+  footnote line has the screen's ground, so it is never drawn over his words, and the caret is kept clear of it.
+- **Reorder** is its own mode from More (the existing drag list): the rows are the document's lines and one "Blank
+  line" row per gap between ideas, which can be dragged too.
+- **Limit.** A version takes 4000 characters (`pk-api/src/writes/bits.rs`). A longer document stays on the phone
+  with "Too long to save · 4,120 of 4,000" in the footnote. Raising the route's limit is a server change and is
+  **not in this slice**; a bit that holds several ideas will reach it (about 700 words).
+- **Fallback:** the older page (lines as 44-pt rows, the bottom Write button, the one-box editor with Save), behind
+  Settings › This device › "Write button on a bit".
 
 ### 4.4 Recording during the walk-through
 
@@ -476,10 +504,10 @@ time"). The bit page's bar button (3c D1) opens it.
 | Six filter chips | No filter above the fold (3c §3.1) | Earlier decision (B3) |
 | Tap a line → Change / Ask / Keep + its connections | Punch · Tighten · Tag after; second tap opens Write (3c §3.2) | **Mockup**, on 3c's mechanics. Punch, Tighten and Tag after become Change's chips; "Edit" joins the row to replace the second tap. |
 | Redlines inline with Keep / Skip | Tracked changes in the session sheet | **Mockup** (HIG, Generative AI: controls "near generated content"). Keep is not a filled button on every block. |
-| "Around this bit" and "In these sets" as open cards | Collapsed section rows | Earlier decision, with the mockup's groups inside |
+| "Around this bit" and "In these sets" as open cards | Collapsed section rows | **Mockup, since B11** (Slice 1 shipped the collapsed rows; the owner on build 28: "when i open a bit i dont automatically see other connections"): drawn on the page under the document, two cards a group, "See all N" |
 | No Pile, Versions, On tape rows | 3c §3.4-3.7 | Earlier decision: Loose scraps opens the Pile's content, On stage links to On tape, the stepper stays |
 | "Send 3 marks" swapping places with Write | The bottom holds Write alone | Write always trailing; Send leading |
-| Write in place with a bottom Done, grips and ✕ | Focus mode, Done in the bar | §4.3 |
+| Write in place with a bottom Done, grips and ✕ | Focus mode, Done in the bar | **Neither, since B11:** the page is the document; Done in the bar only puts the keyboard away (§4.3) |
 | Snack with Undo only | Snack plus a non-timed Undo (`HIG.md` §7, §10) | Earlier decision |
 | "Yes, connected" | No Yes / No labels (`HIG.md` §9) | "Connect" / "Not connected" |
 | Search drawn as a pill in the content | The system search field (`HIG.md` §3.2) | Earlier decision |
@@ -498,7 +526,7 @@ Tabs: Bits `square.grid.2x2.fill`, Sets `list.bullet.rectangle.portrait.fill` (b
 | R2 | **Matching a recording to bits when he never taps Next.** | The model split exists (`set_text`, Opus) and cuts a transcript into units, but **nothing matches those units to his bits for a phone set** (the `match_judge` task is in the config; what calls it is UNKNOWN), and each funny unit becomes a new idea today, which duplicates bits he already has. Quality of a vector-plus-judge match on spoken, paraphrased bits is **UNKNOWN**. | Slice 7 builds the match with a private eval on tapes he has already corrected, shows every guessed stretch with the AI badge and "Not this bit", and falls back to "Not in any bit" when unsure. Taps (Slice 5) are the reliable path and ship first. |
 | R3 | **Phone-taped sets may not be reaching the Sets list today** (§2.7 defect 1). | Read in code on both the Rust and the Python side; not run. | First task of Slice 7: one scratch-database run settles it; the fix is that slice's first commit. Worth checking sooner if he has taped a set on build 20 or later and cannot find it. |
 | R4 | **No laughs on phone tapes.** | The audio stays on the phone and nothing there finds laughs; hosted audio processing does not exist. The mockup's "laugh 5s" after each stretch and "4 laughs" on the After screen cannot be shown for anything he records in the app. | The transcript and After screens show times and words only, and laughs where older sets have them. §7 Q3. |
-| R5 | **Three keyboard and selection behaviours are unproven on a phone** (§4.2, §4.3), and three earlier device checks were never answered (3c checks 1 and 3; build 26's C, D, E; Film it D1-D8). | Each has a fallback that needs no native code. | Slice 1's build carries one Device checks screen for the four new questions; Slices 2, 3, 5 and 9 each read its answer before they start. |
+| R5 | **Keyboard and selection behaviours are unproven on a phone** (§4.2; §4.3: since B11 the per-line questions are gone and the open one is whether the caret stays above the keyboard in a long bit), and three earlier device checks were never answered (3c checks 1 and 3; build 26's C, D, E; Film it D1-D8). | Each has a fallback that needs no native code. | Slice 1's build carries one Device checks screen for the four new questions; Slices 2, 3, 5 and 9 each read its answer before they start. |
 | R6 | **Which line a connection belongs to is a guess.** | No edge points at a line; the anchor is word overlap and a cosine. A wrong anchor puts a card under the wrong line, never changes his words. | Bit-level first (Slice 1), pips second (Slice 3), a threshold from a private eval, and no pip below it. |
 | R7 | **Marks on a version that has moved on.** | Lines have no ids (B1). | The round is refused with 409 when the bit has a newer version; a redline is applied by its quoted `was`, so one that no longer matches a line is shown as "this line changed" and cannot be kept. |
 | R8 | **A new job kind can break the Python while it still runs.** | Its reducer raises on an unknown kind. | `redline` and `doc_sort` ship Python image first, as `rant_draft` and `rant_line` did; or after T11, when the rule goes. |
@@ -568,9 +596,9 @@ gate`, a scratch-database test in `pk-api/tests/writes.rs` with a red arm, the r
 each commit; the iOS design and dev experts review each diff. Server before app: each build's routes are live
 before the build goes out. No time estimates.
 
-**The order against the lead's suggestion.** (1) The line editor moves ahead of marks: it is app-only, it reuses
-the Rant script's editor, and it proves the keyboard behaviour that the marks slice's inline note field and the set
-notes both lean on; marks need a new worker kind, a Python-first rollout and an eval. (2) "Sets with bullet notes,
+**The order against the lead's suggestion.** (1) The editor moves ahead of marks: it is app-only and it proves the
+keyboard behaviour that the marks slice's inline note field and the set notes both lean on (since B11 it is the
+document, not a line editor); marks need a new worker kind, a Python-first rollout and an eval. (2) "Sets with bullet notes,
 the walk-through and the rant migration" is three slices (4, 5, 6): notes are useful on today's stage screen the
 day they ship; the walk-through must exist with Film before rants can move into sets, or rants would lose filming;
 the tab swap rides with the migration so the bar never shows four tabs or an empty one. (3) The multi-tick picker
@@ -640,25 +668,122 @@ sets at once.
       or Keep editing; a sheet that was swiped away while its request ran pops nothing; the two rows are drawn
       while the read is on its way; on an empty bit the Pile leads.
 
-### Slice 2: Write as a line editor
+### Slice 2: The bit is a document (rewritten 2026-11-16 for B11; was "Write as a line editor")
 
-**After it he can:** write a bit the way Notes works: Return makes a line, Backspace (or Join up) joins two, drag
-moves one; nothing typed is lost if the app closes.
+**After it he can:** open a bit and type straight into it, the way Notes or a Google Doc works on a phone: tap
+anywhere and the caret is there; Return makes a line, a blank line starts another idea, Backspace joins two lines;
+nothing typed is lost if the app closes or the phone is offline; and what is tied to the bit is on the page under
+his words, without a tap.
+
+**Superseded (not built):** `joke/[id]/write.tsx` as a full-screen modal with Cancel · name · Done,
+`lib/LineEditor.tsx`, `lib/DragList` with input rows, the keyboard bar's Join up key, "an unchanged Done saves
+nothing" as a button's rule (it is the autosave's rule now).
 
 - **Server:** none.
-- **App:** new `joke/[id]/write.tsx` (full-screen modal; Cancel · name · Done), `lib/LineEditor.tsx` taken from
-  `script.tsx` and `spike-write.tsx`, `rules/lineRules.ts` (split, join at caret 0, join empty, reorder, the diff
-  that decides whether Done saves), `lib/DragList` with input rows, the keyboard bar with Join up, a local draft
-  per bit (`lib/scriptDraft*` generalised); the one-multiline editor stays behind `prefs` as the fallback; remove
-  `spike.tsx`, `spike-write.tsx`, `(bits)/write.tsx`.
-- **Tests:** `tests/lineRules.test.mjs` with `--red` (join keeps both lines' words and puts the caret at the join;
-  a split in the middle of a word; an unchanged Done saves nothing); `static.worklets` for the drag.
-- **Owner's phone checks:** Write → type, Return mid-line splits with the caret at the start of the new line;
-  Backspace at the start of a line joins (or the Join up key does); drag a line by its grip while the keyboard is
-  up; dictate "new line"; Done → "Saved as v9" and Undo; force-quit mid-edit and reopen: the words are there;
-  airplane mode: write, Done, it saves when the connection returns.
+- **App:** `joke/[id].tsx` (the page is the document), new `lib/BitDoc.tsx` (the one input, the autosave, the caret
+  follow), `rules/lineRules.ts` (what a save is; lines, ideas and rows read out of the text; an edit that keeps the
+  blank lines; the local draft and which text the page opens on; where the page scrolls for the caret),
+  `lib/bitDraft.ts` on `lib/draftFiles(.native).ts` (`lib/scriptDraft*` generalised), `lib/Around.tsx`
+  (`AroundInline`, `SetsInline`, the sheet's group list), `rules/aroundRules.ts` (`inlineGroups`, `inlineAction`),
+  Reorder as a mode, the older editor behind `prefs.bitEditor`; remove `spike-write.tsx` and `(bits)/write.tsx`.
+- **Tests:** `tests/lineRules.test.mjs` with `--red` (five arms: a save only when the words changed; blank lines
+  kept through rows; an edit that keeps the gaps; the page opens on his unsaved words; the page does not scroll
+  while the caret is in view); `tests/aroundRules.test.mjs --red=inline` (which cards the page draws).
+- **Owner's phone checks:**
+  1. Open a bit: his words, then Versions, then Around this bit with up to two cards a group and In these sets by
+     name, with no tap.
+  2. Tap a word in the middle of a long bit: the caret is on that word and the keyboard comes up; the page does not
+     jump. Tap after the last word of a long bit: the same.
+  3. Type at the bottom of a long bit, ten new lines: the line being typed stays above the keyboard and the page
+     does not jiggle.
+  4. Return mid-line splits it; Backspace at the start of a line joins it to the one above; select across three
+     lines and cut; paste them elsewhere; dictate two sentences with "new line" between them.
+  5. Tap Done: the keyboard goes, the line above the bottom says "Saved as v9" for a moment, and the Versions row
+     under the text reads "v9 · just now" with Undo; Undo puts the old words back. Tap Done without changing
+     anything: no new version.
+  6. Type and swipe Back mid-word: Bits shows "Saved as v…" with Undo, and the bit has the words when reopened.
+  7. Type, close the app completely within a second, reopen the bit: the words are there, and they become a version.
+  8. Airplane mode: type; the line says "Offline · kept on this iPhone"; turn the connection back on: a version
+     appears without a tap. Both the line he is typing and that offline line are readable.
+  9. Drag down on the text with the keyboard up: does the keyboard follow the finger, and is there a blank band
+     above it?
+  10. More › Reorder lines: drag a line across a "Blank line" row; Done → "Reordered" with Undo, and the blank line
+      is still there.
+  11. On a card under the text, tap its button (Connect, Add this line…): it happens, with Undo; "Add this line"
+      keeps the blank lines of the bit. "See all 5" opens that group; a card there opens in the same sheet with Back.
+  12. Settings › This device › "Write button on a bit" on: the older page with Write and Save is back.
+- **Built 2026-11-16 (branch `app/redesign-slice2`; not merged, not pushed, no phone build; app only, no server
+  change).** Nothing was run on a phone. The calls made against this spec:
+  1. **One multiline input, not one per line** (B11). Nothing of the first Slice 2's editor was built, so nothing
+     was switched.
+  2. **A version on leaving the text, the page or the app, on a pause and on reconnect; never on `inactive`.** The
+     pause is 30 seconds without a keystroke and **at most one pause-save every three minutes**
+     (`lineRules PAUSE_MS`, `PAUSE_GAP_MS`): both reviewers found a version per pause would fill the Versions list
+     with near-copies. The owner may tune both numbers.
+  3. **Saving is quiet on the page** (design review, must-fix): no snack and no haptic on Done; "Saved as v9" in the
+     footnote line for four seconds and the non-timed Undo on the Versions row. Only a save made while leaving the
+     page is a snack. This differs from the first Slice 2's check "Done → Saved as v9 and Undo" in where it shows.
+  4. **The Versions row sits directly under the document** (above Around this bit) and is shown from the first save
+     on, because its Undo is the save's Undo.
+  5. **Around this bit on the page:** each group that holds something, in the server's order, **its first two
+     cards**, "See all N" when there are more; nothing at all when nothing is tied to the bit; skeleton rows while
+     the read is on its way. The design review suggested two cards for the first group and one for the rest, and no
+     header until the read lands; the brief's two cards and skeleton rows were kept, for the owner's phone to judge
+     (check 1).
+  6. **A card carries one button on the page**, its first action that is not "Not connected": bordered, never
+     filled, in the link colour. "Merge into this bit" still asks once. A card whose button would write a line and
+     that has several lines to choose from opens the sheet instead (the picker is there). The card's body opens the
+     Slice 1 sheet with every action. **"See all N" opens that same sheet route on a group** (`/around?group=`): the
+     group's cards, then the tapped card in the same sheet with a Back chevron (one sheet at a time).
+  7. **A button that writes a line edits the document** (`lineRules applyEdit`; a `Plan` of kind `version` carries
+     `edit`), so the blank lines between ideas survive. Slice 1 joined the lines with words and lost them.
+  8. **Cards, the sparkle and the page's own writes are off while typed words are not a version yet** (typed and
+     unsaved, or a save on its way), on the page and in the sheet ("Saving what you typed first"), so nothing is
+     written from the older text.
+  9. **One local draft per bit and cut** (`Documents/bit/<bit>.json`; the web: `localStorage`). The storage is
+     `lib/draftFiles(.native).ts`; `lib/scriptDraft.native.ts` is gone and `lib/scriptDraft.ts` sits on the shared
+     storage with the same file path and web key as before (CONFIRMED by the iOS dev review).
+  10. **A draft found later is saved as the newest version even when the bit moved on elsewhere** (the script's
+      rule is the opposite: the server wins), **unless some version of that cut already says it**: then its save
+      had landed and only the answer was lost, and it is dropped (iOS dev review, must-fix).
+  11. **Offline he can type**: the draft waits, the line reads "Offline · kept on this iPhone", and it is sent when
+      the connection returns (the page, or `flushBitDrafts` from the root layout at launch).
+  12. **The fallback** is `prefs.bitEditor: 'classic'`, Settings › This device › "Write button on a bit": the
+      Slice 1 page's lines, bottom Write button and one-box editor. One of the two is drawn, never both.
+  13. **`(bits)/spike.tsx` is kept** (the first Slice 2 listed it for removal): it is the Device checks screen and
+      six of its checks are still unanswered and needed by later slices. Checks 2, 3 and 6 (the glass bar above the
+      keyboard, dictation into per-line inputs, Backspace between inputs) are retired with `spike-write.tsx`; the
+      other numbers are kept so an answer given on build 28 names the same check. `(bits)/write.tsx` is a redirect
+      to Bits (`/write` stays in the route table).
+  14. **No bottom button on the document.** The bottom toolbar's Write is drawn only in the fallback, so 3c's
+      device check 1 no longer gates this page (it still decides where Slice 3's Send sits).
+  15. **`keyboardDismissMode` is `interactive` on this page** (the shell's default `on-drag` would put the keyboard
+      away whenever he scrolls his own document), and while typing the field is at least as tall as the page, so a
+      tap under a short bit moves the caret to its end instead of landing on nothing.
+  16. **The shell (`lib/Screen*`) gained** `scrollWatch` (scroll position, height, the dismiss mode), `offlineNote`,
+      and a ground behind the bottom footnote line.
+  17. **Not done, needs a server change:** the 4000-character limit of a version (§4.3 Limit). **Not done, by
+      design:** the punch mark and the folded tags are not drawn in the document (no read carries `line_meta` yet,
+      3c Slice 3); they are still drawn in the fallback.
+  18. **`lineRules` gained `anchorsOf` and `findAnchor`** (a place in the document found by the line's own words,
+      with its idea and where its words sit in the text), so Slice 3 can hang marks on them (B12). Nothing of
+      Slice 3 is built, and nothing on the page uses them yet.
+  19. **From the two reviews (iOS dev, iOS design; both "ship with fixes"; every must-fix landed):** the caret is
+      taken to be at the END of the text until the field reports otherwise (a tap after the last word reported
+      nothing, and the page would have scrolled to the top); a save is single-flight from before its first await
+      (blur then unmount could post twice); a stale draft cannot bury a newer version (call 10); the offline line
+      is not drawn over his words; a card cannot write over words still saving (call 8); no snack on Done (call 3).
+      Also landed: `background` only (not `inactive`), the pause gap, the caret measured to the end of its word, a
+      newer server version that arrives while the keyboard is up on untouched text is taken on blur instead of
+      being overwritten, a failed save is tried again by itself, Done is prominent, VoiceOver hears which card a
+      button acts on, the gap row is "Blank line", a new bit has one placeholder.
 
 ### Slice 3: Marks and redlines (and the pips)
+
+**Since B11 and B12:** the bit is one text field now, so "the marks row, the pip, the inline minis" on
+`lib/BitLines.tsx` below describe the fallback editor's component; how a mark is put on a line or on selected words
+of the document is this slice's first design question (§4.2). A mark's place is found with `rules/lineRules.ts`
+`findAnchor` (the line's own words, B1), which Slice 2 added for this. **Not started.**
 
 **After it he can:** mark several lines (or words) Change, Ask or Keep, send them once, and keep or skip each
 tracked change where it sits; kept lines are never touched again; a line shows how many things belong to it.

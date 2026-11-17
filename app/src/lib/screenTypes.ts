@@ -29,4 +29,13 @@ export type ScreenProps = {
   /** One short line pinned above the bottom while online (the reason under the bottom button: "Reading v5");
    *  the offline line takes the slot when there is no signal. */
   footnote?: string | null;
+  /** The offline line's words on a screen that keeps working offline (the bit page: his typing is kept on the phone);
+   *  default "Offline · reading only". Only with `offlineAt="bottom"`. */
+  offlineNote?: string | null;
+  /** The shell's own scroll view, for a screen that must follow it (the bit page keeps the caret above the keyboard):
+   *  its scroll position, its height, and whether a drag puts the keyboard away (default: it does). */
+  scrollWatch?: {
+    onScroll?: (y: number) => void; onHeight?: (h: number) => void;
+    keyboardDismissMode?: 'none' | 'on-drag' | 'interactive';
+  };
 };

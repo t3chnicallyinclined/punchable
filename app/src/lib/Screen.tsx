@@ -102,7 +102,7 @@ function SidebarYou() {
  * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
  * `scroll={false}` hands the body to the child (a virtualized list).
  */
-export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, offlineAt = 'top', footnote }: ScreenProps) {
+export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, offlineAt = 'top', footnote, offlineNote, scrollWatch }: ScreenProps) {
   const wide = useWide();
   const sv = useRef<any>(null);
   useEffect(() => {
@@ -151,7 +151,7 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
         </View>
         {offlineAt === 'top' && <OfflineStrip />}
         {scroll ? (
-          <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+          <ScrollView ref={(r) => { sv.current = r; if (scrollRef) scrollRef.current = r; }} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode={scrollWatch?.keyboardDismissMode || 'on-drag'}
             contentContainerStyle={{ paddingHorizontal: wide ? 32 : 16, paddingTop: wide ? 24 : 12, paddingBottom: bottomPad }}
             scrollEventThrottle={32} onScroll={largeTitle ? (e) => setCollapsed(e.nativeEvent.contentOffset.y > 36) : undefined}
             refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.amber} colors={[C.amber]} progressBackgroundColor={C.surface} /> : undefined}>
@@ -174,8 +174,8 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
           </View>
         )}
         {offlineAt === 'bottom' && noteOn && (
-          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: (showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom) + (dock ? 96 : 0) + (bar ? 120 : 0), zIndex: 5 }}>
-            <OfflineStrip placement="bottom" note={footnote} />
+          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: (showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom) + (dock ? 96 : 0) + (bar ? 120 : 0), zIndex: 5, backgroundColor: deep ? C.bgDeep : C.bg }}>
+            <OfflineStrip placement="bottom" note={footnote} offlineNote={offlineNote} />
           </View>
         )}
         {showNav && <BottomNav active={active} />}

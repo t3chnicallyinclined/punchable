@@ -1,20 +1,26 @@
-// A bit's page, design option 3c (docs/design/SPEC-2026-11-03-bit-page-3c.md; Slice 1, app-only). Mostly his words:
-// the bar (his short name; the sparkle, To a set, More), one muted idea line, the bit as 44-pt lines (the punch bold
-// with one amber dot, the tags folded), then one collapsed row each for the Pile and the Versions (inline) and On
-// tape (a push), and one bottom button, Write. Tap a line for its actions; tap it again and Write opens at that line.
-// Two reads kept from the workbench: the joke (/api/jokes/<id>) and what sounds like it (/similar); the pile reads the
-// notes attached to the bit (/api/merge/candidates?joke=) and this phone's memos. Every write is a new version
-// (POST /api/jokes/<id>/versions, the old ones stay) with Undo in the snack and, non-timed, in the Versions row.
-// Slice 1 has no outbox (D4): Write and To a set grey with the offline line until Slice 2. The Punch action waits for
-// Slice 3 (line_meta); Sessions and the Claude line are hidden until they exist.
-// The redesign, Slice 1 (SPEC 2026-11-16 §3.1, §4.5, §4.6): two more collapsed rows under the lines, "Around this bit"
-// (everything tied to the bit in five groups, his words on every card, a half sheet to act on one: lib/Around) and
-// "In these sets" (lib/Around SetsList), both from one read, GET /api/jokes/<id>/around; and "To a set" in the bar
-// opens the multi-tick picker (lib/SetPicker). The rows are not drawn while that read has no answer (a server
-// without the route), so the page works either way.
+// A bit's page: the bit is a document (owner 2026-11-16: "a bit is a document, it just has a bunch of ideas for the
+// same topic ... it should be as easy as editing a google doc on your phone, with the power of punchable"; SPEC
+// 2026-11-16 B11, §4.3, Slice 2). The page opens on his words; a tap anywhere in them puts the caret there and brings
+// up the keyboard (lib/BitDoc: one multiline input over the whole text). There is no Write screen and no Save: the
+// words are kept on the phone as he types and a version is saved when he leaves the text, the page or the app, or
+// pauses, only when the words changed. Saving is quiet (HIG/feedback: he expects it to work): the footnote line reads
+// "Saved as v9" for a moment and the Versions row, right under the document, carries the non-timed Undo; only a save
+// made as he LEAVES the page says so in a snack (he is no longer looking at the row). While the keyboard is up
+// nothing else is on the page: the bar holds Done alone and everything under the document is out of the way.
+// Under the document, when he is not typing (SPEC 2026-11-16 §3.1, §4.6; owner on build 28: "when i open a bit i dont
+// automatically see other connections"): Around this bit drawn on the page itself (each group that holds something,
+// its first two cards, "See all N"; lib/Around AroundInline) and In these sets (the sets by name, Add to a set), both
+// from one read, GET /api/jokes/<id>/around, with skeleton rows while it is on its way; then the collapsed rows of
+// the 3c page (docs/design/SPEC-2026-11-03-bit-page-3c.md): the Pile and the Versions (inline), On tape (a push).
+// The bar: his short name; the sparkle, To a set, More. More › Reorder lines is its own mode (a drag list over the
+// document's lines and the gaps between its ideas). Every write is a new version (POST /api/jokes/<id>/versions, the
+// old ones stay).
+// The older flow is kept behind a preference (Settings › About › "Write button on a bit"; prefs.bitEditor 'classic'):
+// the bit as 44-pt lines, one bottom button, Write, and the one-box editor with Save. One of the two is drawn, never
+// both.
 // Film it's rant half (SPEC 2026-11-03 D10, D11, §2.5, §2.6; build 24): a version is the stage cut or a rant cut (its
 // `source`, rules/bitLines cutOf). The body shows the newest STAGE version; the stepper walks every version and says
-// the cut; on a rant version a "Rant cut" row sits above the lines and Write / Restore write that cut. The sparkle
+// the cut; on a rant version a "Rant cut" row sits above the text and a write or Restore writes that cut. The sparkle
 // opens the sessions sheet (/session/[bit]) with its two rows, Make it a rant and Pick a hook, on the version shown.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Share, Text, TextInput, View } from 'react-native';
@@ -26,9 +32,11 @@ import { rant } from '@/lib/rant';
 import { isFreshBit, nameFromFirstLine } from '@/rules/bitWorkRules';
 import type { SimilarResult } from '@/rules/searchRows';
 import * as R from '@/rules/bitLines';
+import * as L from '@/rules/lineRules';
 import { shortNameOf } from '@/lib/say';
 import { C, F, linkColor, stageWord } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
+import { getPrefs, onPrefs } from '@/lib/prefs';
 import { useRecordings } from '@/lib/recordings';
 import { afterWrite } from '@/lib/feedback';
 import { Btn, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
@@ -37,18 +45,22 @@ import { SectionRow } from '@/lib/SectionRow';
 import { IdeaLine } from '@/lib/IdeaLine';
 import { VersionStepper } from '@/lib/VersionStepper';
 import { BitLines, type LineAction } from '@/lib/BitLines';
+import { BitDoc, type BitDocHandle, type BitDocState, type SaveWhy } from '@/lib/BitDoc';
 import { Pile } from '@/lib/Pile';
-import { AroundList, SetsList, aroundChanged, aroundPath } from '@/lib/Around';
+import { AroundInline, SetsInline, aroundChanged, aroundPath } from '@/lib/Around';
 import * as AR from '@/rules/aroundRules';
 import { DragList } from '@/lib/DragList';
 
 type V = R.BitVersion;
 type Note = { id: string; text?: string | null; date?: string | null; reasons?: unknown[] | null; score?: number | null };
+/** A row of Reorder mode: a line, or the gap between two ideas; `k` keeps its identity through the drag. */
+type OrderRow = L.Row & { k: string };
 
 /** The stages he can set from More › Stage (Retire is its own, destructive item). */
 const STAGE_MENU: [string, string][] = [['idea', 'Idea'], ['to_try', 'To try'], ['testing', 'Testing'], ['working', 'Working']];
 const enc = encodeURIComponent;
 const native = Platform.OS !== 'web';
+const QUIET: BitDocState = { typing: false, pending: false, note: null };
 
 /** The versions as the page reads them (rules/bitLines versionsOf; the camera reads the same list). */
 const versionsOf = (d: any): V[] => R.versionsOf(d);
@@ -64,8 +76,21 @@ export default function BitPage() {
   const cand = useApi<{ history?: { notes?: Note[] } }>(`/api/merge/candidates?joke=${enc(id)}`, { cache: false });
   // everything tied to the bit, and the sets it is in (one read; the half sheet reads the same path from the cache)
   const ar = useApi<AR.Around>(aroundPath(id));
-  const [aroundOpen, setAroundOpen] = useState(false);
-  const [setsOpen, setSetsOpen] = useState(false);
+  // which editor this phone draws: the document (default) or the older Write button (a preference, the fallback)
+  const [classic, setClassic] = useState(() => getPrefs().bitEditor === 'classic');
+  useEffect(() => onPrefs((x) => setClassic(x.bitEditor === 'classic')), []);
+  // the document: its handle, what it says about itself, and the page's scroll view it keeps the caret visible in
+  const doc = useRef<BitDocHandle>(null);
+  const [docState, setDocState] = useState<BitDocState>(QUIET);
+  const scrollRef = useRef<any>(null);
+  const scrollY = useRef(0);
+  const scrollH = useRef(0);
+  const scrollWatch = useMemo(() => ({
+    onScroll: (y: number) => { scrollY.current = y; },
+    onHeight: (h: number) => { scrollH.current = h; doc.current?.follow(); },
+    // a drag never puts the keyboard away under his thumb mid-sentence; it follows the finger down, as in Notes
+    keyboardDismissMode: 'interactive' as const,
+  }), []);
   // the last write from a card's sheet: its non-timed Undo sits on the Around row (HIG.md §7)
   const [lastAround, setLastAround] = useState<{ undo: () => Promise<void> } | null>(null);
   // which version is shown: null = the newest stage version (home), 'rant' = the newest rant cut (after a rant write),
@@ -75,18 +100,25 @@ export default function BitPage() {
   const [rename, setRename] = useState(false);
   const [idea, setIdea] = useState(false);
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);   // the text being edited (a new version on Save)
+  // the older editor only: the text being edited (a new version on Save) and where its caret starts
+  const [editing, setEditing] = useState<string | null>(null);
   const [editSel, setEditSel] = useState<{ start: number; end: number } | undefined>(undefined);
-  const [order, setOrder] = useState<string[] | null>(null);     // Reorder mode: the lines being reordered
+  const [order, setOrder] = useState<OrderRow[] | null>(null);   // Reorder mode: the document's rows being reordered
   const [pileOpen, setPileOpen] = useState<boolean | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
   // the last write's undo handle: "v9 · just now · Undo" in the Versions row (non-timed, HIG.md §7)
   const [lastWrite, setLastWrite] = useState<{ indexes: number[]; n: number } | null>(null);
-  // opened from Bits "+": a fresh document, the editor open and focused before anything else
+  // "Saved as v9" in the footnote slot for a moment after the document saved itself (no snack, no haptic)
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
+  // opened from Bits "+": a fresh document, the keyboard up before anything else
   const [openedFresh, setOpenedFresh] = useState(false);
   useEffect(() => {
-    if (p.edit === '1' && d.data && !openedFresh && editing == null) { setEditing(''); setOpenedFresh(true); }
-  }, [p.edit, d.data, openedFresh, editing]);
+    if (p.edit !== '1' || !d.data || openedFresh) return;
+    setOpenedFresh(true);
+    if (classic && editing == null) setEditing('');
+  }, [p.edit, d.data, openedFresh, editing, classic]);
   const [saving, setSaving] = useState(false);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
   const reloadAll = useCallback(() => { d.reload(); sim.reload(); cand.reload(); ar.reload(); }, [d.reload, sim.reload, cand.reload, ar.reload]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -108,7 +140,7 @@ export default function BitPage() {
   const takes = useMemo(() => recs.filter((r) => r.kind === 'film' && r.bit?.id === id), [recs, id]);
   const takeNotes = useMemo(() => new Set(takes.map((t) => t.merge_id).filter(Boolean) as string[]), [takes]);
   const J = d.data?.joke;
-  // a fresh bit (lib/newBit) carries a marker title until its first Save names it; the page says "New bit" meanwhile
+  // a fresh bit (lib/newBit) carries a marker title until its first save names it; the page says "New bit" meanwhile
   const fresh = isFreshBit(J?.title);
   const title = fresh ? 'New bit' : (J?.title || '').split(' (')[0] || J?.title || 'Bit';
   const shortName = fresh ? 'New bit' : shortNameOf(J?.title || '', J?.short_name);
@@ -119,32 +151,51 @@ export default function BitPage() {
   const vCut: R.Cut = v?.cut || 'stage';
   const src = R.sourceFor(vCut, 'write');
   const lines = useMemo(() => R.linesOf(v?.text), [v?.text]);
+  // what every version of this cut says: a draft on the phone that one of them already says is not newer words
+  const said = useMemo(() => versions.filter((x) => x.cut === vCut).map((x) => x.text), [versions, vCut]);
   const punch = useMemo(() => R.cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
-  // reading = an older version of its cut: Write and the line actions are off, Restore is on
+  // reading = an older version of its cut: the text is not editable, Restore is on
   const reading = versions.length > 0 && !R.isNewestOfCut(versions, vi);
   const scraps = useMemo(() => R.pileScraps((cand.data?.history?.notes || []).filter((n: Note) => !takeNotes.has(n.id)), memos), [cand.data, memos, takeNotes]);
   const barOn = R.barEnabled(lines, J?.summary) && !fresh;
-  const canWrite = online && !reading && editing == null && order == null;
-  const footnote = R.writeReason({ vi, count: versions.length, online: true, newest: !reading });
+  const typing = !classic && docState.typing;
+  // the page's own writes (a reorder, a line from the pile, a restore, Cut): online, on the newest version, nothing else open
+  const canWrite = online && !reading && editing == null && order == null && !typing;
+  // the one line above the bottom: an older version being read, else why his words are not a version yet
+  const footnote = R.writeReason({ vi, count: versions.length, online: true, newest: !reading }) || (classic ? null : docState.note || savedNote);
   // a selection outlives nothing: stepping clears it (onStep), a write clears it (wrote), a shorter version drops it
   const sel = selRaw != null && selRaw < lines.length ? selRaw : null;
   // an empty bit opens its Pile row on its one real action (frame d); otherwise the rows start closed
   const pileIsOpen = pileOpen ?? (!!d.data && lines.length === 0);
+  /** The document as it stands: what he typed (the document owns it), else the version shown. */
+  const docNow = () => (!classic && !reading ? doc.current?.text() : undefined) ?? v?.text ?? '';
 
   /** Every write lands as a new version: the snack's timed Undo and the row's non-timed one share the indexes. */
-  const wrote = (indexes: number[], msg: string, cut: R.Cut = 'stage') => {
-    haptics.success();
+  const wrote = (indexes: number[], msg: string | null, cut: R.Cut = 'stage') => {
     setPos(cut === 'rant' ? 'rant' : null);
     setSel(null);
-    setLastWrite({ indexes, n: versions.length + 1 });
+    setLastWrite({ indexes, n: versionCount.current + 1 });
     reloadAll();
-    ui.snack(msg, async () => { await undo(indexes); setLastWrite(null); reloadAll(); });
+    if (msg) ui.snack(msg, async () => { await undo(indexes); doc.current?.undone(); setLastWrite(null); reloadAll(); });
   };
   const undoLast = async () => {
     if (!lastWrite) return;
-    try { await undo(lastWrite.indexes); setLastWrite(null); reloadAll(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); }
+    try { await undo(lastWrite.indexes); doc.current?.undone(); setLastWrite(null); reloadAll(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); }
+  };
+  /** The document saved a version by itself. Quiet while he is on the page (HIG/feedback: a save is expected to
+   *  work): the footnote reads "Saved as v9" for a moment and the Versions row under the document has the Undo. Only a
+   *  save made as he leaves the page is a snack, because the row is no longer in front of him. */
+  const docSaved = (indexes: number[], why: SaveWhy) => {
+    const word = fresh ? 'Saved' : `Saved as v${versionCount.current + 1}${vCut === 'rant' ? ' · rant' : ''}`;
+    if (why !== 'leave') {
+      setSavedNote(word);
+      clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSavedNote(null), 4000);
+    }
+    wrote(indexes, why === 'leave' ? word : null, vCut);
   };
 
+  /** The older editor's Save. */
   const saveEdit = async () => {
     const t = (editing || '').trim();
     if (!t || saving) return;
@@ -160,6 +211,7 @@ export default function BitPage() {
       }
       setEditing(null);
       setEditSel(undefined);
+      haptics.success();
       wrote(indexes, openedFresh ? 'Saved' : `Saved as v${versions.length + 1}${vCut === 'rant' ? ' · rant' : ''}`, vCut);
     } catch (e: any) {
       ui.snack(`Couldn’t save: ${e.message}`);
@@ -167,34 +219,45 @@ export default function BitPage() {
       setSaving(false);
     }
   };
-  /** Write: today's editor, over the whole bit; `at` = the line the caret starts on (the second tap on a line). */
+  /** The older editor's Write: one box over the whole bit; `at` = the line the caret starts on (the second tap on a line). */
   const openWrite = (at?: number) => {
     if (!canWrite) return;
     const text = v?.text || '';
     setEditSel(at == null ? undefined : { start: R.lineOffset(text, at), end: R.lineOffset(text, at) });
     setEditing(text);
   };
-  const writeLines = async (next: string[], reason: string, msg: string) => {
+  /** One of the page's own writes: the whole document as a new version; the document on the page follows it. */
+  const writeText = async (make: () => string, reason: string, msg: string) => {
     try {
-      const r = await addVersion(id, R.joinLines(next), reason, false, src);
+      // a save of his own typing that is still on its way lands first: this write is made from, and on top of, it
+      await doc.current?.save('done');
+      const text = make();
+      const r = await addVersion(id, text, reason, false, src);
+      doc.current?.adopt(text, r.unit);
+      haptics.success();
       wrote(r.indexes, msg, vCut);
     } catch (e: any) {
       ui.snack(`Couldn’t save: ${e.message}`);
     }
   };
+  // the older editor's Cut under a line: that line goes, the gaps between his ideas stay
   const cut = (i: number) => {
-    const next = R.cutLine(lines, i);
-    if (!next) return ui.snack('That is the only line');
-    void writeLines(next, 'cut a line on the bit page', 'Line cut');
+    if (lines.length < 2) return ui.snack('That is the only line');
+    void writeText(() => { let n = -1; return L.textOf(L.rowsOf(v?.text).filter((r) => r.kind !== 'line' || ++n !== i)); }, 'cut a line on the bit page', 'Line cut');
   };
-  const startReorder = () => { if (lines.length > 1 && canWrite) { setSel(null); setOrder(lines); } };
+  const startReorder = () => {
+    if (lines.length < 2 || !canWrite) return;
+    setSel(null);
+    setOrder(L.rowsOf(docNow()).map((r, i) => ({ ...r, k: `${i}` })));
+  };
   const finishReorder = () => {
-    const next = order || [];
+    const next = L.textOf(order || []);
     setOrder(null);
-    if (next.join('\n') !== lines.join('\n')) void writeLines(next, 'reordered the lines', 'Reordered');
+    if (!L.sameDoc(next, L.textOf(L.rowsOf(docNow())))) void writeText(() => next, 'reordered the lines', 'Reordered');
   };
-  const addScrap = (s: R.Scrap) => void writeLines(R.insertAfter(lines, sel, s.words), 'added from the pile', 'Added');
-  const restore = () => { if (v) void writeLines(R.linesOf(v.text), `restored ${v.label}`, `Restored ${v.label} as v${versions.length + 1}`); };
+  // a scrap goes in after the line the caret was last on (the older editor: the selected line), else at the end
+  const addScrap = (s: R.Scrap) => void writeText(() => L.applyEdit(docNow(), { op: 'insert', at: classic ? sel : doc.current?.caretLine() ?? null, words: s.words }), 'added from the pile', 'Added');
+  const restore = () => { if (v) void writeText(() => L.docText(v.text), `restored ${v.label}`, `Restored ${v.label} as v${versions.length + 1}`); };
   const toSet = () => afterWrite(() => boards.add(id, title), (ok) => ok, haptics);
   // the bar's To a set: the picker, with a tick on every set the bit is already in (SPEC 2026-11-16 §4.5)
   const pickSets = () => boards.pick(id, shortName);
@@ -222,13 +285,14 @@ export default function BitPage() {
       setRanting(false);
     }
   };
-  // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so the sparkle is off there)
-  const canAsk = online && lines.length > 0 && !!v && v.key !== 'idea' && editing == null && order == null;
+  // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so the sparkle is off there);
+  // off too while words he typed are not a version yet (a session reads the saved version)
+  const canAsk = online && lines.length > 0 && !!v && v.key !== 'idea' && editing == null && order == null && !typing && !(!classic && docState.pending);
   const openSessions = () => {
     if (!canAsk || !v) return;
     router.push({ pathname: '/session/[bit]', params: { bit: id, unit: v.key, cut: v.cut, n: String(versions.length), title: shortName } } as any);
   };
-  const share = () => Share.share({ message: [title, v?.text || ''].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'));
+  const share = () => Share.share({ message: [title, docNow()].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'));
   const retire = async () => {
     try {
       const w = await decide({ target: 'node', action: 'edit', id, after: { stage: 'retired' } });
@@ -281,13 +345,18 @@ export default function BitPage() {
   const tape = R.tapeMeta(nights, killed, 0, takes.length);
   // collapsed, the row reads the newest stage version (Film it §2.6: "unchanged"); right after a write, "just now"
   const vmeta = { count: versions.length - home, newestDate: versions[home]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
-  // the line's actions (Slice 1: Move · Cut; Punch waits for its home in Slice 3, the Claude asks for Slice 4). Move is
-  // not shown on a one-line bit (a greyed control that leads nowhere is not rendered, §14).
+  const canUndoWrite = !!lastWrite && vmeta.justWrote && !reading;
+  // the older editor's line actions (Move · Cut). Move is not shown on a one-line bit (a greyed control that leads
+  // nowhere is not rendered, 3c §14).
   const lineActions: LineAction[] | null = reading || !online || editing != null ? null : [
     ...(lines.length > 1 ? [{ label: 'Move', testID: 'line-move', onPress: startReorder }] : []),
     { label: 'Cut', testID: 'line-cut', onPress: (i: number) => cut(i) },
   ];
+  // the two sections under the document are drawn while the read is on its way too (skeleton rows), so the rows
+  // under them do not jump when it lands; gone only when the read failed with nothing cached (a server without the route)
   const aroundShown = !!ar.data || !ar.rawError;
+  // a card writes into the saved document: not offline, and not over words he typed that no version holds yet
+  const cardsCanAct = online && !reading && order == null && !(!classic && docState.pending);
   const pileRow = (
     <SectionRow testID="row-pile" kind="inline" label="Pile" meta={String(scraps.length)} open={pileIsOpen} onPress={() => setPileOpen(!pileIsOpen)}>
       <Pile testID="pile" scraps={scraps} recs={memos} lines={lines} onAdd={addScrap} />
@@ -306,17 +375,28 @@ export default function BitPage() {
     { label: 'Stage…', onPress: () => setMenu(STAGE_MENU.map(([k, w]) => ({ label: `${w}${J?.stage === k ? ' ✓' : ''}`, onPress: () => void setStage(k) }))) },
     { label: 'Retire', onPress: retire, destructive: true },
   ];
+  const done = () => doc.current?.blur();
 
   return (
     <Screen title={shortName} back testID="bitpage" maxWidth={760} offlineAt="bottom" footnote={footnote}
-      right={native ? undefined : (
+      offlineNote={classic ? undefined : 'Offline · kept on this iPhone'} scrollRef={scrollRef} scrollWatch={classic ? undefined : scrollWatch}
+      right={native ? undefined : typing ? (
+        <Btn small v="primary" testID="bit-done" label="Done" onPress={done} />
+      ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />
+          {classic && <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />}
           <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={canAsk ? C.amber : C.dim} /></IconBtn>
           <IconBtn testID="bit-more" label="More" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>
         </View>
       )}>
-      {native && (
+      {native && typing && (
+        // the keyboard is up: Done alone, trailing (HIG/toolbars; Notes does the same). It puts the keyboard away,
+        // which saves a version if the words changed.
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button variant="prominent" accessibilityLabel="Done" accessibilityHint="Puts the keyboard away" onPress={done}>Done</Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      )}
+      {native && !typing && (
         // HIG/toolbars: simple symbols (no circle borders), the important few in the bar, the rest under More
         <Stack.Toolbar placement="right">
           {/* Ask Claude: the sessions sheet (Film it's two rows until 3c Slice 4 adds the rest); off with its reason */}
@@ -347,8 +427,8 @@ export default function BitPage() {
           </Stack.Toolbar.Menu>
         </Stack.Toolbar>
       )}
-      {native && (
-        // HIG/toolbars: one prominent action, trailing. iOS 18+ draws it (expo-router's bottom toolbar); device check 1 (§4.1) decides it stays
+      {native && classic && (
+        // the older editor only (HIG/toolbars: one prominent action, trailing). The document needs no button: he taps his words.
         <Stack.Toolbar placement="bottom">
           <Stack.Toolbar.Spacer />
           {/* label only: UIKit draws a bar item that has an image as the image alone, and the word is the HIG-standard prominent action */}
@@ -356,10 +436,12 @@ export default function BitPage() {
         </Stack.Toolbar>
       )}
 
+      {/* what sits above the document never changes when the keyboard comes up: a tap must land where he aimed it */}
       <View style={{ gap: 2 }}>
         {/* HIG/typography Title 1 (28 pt) for the full title, only when it says more than the bar's short name */}
         {!fresh && title !== shortName && <Text testID="bit-title" accessibilityRole="header" maxFontSizeMultiplier={1.8} style={{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text }}>{title}</Text>}
-        <IdeaLine testID="bit-idea" summary={J?.summary} ai={aiIdea} onEdit={() => setIdea(true)} />
+        {/* a new bit has one placeholder, the document's own; the idea line comes once the bit has a name */}
+        {!fresh && <IdeaLine testID="bit-idea" summary={J?.summary} ai={aiIdea} onEdit={() => setIdea(true)} />}
       </View>
 
       {editing != null ? (
@@ -380,62 +462,70 @@ export default function BitPage() {
             <T v="semi" style={{ flex: 1, textAlign: 'center' }} accessibilityRole="header">Reorder</T>
             <TextBtn testID="reorder-done" label="Done" color={linkColor()} onPress={finishReorder} />
           </View>
-          <DragList items={order.map((text, i) => ({ k: `${i}:${text}`, text }))} keyOf={(x) => x.k} testID="reorder-list"
-            onReorder={(from, to) => setOrder((o) => (o ? R.moveLine(o, from, to) : o))}
-            render={(x, i, handle) => (
+          <DragList items={order} keyOf={(x) => x.k} testID="reorder-list"
+            onReorder={(from, to) => setOrder((o) => (o ? (L.moveRow(o, from, to) as OrderRow[]) : o))}
+            render={(x, _i, handle) => (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, borderBottomWidth: 1, borderBottomColor: C.hairline }}>
                 {handle}
-                <Text maxFontSizeMultiplier={R.PROSE_CAP} style={{ flex: 1, minWidth: 0, fontFamily: R.isPunch(punch, lines.indexOf(x.text)) ? F.bold : F.body, fontSize: 17, lineHeight: 26, color: C.text, paddingVertical: 9 }}>{x.text}</Text>
+                {x.kind === 'line'
+                  ? <Text maxFontSizeMultiplier={R.PROSE_CAP} style={{ flex: 1, minWidth: 0, fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text, paddingVertical: 9 }}>{x.text}</Text>
+                  // the blank line between two ideas is a row of its own: drag it to split an idea somewhere else, or a line across it
+                  : <Text maxFontSizeMultiplier={R.ROW_CAP} style={{ flex: 1, minWidth: 0, fontFamily: F.semi, fontSize: 13, lineHeight: 18, color: C.mut2 }}>Blank line</Text>}
               </View>
             )} />
         </View>
-      ) : lines.length ? (
-        <>
-        {vCut === 'rant' && (
-          // a word, not a colour (Film it §2.6): the version shown is the rant cut, and Write writes that cut
-          <View testID="bit-rant-cut" accessible accessibilityLabel={`Rant cut, ${v?.label}`} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ paddingHorizontal: 8, minHeight: 24, borderRadius: 6, borderWidth: 1, borderColor: C.border, justifyContent: 'center' }}>
-              <Text maxFontSizeMultiplier={R.ROW_CAP} style={{ fontFamily: F.semi, fontSize: 13, color: C.text }}>Rant cut</Text>
-            </View>
-          </View>
-        )}
-        <BitLines testID="bit-lines" lines={lines} punch={punch} selected={sel} onSelect={setSel} onOpenAt={(i) => openWrite(i)} actions={lineActions} />
-        </>
       ) : (
-        <Text testID="bit-empty" maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.mut2, paddingVertical: 8 }}>Nothing written yet.</Text>
+        <>
+          {vCut === 'rant' && (
+            // a word, not a colour (Film it §2.6): the version shown is the rant cut, and a write writes that cut
+            <View testID="bit-rant-cut" accessible accessibilityLabel={`Rant cut, ${v?.label}`} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ paddingHorizontal: 8, minHeight: 24, borderRadius: 6, borderWidth: 1, borderColor: C.border, justifyContent: 'center' }}>
+                <Text maxFontSizeMultiplier={R.ROW_CAP} style={{ fontFamily: F.semi, fontSize: 13, color: C.text }}>Rant cut</Text>
+              </View>
+            </View>
+          )}
+          {classic ? (
+            lines.length
+              ? <BitLines testID="bit-lines" lines={lines} punch={punch} selected={sel} onSelect={setSel} onOpenAt={(i) => openWrite(i)} actions={lineActions} />
+              : <Text testID="bit-empty" maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.mut2, paddingVertical: 8 }}>Nothing written yet.</Text>
+          ) : reading ? (
+            // an older version: read, select and copy; not typed into (Restore makes it the newest)
+            <Text testID="bit-reading" selectable maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text2 }}>{v?.text || ''}</Text>
+          ) : (
+            // keyed by the cut: the stage document and the rant cut are two documents, each with its own draft
+            <BitDoc key={vCut} ref={doc} testID="bit-doc" bit={id} cut={vCut} unit={v?.key ?? null} saved={v?.text || ''} said={said} fresh={fresh} autoFocus={p.edit === '1'} online={online}
+              noteOn={!online || !!footnote} onSaved={docSaved} onFailed={() => ui.snack('Couldn’t save. Trying again.')} onState={setDocState}
+              scroll={{ ref: scrollRef, y: scrollY, h: scrollH }} />
+          )}
+        </>
       )}
 
-      <View testID="bit-rows" style={{ borderTopWidth: 1, borderTopColor: C.hairline }}>
-        {/* an empty bit opens on its one real action, the Pile: it leads there (the two rows below it hold nothing yet) */}
-        {lines.length === 0 && pileRow}
-        {/* drawn while the read is on its way too (no count, not tappable), so the rows under them do not jump when it
-            lands; gone only when the read failed with nothing cached (a server without the route) */}
-        {aroundShown && (
-          <SectionRow testID="row-around" kind="inline" label="Around this bit" meta={ar.data ? AR.countMeta(AR.aroundCount(ar.data)) : null} disabled={!ar.data} open={!!ar.data && aroundOpen} onPress={() => setAroundOpen((o) => !o)}
-            right={lastAround ? <TextBtn testID="row-around-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last change around this bit" onPress={() => void undoAround()} /> : undefined}
-            extraActions={lastAround ? [{ label: 'Undo the last change around this bit', onPress: () => void undoAround() }] : undefined}>
-            {!!ar.data && <AroundList testID="around" around={ar.data} onOpen={(it) => router.push({ pathname: '/around', params: { bit: id, item: it.id } } as any)} />}
-          </SectionRow>
-        )}
-        {aroundShown && (
-          <SectionRow testID="row-sets" kind="inline" label="In these sets" meta={ar.data ? AR.countMeta(ar.data.sets.length) : null} disabled={!ar.data} open={!!ar.data && setsOpen} onPress={() => setSetsOpen((o) => !o)}>
-            {!!ar.data && <SetsList testID="sets" sets={ar.data.sets} canAdd={barOn && online} onAdd={pickSets} />}
-          </SectionRow>
-        )}
-        {lines.length > 0 && pileRow}
-        {versions.length > 1 && (
-          <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
-            accessibilityLabel={vi !== home ? `Versions, reading ${R.stepperValue(vi, versions.length, v?.date, v)}` : R.versionsLabel(vmeta)}
-            open={versionsOpen} onPress={() => setVersionsOpen((o) => !o)}
-            right={lastWrite && vmeta.justWrote && !reading ? <TextBtn testID="row-versions-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last write" onPress={() => void undoLast()} /> : undefined}
-            extraActions={lastWrite && vmeta.justWrote && !reading ? [{ label: 'Undo the last write', onPress: () => void undoLast() }] : undefined}>
-            <VersionStepper testID="stepper" versions={versions} vi={vi} reading={reading} onStep={(i) => { setPos(i); setSel(null); }} onRestore={restore} durationS={J?.duration_s} estimated={!!J?.duration_estimated} />
-          </SectionRow>
-        )}
-        {!!tape && (
-          <SectionRow testID="row-tape" kind="push" label="On tape" meta={tape} onPress={() => router.push(`/joke/${enc(id)}/tape` as any)} />
-        )}
-      </View>
+      {/* everything under the document is out of the way while the keyboard is up: nothing sits between him and typing */}
+      {!typing && (
+        <View testID="bit-rows" style={{ borderTopWidth: 1, borderTopColor: C.hairline }}>
+          {/* first under the document: its Undo is the Undo of the save he just made (shown from the first save on) */}
+          {(versions.length > 1 || canUndoWrite) && (
+            <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
+              accessibilityLabel={vi !== home ? `Versions, reading ${R.stepperValue(vi, versions.length, v?.date, v)}` : R.versionsLabel(vmeta)}
+              open={versionsOpen} onPress={() => setVersionsOpen((o) => !o)}
+              right={canUndoWrite ? <TextBtn testID="row-versions-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last write" onPress={() => void undoLast()} /> : undefined}
+              extraActions={canUndoWrite ? [{ label: 'Undo the last write', onPress: () => void undoLast() }] : undefined}>
+              <VersionStepper testID="stepper" versions={versions} vi={vi} reading={reading} onStep={(i) => { setPos(i); setSel(null); }} onRestore={restore} durationS={J?.duration_s} estimated={!!J?.duration_estimated} />
+            </SectionRow>
+          )}
+          {/* an empty bit opens on its one real action, the Pile: it leads there (the two sections below it hold nothing yet) */}
+          {lines.length === 0 && pileRow}
+          {aroundShown && (
+            <AroundInline testID="around" bit={id} around={ar.data || null} text={v?.text || ''} canAct={cardsCanAct}
+              right={lastAround ? <TextBtn testID="row-around-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last change around this bit" onPress={() => void undoAround()} /> : undefined} />
+          )}
+          {aroundShown && <SetsInline testID="sets" sets={ar.data ? ar.data.sets : null} canAdd={barOn && online} onAdd={pickSets} />}
+          {lines.length > 0 && pileRow}
+          {!!tape && (
+            <SectionRow testID="row-tape" kind="push" label="On tape" meta={tape} onPress={() => router.push(`/joke/${enc(id)}/tape` as any)} />
+          )}
+        </View>
+      )}
 
       <Sheet visible={rename} onClose={() => setRename(false)} label="Short name" testID="bit-rename-sheet">
         <SheetHead title="Short name" onCancel={() => setRename(false)} testID="bit-rename" />

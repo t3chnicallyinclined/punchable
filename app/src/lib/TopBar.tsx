@@ -51,9 +51,9 @@ function TopBarRight() {
  * (the bit page: status near the controls it describes, HIG/feedback); while online that slot shows `note` instead
  * (the one-word reason under the bottom button, "Reading v5"), or nothing.
  */
-export function OfflineStrip({ placement = 'top', note }: { placement?: 'top' | 'bottom'; note?: string | null }) {
+export function OfflineStrip({ placement = 'top', note, offlineNote }: { placement?: 'top' | 'bottom'; note?: string | null; /** what the line says with no signal on a screen that keeps working offline; the screen's own note, when it has one, is said first (default: reading only) */ offlineNote?: string | null }) {
   const online = useOnline();
-  const text = placement === 'bottom' ? (online ? note : 'Offline · reading only') : null;
+  const text = placement === 'bottom' ? (online ? note : offlineNote ? note || offlineNote : 'Offline · reading only') : null;
   // iOS has no live region (accessibilityLiveRegion is Android-only): say the change once
   useEffect(() => {
     if (text) AccessibilityInfo.announceForAccessibility?.(text);
