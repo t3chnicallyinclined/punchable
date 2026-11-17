@@ -11,8 +11,9 @@
 //   - where the page must scroll so the caret is never under the keyboard.
 // No React, no React Native: tests/lineRules.test.mjs runs it under node, with a --red arm per rule.
 
-/** The longest text a version takes (POST /api/jokes/<id>/versions refuses more). */
-export const MAX_DOC = 4000;
+/** The longest text a version takes, in characters (POST /api/jokes/<id>/versions refuses more: pk-api
+ *  MAX_VERSION_CHARS). A bit is a document of several ideas on one topic, so this is a few pages, not a few lines. */
+export const MAX_DOC = 40000;
 /** The local draft is written this long after the last keystroke. */
 export const DRAFT_SETTLE_MS = 400;
 /** A pause: this long without a keystroke while the words differ from the saved version, and a version is saved. */

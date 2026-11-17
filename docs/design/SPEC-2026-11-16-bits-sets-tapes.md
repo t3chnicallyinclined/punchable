@@ -1,7 +1,8 @@
 # SPEC 2026-11-16: Bits, Sets, Tapes (the redesign) and the build slices
 
 Status: **Slice 1 is merged (§8 Slice 1 "Built"); Slice 2 is built on a branch (§8 Slice 2 "Built"), rewritten
-by an owner statement of 2026-11-16 (B11: the bit is a document); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
+by an owner statement of 2026-11-16 (B11: the bit is a document); Slice 4 is built on a branch (§8 Slice 4
+"Built"); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
 the roadmap to figure out". This file turns that mockup into an inventory, the data and API changes, the platform
 verdicts, the risks and nine slices. The mockup is an HTML sketch kept outside this repo; every joke in it and in
 this file is invented.
@@ -459,9 +460,27 @@ a document does, and the unknown about Backspace only exists because of them. No
   footnote line has the screen's ground, so it is never drawn over his words, and the caret is kept clear of it.
 - **Reorder** is its own mode from More (the existing drag list): the rows are the document's lines and one "Blank
   line" row per gap between ideas, which can be dragged too.
-- **Limit.** A version takes 4000 characters (`pk-api/src/writes/bits.rs`). A longer document stays on the phone
-  with "Too long to save · 4,120 of 4,000" in the footnote. Raising the route's limit is a server change and is
-  **not in this slice**; a bit that holds several ideas will reach it (about 700 words).
+- **Limit.** A version takes **40,000 characters** (raised from 4,000 on 2026-11-16, owner: "a bit is a document,
+  it just has a bunch of ideas for the same topic"): `pk_kb::MAX_UNIT_CHARS` / `kb.MAX_UNIT_CHARS` (a unit),
+  `pk-api/src/writes/bits.rs` and `api-dev/server.py` (the route, both servers, the same words), `rules/lineRules.ts`
+  `MAX_DOC` (the app). A longer document stays on the phone with "Too long to save · 40,120 of 40,000" in the
+  footnote. An idea jotted and the input bar keep 4,000. What a 40,000-character version meets (read in code
+  2026-11-16, not measured):
+  - **The write:** at most 160 KB of text in a 256 KiB body; one decision line and one unit hold it whole.
+  - **Search by meaning and "sounds like it":** the vector is made from the first 2,000 characters only
+    (`pk-embed` `MAX_CHARS`, then 512 tokens), so the lower part of a long document is found by its words (the
+    full-text index covers all of it) and not by its meaning. Cut, never refused.
+  - **The worker:** Make it a rant, Pick a hook and punch-up are handed the version's lines whole (INFERRED: no cap
+    on the way in was found); a full document is about ten times the tokens of an old one, inside the daily budget.
+    Draft a rant from a topic reads the first 4,000 characters of each source.
+  - **Lists and search rows** show a cut line, and the decisions list is paged; backups dump whole tables.
+  - **What grows:** every save is a whole new version. `GET /api/jokes/<id>` sends every version's text, and each
+    one is a row in the decision log and a node in pk-api's memory, which already runs close to its limit under
+    load (journal 2026-11-16). Twenty-five saves of a full document are 1 MB of text for one bit. Not a problem at
+    one write; the thing to watch as documents get long. Follow-ups, none done: versions sent without their text
+    until asked for, and the memory limit.
+  - **On the phone:** one multiline field holds the whole text and the local draft is rewritten after each pause in
+    typing; how that feels at several thousand words is a device check.
 - **Fallback:** the older page (lines as 44-pt rows, the bottom Write button, the one-box editor with Save), behind
   Settings › This device › "Write button on a bit".
 
@@ -762,7 +781,7 @@ nothing" as a button's rule (it is the autosave's rule now).
       tap under a short bit moves the caret to its end instead of landing on nothing.
   16. **The shell (`lib/Screen*`) gained** `scrollWatch` (scroll position, height, the dismiss mode), `offlineNote`,
       and a ground behind the bottom footnote line.
-  17. **Not done, needs a server change:** the 4000-character limit of a version (§4.3 Limit). **Not done, by
+  17. **Done after the slice (2026-11-16):** a version's limit is 40,000 characters (§4.3 Limit). **Not done, by
       design:** the punch mark and the folded tags are not drawn in the document (no read carries `line_meta` yet,
       3c Slice 3); they are still drawn in the fallback.
   18. **`lineRules` gained `anchorsOf` and `findAnchor`** (a place in the document found by the line's own words,
@@ -820,6 +839,67 @@ those notes on stage on today's Record screen.
 - **Owner's phone checks:** open a set, type a note under a bit, Return adds another, Backspace on an empty one
   removes it; reorder the bits: the notes travel with their bit; Record → tap the bit: his notes, not the app's;
   tap the words between two bits: a callback, the usual order, a bridge to draft, or "same shape twice".
+- **Built 2026-11-16 (branch `app/redesign-slice4`; not merged, not pushed, not deployed, no phone build).** Server:
+  `pk-creative/src/reducers/setnotes.rs` (the store), `pk-creative/src/setnotes.rs` (derived notes, the same-shape
+  seam, whose tie a seam names), `pk-api/src/writes/setnotes.rs` (`POST /api/boards/<id>/notes`), `note` in
+  `writes/boards.rs`, the join in `routes/sets_detail.rs` and `routes/around.rs`; one regex Ingress path
+  (`/api/boards/[^/]+/notes$`) in `infra/k8s/prepared/t10-api-rs.yaml`. App: `rules/setNoteRules.ts`,
+  `lib/BulletNotes.tsx`, `lib/SetCard.tsx`, `list/[id].tsx`, `bitnotes.tsx`, `lib/stageNotes.ts`. The calls made
+  against this spec:
+  1. **The caps are the route's, not the reducer's** (§3.3 put them on the op). The reducer checks only the shape (a
+     list of texts for one board and one bit); 12 notes, 200 characters and "one clean line" are checked by the route.
+     A cap in the reducer that was ever tightened would refuse the rows already written and the store could not be
+     replayed (security review).
+  2. **The answer carries more than `{ok, notes, was}`:** `board`, `joke_id`, and `already: true` when the list sent
+     is the list stored (nothing is written). Notes need the bit to be on the list (400); an archived list refuses in
+     the words every other change to it is refused with; a list the app made (a draft) takes notes and stays a draft.
+  3. **A note is cleaned, not refused:** control characters, line separators and direction overrides become spaces,
+     the ends are trimmed, blank bullets are dropped. Each note, and the notes read together, pass the court-material
+     check (422, nothing written), as every stored text does.
+  4. **`note` on `POST /api/boards/<id>/items`** goes after the notes the bit kept from an earlier stay on the list
+     and is not written twice; the answer adds `notes` and `note_added`. The add and the note are two rows in two
+     stores: when the note fails after the add landed the answer is still 200 with `note_error: true`. **The app
+     sends no note yet:** nothing on the bit page can be highlighted until Slice 3, so the picker is unchanged
+     (`creative.addItem` takes the argument).
+  5. **"Same shape twice"** (`transition_in.same_shape: {source, shared, edge} | null`) is a stored `same_shape` edge
+     between the two neighbours, or two shared device or structure labels above the bar Around this bit lists Same
+     shape by; a pair he called Not connected is silent unless the edge is stored. It wins the seam's label.
+  6. **`transition_in.source` (`his` | `ai` | null) is new:** a callback or a shared premise that is only the app's
+     reading keeps its name, carries the AI badge on the row and gets no check; the check is for what he did on
+     stage, wrote, made or confirmed (design review).
+  7. **The notes and the dismissed pairs are extras on the two reads:** a `setnotes` or `links` store that cannot be
+     replayed costs the notes or the seam, not the page (security review).
+  8. **Every seam is one row, opened in place** (a mark, the words, the AI badge where it applies, a chevron):
+     "Usual order", "Callback", "Your segue", "Could lead in", "Same premise", "Same shape twice", "No bridge yet".
+     "Gap here · add a bridge" is now "No bridge yet" with **Draft a bridge** inside. No sheet (a bridge sheet would
+     open over it).
+  9. **Reading and writing are two looks.** Notes read as wrapped bullets; a tap turns that bit's notes into
+     single-line fields (iOS reports Backspace in an empty field only for a single-line one). Return adds a note,
+     **Return on an empty note puts the keyboard away**, Backspace on an empty note removes it, "Add a note" sits
+     under every bit. Not done: only the focused note as a field (a long note is one line while it is edited).
+  10. **Saved when he leaves a bit's notes**, when the app leaves the foreground and when the screen goes; never per
+      Return. Adding is quiet; a removed or changed note gets the snack with Undo; **the list's menu gains
+      "Undo: <the last change>" with no clock on it**, fed by the notes and by move, remove, add, swap, rename and
+      length (`HIG.md` §7). A save that fails keeps his words with "Not saved · Try again", for as long as the app
+      runs. **Offline he cannot write notes** ("Add a note · offline"); there is no queue.
+  11. **The derived words are shown under "From the bit", muted, and are never saved:** the editor opens empty and
+      they stay in sight until his first note is saved (`tests/setNoteRules.test.mjs --red` pins it). Each derived
+      note is cut at 300 characters (a version can be a 40,000-character document; the step's `text` has it whole).
+  12. **The row lost its quote line** (the notes are under it), the footer hint line is gone, and "Add a joke" reads
+      **"Add a bit"** on the list and on the add sheet.
+  13. **The Sets card is a system card** (name, "4 bits · 6:10", the bits' names on one run, "Tonight · 7:00 slot ·
+      Edited Nov 16"); the paper card with its fixed colours is gone. **No "last recorded" line:** the server is not
+      told which set a tape followed until Slice 5.
+  14. **The notes sheet shows his notes first at stage size;** opened from the stage, the bit's words are folded
+      behind a "The bit" row; opened from the list they follow open.
+  15. **No differential:** the route has no Python twin. Proof is the unit tests in the three Rust files and one
+      scratch-database test in `pk-api/tests/writes.rs`, with four red arms run once each (the build ignoring the
+      store; a remove that clears the notes; `was` holding the new list; the archived check gone): each failed with
+      exit 101, then passed with the plant out.
+  16. **Not done, each a follow-up:** `/api/export` and the delete-me inventory do not list `setnotes` (nor `links`
+      from Slice 1); `pk-wire`'s `Step` does not carry the new fields (pk-api answers with values); the snack can sit
+      behind the keyboard when he moves straight into another bit's notes; whether holding Delete eats into the note
+      above is a device check.
 
 ### Slice 5: The walk-through and After
 

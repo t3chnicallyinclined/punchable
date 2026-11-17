@@ -1,7 +1,7 @@
 //! The set lists' writes (`creative_api.Routes.board_create`, `board_patch`, `board_item`, `bridge`): `POST
 //! /api/boards` (a new list: `story.create`), `PATCH /api/boards/<id>` (every change in one body, each op checked
 //! on a copy before any is written: `story._apply` on a probe), `POST /api/boards/<id>/items` (one bit added after
-//! another) and `POST /api/boards/<id>/bridge` (a transition drafted by the hosted worker: a `bridge` job queued, or
+//! another; Rust only, an optional `note` goes under it as a bullet note: `writes::setnotes`) and `POST /api/boards/<id>/bridge` (a transition drafted by the hosted worker: a `bridge` job queued, or
 //! the finished one). Every answer is the board as the Storyboard screen reads it (`story.board_view`).
 
 use std::sync::Arc;
@@ -236,7 +236,12 @@ pub async fn patch(
     Ok(json_response(StatusCode::OK, &out))
 }
 
-/// `POST /api/boards/<id>/items {joke_id, after?}`: one bit added (after another, at a place, or at the end).
+/// `POST /api/boards/<id>/items {joke_id, after?, note?}`: one bit added (after another, at a place, or at the end).
+/// `note` (SPEC 2026-11-16 §3.3; the words he highlighted when he added it) is put under the bit in the `setnotes`
+/// store once the add has landed, after any notes the bit kept from an earlier stay on this list; the answer then
+/// carries `notes` (the bit's notes now) and `note_added`. A note that cannot be stored (too long, court material)
+/// refuses the whole request before anything is written; a note that fails to land after the add did is
+/// `note_added: false, note_error: true` on a 200, never an error.
 pub async fn item(
     State(st): State<AppState>,
     Extension(_caller): Extension<Caller>,
@@ -246,6 +251,8 @@ pub async fn item(
     body: Body,
 ) -> ApiResult<Response> {
     let Req { st, q: _, b } = request(st, raw.as_deref(), &headers, body).await?;
+    let note = super::setnotes::note_arg(b.get("note"))?;
+    super::refuse_legal(&st, note.as_deref())?;
     let out = detached(async move {
         let owner = st.config().owner_id.clone();
         let _cr = st.creative_lock().lock().await;
@@ -279,8 +286,36 @@ pub async fn item(
             }
             Err(ProbeError::Failed(e)) => return Err(e),
         }
+        // the note is read with the ones the bit kept from an earlier stay here: court material split across two
+        // bullets is refused before anything is written, as on `POST /api/boards/<id>/notes`
+        if let Some(n) = &note {
+            let kept = cr.items(super::setnotes::STORE).await?;
+            let mut all = pk_creative::reducers::setnotes::notes_of(&kept, &id, &jid);
+            all.push(n.clone());
+            super::setnotes::refuse_legal_notes(&st, &all)?;
+        }
         let rec = cr.append("storyboards", "add", &id, op[0].2.clone(), &owner).await?;
-        view_of(c, rec).await
+        // the add has landed: a note that then fails to land must not turn the answer into an error (a retry of the
+        // add would be refused as "already on the board"). The answer says the note is not there; the app sends it
+        // again through the notes route.
+        let stored = match &note {
+            Some(n) => Some(super::setnotes::add_note(&cr, &id, &jid, n, &owner).await),
+            None => None,
+        };
+        let mut view = view_of(c, rec).await?;
+        match stored {
+            Some(Ok((now, added))) => {
+                view["notes"] = json!(now);
+                view["note_added"] = json!(added);
+            }
+            Some(Err(e)) => {
+                tracing::warn!(status = %e.status, "the bit was added; its note was not stored");
+                view["note_added"] = json!(false);
+                view["note_error"] = json!(true);
+            }
+            None => {}
+        }
+        Ok(view)
     })
     .await?;
     Ok(json_response(StatusCode::OK, &out))

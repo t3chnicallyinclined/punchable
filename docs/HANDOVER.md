@@ -169,9 +169,10 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    straight into (`lib/BitDoc`), it keeps a draft on the phone and saves versions by itself (`rules/lineRules`,
    `lib/bitDraft`), and Around this bit and In these sets are drawn on the page under the text (`lib/Around`
    `AroundInline`). The older Write button is behind Settings › This device. **Nothing was run on a phone:** whether
-   the caret stays above the keyboard in a long bit is the open question (checks 2, 3 and 9). **Known limit:** a
-   version takes 4000 characters; a longer bit stays on the phone until the route's limit is raised (a server
-   change, not done).
+   the caret stays above the keyboard in a long bit is the open question (checks 2, 3 and 9). **The limit of a version is 40,000
+   characters** (was 4,000; on branch `app/redesign-slice4`, with Slice 4: pk-kb, pk-api, the Python API and the
+   app's `MAX_DOC` together, so **the API images ship before the phone build that allows the longer text**; spec
+   §4.3 "Limit" says what a long version meets).
 0h. **The redesign: Bits · Sets · Tapes (owner 2026-11-16: "ok lets get all this in, maps on the roadmap to figure
    out"): `docs/design/SPEC-2026-11-16-bits-sets-tapes.md`. Slice 1 is built on branch `app/redesign-slice1` (not
    merged, not pushed, not deployed, no phone build): the bit page's "Around this bit" and "In these sets", the
@@ -185,7 +186,17 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
    and the multi-tick Add to a set → 2 Write as a line editor → 3 marks and redlines → 4 sets with bullet notes →
    5 the one walk-through (sound or video) with a split per bit → 6 rants become sets and the tabs become Bits ·
    Sets · Tapes → 7 a tape as its transcript cut by bit → 8 a Google Doc as written → 9 the Record control. The
-   joke map is untouched and on the roadmap (its §9). **Waiting on owner:** the seven questions in its §7 (where
+   joke map is untouched and on the roadmap (its §9). **Slice 4 (sets with bullet notes) is built on branch
+   `app/redesign-slice4` (not merged, not pushed, not deployed, no phone build):** his notes under each bit of a
+   set, a seam between every two bits, the system Sets card, his notes first on the stage sheet, "Undo: <last
+   change>" in the list's menu; server store `setnotes`, `POST /api/boards/<id>/notes`, `notes` / `notes_from` /
+   `transition_in.same_shape` / `transition_in.source` on the build steps, `note` on `POST /api/boards/<id>/items`.
+   Its sixteen calls against the spec are in §8 Slice 4 "Built". **Deploy order: pk-api first** (the new image, then
+   re-apply the Ingresses of `infra/k8s/prepared/t10-api-rs.yaml`: one new regex path `/api/boards/[^/]+/notes$`),
+   **then the phone build.** No new job kind, no schema change, no new op on an existing store: an older pk-worker
+   and the Python never read `setnotes` (they ask for the stores they name), and a pk-api rolled back below this
+   release leaves the rows untouched. A phone build that meets a server without the slice shows no notes, every
+   seam as before, and "Couldn't save the notes" on a save. **Waiting on owner:** the seven questions in its §7 (where
    Record sits, highlighting words, laughs on phone tapes, the rant draft tool, which version a doc-sorted bit
    shows, old rants as sets, removing unreachable screens). **Found by reading, not run (its §2.7, §5):** a set
    transcribed on the phone may never reach the Sets list (the worker writes `rows`, the graph sync wants `jokes`);

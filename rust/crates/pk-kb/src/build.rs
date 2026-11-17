@@ -16,6 +16,11 @@ use pk_core::py::{self, truthy};
 use crate::model::{EDGE_KINDS, LABEL_KINDS, PERF_KINDS, Rec, STAGES, bucket, public};
 use crate::view::View;
 
+/// A unit's text, at most, in code points (`kb.MAX_UNIT_CHARS`). A unit is a version of a bit, and a bit is a
+/// document of several ideas on one topic (owner, 2026-11-16): 40,000, where it was 4,000 while a version was a few
+/// lines.
+pub const MAX_UNIT_CHARS: usize = 40_000;
+
 static DATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("regex"));
 static UNIT_ID_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^unit:[A-Za-z0-9._-]{1,80}$").expect("regex"));
 
@@ -365,8 +370,10 @@ pub fn build(v: &View, req: &Value, now: &str, owner_id: &str) -> KbResult<Built
                     .unwrap_or("")
                     .trim()
                     .to_string();
-                if text.is_empty() || text.chars().count() > 4000 {
-                    return Err(KbError::bad("a line needs its text (up to 4000 characters)"));
+                if text.is_empty() || text.chars().count() > MAX_UNIT_CHARS {
+                    return Err(KbError::bad(format!(
+                        "a line needs its text (up to {MAX_UNIT_CHARS} characters)"
+                    )));
                 }
                 let nid = match after.get("id").and_then(Value::as_str) {
                     Some(id) if UNIT_ID_RE.is_match(id) => id.to_string(),

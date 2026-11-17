@@ -3,7 +3,8 @@
 //! that joins what the page used to ask for one by one or not at all: the merge judge's group and the closest other
 //! bits (`/api/merge/candidates?joke=`), the connection groups (`/api/jokes/<id>/connections`), what sounds like it
 //! (`/api/jokes/<id>/similar`), the notes filed under it (the `merges` store), the newest night's different wording
-//! (the notebook's `script_diff`), the set lists (`storyboards`) and the pairs he said are not connected (`links`).
+//! (the notebook's `script_diff`), the set lists (`storyboards`) with his bullet notes for the bit in each
+//! (`setnotes`) and the pairs he said are not connected (`links`).
 //! The join itself is `pk_creative::around`; this module fetches, in the order of refusals the other id pages keep
 //! (the data, `?backend=`, the cap, the id, the bit).
 //!
@@ -19,7 +20,7 @@ use pk_creative::merge::{MergeState, candidates_for};
 use pk_kb::View;
 use serde_json::Value;
 
-use super::creative::items_of;
+use super::creative::{items_of, items_or_none};
 use super::sets_detail::digits_in;
 use crate::error::{ApiError, ApiResult, ok};
 use crate::index::AppIndex;
@@ -120,10 +121,12 @@ pub async fn around(
         let groups = d.merge_groups(&st, events.len(), &merges).await?;
         let boards = items_of(&st, |s| &s.storyboards).await?;
         let links = items_of(&st, |s| &s.links).await?;
-        Ok::<_, ApiError>((idx, c, ix, merges, groups, boards, links))
+        // his notes on a set's row are an extra: a store that cannot be read costs them, not the page
+        let setnotes = items_or_none(&st, |s| &s.setnotes, "setnotes").await;
+        Ok::<_, ApiError>((idx, c, ix, merges, groups, boards, links, setnotes))
     };
     let (like, rest) = tokio::join!(like, rest);
-    let (idx, c, ix, merges, groups, boards, links) = rest?;
+    let (idx, c, ix, merges, groups, boards, links, setnotes) = rest?;
     let like = like.unwrap_or_else(|e| {
         tracing::warn!("around: what sounds like it failed: {}; the rest is answered", e.msg);
         Like::default()
@@ -159,6 +162,7 @@ pub async fn around(
             wording: said.as_ref(),
             boards: &boards,
             links: &links,
+            setnotes: &setnotes,
             merges: &state,
             cap,
         };

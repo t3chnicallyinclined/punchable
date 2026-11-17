@@ -3,6 +3,7 @@
 import { get, post } from './api';
 import { Job, creative } from './creative';
 import { retry } from '@/rules/retry';
+import type { NotesFrom, TransitionIn } from '@/rules/setNoteRules';
 
 /** A bit as the app shows it anywhere: short title, his line (verbatim), its date, one stage line in words. */
 export type BitCard = {
@@ -18,8 +19,11 @@ export type JokeMap = { joke: BitCard & { text?: string }; groups: { key: MapGro
  *  (the split is the server's guess over his typed idea) and `idea` is the typed idea itself. */
 export type StepText = { setup: string | null; reveal: string | null; from: { unit?: string; date?: string; doc_title?: string } | null };
 export type Step = BitCard & {
-  position: number; transition_in: null | { words: string; weak: boolean; kind: 'proven' | 'link' | 'jump'; from: string; to: string };
+  position: number; transition_in: null | TransitionIn;
   text?: StepText | null; idea?: string | null;
+  /** Slice 4 (SPEC 2026-11-16 §3.3): the bullet notes under this bit in this set. `his` = he wrote them; `derived` =
+   *  the app's pick from the bit's own words while he has written none. Absent on a server older than the slice. */
+  notes?: string[]; notes_from?: NotesFrom;
 };
 export type Build = {
   board: { id: string; title: string; target_s: number; target_lo_s: number }; runtime_s: number; runtime: string; estimated_n: number;

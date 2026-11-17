@@ -321,6 +321,8 @@ pub struct Stores {
     pub intents: Replayed,
     /// The pairs he said are not connected (Around this bit; Rust only).
     pub links: Replayed,
+    /// His bullet notes under each bit of a set list (Rust only).
+    pub setnotes: Replayed,
 }
 
 impl Default for Stores {
@@ -339,6 +341,7 @@ impl Default for Stores {
             script: Replayed::new("script"),
             intents: Replayed::new("intents"),
             links: Replayed::new("links"),
+            setnotes: Replayed::new("setnotes"),
         }
     }
 }
@@ -360,6 +363,7 @@ impl Stores {
             "script" => &self.script,
             "intents" => &self.intents,
             "links" => &self.links,
+            "setnotes" => &self.setnotes,
             _ => return None,
         })
     }

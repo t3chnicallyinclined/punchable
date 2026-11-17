@@ -130,6 +130,10 @@ BUILD_REQUESTS = [
     {"target": "node", "action": "add", "after": {"type": "unit", "text": "ok", "id": "unit:draft-abc", "date": "2024-02-03", "doc_title": " Notes "}},
     {"target": "node", "action": "add", "after": {"type": "unit", "text": "ok", "id": "unit:m1"}},
     {"target": "node", "action": "add", "after": {"type": "unit", "text": "   "}},
+    # a unit is a version of a bit, and a bit is a document of several ideas (kb.MAX_UNIT_CHARS, 40,000 since
+    # 2026-11-16): exactly the limit is built, one character more is refused
+    {"target": "node", "action": "add", "after": {"type": "unit", "text": "meter" * 8000, "source": "app"}},
+    {"target": "node", "action": "add", "after": {"type": "unit", "text": "meter" * 8000 + "s", "source": "app"}},
     {"target": "node", "action": "add", "after": {"type": "set", "title": "x"}},
     {"target": "node", "action": "delete", "id": "joke:raccoons"},
     {"target": "node", "action": "delete", "id": "joke:meters"},

@@ -23,7 +23,7 @@ pub mod overlay;
 pub mod read;
 pub mod view;
 
-pub use build::{Built, build, undo_line};
+pub use build::{Built, MAX_UNIT_CHARS, build, undo_line};
 pub use decision::Decision;
 pub use error::KbError;
 pub use ids::{EdgeId, NodeId, NodeKind, edge_id, slugify};

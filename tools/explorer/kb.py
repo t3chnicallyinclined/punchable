@@ -35,6 +35,9 @@ NODE_EDIT_FIELDS = {"joke": {"stage", "title", "summary", "hidden", "short_name"
                     "set": {"show_date", "venue", "audio_unreliable"},
                     "performance": {"kind"}}
 PERF_KINDS = ("bit", "crowd_work", "banter")
+# a unit's text, at most (code points). A unit is a version of a bit, and a bit is a document of several ideas on one
+# topic (owner, 2026-11-16): 40,000, where it was 4,000 while a version was a few lines. pk-kb: MAX_UNIT_CHARS.
+MAX_UNIT_CHARS = 40000
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -791,8 +794,8 @@ class KB:
                 # (Brainstorm "Use as mine"), or a typed idea folded into a bit by a merge (merge_api). The part_of edge
                 # to its joke is the next decision; until then the unit stands alone.
                 text = (after.get("text") or "").strip() if isinstance(after.get("text"), str) else ""
-                if not text or len(text) > 4000:
-                    raise DecisionError("a line needs its text (up to 4000 characters)")
+                if not text or len(text) > MAX_UNIT_CHARS:
+                    raise DecisionError(f"a line needs its text (up to {MAX_UNIT_CHARS} characters)")
                 nid = after.get("id")
                 if not (isinstance(nid, str) and re.match(r"^unit:[A-Za-z0-9._-]{1,80}$", nid)):
                     nid = "unit:" + hashlib.sha1(f"{text}|{now_iso()}|{len(v.nodes)}".encode("utf-8")).hexdigest()[:12]

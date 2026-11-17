@@ -32,7 +32,7 @@ export type AddJokeProps = {
 };
 
 /** The sheet's title (the wrapper's row, or the native sheet's bar). */
-export const addJokeTitle = (mode: 'add' | 'swap', left: number | null) => (mode === 'swap' ? 'Swap it for' : `Add a joke${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`);
+export const addJokeTitle = (mode: 'add' | 'swap', left: number | null) => (mode === 'swap' ? 'Swap it for' : `Add a bit${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`);
 
 /** The content. `chrome` draws the Cancel · title row (the Modal sheet); the native form sheet owns the bar (chrome={false}). */
 export function AddJokeBody({ onClose, boardId, inSet, fits, onPick, left, mode = 'add', chrome = true }: AddJokeProps & { chrome?: boolean }) {
@@ -142,7 +142,7 @@ export function AddJokeBody({ onClose, boardId, inSet, fits, onPick, left, mode 
 /** The Modal sheet (the web; also any caller that keeps the in-page sheet). The body remounts on each open. */
 export function AddJokeSheet({ visible, ...p }: AddJokeProps & { visible: boolean }) {
   return (
-    <Sheet visible={visible} onClose={p.onClose} label={p.mode === 'swap' ? 'Swap for another joke' : 'Add a joke'} testID="add-sheet">
+    <Sheet visible={visible} onClose={p.onClose} label={p.mode === 'swap' ? 'Swap for another bit' : 'Add a bit'} testID="add-sheet">
       {visible && <AddJokeBody {...p} />}
     </Sheet>
   );

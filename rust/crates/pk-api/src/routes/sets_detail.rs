@@ -13,7 +13,7 @@ use pk_creative::Items;
 use regex::Regex;
 use serde_json::{Map, Value};
 
-use super::creative::{corpus_and_items, items_of};
+use super::creative::{corpus_and_items, items_of, items_or_none};
 use crate::error::{ApiError, ApiResult, ok};
 use crate::query::Query;
 use crate::state::AppState;
@@ -68,7 +68,10 @@ pub async fn board(
 }
 
 /// `GET /api/boards/<id>/build`: the board as a set (`notebook.build`), the working set made from it last, and each
-/// step's text (`server.joke_text`, the joke page's) or his typed idea when there is no written version.
+/// step's text (`server.joke_text`, the joke page's) or his typed idea when there is no written version. Rust only
+/// (SPEC 2026-11-16 §3.3, no Python twin): each step's `notes` with `notes_from` (his bullet notes from the
+/// `setnotes` store, else the derived ones), `transition_in.same_shape` and `transition_in.source`
+/// (`pk_creative::setnotes::decorate`).
 pub async fn board_build(
     State(st): State<AppState>,
     Path(bid): Path<String>,
@@ -77,7 +80,12 @@ pub async fn board_build(
     let q = Query::parse(raw.as_deref());
     let (d, nb, boards) = corpus_and_items(&st, &q, |s| &s.storyboards).await?;
     let wss = items_of(&st, |s| &s.workingsets).await?;
+    // the notes and the dismissed pairs are extras on this page: a store that cannot be read costs them, not the page
+    let notes = items_or_none(&st, |s| &s.setnotes, "setnotes").await;
+    let links = items_or_none(&st, |s| &s.links, "links").await;
     let board = live(&boards, &bid, "no such storyboard")?.clone();
+    // the notes are keyed by the list's own id (what the write uses), not by the path as it was typed
+    let board_id = board.get("id").and_then(Value::as_str).unwrap_or(&bid).to_string();
     let idx = d.index(q.include_hidden()).await?;
     let body = blocking(move || {
         let mut out = pk_creative::setlist::build(&nb.story(), &nb, &board, 5);
@@ -118,6 +126,8 @@ pub async fn board_build(
                 s["idea"] = idea;
             }
         }
+        let gone = pk_creative::reducers::links::dismissed_pairs(&links);
+        pk_creative::setnotes::decorate(&mut out, &nb, &board_id, &notes, &gone);
         out
     })
     .await?;

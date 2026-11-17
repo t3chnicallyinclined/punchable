@@ -1708,8 +1708,8 @@ class Handler(BaseHTTPRequestHandler):
         the voice profile learns it (profile_api.learn_kept). The legal rules run on the text first."""
         by = self.actor(b)
         text = (b.get("text") or "").strip() if isinstance(b.get("text"), str) else ""
-        if not text or len(text) > 4000:
-            raise K.DecisionError("text is required (up to 4000 characters)")
+        if not text or len(text) > K.MAX_UNIT_CHARS:
+            raise K.DecisionError(f"text is required (up to {K.MAX_UNIT_CHARS} characters)")
         import creative_api as CA
         try:
             CA.refuse_legal(text)

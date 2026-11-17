@@ -14,6 +14,7 @@ use serde_json::{Map, Value, json};
 use crate::corpus::{Corpus, venue_short};
 use crate::merge::MergeState;
 use crate::reducers::links::{dismissed_pairs, sorted_pair};
+use crate::reducers::setnotes::notes_of;
 use crate::store::Items;
 use pk_core::py;
 
@@ -117,6 +118,8 @@ pub struct Sources<'a> {
     pub boards: &'a Items,
     /// The pairs he said are not connected (the `links` store).
     pub links: &'a Items,
+    /// His bullet notes under each bit of a set (the `setnotes` store).
+    pub setnotes: &'a Items,
     /// His merges, the notes filed under bits, the pairs he said are not the same bit.
     pub merges: &'a MergeState,
     /// Items per group, at most.
@@ -313,9 +316,9 @@ fn shape_why(it: &Value, his: bool) -> String {
 }
 
 /// The sets a bit is in: his live set lists (not archived, not deleted, not a draft the app made) that hold it, in
-/// store order, each with where it sits. `notes` is the bit's bullet notes in that set (none until the `setnotes`
-/// store exists).
-pub fn sets_of(boards: &Items, jid: &str) -> Vec<Value> {
+/// store order, each with where it sits. `notes` is his bullet notes for the bit in that set (the `setnotes` store;
+/// none when he wrote none: the notes the app derives are the set page's, not this row's).
+pub fn sets_of(boards: &Items, setnotes: &Items, jid: &str) -> Vec<Value> {
     boards
         .values()
         .filter_map(Value::as_object)
@@ -324,9 +327,10 @@ pub fn sets_of(boards: &Items, jid: &str) -> Vec<Value> {
         .filter_map(|b| {
             let ids = b.get("joke_ids").and_then(Value::as_array)?;
             let at = ids.iter().position(|x| x.as_str() == Some(jid))?;
+            let notes = notes_of(setnotes, b.get("id").and_then(Value::as_str).unwrap_or(""), jid);
             Some(
                 json!({"board": b.get("id"), "title": b.get("title"), "position": at + 1, "count": ids.len(),
-                        "notes": []}),
+                        "notes": notes}),
             )
         })
         .collect()
@@ -623,7 +627,7 @@ pub fn build(s: &Sources<'_>, bit: &dyn Fn(&str) -> Option<Bit>) -> Value {
             json!({"key": key, "title": title, "items": items})
         })
         .collect();
-    json!({"joke": s.joke, "unit": s.unit, "groups": groups, "sets": sets_of(s.boards, s.joke)})
+    json!({"joke": s.joke, "unit": s.unit, "groups": groups, "sets": sets_of(s.boards, s.setnotes, s.joke)})
 }
 
 #[cfg(test)]
@@ -753,6 +757,7 @@ mod tests {
         wording: Option<Wording>,
         boards: Items,
         links: Items,
+        setnotes: Items,
         merges: MergeState,
     }
 
@@ -791,6 +796,12 @@ mod tests {
                     "sb:6": {"id": "sb:6", "title": "Smart home stuff", "joke_ids": ["joke:fridge", "joke:gps"]},
                 })),
                 links: Items::new(),
+                // his notes for the fridge in the Friday set; the archived set's and another bit's are never shown
+                setnotes: items(&json!({
+                    "sb:1|joke:fridge": {"id": "sb:1|joke:fridge", "notes": ["open on the beep", "slow down"]},
+                    "sb:2|joke:fridge": {"id": "sb:2|joke:fridge", "notes": ["put away"]},
+                    "sb:6|joke:gps": {"id": "sb:6|joke:gps", "notes": ["another bit's"]},
+                })),
                 merges,
             }
         }
@@ -807,6 +818,7 @@ mod tests {
                 wording: self.wording.as_ref(),
                 boards: &self.boards,
                 links: &self.links,
+                setnotes: &self.setnotes,
                 merges: &self.merges,
                 cap: 6,
             };
@@ -1018,13 +1030,14 @@ mod tests {
         assert_eq!(
             out["sets"],
             json!([
-                {"board": "sb:1", "title": "Friday late show", "position": 2, "count": 3, "notes": []},
+                {"board": "sb:1", "title": "Friday late show", "position": 2, "count": 3,
+                 "notes": ["open on the beep", "slow down"]},
                 {"board": "sb:6", "title": "Smart home stuff", "position": 1, "count": 2, "notes": []},
             ]),
-            "not the archived one, the deleted one, the app's draft, or a list without it"
+            "not the archived one, the deleted one, the app's draft, or a list without it; his notes per set"
         );
         assert_eq!(
-            sets_of(&World::new().boards, "joke:nope"),
+            sets_of(&World::new().boards, &World::new().setnotes, "joke:nope"),
             Vec::<Value>::new(),
             "a bit in no set"
         );
@@ -1066,6 +1079,7 @@ mod tests {
             wording: w.wording.as_ref(),
             boards: &w.boards,
             links: &w.links,
+            setnotes: &w.setnotes,
             merges: &w.merges,
             cap: 1,
         };
@@ -1111,7 +1125,7 @@ mod tests {
 
     #[test]
     fn nothing_known_is_five_empty_groups() {
-        let (boards, links, merges) = (Items::new(), Items::new(), MergeState::default());
+        let (boards, links, setnotes, merges) = (Items::new(), Items::new(), Items::new(), MergeState::default());
         let s = Sources {
             joke: "joke:new",
             unit: None,
@@ -1123,6 +1137,7 @@ mod tests {
             wording: None,
             boards: &boards,
             links: &links,
+            setnotes: &setnotes,
             merges: &merges,
             cap: 6,
         };

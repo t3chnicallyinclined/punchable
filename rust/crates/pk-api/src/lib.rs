@@ -184,7 +184,7 @@ pub const OWN_WRITE_PATHS: [&str; 40] = [
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
 /// list's changes, a set's versions, locks and try notes, a job's result and its drop.
-pub const OWN_WRITE_PATTERNS: [&str; 20] = [
+pub const OWN_WRITE_PATTERNS: [&str; 21] = [
     "/api/jokes/{id}/versions",
     "/api/jokes/{id}/punchup",
     "/api/jokes/{id}/rant",
@@ -205,6 +205,8 @@ pub const OWN_WRITE_PATTERNS: [&str; 20] = [
     "/api/mysets/{id}/lock",
     "/api/mysets/{id}/bridge",
     "/api/topics/{id}",
+    // the redesign, slice 4 (SPEC 2026-11-16 §3.3): his bullet notes under a bit of a set list
+    "/api/boards/{id}/notes",
 ];
 
 /// The nginx regex path the prepared Ingress writes for an [`OWN_PATTERNS`] entry (`{id}` = one segment).
@@ -445,6 +447,7 @@ pub fn app(st: AppState) -> Router {
         )
         .route("/api/boards/{id}/items", write_route(&st, writes::boards::item))
         .route("/api/boards/{id}/bridge", write_route(&st, writes::boards::bridge))
+        .route("/api/boards/{id}/notes", write_route(&st, writes::setnotes::set))
         .route(
             "/api/workingsets/{id}/versions",
             write_route(&st, writes::workingsets::version),
