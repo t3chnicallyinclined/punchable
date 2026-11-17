@@ -1,6 +1,6 @@
 # SPEC 2026-11-16: Bits, Sets, Tapes (the redesign) and the build slices
 
-Status: **Slices 1, 2 and 4 are merged (§8, each "Built"); Slice 2 was rewritten by an owner statement of 2026-11-16
+Status: **Slices 5 and 6 are built on one branch, 2026-11-17 (§8, each "Built"). Slices 1, 2 and 4 are merged (§8, each "Built"); Slice 2 was rewritten by an owner statement of 2026-11-16
 (B11: the bit is a document); Slice 3 is built on a branch (§8 Slice 3 "Built"), rewritten by the owner's rulings of
 2026-11-16 and 2026-11-17 (B12, a whole new draft); the rest is spec only.** Owner, 2026-11-16, on the working mockup: "ok lets get all this in, maps on
 the roadmap to figure out". This file turns that mockup into an inventory, the data and API changes, the platform
@@ -1023,6 +1023,47 @@ lines, go Next and Back, and get the recording back cut up by bit with what he a
   through three bits, Back once; lock the phone and unlock: still recording; End → After shows each bit's time and
   words, a skipped bit says so; Film: the camera on top, same screen, 3-2-1, Keep puts it in Photos; no buzz on
   Next while recording; a call mid-take: "Paused by a call", Resume, and the bit times are still right.
+- **Built 2026-11-17 (branch `app/redesign-slice5-6`, with Slice 6; not merged, not pushed, not deployed, no phone
+  build).** Nothing was run on a phone. Server: `board`, `splits`, `mode` on `POST /api/sets/transcript`
+  (`pk-api/src/writes/transcript.rs` `check_walk`, `check_board` under the creative lock), `pk-wire` `SetTextInput`
+  and `Split`, `pk-worker/src/kinds/set_text.rs` and `worker/execute.py` (`meta.json`). App: `run/[id].tsx`,
+  `after/[rec].tsx`, `rules/runRules.ts`, `rules/memoRules.ts` (`setBody`, `walkFieldsRefused`),
+  `lib/recordings(.native).ts`, `lib/film(.native).ts` `keepSetTake`, `lib/RecRows.tsx`, `stage/[id].tsx` (a redirect).
+  The calls made against this spec:
+  1. **One screen, two recorders, never at once.** `?mode=sound` (expo-audio, keeps taping locked, a call pauses it)
+     and `?mode=video` (the camera on top, the bit under it, 3 · 2 · 1, the review's Redo / Keep). Camera on in the
+     middle of a sound take (§4.4) is not built: it is Slice 9's.
+  2. **Splits come from the recording's own position:** the recorder's clock for sound (it holds still during a call,
+     so a call is in no split: `tests/runRules.test.mjs --red` plants the wall clock and is caught); for video the
+     time since the start, moved once to the file's own clock by the camera's first progress report
+     (`onRecordingProgress`, iOS dev review), so most of the camera's start-up bias of §3.4 is gone. A tap through a
+     bit in under a quarter second is no span. Next, Back, Next makes a second span for the bit visited twice.
+  3. **The dock is Back · disc · Next** (§4.4); Pause moved to the top bar while recording; Next greys as "Last bit";
+     no haptic on Next or Back while a microphone is live; the start haptic fires on the press, before the
+     microphone opens (design review, HIG/playing-haptics; the video take keeps Film it's).
+  4. **Notes / Full lines:** his notes for the bit (or the app's, muted, while he has written none: Slice 4), or the
+     bit's setup and reveal; a 44-pt "Show full lines" / "Show my notes" button under the words, which are plain
+     text VoiceOver reads (design review must-fix).
+  5. **A filmed set is a recording of kind `set` with `mode: video`:** the one copy goes to Photos on Keep, its words
+     go up as a set transcript with the splits, the .mov leaves Documents once the words exist (as a filmed take's),
+     and its row plays it or opens Photos. The take is capped at 20 minutes (`SET_TAKE_S`, this slice's cap decision)
+     and at a file size from the free space; under 2 GB free the disc greys "no room" (iOS dev review). Heat and size
+     at that length are a phone check.
+  6. **The route refuses** a list he does not have, a bit not on it, splits out of order, overlapping, past the take
+     or more than 500, a `mode` other than sound or video (400). **The phone never loses the words to it:** a 400 on
+     a body with the list is sent again with the words alone (`walkFieldsRefused`). The job key gains a digest of the
+     list, the splits and the mode only when they are sent, so the differentials (no such fields) see the Python's
+     key, and the same words sent with corrected taps are a new job (security review).
+  7. **After** reads the phone's row: each bit's time (visits added up), "Skipped", and once transcribed what he said
+     there (`wordsBySplit`: a segment goes to the span its middle falls in; kept on the row as `bit_words`, because
+     the segments leave the row once sent). "You said it differently · Open the bit" when at least four of his
+     spoken content words, and 30 % of them, are in no line of the bit (`saidDifferently`, the lead's numbers). No
+     laughs (§5 R4). The web has no After (it keeps no recordings).
+  8. **The `set_text` golden with splits** is a new scenario of the Python generator (`set_text_splits`): the Python
+     worker writes the same three keys, so the worker differential covers them.
+  9. **Not done, each a follow-up:** the set cards' "last recording" (needs a phone tape's server set id: Slice 7);
+     using the splits on the server (performances, `performed_as`: Slice 7); the splits of a sound take are in memory
+     until the row is written, so a crash between Stop and the row keeps the tape but not its splits.
 
 ### Slice 6: Rants become sets; the tabs become Bits · Sets · Tapes
 
@@ -1043,6 +1084,45 @@ one Tapes tab for every set, video and memo he has recorded.
   each old topic is a set with its rants first and kept bits after; a rant opens as a bit with every version and
   its "rant" label; Film from the set; Tapes lists sets, videos and memos, newest first; the avatar opens Settings
   from every tab; a draft he was mid-way through is saved as a version.
+- **Built 2026-11-17 (branch `app/redesign-slice5-6`, after Slice 5; not merged, not pushed, not deployed, no phone
+  build; the migration ran on scratch databases only).** Server: `pk-api/src/migrate.rs` (`plan`, `mint_ids`,
+  `rants_to_sets`), the binary `pk-rants-to-sets` (in the pk-api image), `cargo xtask rants-to-sets`. App: the tab
+  bar, `(tabs)/(tapes)/` (Tapes, the performed set moved there, `/filmed`), `(me)/` (You, Settings, Voice, Learned,
+  Usage), `(tabs)/(bits)/index.tsx` (`/`), the topic pages moved to `(tabs)/(sets)/topic/`, `lib/scriptFlush.ts`,
+  `lib/PopTo.tsx`, `lib/AlsoKept.tsx`, `rules/tapesRules.ts`, `lib/TopBar.tsx` and `lib/Screen.tsx` (the web's roots).
+  The calls made against this spec:
+  1. **The migration** adds `create` events to `storyboards` in one transaction and changes nothing else: per live
+     topic a list titled with its words (`seed: {topic}`), its rants first (oldest first), then the bits he kept in
+     the order he kept them, jots included, each bit once; a one-bit list (`seed: {rant}`) for each rant no topic
+     holds; nothing for a deleted topic, whose rants count as held by it. A topic or rant that already has a list
+     seeded from it (live, archived or deleted) is skipped, so a second run makes nothing (scratch test, red arm).
+     A bit that is no longer a bit is left out; a list holds at most 200 bits (the route's cap, security review); a
+     title the court-material rules stop becomes "Untitled topic" / "Untitled rant" (security review).
+  2. **Dry run by default; it prints counts only.** `--list` adds each list's title and size (his words: for his eyes,
+     never a log). `--write` refuses unless `--i-have-a-backup` is also given, and prints how many lists it made;
+     their ids (which start with the title) only with `--list`. Rollback: archive the lists whose `seed` names a
+     topic or a rant. Run it once, by one person (two runs at once are not guarded across processes).
+  3. **The app works before and after the migration.** A topic no list was made from yet is listed on Sets under
+     "Topics not yet in a set" and opens its old page (now in the Sets stack); once its list exists, only the list
+     shows and `/topic/<id>` opens it (the page waits for both board lists, so nothing typed is lost to the redirect).
+     Rants with no topic are bits in Bits either way. `useTonight` was not moved: Bits, now the first tab, mounts it at
+     launch.
+  4. **"Also kept"** (the taped moments he kept for the topic) is read through the existing `GET /api/topics/<id>`, not
+     a new route; **"Draft it as one piece…"** in a topic-made set's menu opens the topic's rant script.
+  5. **Tapes** is one list, newest first: the phone's recordings (memos, filmed takes, sets taped here, with their
+     state, play, Delete, Try again, and "By bit" for a walk-through set) and the server's sets; a phone set already
+     sent is shown once when the server holds a set of the same day and title (`tapeRows`, red arm). The Recorded
+     segment left Sets; `/set/<id>` lives in the Tapes stack, so opening a night from Bits or Sets switches to Tapes.
+  6. **The avatar is on all three roots** and opens You, the first page of a root modal stack `(me)` with a standard
+     Close (design review); Settings and the rest push inside it; its links into the tabs pop the modal
+     (`router.dismissTo`, iOS dev review).
+  7. **`/` and `/filmed` pop back to their tab's root** (`lib/PopTo`, `dismissTo`, no animation): a `<Redirect>` on a
+     tab's first screen leaves two copies of it and a Back at launch (iOS dev review). `/stage/<id>` redirects to the
+     walk-through.
+  8. **Not done:** the other leftovers of §7 Q7 (the builder, working sets, Notebook, After a show…) still open as
+     they did; removing them waits for the owner's answer to Q7. `tests/rantTab.test.mjs` is retired; its rules
+     (`rantRules`, `scriptRules`) stay because the topic pages still use them; `tests/tabsShell.test.mjs` replaces it
+     (red arm: main before the slice fails seven checks).
 
 ### Slice 7: A tape as its transcript, cut by bit
 

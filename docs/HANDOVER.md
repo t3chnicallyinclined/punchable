@@ -169,6 +169,26 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0m. **Redesign Slices 5 and 6: the walk-through, and the tabs become Bits · Sets · Tapes (owner on build 32,
+   2026-11-17: "it still seems like its part of the old ux/ui on the phone i see rant bits sets tabs"). Built on branch
+   `app/redesign-slice5-6` (not merged, not pushed, not deployed, no phone build).**
+   `docs/design/SPEC-2026-11-16-bits-sets-tapes.md` §8 Slices 5 and 6 "Built" (the calls, the reviews).
+   - **Slice 5:** a set's Record and Film open one walk-through (`/run/<id>`): one bit at a time with his notes or the
+     full lines, Back · disc · Next, a split per bit kept on the recording's own clock, After cut up by bit; the
+     transcript route takes `board`, `splits`, `mode` (Rust only; refused fields fall back to the words alone).
+   - **Slice 6:** the tab bar is Bits · Sets · Tapes; You and Settings are one modal stack behind the avatar on every
+     tab; Tapes lists every recording; topics not yet made into sets stay reachable on Sets, and a topic made into a
+     set opens it. `cargo xtask rants-to-sets` (the binary `pk-rants-to-sets`, in the pk-api image) makes those sets:
+     a dry run by default, counts only.
+   - **Deploy order:** pk-api (the route's new fields and the migration binary; no new route, no Ingress change, no
+     new job kind, no schema change) → pk-worker (`meta.json` carries the new fields) → web (the same app code) →
+     the migration: the dry run with `--list` for the owner's eyes, his yes, `ship.sh backup-now`, then `--write
+     --i-have-a-backup` once; rollback = archive the lists whose `seed` names a topic or a rant → the phone build.
+     The build works before the migration too (topics show under "Topics not yet in a set").
+   - **Found on the way:** `cargo deny check` fails on main as well: two new upstream advisories (chrono and humantime
+     unmaintained, RUSTSEC-2026-0543 and the humantime one); no fix released. Needs a decision (ignore with a reason
+     in `rust/deny.toml`, or replace the crates) before CI's gate is green again.
+
 0l. **Usage metering, phase 1 (owner 2026-11-17: "lets make sure we monitor account usage so we can tell how much
    users are using and how actinve/how much a user would cost or pay per month"). Built on branch
    `app/usage-metering` (not merged, not pushed, not deployed, no phone build).**
