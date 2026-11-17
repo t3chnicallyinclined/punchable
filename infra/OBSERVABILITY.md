@@ -36,8 +36,9 @@ namespace to the port.
 | `pk_worker_heartbeat_age_seconds` | | seconds since the poll loop last ticked |
 | `pk_worker_build_info` | version, sha | |
 
-Everything else on the dashboard comes from the cluster's own exporters: kube-state-metrics (restarts, the backup
-CronJob's last success, failed Jobs, Bugsink's available replicas) and cAdvisor (pod memory).
+Everything else on the dashboard comes from exporters: Punchable's own kube-state-metrics
+(`infra/observability/kube-state-metrics.yaml`, since 2026-11-17: restarts, the backup CronJobs' last success, failed
+Jobs, Bugsink's available replicas; namespace `punchable` only) and cAdvisor (pod memory).
 
 Every metric is capped at 200 distinct label sets (`engine/prom.py`); past that, new label values collapse into one
 `other` series. The tests (`api-dev/tests/test_metrics.py`) assert that 500 different joke ids produce one route
@@ -60,7 +61,7 @@ series and that no label value on the page is an id.
 | PunchableJobsWaitingForTranscriber | an upload or YouTube import queued > 1 day | info | nothing transcribes on the server since 2026-10-27 and the shipped app does not transcribe yet, so this fires for every set recorded on the phone. Drop it: `POST /api/jobs/<id>/drop {reason}` (his token), or from the worker pod as a final failure (`api-dev/tests/test_jobs_waiting.py` shows the rule). Fired 2026-10-29 for eight test tapes; dropped. The real fix is on-device transcription in the production app (open item). |
 | PunchableSurrealDbRestarted | any restart of `surrealdb-0` in 1 h | warning | `describe pod`: OOMKilled at 512 Mi → memtable; then confirm the last backup is recent |
 | PunchableBackupFailed | a `punchable-backup*` Job failed, 10 m | critical | the Job's log (one redacted line): R2 token, a refused export, SurrealDB down; `ship.sh backup-now` |
-| PunchableBackupMissed | no success for 36 h (VERIFY the metric, below) | critical | CronJob suspended? missed its deadline? `backup-now`, `backup-list` |
+| PunchableBackupMissed | `punchable-backup` or `punchable-backup-rs`: no success for 36 h (never succeeded: 36 h after its creation) | critical | CronJob suspended? missed its deadline? `backup-now`, `backup-list` |
 | PunchableCertificateExpiringSoon | < 14 days left (VERIFY, below) | warning | renewal failing: `describe certificate`, challenges, DNS, the acme-solver NetworkPolicy |
 | PunchablePodCrashLooping | > 3 restarts in 1 h | warning | `describe pod`, `logs --previous` |
 | PunchableBugsinkDown | no available replica 10 m | warning | its log; a PVC or SECRET_KEY problem; `ship.sh bugsink` |
@@ -76,23 +77,26 @@ domain in Resend** (the cluster's Resend key is send-only, so that is a dashboar
 becomes `Punchable Alerts <alerts@punchable.io>` and nothing else changes. The DNS records Resend asks for go into
 `infra/dns/cf_dns.py` WANT and `ship.sh dns apply`.
 
-**Two rules to VERIFY on the live Prometheus before trusting them** (a rule on a metric nobody emits never fires and
-looks exactly like a rule that is passing):
+**Rules that depend on an exporter: check the series exist before trusting them** (a rule on a metric nobody emits
+never fires and looks exactly like a rule that is passing):
 
 ```
-# at :9090/graph on the observability Prometheus
-kube_cronjob_status_last_successful_time{namespace="punchable"}        # PunchableBackupMissed (kube-state-metrics >= 2.x)
+# at :9090/graph on the observability Prometheus (the plain one in namespace observability, NOT sg-prometheus)
+count by (cronjob) (kube_cronjob_created{namespace="punchable"})       # PunchableBackupMissed: both CronJobs listed
+count by (job_name) (kube_job_status_failed{namespace="punchable"})    # PunchableBackupFailed
 certmanager_certificate_expiration_timestamp_seconds{namespace="punchable"}   # PunchableCertificateExpiringSoon (cert-manager scraped?)
 ```
 
-**Verified 2026-10-28 10:50 UTC: BOTH are empty.** The live Prometheus has no kube-state-metrics at all
-(`count(kube_cronjob_info)` = nothing) and does not scrape cert-manager (`{__name__=~"certmanager_.*"}` = nothing); its
-only targets are the punchable api/worker jobs and another app's. So PunchableBackupMissed and PunchableCertificateExpiringSoon
-cannot fire today. Fix (shared observability namespace, owner's go): deploy kube-state-metrics there and add scrape jobs
-for it and for cert-manager's `:9402/metrics` through `infra/observability/apply_prometheus.py`. Until then the backup is
-checked by hand (`infra/ship.sh backup-list`) and the certificate by `kubectl get certificate -n punchable`.
+- **kube_\*: live since 2026-11-17.** Until then this Prometheus had no kube-state-metrics (0 `kube_*` series, checked
+  2026-10-28 and 2026-11-16), so the five kube_* rules (BackupFailed, BackupMissed, PodCrashLooping, SurrealDbRestarted,
+  BugsinkDown) could not fire. Now `infra/observability/kube-state-metrics.yaml` runs one exporter in `observability` that
+  watches namespace `punchable` only (pods, jobs, cronjobs, deployments; a read-only Role in `punchable`, no ClusterRole),
+  scraped by the static job `punchable-kube-state-metrics` that `apply_prometheus.py` adds. `infra/ship.sh observability`
+  applies both.
+- **certmanager_\*: still empty** (cert-manager's `:9402/metrics` is not scraped), so PunchableCertificateExpiringSoon cannot
+  fire; the certificate is checked by `kubectl get certificate -n punchable`.
 
-If either returns nothing, that alert is decoration until the exporter is scraped; say so in the runbook rather
+If a query returns nothing, that alert is decoration until the exporter is scraped; say so in the runbook rather
 than leaving it looking green.
 
 ## Deploying it

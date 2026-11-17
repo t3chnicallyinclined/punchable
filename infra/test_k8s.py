@@ -136,15 +136,16 @@ def test_pk_api_is_scraped_and_alerted_beside_the_python():
     finally:
         sys.path.pop(0)
     jobs = {j["job_name"]: j for j in yaml.safe_load(ap.JOBS)}
-    assert set(jobs) == {"punchable-api", "punchable-api-rs", "punchable-worker"}
+    assert set(jobs) == {"punchable-api", "punchable-api-rs", "punchable-worker", "punchable-kube-state-metrics"}
     # merging adds each MISSING job: a live config made before pk-api had the other two (2026-11-07)
     head, blocks = ap.job_blocks()
     old = ("global: {}\nscrape_configs:\n  - job_name: 'other'\n    static_configs: [{targets: ['x:1']}]\n"
            + head + "\n" + blocks["punchable-api"] + "\n" + blocks["punchable-worker"] + "\n")
     merged, changed = ap.merged_prometheus_yml(old)
     got = [j["job_name"] for j in yaml.safe_load(merged)["scrape_configs"]]
-    assert sorted(got) == ["other", "punchable-api", "punchable-api-rs", "punchable-worker"], got
-    assert changed[0] == "scrape jobs punchable-api-rs", changed
+    assert sorted(got) == ["other", "punchable-api", "punchable-api-rs", "punchable-kube-state-metrics",
+                           "punchable-worker"], got
+    assert changed[0] == "scrape jobs punchable-api-rs, punchable-kube-state-metrics", changed
     again, changed2 = ap.merged_prometheus_yml(merged)
     assert again == merged and not any(c.startswith("scrape jobs") for c in changed2)
     fresh, _ = ap.merged_prometheus_yml("scrape_configs:\n  - job_name: 'other'\n    static_configs: [{targets: ['x:1']}]\n")
@@ -160,7 +161,7 @@ def test_pk_api_is_scraped_and_alerted_beside_the_python():
     assert (keep("punchable-worker"), port("punchable-worker")) == ("punchable-worker", "${1}:9100")
     # the keep regexes are anchored by Prometheus: no job's regex matches another's pod label
     labels = {"punchable-api", "punchable-api-rs", "punchable-worker"}
-    for job in jobs:
+    for job in labels:
         assert {l for l in labels if re.fullmatch(keep(job), l)} == {keep(job)}, job
     [pr] = by_kind("PrometheusRule")
     rules = {r["alert"]: r for g in pr["spec"]["groups"] for r in g["rules"]}
@@ -172,6 +173,43 @@ def test_pk_api_is_scraped_and_alerted_beside_the_python():
     assert 'max(up{job="punchable-api-rs"}) or vector(0)' in exprs and 'max(up{job="punchable-api"}) or vector(0)' in exprs
     stats = [p["gridPos"] for p in dash["panels"] if p["gridPos"]["y"] == 1]
     assert sum(g["w"] for g in stats) == 24 and len({g["x"] for g in stats}) == len(stats)
+
+
+def test_kube_state_metrics_is_read_only_scoped_and_scraped():
+    """2026-11-17: the kube_* alert rules need an exporter. Punchable's own kube-state-metrics watches namespace punchable
+    only, through a namespaced read-only Role (no ClusterRole, no Secrets), is pinned by digest, is scraped by the static
+    job at its Service, and PunchableBackupMissed names BOTH nightly CronJobs."""
+    path = ROOT / "infra" / "observability" / "kube-state-metrics.yaml"
+    docs = [d for d in yaml.safe_load_all(path.read_text(encoding="utf-8")) if d]
+    kinds = sorted(d["kind"] for d in docs)
+    assert kinds == ["Deployment", "Role", "RoleBinding", "Service", "ServiceAccount"], kinds
+    [role] = [d for d in docs if d["kind"] == "Role"]
+    assert role["metadata"]["namespace"] == "punchable"
+    granted = {(g, r) for rule in role["rules"] for g in rule["apiGroups"] for r in rule["resources"]}
+    assert granted == {("", "pods"), ("batch", "jobs"), ("batch", "cronjobs"), ("apps", "deployments")}, granted
+    assert all(set(rule["verbs"]) <= {"list", "watch"} for rule in role["rules"])
+    [dep] = [d for d in docs if d["kind"] == "Deployment"]
+    [svc] = [d for d in docs if d["kind"] == "Service"]
+    assert dep["metadata"]["namespace"] == svc["metadata"]["namespace"] == "observability"
+    [c] = dep["spec"]["template"]["spec"]["containers"]
+    assert re.fullmatch(r"registry\.k8s\.io/kube-state-metrics/kube-state-metrics:v[\d.]+@sha256:[0-9a-f]{64}", c["image"])
+    assert "--namespaces=punchable" in c["args"]
+    assert "--resources=pods,jobs,cronjobs,deployments" in c["args"]
+    assert c["securityContext"]["readOnlyRootFilesystem"] and c["resources"]["limits"]["memory"]
+    sys.path.insert(0, str(ROOT / "infra" / "observability"))
+    try:
+        import apply_prometheus as ap
+    finally:
+        sys.path.pop(0)
+    [job] = [j for j in yaml.safe_load(ap.JOBS) if j["job_name"] == "punchable-kube-state-metrics"]
+    [target] = job["static_configs"][0]["targets"]
+    assert target == f"{svc['metadata']['name']}.observability.svc.cluster.local:{svc['spec']['ports'][0]['port']}"
+    assert "relabel_configs" not in job  # the series' own namespace/pod labels must reach the rules unrenamed
+    [pr] = by_kind("PrometheusRule")
+    rules = {r["alert"]: r for g in pr["spec"]["groups"] for r in g["rules"]}
+    missed = rules["PunchableBackupMissed"]["expr"]
+    assert missed.count('cronjob=~"punchable-backup|punchable-backup-rs"') == 2 and "kube_cronjob_created" in missed
+    assert 'job_name=~"punchable-backup.*"' in rules["PunchableBackupFailed"]["expr"]
 
 
 def test_api_down_rule_matches_two_minutes_and_latency_ten():

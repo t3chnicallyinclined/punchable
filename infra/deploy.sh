@@ -287,6 +287,10 @@ case "$STEP" in
       | $K apply --server-side --field-manager=punchable -f - >/dev/null
     echo "dashboard ConfigMap observability/grafana-dashboard-punchable applied (restart Grafana to pick up a CHANGED file)"
     apply infra/k8s/10-networkpolicy.yaml   # the API and worker admit the observability namespace to their metrics ports
+    # Punchable's own kube-state-metrics (namespace punchable only, read-only Role): the kube_* series the backup,
+    # restart and Bugsink alerts read. Additive in `observability`: its own ServiceAccount, Deployment and Service.
+    $K apply --server-side --field-manager=punchable -f infra/observability/kube-state-metrics.yaml
+    $K -n observability rollout status deploy/punchable-kube-state-metrics --timeout=120s
     if $K api-resources --api-group=monitoring.coreos.com 2>/dev/null | grep -q '^servicemonitors'; then
       apply infra/k8s/60-observability.yaml
       $K -n $NS get servicemonitor,prometheusrule

@@ -1,0 +1,114 @@
+# kube-state-metrics for Punchable's alerts (infra/OBSERVABILITY.md "Alerts"), installed beside the plain Prometheus in the
+# shared namespace `observability`. Applied by `infra/ship.sh observability` (server-side, field manager punchable).
+#
+# Why: PunchableBackupFailed, PunchableBackupMissed, PunchablePodCrashLooping, PunchableSurrealDbRestarted and
+# PunchableBugsinkDown are built on kube_* series. Before 2026-11-17 this Prometheus had none (no exporter), so all five sat
+# "health ok, inactive" and could never fire.
+#
+# Least privilege, on purpose narrower than the upstream example:
+#   * it watches namespace `punchable` ONLY (--namespaces) and only the four kinds the rules read (--resources): pods,
+#     jobs, cronjobs, deployments. The grant is a namespaced Role in `punchable` (list + watch on those four), not a
+#     ClusterRole: it cannot read Secrets, ConfigMaps, nodes, or anything in another namespace.
+#   * Another lane that wants kube_* for its own namespace runs its own exporter, or adds its namespace to --namespaces AND
+#     a Role there; this one is named punchable-kube-state-metrics so nobody mistakes it for a cluster-wide one.
+#   * non-root, read-only root filesystem, no capabilities, RuntimeDefault seccomp; small requests and limits.
+# Scraped by the static job `punchable-kube-state-metrics` (infra/observability/apply_prometheus.py) at
+# punchable-kube-state-metrics.observability.svc:8080. The pinned digest is the multi-arch index of the v2.20.0 release
+# (registry.k8s.io, 2026-08-16; built with client-go v0.36, the cluster is v1.36).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: punchable-kube-state-metrics
+  namespace: observability
+  labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: punchable-kube-state-metrics
+  namespace: punchable
+  labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [list, watch]
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: punchable-kube-state-metrics
+  namespace: punchable
+  labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: punchable-kube-state-metrics
+subjects:
+  - kind: ServiceAccount
+    name: punchable-kube-state-metrics
+    namespace: observability
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: punchable-kube-state-metrics
+  namespace: observability
+  labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector: { matchLabels: { app: punchable-kube-state-metrics } }
+  template:
+    metadata:
+      labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+    spec:
+      serviceAccountName: punchable-kube-state-metrics
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: kube-state-metrics
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.20.0@sha256:42cfe3723a5f058171c627537fb57a3ea0f26e4380fa18555a95cb1a1b4cfc5b
+          args:
+            - --namespaces=punchable
+            - --resources=pods,jobs,cronjobs,deployments
+            - --port=8080
+            - --telemetry-port=8081
+          ports:
+            - { name: http-metrics, containerPort: 8080 }
+            - { name: telemetry, containerPort: 8081 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8081 }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /livez, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: punchable-kube-state-metrics
+  namespace: observability
+  labels: { app: punchable-kube-state-metrics, app.kubernetes.io/part-of: punchable }
+spec:
+  selector: { app: punchable-kube-state-metrics }
+  ports:
+    - { name: http-metrics, port: 8080, targetPort: http-metrics }

@@ -9,8 +9,9 @@
 #   * `jobLabel: app` names the scrape jobs punchable-api / punchable-worker (the Services' `app` label), which is
 #     what the `up{job=...}` rules below match.
 # Every expression is built on a metric that is emitted (api-dev/metrics.py, worker/metrics.py, kube-state-metrics,
-# cert-manager). A rule on a metric nobody emits never fires and reads exactly like a rule that is passing; the two
-# that depend on scrapes this repo does not own are marked VERIFY and infra/OBSERVABILITY.md says how to check them.
+# cert-manager). A rule on a metric nobody emits never fires and reads exactly like a rule that is passing. The kube_*
+# rules read Punchable's own kube-state-metrics (infra/observability/kube-state-metrics.yaml, since 2026-11-17); the
+# certificate rule is still marked VERIFY (cert-manager is not scraped) and infra/OBSERVABILITY.md says how to check it.
 # If the cluster's Prometheus is NOT run by the operator (the other app's live one was not), `infra/ship.sh observability`
 # falls back to infra/observability/apply_prometheus.py, which installs the same scrape jobs and these rule groups
 # into the plain Prometheus's ConfigMap.
@@ -197,17 +198,24 @@ spec:
               redacted. Usual causes: R2 token revoked or rotated (`infra/ship.sh backup-secret`), the export refused as incomplete,
               SurrealDB down during the run. Run one now: `infra/ship.sh backup-now`.
         - alert: PunchableBackupMissed
-          # VERIFY on the live Prometheus that kube_cronjob_status_last_successful_time exists (kube-state-metrics >= 2.x).
-          expr: time() - kube_cronjob_status_last_successful_time{namespace="punchable", cronjob="punchable-backup"} > 36 * 3600
+          # kube-state-metrics (infra/observability/kube-state-metrics.yaml) since 2026-11-17. Both nightly CronJobs: the Python
+          # punchable-backup (04:17 UTC) and the Rust punchable-backup-rs (04:47 UTC). A CronJob that has NEVER succeeded has no
+          # last_successful_time series, so `or kube_cronjob_created` counts from its creation instead of staying silent.
+          expr: >-
+            time() - (
+              kube_cronjob_status_last_successful_time{namespace="punchable", cronjob=~"punchable-backup|punchable-backup-rs"}
+              or kube_cronjob_created{namespace="punchable", cronjob=~"punchable-backup|punchable-backup-rs"}
+            ) > 36 * 3600
           for: 30m
           labels: { severity: critical, service: punchable }
           annotations:
             summary: "no successful backup for 36 hours"
-            description: "The 04:17 UTC CronJob has not succeeded since {{ $value | humanizeDuration }} ago (two nights)."
+            description: "CronJob {{ $labels.cronjob }} has not succeeded for {{ $value | humanizeDuration }} (two nights)."
             runbook: >-
-              `kubectl -n punchable get cronjob punchable-backup` (suspended after a restore drill?), `get jobs`. If the CronJob never
-              ran: startingDeadlineSeconds missed while the node was busy. `infra/ship.sh backup-now`, then `backup-list` to see the
-              bucket. The Bugsink SQLite copy rides in the same Job (infra/backup/backup.py).
+              `kubectl -n punchable get cronjob {{ $labels.cronjob }}` (suspended after a restore drill?), `get jobs`. If the CronJob never
+              ran: startingDeadlineSeconds missed while the node was busy. `infra/ship.sh backup-now` (the Python) or a Job from
+              cronjob/punchable-backup-rs (infra/backup/RUST.md), then `backup-list` to see the bucket. The Bugsink SQLite copy rides
+              in the same Job.
         - alert: PunchableCertificateExpiringSoon
           # VERIFY: needs cert-manager's /metrics scraped by this Prometheus (the box's live config did not scrape it on 2026-09-23).
           expr: (certmanager_certificate_expiration_timestamp_seconds{namespace="punchable"} - time()) < 14 * 86400

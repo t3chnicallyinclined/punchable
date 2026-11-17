@@ -9,8 +9,9 @@ app's scripts/apply_prometheus_alerts.py on this box (read-only reference). Run 
     python3 infra/observability/apply_prometheus.py [--dry-run]
 
 What it changes in ConfigMap observability/prometheus-config, idempotently:
-  * data["prometheus.yml"]: a `punchable-api` and a `punchable-worker` scrape job (pod discovery in namespace punchable,
-    kept by the `app` label, port 8080 / 9100) appended to scrape_configs if missing, and `punchable-alerts.yml` added
+  * data["prometheus.yml"]: the `punchable-api`, `punchable-api-rs` and `punchable-worker` scrape jobs (pod discovery in
+    namespace punchable, kept by the `app` label, port 8080 / 9100) and `punchable-kube-state-metrics` (a static target,
+    infra/observability/kube-state-metrics.yaml) appended to scrape_configs if missing, and `punchable-alerts.yml` added
     to rule_files (the key is created if there is none);
   * data["punchable-alerts.yml"]: the rule groups of 60-observability.yaml's PrometheusRule, verbatim.
 Nothing else in the ConfigMap moves (the other app's keys are left alone). It never touches the `alerting:` block: if there
@@ -66,6 +67,13 @@ JOBS = """
       - { source_labels: [__meta_kubernetes_pod_ip], target_label: __address__, replacement: '${1}:9100' }
       - { source_labels: [__meta_kubernetes_namespace], target_label: namespace }
       - { source_labels: [__meta_kubernetes_pod_name], target_label: pod }
+  - job_name: 'punchable-kube-state-metrics'
+    # kube-state-metrics for namespace punchable only (infra/observability/kube-state-metrics.yaml): the kube_* series
+    # the backup, restart and Bugsink rules read. A static target, and no namespace/pod target labels: the series carry
+    # their own `namespace`, `pod`, `job_name` and `cronjob` labels, which the rules match.
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['punchable-kube-state-metrics.observability.svc.cluster.local:8080']
 """
 
 

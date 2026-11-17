@@ -36,9 +36,11 @@ kubectl -n punchable get cronjob punchable-backup-rs
 ```
 
 It runs at 04:47 UTC (the Python at 04:17) and writes only under `surreal-rs/` and `bugsink-rs/`, so neither job's
-retention can see the other's objects. The existing NetworkPolicy `punchable-backup` and the alert
-`PunchableBackupFailed` already cover its pods and Jobs (the label `app=punchable-backup`, the name prefix
-`punchable-backup`). **Rollback:** `kubectl -n punchable delete cronjob punchable-backup-rs`; the Python CronJob is not touched.
+retention can see the other's objects. The existing NetworkPolicy `punchable-backup` covers its pods (the label
+`app=punchable-backup`). The alerts: `PunchableBackupFailed` matches its Jobs by the name prefix `punchable-backup`,
+and since 2026-11-17 `PunchableBackupMissed` names `punchable-backup-rs` too; both read kube-state-metrics, which this
+cluster did NOT have until 2026-11-17 (`infra/observability/kube-state-metrics.yaml`, infra/OBSERVABILITY.md). Before that
+date neither alert could fire for either CronJob, whatever the rule text said. **Rollback:** `kubectl -n punchable delete cronjob punchable-backup-rs`; the Python CronJob is not touched.
 
 One run now, before waiting for the night (a Job from the CronJob; prints its log):
 
