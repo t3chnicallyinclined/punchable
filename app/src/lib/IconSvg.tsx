@@ -47,6 +47,8 @@ export const P = {
   chevronUp: 'M6 15l6-6 6 6',
   // a bit's notes (the stage sheet): left-aligned lines of text
   lines: 'M4 6h16M4 12h11M4 18h14',
+  // worth a look (a seam with the same shape twice): a triangle with a mark
+  warn: 'M12 4l9 16H3zM12 10v4M12 17h.01',
 } as const;
 export type IconName = keyof typeof P;
 

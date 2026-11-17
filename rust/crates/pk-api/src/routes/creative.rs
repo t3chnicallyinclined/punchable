@@ -33,6 +33,23 @@ pub(crate) async fn items_of(
         .map_err(|e| ApiError::internal("CreativeError", e))
 }
 
+/// A store's items for a part of a page that is an extra (his notes under a bit of a set, the pairs behind a seam):
+/// when the store cannot be read or replayed the page is answered without it and the failure is logged (the store's
+/// name and the error's kind, never a row's content), where [`items_of`] would turn the whole page into a 500.
+pub(crate) async fn items_or_none(
+    st: &AppState,
+    which: fn(&crate::creative::Stores) -> &Replayed,
+    name: &'static str,
+) -> Arc<Items> {
+    match items_of(st, which).await {
+        Ok(items) => items,
+        Err(e) => {
+            tracing::warn!(store = name, status = %e.status, "a creative store could not be read; the page is answered without it");
+            Arc::new(Items::new())
+        }
+    }
+}
+
 /// The data, its notebook and a store's items: the 503 while booting first, then `?backend=`; the store's lines are
 /// read right after this request's `meta:state` read, while the data and the notebook are made ready.
 pub(super) async fn corpus_and_items(

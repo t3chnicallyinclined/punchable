@@ -41,6 +41,7 @@ pub mod mysets;
 pub mod rant;
 pub mod review;
 pub mod say;
+pub mod setnotes;
 pub mod srcpaths;
 pub mod topic;
 pub mod transcript;

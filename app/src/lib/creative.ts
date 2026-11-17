@@ -175,8 +175,9 @@ export const creative = {
   archivedBoards: () => get<any>('/api/boards?archived=1').then((j) => ({ boards: asList<BoardListItem>(j, 'boards') })),
   patchBoard: (id: string, p: BoardPatch) =>
     withFixture(() => patch<any>(`/api/boards/${enc(id)}`, p).then(boardOf), async () => (await fx()).patchBoard(id, p)),
-  addItem: (id: string, jokeId: string, after?: string) =>
-    withFixture(() => post<any>(`/api/boards/${enc(id)}/items`, { joke_id: jokeId, ...(after ? { after } : {}) }).then(boardOf), async () => (await fx()).addItem(id, jokeId, after)),
+  /** `note` (SPEC 2026-11-16 §3.3): words that go under the bit as a bullet note of this set, once it is on the list. */
+  addItem: (id: string, jokeId: string, after?: string, note?: string) =>
+    withFixture(() => post<any>(`/api/boards/${enc(id)}/items`, { joke_id: jokeId, ...(after ? { after } : {}), ...(note ? { note } : {}) }).then(boardOf), async () => (await fx()).addItem(id, jokeId, after)),
   bridge: (id: string, from: string, to: string) =>
     withFixture(() => post<any>(`/api/boards/${enc(id)}/bridge`, { from, to }).then((b) => (b.__status === 202 || b.status === 'queued' ? ({ ...b, from, to, draft: true, label: 'DRAFT · AI · not your words yet', status: 'queued' } as Bridge) : (b as Bridge))), async () => (await fx()).bridge(from, to)),
   workingsets: () => withFixture(() => get<any>('/api/workingsets').then((j) => ({ working_sets: asList<WSListItem>(j?.working_sets ? j : { working_sets: j?.workingsets }, 'working_sets') })), async () => (await fx()).workingsets()),

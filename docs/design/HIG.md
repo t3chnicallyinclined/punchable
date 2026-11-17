@@ -194,8 +194,9 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Header: large title "Sets"; `headerRight` = `+` ("New set list") then the face.
 - Segmented Set lists · Performed is fine (HIG/segmented-controls: "Consider a segmented control to switch between closely
   related subviews").
-- Paper cards unchanged: content-layer branding is where the HIG wants it ("consider moving it into the content layer,
-  where it scrolls beneath Liquid Glass controls", HIG/branding). Context menu on a card: "Open", "Go on stage",
+- **Amended 2026-11-16 (redesign Slice 4): the paper cards are system cards** (`lib/SetCard`: the name, "4 bits ·
+  6:10", the bits' names on one run, "Tonight · 7:00 slot · Edited Nov 16"; the count stacks under the name at the
+  large text sizes). The paper look had fixed colours and no light twin. Context menu on a card: "Open", "Go on stage",
   "Rename…", "Duplicate", "Delete" (destructive; confirm with an action sheet because it isn't undoable:
   HIG/pull-down-buttons "When people choose a destructive action, the system displays an action sheet").
 - "Found for you" rows with disclosure indicators (unchanged).
@@ -210,7 +211,10 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   HIG/toolbars). `variant` values `'plain' | 'done' | 'prominent'` CONFIRMED (native-stack `types.d.ts:878`).
 - The in-content "Rename" link beside the title goes (the title is in the bar; the menu renames). The runtime line
   "6:40 / 7:00 · 20 s left" and the progress bar stay as the first content row.
-- Bottom toolbar: `Stack.Toolbar placement="bottom"` with one prominent button "Add a joke · 20 s left" (`plus`).
+- Bottom toolbar: `Stack.Toolbar placement="bottom"` with one prominent button "Add a bit · 20 s left" (`plus`;
+  "Add a joke" until redesign Slice 4). Since that slice each row has his bullet notes under it (`lib/BulletNotes`),
+  every pair of rows has a seam row that opens in place, and the More menu's first item is the untimed
+  "Undo: <the last change>" (§7).
   `placement` values `'left' | 'right' | 'bottom'` CONFIRMED (`layouts/stack-utils/toolbar/StackToolbarClient.d.ts:18-22`).
   The tab bar stays visible beneath (HIG/tab-bars).
 - Rows: tap opens the bit; drag by the grip after a long press (`DragList.native.tsx`, unchanged; haptic `light` on
@@ -225,8 +229,8 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
 - Gap rows ("Gap here · add a bridge") unchanged.
 
 ### 3.5 Add a joke / Swap (`/add/{board}`, form sheet)
-- Native sheet at the large detent, grabber visible; the sheet's own bar: Cancel leading, the title ("Add a joke · 20 s
-  left"), no Done (a tap on + is the write). HIG/sheets: "If you provide a Done button, always pair it with a Cancel
+- Native sheet at the large detent, grabber visible; the sheet's own bar: Cancel leading, the title ("Add a bit · 20 s
+  left"; "Add a joke" until redesign Slice 4), no Done (a tap on + is the write). HIG/sheets: "If you provide a Done button, always pair it with a Cancel
   button"; Cancel alone is allowed.
 - A plain `TextInput` search at the top of the sheet (`headerSearchBarOptions` does not apply inside a form sheet,
   INFERRED). Filter chips unchanged. Rows with a trailing 44 pt `+`.

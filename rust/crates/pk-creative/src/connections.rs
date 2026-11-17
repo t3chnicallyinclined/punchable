@@ -153,7 +153,7 @@ fn obj(pairs: impl IntoIterator<Item = (&'static str, Value)>) -> Map<String, Va
     pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
 }
 
-fn names(c: &Corpus, ls: &[&String]) -> Vec<Value> {
+pub(crate) fn names(c: &Corpus, ls: &[&String]) -> Vec<Value> {
     ls.iter().map(|l| c.label_field(l, "name")).collect()
 }
 
@@ -174,7 +174,7 @@ fn label_ev(c: &Corpus, jid: &str, l: &str) -> Vec<Value> {
 
 /// `_idf_overlap(c, a, b, kinds, min_w)`: the idf-weighted share of the labels both hold, and those shared (rarest
 /// first).
-fn idf_overlap(c: &Corpus, a: &str, b: &str, kinds: &[&str], min_w: f64) -> (f64, Vec<String>) {
+pub(crate) fn idf_overlap(c: &Corpus, a: &str, b: &str, kinds: &[&str], min_w: f64) -> (f64, Vec<String>) {
     let la = c.labels_of(a, Some(kinds), min_w);
     let lb = c.labels_of(b, Some(kinds), min_w);
     if la.is_empty() || lb.is_empty() {

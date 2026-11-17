@@ -28,6 +28,7 @@ pub mod pyish;
 pub mod reducers;
 pub mod say;
 pub mod setlist;
+pub mod setnotes;
 pub mod store;
 pub mod story;
 pub mod textdiff;

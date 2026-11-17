@@ -1,5 +1,5 @@
-// Sets (MixSets, docs/UX_2026-10.md): HIS set lists as Sharpie-on-paper cards, each joke's short name in order (the
-// boards list carries `names`, one request), tonight's first; "Recorded" lists the taped sets. A set list IS a board
+// Sets (MixSets, docs/UX_2026-10.md): HIS set lists as cards (lib/SetCard: the name, how many bits and how long, the
+// bits' names in order; the boards list carries `names`, one request), tonight's first; "Recorded" lists the taped sets. A set list IS a board
 // (/list/<id>); "+" starts today's list at once and opens it (lib/newSetList, SPEC 2026-10-30: one tap to an open
 // list, the name and the length are defaults he changes from the list's own menu). The lists the app made (`source` "inferred") are drafts: ONE
 // collapsed row at the bottom ("15 drafts from your Insights"), each with "Use this" (an owner write: the list becomes
@@ -20,6 +20,7 @@ import { RecRows } from '@/lib/RecRows';
 import { useRecordings } from '@/lib/recordings';
 import { fmtShortDate, mmss } from '@/rules/format';
 import { draftsLabel, splitLists } from '@/rules/setListRules';
+import { SetCard } from '@/lib/SetCard';
 import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { getPrefs, setPrefs } from '@/lib/prefs';
@@ -32,34 +33,8 @@ import { TonightCard } from '@/lib/SetBar';
 import { useTonight } from '@/lib/tonight';
 
 type Seg_ = 'lists' | 'performed';
-const PAPER = '#F2EEE4';
-const INK = '#1B1B1F';
-const MARKER = '#2A2A2E';
 const enc = encodeURIComponent;
 const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
-
-/** A set list on paper: the title in marker, the short names down the page. */
-export function PaperCard({ b, current, onPress, onLongPress, a11y, testID }: {
-  b: BoardListItem & { names?: string[] }; current?: boolean; onPress: () => void; onLongPress?: () => void; a11y?: ReturnType<typeof rowActions>; testID?: string;
-}) {
-  const names = b.names || [];
-  const shown = names.slice(0, 6);
-  return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${b.title}, ${b.n} jokes, ${b.runtime}. Open`} onPress={onPress} onLongPress={onLongPress} delayLongPress={350} {...a11y}
-      style={({ pressed }) => ({ width: '100%', borderRadius: 6, backgroundColor: PAPER, padding: 16, paddingBottom: 18, gap: 8, ...(Platform.OS === 'web' ? { transform: [{ rotate: current ? '-0.6deg' : '0.4deg' }] } : null), opacity: pressed ? 0.9 : 1, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } })}>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-        <Text numberOfLines={1} style={{ flex: 1, fontFamily: F.black, fontSize: 20, letterSpacing: -0.3, color: INK }}>{b.title}</Text>
-        <Text style={{ fontFamily: F.bold, fontSize: 14, color: MARKER, fontVariant: ['tabular-nums'] }}>{b.runtime}</Text>
-      </View>
-      <View style={{ gap: 3, paddingLeft: 6, borderLeftWidth: 2, borderLeftColor: '#D8D2C4' }}>
-        {shown.map((n, i) => <Text key={i} numberOfLines={1} style={{ fontFamily: F.bold, fontSize: 17, color: MARKER, letterSpacing: -0.2 }}>{n}</Text>)}
-        {names.length > shown.length && <Text style={{ fontFamily: F.semi, fontSize: 14, color: '#6B6660' }}>+ {names.length - shown.length} more</Text>}
-        {!names.length && <Text style={{ fontFamily: F.semi, fontSize: 14, color: '#6B6660' }}>(empty)</Text>}
-      </View>
-      <Text style={{ fontFamily: F.medium, fontSize: 12, color: '#6B6660' }}>{current ? 'tonight · ' : ''}{b.target_s ? `${mmss(b.target_s)} slot · ` : ''}{fmtShortDate(b.updated)}</Text>
-    </Pressable>
-  );
-}
 
 function RenameForm({ title, onSave }: { title: string; onSave: (t: string) => void }) {
   const [t, setT] = useState(title);
@@ -223,11 +198,11 @@ export default function Sets() {
           {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
           {/* HIG/writing: an empty screen says what to do next; the "+" in the bar is the button (SPEC 2026-10-30 §3) */}
           {b.data && !his.length && <Empty text="No set list yet. Tap + and it starts one for tonight." />}
-          <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 18, paddingVertical: 6 }}>
+          <View style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', gap: 10, paddingVertical: 6 }}>
             {ordered.map((x) => (
               <View key={x.id} style={{ width: wide ? 300 : '100%' }}>
                 <RowMenu href={`/list/${enc(x.id)}`} items={cardItems(x)}>
-                  <PaperCard b={x} current={x.id === curId} testID={`setlist-${x.id}`} onPress={() => open(x)} a11y={rowActions(cardItems(x))}
+                  <SetCard b={x} current={x.id === curId} testID={`setlist-${x.id}`} onPress={() => open(x)} a11y={rowActions(cardItems(x))}
                     onLongPress={ios ? undefined : () => { haptics.light(); setMenu({ title: x.title, items: cardItems(x) }); }} />
                 </RowMenu>
               </View>

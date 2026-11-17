@@ -18,6 +18,7 @@ const SF: Record<IconName, SFSymbol> = {
   up: 'arrow.up', down: 'arrow.down', trash: 'trash', list: 'list.bullet', map: 'map', star: 'star', more: 'ellipsis',
   play: 'play.fill', pause: 'pause.fill', record: 'record.circle', user: 'person.crop.circle', tonight: 'megaphone.fill', bits: 'square.grid.2x2.fill',
   sets: 'list.bullet.rectangle.portrait.fill', plus: 'plus', minus: 'minus', check: 'checkmark', spark: 'sparkles', video: 'video', chat: 'text.bubble', chevron: 'chevron.right', chevronDown: 'chevron.down', chevronUp: 'chevron.up', lines: 'text.alignleft',
+  warn: 'exclamationmark.triangle',
 };
 
 export function Icon({ name, size = 22, color = C.text, sw = 2 }: IconProps) {

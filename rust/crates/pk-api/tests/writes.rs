@@ -2445,3 +2445,358 @@ async fn around_a_bit_each_group_from_its_source_and_a_dismissed_pair_stays_gone
         assert!(grp["items"].as_array().unwrap().len() <= 1, "{grp}");
     }
 }
+
+/// One step of `GET /api/boards/<id>/build`, by its bit.
+fn build_step(body: &Value, jid: &str) -> Value {
+    body["steps"]
+        .as_array()
+        .expect("steps")
+        .iter()
+        .find(|s| s["joke_id"] == jid)
+        .cloned()
+        .unwrap_or_else(|| panic!("no step {jid} in {body}"))
+}
+
+/// The redesign, slice 4 (SPEC 2026-11-16 §3.3; Rust only: no Python twin, so the statuses and words are this test's):
+/// his bullet notes under a bit of a set list. `POST /api/boards/<id>/notes` stores the list for one bit in one set
+/// and the build read hands it back as `notes` with `notes_from: "his"` (a bit he wrote nothing under shows the
+/// derived words); the same list again writes nothing; the notes stay when the bit is taken off the list and are
+/// there again when it is put back; `was` is the list before, so Undo is one more call; an archived list refuses and
+/// writes nothing; `POST /api/boards/<id>/items` takes a `note`; `GET /api/jokes/<id>/around` shows the notes on the
+/// set's row; two neighbours tied by a `same_shape` edge carry the "same shape twice" seam.
+///
+/// The red arms (each run once by hand, see the slice's report): with `decorate` in `pk_creative::setnotes` reading
+/// no stored notes (the join gone), the first "his" assertion fails; with `boards::patch` clearing a bit's notes when
+/// it is taken off the list (the tidy-looking bug), "the notes survive a remove and a re-add" fails; with the reducer
+/// keeping the new list as `was`, the `was` assertions fail; with the archived check of `writes::setnotes::set`
+/// removed, the archived refusal fails.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[allow(clippy::too_many_lines)]
+async fn set_notes_survive_a_remove_undo_brings_the_old_list_back_and_an_archived_list_refuses() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let mut scratch_graph = graph();
+    scratch_graph["edges"].as_array_mut().expect("edges").push(json!({
+        "id": "e:ccccccccccc1", "kind": "same_shape", "src": "joke:meters", "dst": "joke:talks",
+        "status": "proposed", "confidence": 0.6}));
+    let (_writer, st) = setup_with(&env, port, scratch_graph).await;
+    let lines = || async { Creative::new(st.clone()).lines("setnotes").await.unwrap().len() };
+
+    let (s, made) = post(
+        &st,
+        "/api/boards",
+        json!({"title": "Friday late show", "joke_ids": ["joke:cat", "joke:meters", "joke:talks"]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{made}");
+    let bid = made["board"]["id"].as_str().expect("a board id").to_string();
+    let board = format!("/api/boards/{bid}");
+    let build = format!("/api/boards/{bid}/build");
+    let notes = format!("/api/boards/{bid}/notes");
+    let items = format!("/api/boards/{bid}/items");
+
+    // before he writes anything: the derived words, marked as such, and every seam says whether it is the same shape
+    let (s, r) = get_path(&st, &build).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    for jid in ["joke:cat", "joke:meters", "joke:talks"] {
+        let step = build_step(&r, jid);
+        assert_eq!(step["notes_from"], "derived", "{step}");
+        assert!(step["notes"].as_array().is_some_and(|n| !n.is_empty()), "{step}");
+    }
+    assert_eq!(
+        build_step(&r, "joke:talks")["notes"],
+        json!(["The meter talks back"]),
+        "a typed idea is its own note"
+    );
+    assert_eq!(build_step(&r, "joke:cat")["transition_in"], Value::Null);
+    assert_eq!(
+        build_step(&r, "joke:meters")["transition_in"]["same_shape"],
+        Value::Null,
+        "the cat and the meters are not the same shape"
+    );
+    assert_eq!(
+        build_step(&r, "joke:talks")["transition_in"]["same_shape"],
+        json!({"source": "ai", "shared": [], "edge": "e:ccccccccccc1"}),
+        "the same-shape edge between two neighbours"
+    );
+    for jid in ["joke:meters", "joke:talks"] {
+        let tin = &build_step(&r, jid)["transition_in"];
+        assert!(
+            tin.get("source")
+                .is_some_and(|s| s.is_null() || s == "his" || s == "ai"),
+            "every seam says whose tie it names, or that it names none: {tin}"
+        );
+    }
+
+    // his notes: cleaned to one line each, the blank one dropped
+    let (s, w) = post(
+        &st,
+        &notes,
+        json!({"joke_id": "joke:meters", "notes": [" open on the meter ", "", "slow\tdown"]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{w}");
+    assert_eq!(
+        w,
+        json!({"ok": true, "board": bid, "joke_id": "joke:meters", "notes": ["open on the meter", "slow down"],
+               "was": []})
+    );
+    let (_, r) = get_path(&st, &build).await;
+    let step = build_step(&r, "joke:meters");
+    // the red arm of the join: these fail when the build ignores the `setnotes` store
+    assert_eq!(
+        (&step["notes"], &step["notes_from"]),
+        (&json!(["open on the meter", "slow down"]), &json!("his")),
+        "his notes replace the derived ones"
+    );
+    assert_eq!(
+        build_step(&r, "joke:cat")["notes_from"],
+        "derived",
+        "the other bits are untouched"
+    );
+    // the same list again writes nothing
+    let (s, again) = post(
+        &st,
+        &notes,
+        json!({"joke_id": "joke:meters", "notes": ["open on the meter", "slow down"]}),
+    )
+    .await;
+    assert_eq!((s, again["already"].as_bool()), (StatusCode::OK, Some(true)), "{again}");
+    assert_eq!(lines().await, 1, "one row; the repeat wrote nothing");
+    // the page of the bit shows them on the row of the set
+    let (_, around) = get_path(&st, "/api/jokes/joke:meters/around").await;
+    assert_eq!(
+        around["sets"],
+        json!([{"board": bid, "title": "Friday late show", "position": 2, "count": 3,
+                "notes": ["open on the meter", "slow down"]}]),
+        "{around}"
+    );
+
+    // off the list and back on: the notes are there again
+    let (s, gone) = send(&st, "PATCH", &board, json!({"remove": {"joke_id": "joke:meters"}})).await;
+    assert_eq!(s, StatusCode::OK, "{gone}");
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(r["steps"].as_array().map(Vec::len), Some(2), "{r}");
+    let (s, refused) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": ["x"]})).await;
+    assert_eq!(
+        (s.as_u16(), refused["error"].as_str()),
+        (400, Some("joke:meters is not on the board")),
+        "no notes for a bit that is not on the list"
+    );
+    let (s, back) = post(&st, &items, json!({"joke_id": "joke:meters", "after": "joke:cat"})).await;
+    assert_eq!(s, StatusCode::OK, "{back}");
+    assert!(back.get("notes").is_none(), "no note was sent with the add: {back}");
+    let (_, r) = get_path(&st, &build).await;
+    let step = build_step(&r, "joke:meters");
+    assert_eq!(
+        (&step["notes"], &step["notes_from"], &step["position"]),
+        (&json!(["open on the meter", "slow down"]), &json!("his"), &json!(1)),
+        "the notes survive a remove and a re-add"
+    );
+    assert_eq!(lines().await, 1, "taking a bit off a list writes nothing to its notes");
+
+    // a change, then Undo: `was` is the list before, and sending it puts the old notes back
+    let (s, changed) = post(
+        &st,
+        &notes,
+        json!({"joke_id": "joke:meters", "notes": ["open on the meter", "look at the card"]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{changed}");
+    // the red arm of Undo: this fails when `was` is the new list
+    assert_eq!(changed["was"], json!(["open on the meter", "slow down"]), "{changed}");
+    let (s, undone) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": changed["was"]})).await;
+    assert_eq!(s, StatusCode::OK, "{undone}");
+    assert_eq!(
+        (&undone["notes"], &undone["was"]),
+        (
+            &json!(["open on the meter", "slow down"]),
+            &json!(["open on the meter", "look at the card"])
+        )
+    );
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(
+        build_step(&r, "joke:meters")["notes"],
+        json!(["open on the meter", "slow down"]),
+        "Undo brings the old list back"
+    );
+    // clearing them brings the derived words back; Undo of that brings his back
+    let (_, cleared) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": []})).await;
+    assert_eq!(cleared["was"], json!(["open on the meter", "slow down"]), "{cleared}");
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(build_step(&r, "joke:meters")["notes_from"], "derived");
+    let (_, undone) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": cleared["was"]})).await;
+    assert_eq!(undone["notes"], json!(["open on the meter", "slow down"]));
+    let n_before = lines().await;
+    assert_eq!(n_before, 5, "set, change, undo, clear, undo");
+
+    // an archived list refuses, in the words every other change to it is refused with, and writes nothing
+    let (s, arch) = send(&st, "PATCH", &board, json!({"archive": true})).await;
+    assert_eq!(s, StatusCode::OK, "{arch}");
+    let (s, refused) = post(
+        &st,
+        &notes,
+        json!({"joke_id": "joke:meters", "notes": ["while put away"]}),
+    )
+    .await;
+    // the red arm of the archive: this fails when the route does not look at `archived`
+    assert_eq!(
+        (s.as_u16(), refused["error"].as_str()),
+        (400, Some("\"Friday late show\" is archived: unarchive it first")),
+        "{refused}"
+    );
+    assert_eq!(lines().await, n_before, "a refusal writes nothing");
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(
+        build_step(&r, "joke:meters")["notes"],
+        json!(["open on the meter", "slow down"]),
+        "an archived list still shows the notes it had"
+    );
+    let (_, around) = get_path(&st, "/api/jokes/joke:meters/around").await;
+    assert_eq!(
+        around["sets"],
+        json!([]),
+        "an archived list is not one of the sets of the bit"
+    );
+    let (s, un) = send(&st, "PATCH", &board, json!({"unarchive": true})).await;
+    assert_eq!(s, StatusCode::OK, "{un}");
+
+    // a note sent with an add goes under the bit; the same note again is not written twice
+    let cut = json!({"remove": {"joke_id": "joke:talks"}});
+    let (s, r) = send(&st, "PATCH", &board, cut.clone()).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let (s, added) = post(
+        &st,
+        &items,
+        json!({"joke_id": "joke:talks", "note": " the wifi line\n"}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{added}");
+    assert_eq!(
+        (&added["notes"], &added["note_added"]),
+        (&json!(["the wifi line"]), &json!(true)),
+        "{added}"
+    );
+    assert!(
+        added["board"]["joke_ids"].as_array().is_some_and(|ids| ids.len() == 3),
+        "{added}"
+    );
+    let (_, r) = get_path(&st, &build).await;
+    let step = build_step(&r, "joke:talks");
+    assert_eq!(
+        (&step["notes"], &step["notes_from"]),
+        (&json!(["the wifi line"]), &json!("his"))
+    );
+    send(&st, "PATCH", &board, cut.clone()).await;
+    let (_, added) = post(&st, &items, json!({"joke_id": "joke:talks", "note": "the wifi line"})).await;
+    assert_eq!(
+        (&added["notes"], &added["note_added"]),
+        (&json!(["the wifi line"]), &json!(false)),
+        "the note it kept is not written twice: {added}"
+    );
+    // a note that cannot be stored refuses the add before anything is written
+    send(&st, "PATCH", &board, cut).await;
+    let (s, refused) = post(&st, &items, json!({"joke_id": "joke:talks", "note": "x".repeat(201)})).await;
+    assert_eq!(
+        (s.as_u16(), refused["error"].as_str()),
+        (400, Some("a note is at most 200 characters"))
+    );
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(
+        r["steps"].as_array().map(Vec::len),
+        Some(2),
+        "the bit was not added: {r}"
+    );
+    let n_before = lines().await;
+    assert_eq!(n_before, 6, "one more row: the note of the first add");
+
+    // the refusals of the write, each writing nothing
+    let legal = "That reads like court material; Punchable won't send it to the AI.";
+    let thirteen: Vec<String> = (0..13).map(|i| format!("note {i}")).collect();
+    for (path, body, status, msg) in [
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters"}),
+            400,
+            "notes must be a list of texts",
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": "one"}),
+            400,
+            "notes must be a list of texts",
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": ["one", 2]}),
+            400,
+            "notes must be a list of texts",
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": thirteen}),
+            400,
+            "at most 12 notes under a bit",
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": ["x".repeat(201)]}),
+            400,
+            "a note is at most 200 characters",
+        ),
+        (notes.clone(), json!({"notes": ["one"]}), 400, "bad joke id"),
+        // court material is refused like every stored text, in one note or read across two
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": ["The petitioner and the respondent, index no 5."]}),
+            422,
+            legal,
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:meters", "notes": ["The petitioner and the respondent,", "index no 5."]}),
+            422,
+            legal,
+        ),
+        (
+            items.clone(),
+            json!({"joke_id": "joke:talks", "note": "The petitioner and the respondent, index no 5."}),
+            422,
+            legal,
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "joke:nope", "notes": ["one"]}),
+            404,
+            "no such joke joke:nope",
+        ),
+        (
+            notes.clone(),
+            json!({"joke_id": "unit:m1", "notes": ["one"]}),
+            404,
+            "no such joke unit:m1",
+        ),
+        (
+            "/api/boards/sb:nope/notes".to_string(),
+            json!({"joke_id": "joke:meters", "notes": ["one"]}),
+            404,
+            "no such storyboard",
+        ),
+    ] {
+        let (s, r) = post(&st, &path, body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{body}");
+    }
+    assert_eq!(lines().await, n_before, "a refusal writes nothing");
+    let (_, r) = get_path(&st, &build).await;
+    assert_eq!(
+        r["steps"].as_array().map(Vec::len),
+        Some(2),
+        "the add whose note was refused did not land: {r}"
+    );
+    // a deleted list is gone for its notes too
+    let (s, del) = send(&st, "PATCH", &board, json!({"delete": true})).await;
+    assert_eq!(s, StatusCode::OK, "{del}");
+    let (s, r) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": ["one"]})).await;
+    assert_eq!((s.as_u16(), r["error"].as_str()), (404, Some("no such storyboard")));
+}

@@ -1,7 +1,9 @@
 // Inside a set list (MixBuild, docs/UX_2026-10.md). A set list IS a board: this screen is the board's set builder
-// (GET /api/boards/<id>/build) drawn as the paper list: numbered rows with the short name, the first line and the
-// time; "Gap here · add a bridge" where the builder flags a weak transition; the time bar; drag to reorder; "Add a
-// joke · N left" at the bottom. HIG (the audit): tap a row OPENS the bit; trailing swipe = Remove (red, a full swipe
+// (GET /api/boards/<id>/build) drawn as the paper list: numbered rows with the short name and the time, his bullet
+// notes under each (lib/BulletNotes; SPEC 2026-11-16 §3.3: Return adds a note, Backspace on an empty one removes it;
+// while he has written none, the bit's own words show muted), and between two rows the seam (rules/setNoteRules
+// seamOf: a callback, the usual order, "Same shape twice", or "No bridge yet" with a bridge to draft; tap it to read
+// why); the time bar; drag to reorder; "Add a bit · N left" at the bottom. HIG (the audit): tap a row OPENS the bit; trailing swipe = Remove (red, a full swipe
 // runs it, Undo in the snackbar) + Swap; long-press = Open · Swap · Rename · Move to top · Move to bottom · Remove;
 // the title and the "…" More button rename; "Length…" in the same menu sets the slot (5 · 7 · 10 · 15 · custom,
 // PATCH {target_s}; SPEC 2026-10-30: the length a new list is born with is 7, changed here, never asked up front);
@@ -10,24 +12,27 @@
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
-import { decide, patch, undo, useApi } from '@/lib/api';
+import { decide, patch, undo, useApi, useOnline } from '@/lib/api';
 import { creative } from '@/lib/creative';
 import { AddJokeSheet, Pick } from '@/lib/AddJokeSheet';
 import { BridgeSheet, Gap } from '@/lib/bridge';
+import { BulletNotes } from '@/lib/BulletNotes';
 import { DragList } from '@/lib/DragList';
 import { haptics } from '@/lib/haptics';
+import { stackMeta } from '@/rules/bitLines';
 import { mmss } from '@/rules/format';
 import { useBoards } from '@/lib/boards';
-import { Build, Step, quoteText } from '@/lib/simple';
+import { Build, Step } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { stageNotes } from '@/lib/stageNotes';
+import { Seam, seamLabel, seamOf, undoLabel } from '@/rules/setNoteRules';
 import { SwipeRow } from '@/lib/SwipeRow';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { C, F } from '@/lib/theme';
-import { Btn, Empty, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
+import { AIBadge, Btn, Empty, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
 
@@ -53,7 +58,6 @@ function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: num
         <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.semi, fontSize: 14, color: C.mut2, textAlign: 'right' }}>{i + 1}</Text>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Text testID={`row-name-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.bold, fontSize: 17, color: C.text }}>{name}</Text>
-          {!!x.quote && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>“{quoteText(x)}”</Text>}
           {!!x.stage_line && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: x.proven ? C.green : C.mut2 }}>{x.stage_line}</Text>}
         </View>
         <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{mmss(x.duration_s)}</Text>
@@ -64,6 +68,40 @@ function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: num
           <Text style={{ color: C.mut2, fontSize: 18, fontFamily: F.g7 }}>…</Text>
         </Pressable>}
       </Pressable>
+    </View>
+  );
+}
+
+/** The left edge the notes and the seams share with a row's name: the grip (44), a gap (8), the number (22), a gap
+ *  (8). At the large text sizes the notes move out to the grip's edge, so a note keeps its width (HIG.md §6). */
+const INSET = 82;
+const INSET_LARGE = 44;
+
+/** The seam between two bits: one line that says what ties them (or that nothing does); a tap opens why, and what he
+ *  can do about it. The mark and the words carry the meaning; the colour only repeats it (HIG/color). */
+function SeamRow({ seam, i, inset, before, after, open, onToggle, onBridge }: { seam: Seam; i: number; inset: number; before: string; after: string; open: boolean; onToggle: () => void; onBridge: () => void }) {
+  // coral is for the one seam that asks him to move something; the rest are quiet
+  const color = seam.tone === 'warn' ? C.gapText : C.mut2;
+  return (
+    <View>
+      <Pressable testID={`seam-${i}`} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={seamLabel(seam, before, after)}
+        accessibilityHint={open ? 'Hides why' : 'Shows why'} onPress={onToggle}
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingLeft: inset, opacity: pressed ? 0.6 : 1 })}>
+        {seam.mark === 'check' ? <Icon name="check" size={14} color={color} sw={2.6} />
+          : seam.mark === 'warn' ? <Icon name="warn" size={14} color={color} sw={2.4} />
+            : <View style={{ width: 6, height: 6, marginHorizontal: 4, borderRadius: 3, backgroundColor: C.dim }} />}
+        <Text testID={`seam-label-${i}`} maxFontSizeMultiplier={1.4} style={{ flexShrink: 1, fontFamily: F.medium, fontSize: 13, color }}>{seam.label}</Text>
+        {/* the app's reading says so before he opens it (HIG/generative-ai: say where AI is used) */}
+        {seam.ai && <AIBadge testID={`seam-ai-${i}`} />}
+        <Icon name={open ? 'chevronDown' : 'chevron'} size={12} color={C.dim} />
+      </Pressable>
+      {open && (
+        <View testID={`seam-why-${i}`} style={{ marginLeft: inset, marginRight: 8, marginBottom: 8, paddingLeft: 12, paddingVertical: 4, borderLeftWidth: 2, borderLeftColor: C.border, gap: 8 }}>
+          {!!seam.detail && <Text maxFontSizeMultiplier={2} style={{ fontFamily: F.body, fontSize: 15, lineHeight: 21, color: C.text2 }}>{seam.detail}</Text>}
+          {seam.tone === 'warn' && <T v="small">Hold the grip to move one of them.</T>}
+          {seam.bridge && <Btn small testID={`seam-bridge-${i}`} label="Draft a bridge" accessibilityLabel={`Draft a bridge from ${before} to ${after}`} onPress={onBridge} style={{ alignSelf: 'flex-start' }} />}
+        </View>
+      )}
     </View>
   );
 }
@@ -81,6 +119,12 @@ export default function SetListScreen() {
   const [len, setLen] = useState<Len | null>(null);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [listMenu, setListMenu] = useState(false);
+  const [openSeam, setOpenSeam] = useState<string | null>(null);
+  // the last change made on this screen that can be taken back, for the menu's Undo: no clock on it, unlike the
+  // snack's (HIG.md §7; HIG/accessibility: prefer an explicit action to a timed one)
+  const [lastUndo, setLastUndo] = useState<{ what: string; run: () => Promise<void> } | null>(null);
+  const online = useOnline();
+  const inset = stackMeta(PixelRatio.getFontScale()) ? INSET_LARGE : INSET;
   const B = b.data;
   React.useEffect(() => {
     if (B?.board) boards.setCurrent({ id, title: B.board.title });
@@ -110,7 +154,9 @@ export default function SetListScreen() {
       await fn();
       haptics[tone]();
       b.reload();
-      ui.snack(msg, inverse ? async () => { await inverse(); b.reload(); } : undefined);
+      const back = inverse ? async () => { await inverse(); b.reload(); setLastUndo(null); } : undefined;
+      setLastUndo(back ? { what: msg, run: back } : null);
+      ui.snack(msg, back);
     } catch (e: any) {
       ui.snack(`Couldn't save: ${e.message}`);
       b.reload();
@@ -177,7 +223,7 @@ export default function SetListScreen() {
   const target = B.board.target_s;
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
-  const addLabel = `Add a joke${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`;
+  const addLabel = `Add a bit${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`;
   const stage = () => router.push(`/stage/${enc(id)}` as any);
 
   // the list's own menu: Rename… · Duplicate · Share… (the plain-text list, HIG/activity-views) · Delete (not undoable: an action sheet confirms)
@@ -209,7 +255,14 @@ export default function SetListScreen() {
     if (target && m * 60 === target) return;
     act(() => boardPatch(id, { target_s: m * 60 }), `${m} min set`, target ? () => boardPatch(id, { target_s: target }) : undefined);
   };
+  const undoLast = async () => {
+    const u = lastUndo;
+    if (!u) return;
+    setLastUndo(null);
+    try { await u.run(); haptics.success(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); b.reload(); }
+  };
   const listItems: MenuItem[] = [
+    { label: undoLabel(lastUndo?.what), onPress: () => void undoLast(), disabled: !lastUndo, testID: 'list-undo' },
     { label: 'Rename…', onPress: () => setTitle(true), testID: 'list-rename' },
     { label: 'Length…', onPress: openLength, testID: 'list-length' },
     { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
@@ -233,6 +286,7 @@ export default function SetListScreen() {
           {/* HIG/toolbars: one prominent action (Record: the record glyph, never play, which means playback) on the trailing side; the rest in a menu; destructive last */}
           <Stack.Toolbar placement="right">
             <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
+              <Stack.Toolbar.MenuAction icon="arrow.uturn.backward" disabled={!lastUndo} onPress={() => void undoLast()}>{undoLabel(lastUndo?.what)}</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setTitle(true)}>Rename…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
@@ -264,17 +318,16 @@ export default function SetListScreen() {
       </View>
 
       {/* a fresh list (SPEC 2026-10-30 §3): what to do next, and the name it was born with is one tap from here (44 pt, TextBtn) */}
-      {!steps.length && <Empty text="Nothing on it yet. Add a joke below."><TextBtn testID="list-name-it" label="Name it" accessibilityLabel={`Name it. The list is called ${B.board.title}`} onPress={() => setTitle(true)} /></Empty>}
+      {!steps.length && <Empty text="Nothing on it yet. Add a bit below."><TextBtn testID="list-name-it" label="Name it" accessibilityLabel={`Name it. The list is called ${B.board.title}`} onPress={() => setTitle(true)} /></Empty>}
       <DragList testID="list-rows" items={steps} keyOf={(x) => x.joke_id} onReorder={reorder}
-        render={(x: Step, i, handle) => (
+        render={(x: Step, i, handle) => {
+          const seam = i > 0 ? seamOf(x.transition_in) : null;
+          return (
           <View>
-            {x.transition_in?.weak && (
-              <Pressable testID={`gap-${i}`} accessibilityRole="button" accessibilityLabel={`Gap before ${nameOf(x)}: ${x.transition_in.words}. Add a bridge`}
-                onPress={() => setGap({ from: x.transition_in!.from, to: x.transition_in!.to, words: x.transition_in!.words })}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingLeft: 74 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.gap }} />
-                <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 13, color: C.gapText }}>Gap here · add a bridge</Text>
-              </Pressable>
+            {seam && (
+              <SeamRow seam={seam} i={i} inset={inset} before={nameOf(steps[i - 1])} after={nameOf(x)} open={openSeam === seam.key}
+                onToggle={() => setOpenSeam(openSeam === seam.key ? null : seam.key)}
+                onBridge={() => setGap({ from: x.transition_in!.from, to: x.transition_in!.to, words: x.transition_in!.words })} />
             )}
             <SwipeRow testID={`row-swipe-${i}`}
               trailing={{ label: 'Remove', destructive: true, onPress: () => remove(x, i), testID: `row-swipe-remove-${i}` }}
@@ -284,9 +337,13 @@ export default function SetListScreen() {
                 <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} onNotes={() => openNotes(i)} />
               </RowMenu>
             </SwipeRow>
+            {/* his notes for this bit in this set, under its row; they travel with the bit when it is dragged */}
+            <BulletNotes testID={`notes-${i}`} boardId={id} jokeId={x.joke_id} name={nameOf(x)} step={x} canEdit={online} why="offline" indent={inset}
+              onSaved={(notes) => { stageNotes.setNotes(id, x.joke_id, notes); b.reload(); }}
+              onUndoable={(what, undo) => setLastUndo(undo ? { what, run: undo } : null)} />
           </View>
-        )} />
-      {!!steps.length && <T v="small" style={{ textAlign: 'center' }}>{native ? 'Hold the grip to drag · tap a row to open it · the lines button reads its notes · hold a row for Swap, Rename, Move, Remove' : 'Hold the grip to drag · tap a row to open it · the lines button reads its notes · … for Swap, Rename, Move, Remove'}</T>}
+          );
+        }} />
       {B.notes.map((n) => <T key={n.rule} v="small" testID={`note-${n.rule}`}>{n.text}</T>)}
 
       {!native && <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
