@@ -1,0 +1,36 @@
+Review of his bit "Smart home". 3 items, in document order.
+
+Please apply the CHANGEs, answer the QUESTIONs before revising, leave the KEEPs exactly as they are.
+Return the full revised bit as `draft`, not a diff or a summary of changes.
+
+──────────────────────────────────────────────────────────────
+[1] CHANGE · idea 1
+    "the milk is sad"
+
+    sharper
+
+──────────────────────────────────────────────────────────────
+[2] QUESTION · idea 2
+    "judges my outfits"
+
+    Too close to the mirror bit?
+
+──────────────────────────────────────────────────────────────
+[3] KEEP · idea 3
+    "My parrot only says legal disclaimers."
+──────────────────────────────────────────────────────────────
+
+The bit as it stands, his words exactly:
+<bit>
+My fridge has an app now.
+It texts me when the milk is sad.
+
+The doorbell has a camera too.
+Now my front door judges my outfits.
+
+My parrot only says legal disclaimers.
+He will not confirm or deny the crackers.
+
+The vacuum maps my house.
+It knows where I cry.
+</bit>

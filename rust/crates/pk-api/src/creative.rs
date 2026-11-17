@@ -323,6 +323,8 @@ pub struct Stores {
     pub links: Replayed,
     /// His bullet notes under each bit of a set list (Rust only).
     pub setnotes: Replayed,
+    /// The redline round open on each bit, and the one he closed last (Rust only).
+    pub redline: Replayed,
 }
 
 impl Default for Stores {
@@ -342,6 +344,7 @@ impl Default for Stores {
             intents: Replayed::new("intents"),
             links: Replayed::new("links"),
             setnotes: Replayed::new("setnotes"),
+            redline: Replayed::new("redline"),
         }
     }
 }
@@ -364,6 +367,7 @@ impl Stores {
             "intents" => &self.intents,
             "links" => &self.links,
             "setnotes" => &self.setnotes,
+            "redline" => &self.redline,
             _ => return None,
         })
     }

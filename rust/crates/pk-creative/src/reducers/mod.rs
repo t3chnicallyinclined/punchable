@@ -3,8 +3,8 @@
 //! (`creative/workingset._apply`), [`venues`], [`account`] (`creative_api`), [`merges`] (`creative/merge.store_apply`),
 //! [`chats`] (`ask_api.chat_apply`), [`intents`] (`say_api.intent_apply`), [`suggestions`]
 //! (`suggest_api.store_apply`), [`profile`] (`profile_api.profile_apply`, with [`learned`]), and, Rust only (no Python
-//! twin): [`topics`] and [`script`] (the Rant tab), [`links`] (the pairs he said are not connected) and [`setnotes`]
-//! (his bullet notes under a bit of a set). [`for_store`] is the `APPLY` map: a reducer by store name.
+//! twin): [`topics`] and [`script`] (the Rant tab), [`links`] (the pairs he said are not connected), [`setnotes`]
+//! (his bullet notes under a bit of a set) and [`redline`] (the round he sent on a bit and the draft he is reading). [`for_store`] is the `APPLY` map: a reducer by store name.
 
 pub mod account;
 pub mod chats;
@@ -14,6 +14,7 @@ pub mod learned;
 pub mod links;
 pub mod merges;
 pub mod profile;
+pub mod redline;
 pub mod script;
 pub mod setnotes;
 pub mod story;
@@ -30,7 +31,7 @@ use crate::store::{Items, Reducer};
 use pk_core::py;
 
 /// The store names, as the API and the `creative_event` mirror key them.
-pub const STORES: [&str; 14] = [
+pub const STORES: [&str; 15] = [
     "storyboards",
     "workingsets",
     "venues",
@@ -45,6 +46,7 @@ pub const STORES: [&str; 14] = [
     "script",
     "links",
     "setnotes",
+    "redline",
 ];
 
 /// The reducer for a store name (`creative_api.APPLY` after every route module registered). `owner_id` is the
@@ -65,6 +67,7 @@ pub fn for_store(name: &str, owner_id: &str) -> Option<Box<dyn Reducer + Send + 
         "script" => Box::new(script::Script),
         "links" => Box::new(links::Links),
         "setnotes" => Box::new(setnotes::Setnotes),
+        "redline" => Box::new(redline::Redline),
         _ => return None,
     })
 }

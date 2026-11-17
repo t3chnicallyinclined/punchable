@@ -25,6 +25,7 @@ pub mod notebook;
 pub mod oneshot;
 pub mod punch;
 pub mod pyish;
+pub mod redline;
 pub mod reducers;
 pub mod say;
 pub mod setlist;

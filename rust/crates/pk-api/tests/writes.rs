@@ -2839,3 +2839,305 @@ async fn set_notes_survive_a_remove_undo_brings_the_old_list_back_and_an_archive
     let (s, r) = post(&st, &notes, json!({"joke_id": "joke:meters", "notes": ["one"]})).await;
     assert_eq!((s.as_u16(), r["error"].as_str()), (404, Some("no such storyboard")));
 }
+
+/// The redesign, slice 3 (SPEC 2026-11-16 §3.2 as built; Rust only, no Python twin, so the statuses and words are this
+/// test's): his marks on the newest version queue ONE `redline` job over the text the KB holds (never text the phone
+/// sends), the round is stored and read back with the job's status; once the worker's result lands the draft is
+/// ready on the bit and on Bits; round two marks that draft (its Keeps carried), and is refused once he saved a newer
+/// version (stale, never applied by itself); Use and its Undo and Discard close and reopen the round; every refusal
+/// writes nothing. The red arms (each run once by hand, see the slice's report): with `is_stale` answering false the
+/// `stale` assertions fail; with `carried_keeps` returning nothing the carried Keep assertion fails; with the round-two
+/// staleness check removed the second 409 assertion fails.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_redline_round_queues_waits_and_closes() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.expect("data").view(false).await.expect("view");
+    let joke = v0.jokes.first().cloned().expect("a joke");
+    let bit = "My fridge has an app now.\nIt texts me when the milk is sad.\n\n\
+The doorbell judges my outfits.\n\nMy parrot only says legal disclaimers.";
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": bit}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let unit = r["unit"].as_str().unwrap().to_string();
+    let path = format!("/api/jokes/{joke}/redline");
+    let resolve = format!("{path}/resolve");
+    let keep = "My parrot only says legal disclaimers.";
+    let marks = json!([
+        {"type": "keep", "text": keep, "at": 99},
+        {"type": "change", "text": "the milk is sad", "note": "sharper", "at": 41},
+        {"type": "ask", "text": "judges my outfits", "note": "Too close to the mirror bit?"}]);
+    let rounds = || async { Creative::new(st.clone()).lines("redline").await.unwrap().len() };
+
+    // the refusals, each writing nothing
+    let n0 = rounds().await;
+    for (body, status, msg) in [
+        (json!({"unit": unit}), 400, "marks must be a list of 1 to 20 marks"),
+        (json!({"marks": marks}), 400, "unit is required (the version he marked)"),
+        (
+            json!({"unit": unit, "marks": [{"type": "keep", "text": keep}]}),
+            400,
+            "mark something to change or ask about",
+        ),
+        (
+            json!({"unit": unit, "marks": [{"type": "change", "text": "the cheese is sad"}]}),
+            409,
+            "the words you marked are not in this version: it changed since you marked it",
+        ),
+        (
+            json!({"unit": unit, "marks": [{"type": "keep", "text": "the milk is sad"}, {"type": "change", "text": "milk"}]}),
+            400,
+            "a Keep and a Change are on the same words",
+        ),
+        (
+            json!({"unit": "unit:nope", "marks": marks}),
+            404,
+            "that version is not on this bit",
+        ),
+        (
+            json!({"on": "job:redline-nope", "marks": marks}),
+            409,
+            "that draft is not the one waiting on this bit",
+        ),
+    ] {
+        let (s, r) = send(&st, "POST", &path, body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (status, msg), "{body}");
+    }
+    let (s, r) = send(
+        &st,
+        "POST",
+        "/api/jokes/joke:nope/redline",
+        json!({"unit": unit, "marks": marks}),
+    )
+    .await;
+    assert_eq!((s.as_u16(), r["error"].as_str()), (404, Some("no such joke joke:nope")));
+    assert_eq!(rounds().await, n0, "a refusal writes nothing");
+
+    // round one: one job over the KB's text, the round stored
+    let (s, r) = send(
+        &st,
+        "POST",
+        &path,
+        json!({"unit": unit, "marks": marks, "base": "phone text, ignored"}),
+    )
+    .await;
+    assert_eq!((s, r["status"].as_str()), (StatusCode::ACCEPTED, Some("queued")), "{r}");
+    let j1 = r["job"]["id"].as_str().unwrap().to_string();
+    assert_eq!(r["round"]["job"], json!(j1));
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let input = &jobs[&j1]["input"];
+    assert_eq!(jobs[&j1]["kind"], "redline");
+    assert_eq!(input["base"], json!(bit), "the text the KB holds, never the phone's");
+    let types: Vec<&str> = input["marks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|m| m["type"].as_str())
+        .collect();
+    assert_eq!(types, ["change", "ask", "keep"], "document order");
+    assert_eq!(input["marks"][0]["start"], json!(bit.find("the milk is sad").unwrap()));
+    assert_eq!(input["n"], 1);
+    let (s, r) = get_path(&st, &path).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(
+        (r["round"]["status"].as_str(), r["round"]["stale"].as_bool()),
+        (Some("queued"), Some(false))
+    );
+    assert!(
+        r["round"]["marks"][0].get("start").is_none(),
+        "the byte offset is this service's own"
+    );
+    let (_, l) = get_path(&st, "/api/redlines").await;
+    assert_eq!(l["open"][0]["state"], "waiting", "{l}");
+
+    // the worker's result lands: the draft is ready
+    let draft = bit.replace("when the milk is sad.", "when the milk is sad. We're all sad.");
+    let cr = Creative::new(st.clone());
+    cr.append("jobs", "claim", &j1, json!({"worker": "test"}), "worker")
+        .await
+        .unwrap();
+    let result = json!({"status": "ok", "draft": draft, "answers": [], "notes": [], "marks": []});
+    cr.append("jobs", "done", &j1, json!({"result": result}), "worker")
+        .await
+        .unwrap();
+    let (_, r) = get_path(&st, &path).await;
+    assert_eq!(
+        (r["round"]["status"].as_str(), r["round"]["result"]["draft"].as_str()),
+        (Some("done"), Some(draft.as_str()))
+    );
+    let (_, l) = get_path(&st, "/api/redlines").await;
+    assert_eq!(
+        (l["open"][0]["joke"].as_str(), l["open"][0]["state"].as_str()),
+        (Some(joke.as_str()), Some("ready"))
+    );
+
+    // round two marks the draft; the Keep of round one is carried
+    let two = json!([{"type": "change", "text": "We're all sad.", "note": "one more"}]);
+    let (s, r) = send(&st, "POST", &path, json!({"on": j1, "marks": two})).await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    let j2 = r["job"]["id"].as_str().unwrap().to_string();
+    // a double tap: the same marks on the same draft again are that one round, never a 409 or a second job
+    let n_jobs = Creative::new(st.clone()).lines("jobs").await.unwrap().len();
+    let (s, r) = send(&st, "POST", &path, json!({"on": j1, "marks": two})).await;
+    assert_eq!(
+        (s, r["job"]["id"].as_str()),
+        (StatusCode::ACCEPTED, Some(j2.as_str())),
+        "{r}"
+    );
+    assert_eq!(Creative::new(st.clone()).lines("jobs").await.unwrap().len(), n_jobs);
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let input = &jobs[&j2]["input"];
+    assert_eq!(
+        (input["base"].as_str(), input["bit"].as_str()),
+        (Some(draft.as_str()), Some(bit))
+    );
+    assert_eq!(input["n"], 2);
+    let carried: Vec<&Value> = input["marks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["carried"] == json!(true))
+        .collect();
+    assert_eq!(carried.len(), 1, "the Keep of round one rides along: {input}");
+    assert_eq!(carried[0]["text"], keep);
+    let (_, r) = get_path(&st, &path).await;
+    assert_eq!(
+        r["round"]["job"],
+        json!(j2),
+        "the next round replaces the one he was reading"
+    );
+
+    // closing: not the open round, a used draft names its version
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j1, "verdict": "discarded"})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (409, Some("that draft is not the one waiting on this bit"))
+    );
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j2, "verdict": "used"})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (400, Some("a draft he used names the version it became"))
+    );
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j2, "verdict": "kept"})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (400, Some("verdict must be one of used, discarded, open"))
+    );
+
+    // he saves a newer version: the open round is stale, offered against the new text, never applied
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": format!("{bit}\n\nA new idea.")}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let newer = r["unit"].as_str().unwrap().to_string();
+    let (_, r) = get_path(&st, &path).await;
+    assert_eq!(
+        (r["round"]["stale"].as_bool(), r["round"]["newest"].as_str()),
+        (Some(true), Some(newer.as_str())),
+        "{r}"
+    );
+    let (_, l) = get_path(&st, "/api/redlines").await;
+    assert_eq!(l["open"][0]["stale"], true);
+    // marks on the old version, and marks on the draft of the old version: both the 409
+    let (s, r) = send(&st, "POST", &path, json!({"unit": unit, "marks": marks})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (
+            409,
+            Some("the bit changed since you marked it: a newer version is saved")
+        )
+    );
+    let cr = Creative::new(st.clone());
+    cr.append("jobs", "claim", &j2, json!({"worker": "test"}), "worker")
+        .await
+        .unwrap();
+    cr.append(
+        "jobs",
+        "done",
+        &j2,
+        json!({"result": {"status": "ok", "draft": draft}}),
+        "worker",
+    )
+    .await
+    .unwrap();
+    let (s, r) = send(&st, "POST", &path, json!({"on": j2, "marks": two})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (409, Some("the bit changed since that draft was made"))
+    );
+
+    // Use, its Undo, Discard
+    let (s, r) = send(
+        &st,
+        "POST",
+        &resolve,
+        json!({"job": j2, "verdict": "used", "unit": newer}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(
+        (r["round"].clone(), r["last"]["verdict"].as_str()),
+        (Value::Null, Some("used"))
+    );
+    let (_, l) = get_path(&st, "/api/redlines").await;
+    assert_eq!(l["open"], json!([]), "nothing waits once he used it");
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j2, "verdict": "open"})).await;
+    assert_eq!(
+        (s, r["round"]["job"].as_str()),
+        (StatusCode::OK, Some(j2.as_str())),
+        "Undo opens it again"
+    );
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j2, "verdict": "open"})).await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (409, Some("another round is open on this bit"))
+    );
+    let (s, r) = send(&st, "POST", &resolve, json!({"job": j2, "verdict": "discarded"})).await;
+    assert_eq!((s, r["last"]["verdict"].as_str()), (StatusCode::OK, Some("discarded")));
+    let (_, r) = get_path(&st, &path).await;
+    assert_eq!(
+        (r["round"].clone(), r["last"]["job"].as_str()),
+        (Value::Null, Some(j2.as_str()))
+    );
+
+    // court material split between his bit and his note is refused (each alone has one marker; read together, two)
+    let marked = format!(
+        "{bit}
+
+The appellate division of my fridge."
+    );
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": marked}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "one marker alone is not court material: {r}");
+    let u3 = r["unit"].as_str().unwrap().to_string();
+    let n_jobs = Creative::new(st.clone()).lines("jobs").await.unwrap().len();
+    let (s, r) = send(
+        &st,
+        "POST",
+        &path,
+        json!({"unit": u3, "marks": [{"type": "change", "text": "the milk is sad", "note": "like docket no 12"}]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY, "{r}");
+    assert_eq!(
+        Creative::new(st.clone()).lines("jobs").await.unwrap().len(),
+        n_jobs,
+        "nothing queued"
+    );
+}

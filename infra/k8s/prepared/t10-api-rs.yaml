@@ -281,6 +281,8 @@ spec:
           # the redesign, slice 1 (SPEC 2026-11-16 §3.1; Rust only): "not connected", remembered (POST), and its Undo (POST)
           - { path: /api/links/dismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
           - { path: /api/links/undismiss, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the redesign, slice 3 (SPEC 2026-11-16 §3.2; Rust only): every bit with a redline round open (GET)
+          - { path: /api/redlines, pathType: Exact, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # Step 4: the id pages (pk-api OWN_PATTERNS): one bit's page and a set's analysis and review. An id cannot be an
 # exact path, and a prefix would also move the writes and the creative GETs under them, so these are regex paths, each
@@ -371,6 +373,10 @@ spec:
           # the redesign, slice 4 (SPEC 2026-11-16 §3.3; Rust only): his bullet notes under a bit of a set list (POST).
           # /api/boards/[^/]+/build$ and /items$ above carry the notes on the read and the optional note on an add.
           - { path: "/api/boards/[^/]+/notes$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          # the redesign, slice 3 (SPEC 2026-11-16 §3.2; Rust only): the redline round on a bit (GET reads it, POST sends
+          # his marks: a redline job for pk-worker) and its close (POST: used, discarded, or Undo of a use)
+          - { path: "/api/jokes/[^/]+/redline$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
+          - { path: "/api/jokes/[^/]+/redline/resolve$", pathType: ImplementationSpecific, backend: { service: { name: punchable-api-rs, port: { number: 80 } } } }
 ---
 # T10 round 4 (group 6a), T11 round 2: POST /api/upload, the phone's recording (at most 1 GiB, the Python's cap; pk-api
 # answers 400 `upload missing or over 1 GB` from Content-Length, so nginx's limit sits at the same 1g). The Python's own
