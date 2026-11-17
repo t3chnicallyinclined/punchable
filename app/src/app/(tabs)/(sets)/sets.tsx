@@ -1,5 +1,8 @@
 // Sets (MixSets, docs/UX_2026-10.md): HIS set lists as cards (lib/SetCard: the name, how many bits and how long, the
-// bits' names in order; the boards list carries `names`, one request), tonight's first; "Recorded" lists the taped sets. A set list IS a board
+// bits' names in order; the boards list carries `names`, one request), tonight's first. What he recorded is on Tapes
+// (SPEC 2026-11-16 Slice 6: the Recorded segment moved there). A topic of the old Rant tab that no list was made from
+// yet is listed under "From the Rant tab" and opens its old page; once `cargo xtask rants-to-sets` made its list, only
+// the list shows (rules/tapesRules). A card's Record and Film open the walk-through (/run/<id>, Slice 5). A set list IS a board
 // (/list/<id>); "+" starts today's list at once and opens it (lib/newSetList, SPEC 2026-10-30: one tap to an open
 // list, the name and the length are defaults he changes from the list's own menu). The lists the app made (`source` "inferred") are drafts: ONE
 // collapsed row at the bottom ("15 drafts from your Insights"), each with "Use this" (an owner write: the list becomes
@@ -11,28 +14,25 @@ import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { BoardListItem, creative, useCreative } from '@/lib/creative';
-import { ApiError, get, patch } from '@/lib/api';
+import { ApiError, get, patch, useApi } from '@/lib/api';
 import { Build } from '@/lib/simple';
 import { actionSheet } from '@/lib/actionSheet';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { SwipeRow } from '@/lib/SwipeRow';
-import { RecRows } from '@/lib/RecRows';
-import { useRecordings } from '@/lib/recordings';
-import { fmtShortDate, mmss } from '@/rules/format';
+import { topicsNotYetSets } from '@/rules/tapesRules';
+import type { Topic } from '@/rules/rantRules';
 import { draftsLabel, splitLists } from '@/rules/setListRules';
 import { SetCard } from '@/lib/SetCard';
-import { useSets } from '@/lib/sets';
 import { useBoards } from '@/lib/boards';
 import { getPrefs, setPrefs } from '@/lib/prefs';
 import { newSetList } from '@/lib/newSetList';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
-import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Seg, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
+import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TonightCard } from '@/lib/SetBar';
 import { useTonight } from '@/lib/tonight';
 
-type Seg_ = 'lists' | 'performed';
 const enc = encodeURIComponent;
 const ios = Platform.OS === 'ios'; // the system context menu owns the long press there
 
@@ -65,8 +65,11 @@ export default function Sets() {
   const wide = useWide();
   const cur = useBoards();
   const b = useCreative<{ boards: BoardListItem[] }>('boards', creative.boards, { poll: 30000 });
-  const sets = useSets();
-  const [seg, setSeg] = useState<Seg_>('lists');
+  // the Rant tab's topics (Slice 6): each one no list was made from yet, until the migration makes them sets. The
+  // archived lists count too: a set he archived still means its topic was made into one.
+  const tp = useApi<{ topics: Topic[] }>('/api/topics');
+  const arch = useApi<{ boards: BoardListItem[] }>(tp.data?.topics?.length ? '/api/boards?archived=1' : null);
+  const fromRant = topicsNotYetSets(tp.data?.topics || [], [...(b.data?.boards || []), ...(arch.data?.boards || [])]);
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [rename, setRename] = useState<BoardListItem | null>(null);
   const [draftsOpen, setDraftsOpen] = useState(() => getPrefs().draftsOpen);
@@ -77,13 +80,12 @@ export default function Sets() {
   const curId = (cur.current && his.some((x) => x.id === cur.current!.id) ? cur.current.id : his[0]?.id) || null;
   const ordered = [...his.filter((x) => x.id === curId), ...his.filter((x) => x.id !== curId)];
   const label = draftsLabel(drafts);
-  const refresh = useCallback(() => Promise.all([b.reload(), sets.reload?.()]), [b.reload, sets.reload]);
+  const refresh = useCallback(() => Promise.all([b.reload(), tp.reload()]), [b.reload, tp.reload]); // eslint-disable-line react-hooks/exhaustive-deps
   const native = Platform.OS !== 'web';
   // "+" acts (SPEC 2026-10-30 §2): today's title, 7 minutes, empty, current, open. The titles on this tab are passed so
   // a second list the same day gets "(2)" without another request; the tab re-reads once the list exists.
   const startList = async () => { if (await newSetList({ titles: (b.data?.boards || []).map((x) => x.title), setCurrent: cur.setCurrent, snack: ui.snack })) b.reload(); };
   const recordSet = () => ui.withMic(() => router.push('/record' as any));
-  const tapes = useRecordings().filter((r) => r.kind === 'set');
   const openArchived = () => router.push('/archived' as any);
   // the ⋯ menu's items, the same words on the phone's toolbar menu and the web's sheet (HIG/menus: "Archived" is navigation, no ellipsis)
   const moreItems: MenuItem[] = [
@@ -151,7 +153,8 @@ export default function Sets() {
   // HIG/context-menus: the destructive item last; Archive (not loss) sits before it
   const cardItems = (x: BoardListItem): MenuItem[] => [
     { label: 'Open', icon: 'doc.text', onPress: () => open(x), testID: `card-open-${x.id}` },
-    { label: 'Record', icon: 'record.circle', onPress: () => router.push(`/stage/${enc(x.id)}` as any), testID: `card-stage-${x.id}` },
+    { label: 'Record', icon: 'record.circle', onPress: () => router.push({ pathname: '/run/[id]', params: { id: x.id, mode: 'sound' } } as any), testID: `card-stage-${x.id}` },
+    ...(native ? [{ label: 'Film', icon: 'video', onPress: () => router.push({ pathname: '/run/[id]', params: { id: x.id, mode: 'video' } } as any), testID: `card-film-${x.id}` }] : []),
     { label: 'Rename…', icon: 'pencil', onPress: () => setRename(x), testID: `card-rename-${x.id}` },
     { label: 'Duplicate', icon: 'plus.square.on.square', onPress: () => duplicate(x), testID: `card-duplicate-${x.id}` },
     { label: 'Archive', icon: 'archivebox', onPress: () => archive(x), testID: `card-archive-${x.id}` },
@@ -179,8 +182,6 @@ export default function Sets() {
           <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
-      {/* a set list is what he is working on; a set exists once it is recorded (owner, 2026-10-29). Equal-width nouns
-          (HIG/segmented-controls); the count lives in the header row below, not in the segment. */}
       <View testID="sets-tonight" style={{ gap: 4 }}>
         <TonightCard board={tonight.data?.board} onNew={() => void startList()} />
         <Pressable testID="sets-record-set" accessibilityRole="button" accessibilityLabel="Record a set" accessibilityHint="Opens the recorder; nothing tapes until the red disc"
@@ -190,9 +191,7 @@ export default function Sets() {
           <Icon name="chevron" size={18} color={C.dim} />
         </Pressable>
       </View>
-      <Seg<Seg_> testID="sets-seg" items={[['lists', 'Set lists'], ['performed', 'Recorded']]} value={seg} onChange={(v) => { haptics.selection(); setSeg(v); }} />
-      {seg === 'lists' ? (
-        <>
+      <>
           <FixtureBanner show={b.fixture} what="GET /api/boards" />
           {b.error && !b.data ? <ErrorCard error={b.error} onRetry={b.reload} /> : null}
           {!b.data && !b.error && <Skeleton lines={4} height={22} testID="sets-skeleton" />}
@@ -241,28 +240,20 @@ export default function Sets() {
               )}
             </View>
           )}
-        </>
-      ) : (
-        <View style={{ gap: 6 }}>
-          {/* the tapes on this phone, while they transcribe and after (SPEC 2026-10-31 §7): status, percent, play */}
-          {tapes.length > 0 && (
-            <View testID="sets-on-phone" style={{ gap: 2, marginBottom: 8 }}>
-              <T v="eb" accessibilityRole="header">On this iPhone</T>
-              <RecRows recs={tapes} testID="tape" />
+          {/* the Rant tab's topics not yet made into sets (Slice 6): each still opens its page; gone once its set exists */}
+          {!!fromRant.length && (
+            <View testID="sets-from-rant" style={{ gap: 2, marginTop: 8 }}>
+              <T v="eb" accessibilityRole="header">Topics not yet in a set</T>
+              <List>
+                {fromRant.map((t) => (
+                  <ListRow key={t.id} testID={`from-rant-${t.id}`} title={<T v="semi" numberOfLines={2}>{t.text}</T>}
+                    sub={[(t.rants?.length || 0) ? `${t.rants!.length} ${t.rants!.length === 1 ? 'rant' : 'rants'}` : null, t.kept ? `${t.kept} kept` : null].filter(Boolean).join(' · ') || 'Topic'}
+                    onPress={() => router.push({ pathname: '/topic/[topic]', params: { topic: t.id } } as any)} />
+                ))}
+              </List>
             </View>
           )}
-          {!!sets.list.length && <T v="small" testID="sets-count">{sets.list.length} {sets.list.length === 1 ? 'set' : 'sets'} on tape</T>}
-          {sets.error && !sets.list.length ? <ErrorCard error={sets.error} /> : null}
-          {!sets.list.length && !sets.error && !tapes.length && <Empty text="No recorded sets yet. Open a set list and tap Record, or pick Record a set from the ⋯ menu." />}
-          <List>
-            {sets.list.map((x) => (
-              <ListRow key={x.id} testID={`performed-${x.id}`} title={<T v="semi" numberOfLines={1}>{x.venue.name}</T>}
-                sub={`${fmtShortDate(x.show.date)} · ${mmss(x.card.duration_s)}${x.best ? ` · ${x.best.title.split(' (')[0]}` : ''}`}
-                onPress={() => router.push(`/set/${encodeURIComponent(x.id)}` as any)} />
-            ))}
-          </List>
-        </View>
-      )}
+      </>
       <MenuSheet visible={!!menu} title={menu?.title} items={menu?.items || []} onClose={() => setMenu(null)} testID="card-menu" />
       <Sheet visible={!!rename} onClose={() => setRename(null)} label="Rename the set list" testID="card-title-sheet">
         <SheetHead title="Rename the set list" onCancel={() => setRename(null)} testID="card-title" />

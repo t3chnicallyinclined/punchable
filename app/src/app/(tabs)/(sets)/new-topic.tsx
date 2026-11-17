@@ -30,7 +30,7 @@ export default function NewTopic() {
     }
   };
   return (
-    <Screen title="" testID="topic-new" backLabel="Rant">
+    <Screen title="" testID="topic-new" backLabel="Sets">
       <TextInput testID="topic-new-input" value={text} onChangeText={setText} autoFocus placeholder="What’s the rant about?" placeholderTextColor={C.dim}
         accessibilityLabel="What’s the rant about?" returnKeyType="go" submitBehavior="submit" onSubmitEditing={() => void make()} maxLength={200}
         editable={!busy} maxFontSizeMultiplier={1.8} style={{ minHeight: 44, marginTop: 8, fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text }} />

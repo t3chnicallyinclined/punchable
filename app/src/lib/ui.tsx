@@ -535,7 +535,7 @@ export const useUI = () => {
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [snack, setSnack] = useState<Snack | null>(null);
   const [sheet, setSheet] = useState<'' | 'cap' | 'mic'>('');
-  const [lastRoot, setLastRoot] = useState('tonight');
+  const [lastRoot, setLastRoot] = useState('bits');
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
   const [toSort, setToSort] = useState(0);

@@ -12,6 +12,8 @@ export const REQUIRED_URLS = [
   '/archived', '/bitnotes', '/film/x', '/take/x', '/session/x', '/rant/new',
   '/new-topic', '/topic/x', '/topic/x/script', '/topic/x/bit/y', '/filmed', '/material/x', '/rant-line',
   '/around', '/setpick', '/marks', '/joke/x/draft', '/usage',
+  // SPEC 2026-11-16 Slices 5 and 6: the walk-through, After, the Tapes tab
+  '/tapes', '/run/x', '/after/x',
 ];
 /** Served as static files by the web image (app/public), outside the router. */
 export const STATIC_URLS: Record<string, string> = { '/privacy': 'privacy.html', '/terms': 'terms.html' };

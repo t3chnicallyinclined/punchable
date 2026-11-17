@@ -13,20 +13,21 @@ import { Face, Icon, SignInBtn, useUI, useWide } from './ui';
 
 export type { ScreenProps } from './screenTypes';
 
-// The three tabs: Rant · Bits · Sets (SPEC 2026-11-06; the first tab's key stays `tonight`, lib/TopBar ROOTS).
+// The three tabs: Bits · Sets · Tapes (SPEC 2026-11-16 Slice 6; lib/TopBar ROOTS). Settings and You sit behind the avatar.
 // screens one tap down, and the tab they belong under (the old tabs Write / Boards / Notebook stay as routes)
 const PUSHED_ROOT: Record<string, string> = {
-  joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', set: 'bits', venue: 'bits', calendar: 'bits',
-  merge: 'bits', write: 'bits', today: 'tonight', import: 'bits', record: 'tonight', inbox: 'bits', say: 'bits', ask: 'bits',
+  joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', venue: 'bits', calendar: 'bits',
+  merge: 'bits', write: 'bits', import: 'bits', inbox: 'bits', say: 'bits', ask: 'bits',
   board: 'sets', builder: 'sets', list: 'sets', archived: 'sets', bitnotes: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
-  settings: 'tonight', profile: 'tonight', learned: 'tonight',
+  run: 'sets', topic: 'sets', today: 'sets', 'new-topic': 'sets',
+  set: 'tapes', take: 'tapes', after: 'tapes', record: 'tapes', filmed: 'tapes',
 };
 
 function rootOf(pathname: string, last: string) {
-  if (pathname === '/' || pathname === '') return 'tonight';
+  if (pathname === '/' || pathname === '') return 'bits';
   const k = pathname.split('/')[1];
   if (ROOTS.some((r) => r.key === k)) return k;
-  return PUSHED_ROOT[k] && last === 'tonight' && k !== 'settings' && k !== 'profile' ? PUSHED_ROOT[k] : last;
+  return PUSHED_ROOT[k] && !ROOTS.some((r) => r.key === last) ? PUSHED_ROOT[k] : last;
 }
 
 

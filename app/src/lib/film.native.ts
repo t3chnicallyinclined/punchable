@@ -31,6 +31,7 @@ import type { CutShort, LocalRec } from '@/rules/memoRules';
 import { isSafeFileName, safeFileName } from '@/rules/memoRules';
 import { VIDEO_CODEC } from '@/rules/filmRules';
 import { addRecording } from './recordings';
+import type { RunBit, Split } from '@/rules/runRules';
 
 export const filmSupported = true;
 export type CameraModule = typeof import('expo-camera');
@@ -90,6 +91,17 @@ export async function stashTake(cacheUri: string, durationMs: number, cutShort: 
   return { uri, name, durationMs, recordedAt: new Date(Date.now() - durationMs).toISOString(), cutShort };
 }
 /** Redo, or Discard behind Close: the file goes; nothing else exists yet. */
+/** Keep a filmed SET (the walk-through, SPEC 2026-11-16 Slice 5): the one copy into Photos, then the row into the
+ *  recordings queue as a set taped as video, with the set list, its bits in order and the spans per bit. Its words go
+ *  up as a set transcript (with the splits); the .mov leaves Documents once they exist, as a filmed take's does. */
+export async function keepSetTake(t: Take, meta: { board: { id: string; title: string }; runBits: RunBit[]; splits: Split[] }): Promise<LocalRec> {
+  if ((await requestPhotosAdd()) !== 'granted') throw new Error('no Photos');
+  await ML.saveToLibraryAsync(t.uri);
+  return addRecording({ uri: t.uri, name: t.name, type: 'video/quicktime', durationMs: t.durationMs }, {
+    kind: 'set', mode: 'video', recordedAt: t.recordedAt, board: meta.board, title: meta.board.title, cutShort: t.cutShort, assetId: null,
+    runBits: meta.runBits, splits: meta.splits,
+  });
+}
 export async function discardTake(t: Take | null | undefined): Promise<void> {
   if (!t) return;
   await FS.deleteAsync(t.uri, { idempotent: true }).catch(() => {});

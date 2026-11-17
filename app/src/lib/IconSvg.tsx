@@ -35,6 +35,7 @@ export const P = {
   // the three tabs (Mix* artboards): a spotlight, a grid of bits, a list
   tonight: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   bits: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  tapes: 'M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2',
   sets: 'M5 6h14M5 12h14M5 18h9',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',

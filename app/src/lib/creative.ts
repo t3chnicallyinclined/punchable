@@ -53,7 +53,7 @@ export type BoardView = { board: Board; health: Health; best_next: BestNext[]; s
 /** One row of GET /api/boards (api-dev/API.md "Creative routes"): `archived` lists are left out unless `?archived=1`;
  *  `source` is "his" once he made or touched it, else "inferred" (a draft the app made); `by` is who created it
  *  (his id, `ai:seed`, `ai:demo`); `seed` names where a draft came from. The screen words come from rules/setListRules. */
-export type BoardSeed = { from?: string | null; chunk?: string | number | null; minutes_est?: number | null };
+export type BoardSeed = { from?: string | null; chunk?: string | number | null; minutes_est?: number | null; /** made from a Rant topic or a rant by `cargo xtask rants-to-sets` (SPEC 2026-11-16 §3.6) */ topic?: string | null; rant?: string | null };
 export type BoardListItem = {
   id: string; title: string; n: number; runtime: string; runtime_s?: number; updated: string; target_s?: number; source?: Source; working_set?: string | null;
   archived?: boolean; by?: string | null; seed?: BoardSeed | null; names?: string[];

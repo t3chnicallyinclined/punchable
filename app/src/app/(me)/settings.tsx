@@ -161,9 +161,9 @@ function ConnectionsCard() {
             accessibilityLabel={AUTH_ENABLED ? 'Reconnect Google' : 'Reconnect Google: sign-in is off on this local copy'}
             onPress={() => prompt().catch((e) => ui.snack(/popup/i.test(String(e?.message)) ? 'Your browser blocked the Google window. Allow pop-ups for this site and try again.' : 'Google sign-in didn’t start. Try again.'))} /> : undefined} />
         <ConnRow testID="src-youtube" name="YouTube" line={d ? (d.youtube.sets ? `${n(d.youtube.sets)} sets imported by link` : 'No sets yet · paste a video link') : 'Checking…'} tone={d?.youtube.sets ? 'ok' : 'off'}
-          action={<Btn small testID="src-youtube-import" label="Import a link" onPress={() => router.push('/import' as any)} />} />
+          action={<Btn small testID="src-youtube-import" label="Import a link" onPress={() => router.dismissTo('/import' as any)} />} />
         <ConnRow testID="src-photos" name="Phone videos" line={photosLine} tone="off"
-          action={<Btn small testID="src-photos-import" label="Import videos" onPress={() => router.push('/import' as any)} />} />
+          action={<Btn small testID="src-photos-import" label="Import videos" onPress={() => router.dismissTo('/import' as any)} />} />
         <ConnRow testID="src-ai" name="AI for drafts" line={`${aiWhere} · ${aiLine}`} tone={!d ? 'off' : w?.online && !w.paused ? 'ok' : 'warn'}
           action={<Btn small testID="src-ai-check" label="Check again" onPress={() => c.reload()} />} />
         <ConnRow testID="src-transcriber" name="Transcription" line={trLine} tone={speechOff ? 'warn' : recordingsSupported ? 'ok' : 'off'}
@@ -288,7 +288,7 @@ export default function SettingsPage() {
         <List>
           <ListRow testID="open-voice" title="Voice profile" sub="What the AI reads before it drafts in your voice. Yours to edit." onPress={() => router.push('/voice' as any)} />
           <ListRow testID="open-learned" title="What I’ve learned about you" sub="The AI’s read of your taste, and how sure it is" onPress={() => router.push('/learned' as any)} />
-          <ListRow testID="audit" title="Show what the AI decided" sub="Your notebook, filtered to things the AI set and you haven’t touched" onPress={() => router.push('/notebook?who=ai' as any)} />
+          <ListRow testID="audit" title="Show what the AI decided" sub="Your notebook, filtered to things the AI set and you haven’t touched" onPress={() => router.dismissTo('/notebook?who=ai' as any)} />
           <ListRow testID="open-privacy" title="Privacy policy" sub="What Punchable stores, where, and your choices" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
           <ListRow testID="open-terms" title="Terms" sub="The short version: it’s yours" onPress={() => Linking.openURL(`${SITE}/terms`)} />
         </List>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
           {showUsageRow(usageAccess.data) && <ListRow testID="open-usage" title="Usage" sub="AI cost this month, and how much you used Punchable" onPress={() => router.push('/usage' as any)} />}
           <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
           {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4); phone only; removed once they are answered */}
-          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Seven checks for the next builds" onPress={() => router.push('/spike' as any)} />}
+          {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Seven checks for the next builds" onPress={() => router.dismissTo('/spike' as any)} />}
         </List>
       </Card>
       <Card style={{ gap: 10 }}>

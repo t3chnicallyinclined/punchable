@@ -74,6 +74,20 @@ check(ib.text === "words" && ib.from.note === "Voice memo, 2026-10-31" && ib.rea
 check(!M.ideaBody(rec({ duration_s: 0 }), "w").reason.includes(" 0 s"), "an import with no known length says no '0 s'");
 const sb = M.setBody(rec({ kind: "set", board: { id: "b1", title: "Tuesday open mic" }, duration_s: 721.6 }), many, M.ENGINE);
 check(sb.segments.length <= 5000 && sb.title === "Tuesday open mic" && sb.duration_s === 722 && sb.engine === M.ENGINE && sb.recorded_at === "2026-10-31T01:02:03.000Z", "the set body: capped segments, the list's title, whole seconds, the engine");
+{
+  // the walk-through (SPEC 2026-11-16 Slice 5): the list, how it was taped, the splits cleaned for the route
+  const walk = rec({ kind: "set", board: { id: "sb:fri-1", title: "Friday" }, mode: "video", duration_s: 120,
+    run_bits: [{ id: "joke:a", name: "A" }, { id: "joke:b", name: "B" }],
+    splits: [{ joke_id: "joke:a", start_ms: 0, end_ms: 60_000.4 }, { joke_id: "joke:gone", start_ms: 60_000, end_ms: 70_000 }, { joke_id: "joke:b", start_ms: 70_000, end_ms: 500_000 }] });
+  const wb = M.setBody(walk, [{ text: "x", start: 0, end: 1 }], "e");
+  check(wb.board === "sb:fri-1" && wb.mode === "video" && JSON.stringify(wb.splits) === JSON.stringify([{ joke_id: "joke:a", start_ms: 0, end_ms: 60000 }, { joke_id: "joke:b", start_ms: 70000, end_ms: 120000 }]),
+    "a walk-through set names its list, its mode and its splits (on the list only, inside the take)");
+  const pb = M.setBody(walk, [{ text: "x", start: 0, end: 1 }], "e", true);
+  check(!("board" in pb) && !("splits" in pb) && !("mode" in pb) && pb.segments.length === 1, "plain: the words alone, for the second try after a refusal");
+  check(M.walkFieldsRefused(400, wb) && !M.walkFieldsRefused(400, pb) && !M.walkFieldsRefused(503, wb), "only a 400 on a body with the list is retried plain");
+  check(!("board" in M.setBody(rec({ kind: "memo", board: { id: "sb:x", title: "x" } }), [], "e")), "a long memo never names a list");
+  check(!("splits" in M.setBody(rec({ kind: "set", board: { id: "sb:x", title: "x" } }), [], "e")), "a set from the old recorder sends no splits");
+}
 check(M.setBody(rec({ kind: "set" }), [], "e").title === "Set 2026-10-31" && M.setBody(rec(), [], "e").title === "Voice memo 2026-10-31", "a default title by kind");
 check(JSON.stringify(M.filingSteps(null, { decision: "attach", into: "x", id: "at:1" })) === "{}", "no bit: the server's auto-attach stands");
 check(JSON.stringify(M.filingSteps("j1", { decision: "attach", into: "j1", id: "at:1" })) === "{}", "auto-attached to the same bit: nothing more");

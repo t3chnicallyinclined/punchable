@@ -2,6 +2,7 @@
 // iPhone (recordings.native.ts); their words reach the web through the server like everything else.
 import type { CutShort, LocalRec, RecKind } from '@/rules/memoRules';
 import type { Recording } from './recorderBase';
+import type { RunBit, Split } from '@/rules/runRules';
 
 export type { LocalRec } from '@/rules/memoRules';
 export const recordingsSupported = false;
@@ -17,7 +18,8 @@ export function startRecordings() {}
 export function useRecordings(): LocalRec[] {
   return none;
 }
-export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[]; cutShort?: CutShort | null; assetId?: string | null; script?: string | null };
+export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[]; cutShort?: CutShort | null; assetId?: string | null; script?: string | null;
+  mode?: 'sound' | 'video'; runBits?: RunBit[]; splits?: Split[] };
 export async function addRecording(_rec: Recording, _meta: AddMeta): Promise<LocalRec> {
   throw new Error('Recordings are kept in the iPhone app.');
 }

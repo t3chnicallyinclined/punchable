@@ -1,6 +1,7 @@
 // Web: no camera path (Film it is in the iPhone app; the bit's More menu does not offer it here). This twin keeps
 // expo-camera and expo-video out of the web bundle; the route files render one line when reached by URL.
 import type { CutShort, LocalRec } from '@/rules/memoRules';
+import type { RunBit, Split } from '@/rules/runRules';
 
 export const filmSupported = false;
 export type CameraModule = typeof import('expo-camera');
@@ -32,5 +33,8 @@ export async function requestPhotosAdd(): Promise<PhotosAdd> {
 }
 export async function playbackMode(): Promise<void> {}
 export async function keepTake(_t: Take, _meta: { bit: { id: string; title: string }; script: string }): Promise<LocalRec> {
+  throw new Error('Film it is in the iPhone app.');
+}
+export async function keepSetTake(_t: Take, _meta: { board: { id: string; title: string }; runBits: RunBit[]; splits: Split[] }): Promise<LocalRec> {
   throw new Error('Film it is in the iPhone app.');
 }

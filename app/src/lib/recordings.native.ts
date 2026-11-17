@@ -28,8 +28,9 @@ import type { Recording } from './recorderBase';
 import { isPermanent } from '@/rules/uploadsCore';
 import {
   KEEP_AWAKE_TRANSCRIBE, afterRefusal, afterRequeue, afterSendFailure, dueToSend, filingSteps, ideaBody, isSafeFileName,
-  nextToTranscribe, parseIndex, retry, routeOf, safeFileName, setBody, textOf,
+  nextToTranscribe, parseIndex, retry, routeOf, safeFileName, setBody, textOf, walkFieldsRefused,
 } from '@/rules/memoRules';
+import { wordsBySplit, type RunBit, type Split } from '@/rules/runRules';
 import type { CutShort, LocalRec, RecKind } from '@/rules/memoRules';
 import { srtNameOf, srtOf } from '@/rules/filmRules';
 import { linesOf } from '@/rules/bitLines';
@@ -122,7 +123,9 @@ async function pump() {
       case 'done': {
         const text = textOf(res.segs);
         const keepSegs = routeOf(r, text) === 'set';
-        return { ...r, state: 'words', text, segments: keepSegs ? res.segs : null, words: r.kind === 'film' ? res.words : undefined, engine: res.engine, progress: 1, paused: false, attempts: 0, next_at: 0, error: null };
+        // a walk-through set keeps what he said per bit for the After screen (the segments leave the row once sent)
+        const bitWords = r.splits?.length ? wordsBySplit(res.segs, r.splits) : undefined;
+        return { ...r, state: 'words', text, segments: keepSegs ? res.segs : null, words: r.kind === 'film' || r.mode === 'video' ? res.words : undefined, ...(bitWords ? { bit_words: bitWords } : {}), engine: res.engine, progress: 1, paused: false, attempts: 0, next_at: 0, error: null };
       }
       case 'requeue': return afterRequeue(r, Date.now(), byUs, res.error);
       case 'no_speech': return { ...r, state: 'no_speech', progress: 0, paused: false, error: null };
@@ -138,7 +141,7 @@ async function pump() {
  *  put the one copy in Photos; the row keeps the Photos asset id). The sidecar is small and stays. */
 async function afterFilmWords(id: string) {
   const r = find(id);
-  if (!r || r.kind !== 'film' || r.video_gone) return;
+  if (!r || (r.kind !== 'film' && r.mode !== 'video') || r.video_gone) return;   // a filmed set too (Slice 5)
   const srt = srtNameOf(r.file);
   try {
     const text = srtOf(r.words || [], linesOf(r.script));
@@ -167,7 +170,14 @@ async function sendOne(r: LocalRec): Promise<LocalRec> {
   const text = r.text || '';
   if (routeOf(r, text) === 'set') {
     const segs = r.segments?.length ? r.segments : [{ text, start: 0, end: Math.max(0, r.duration_s) }];
-    await post('/api/sets/transcript', setBody(r, segs, r.engine || 'phone'));
+    const body = setBody(r, segs, r.engine || 'phone');
+    try {
+      await post('/api/sets/transcript', body);
+    } catch (e) {
+      // the list or a split was refused (the bit left the list, the list is gone, an older rule): the words go alone
+      if (!walkFieldsRefused(e instanceof ApiError ? e.status : null, body)) throw e;
+      await post('/api/sets/transcript', setBody(r, segs, r.engine || 'phone', true));
+    }
     return { ...r, state: 'sent', segments: null, error: null, attempts: 0 };
   }
   let cur = r;
@@ -264,7 +274,9 @@ const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).sli
 
 /** `cutShort`, `assetId`, `script`: a filmed take's (how it ended; the Photos asset Keep made; the lines it was read
  *  from, one per newline, where the captions may break). */
-export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[]; cutShort?: CutShort | null; assetId?: string | null; script?: string | null };
+export type AddMeta = { kind: RecKind; recordedAt: string; bit?: { id: string; title: string } | null; board?: { id: string; title: string } | null; title?: string | null; marksMs?: number[]; cutShort?: CutShort | null; assetId?: string | null; script?: string | null;
+  /** the walk-through's (Slice 5): sound or video, the set's bits in order, the spans per bit */
+  mode?: 'sound' | 'video'; runBits?: RunBit[]; splits?: Split[] };
 /** A stopped recording (already moved into Documents/recordings by the recorder) becomes a row and joins the queue. */
 export async function addRecording(rec: Recording, meta: AddMeta): Promise<LocalRec> {
   await load();
@@ -281,6 +293,9 @@ export async function addRecording(rec: Recording, meta: AddMeta): Promise<Local
     ...(meta.cutShort ? { cut_short: meta.cutShort } : {}),
     ...(meta.assetId ? { asset_id: meta.assetId } : {}),
     ...(meta.script ? { script: meta.script.slice(0, 20_000) } : {}),
+    ...(meta.mode ? { mode: meta.mode } : {}),
+    ...(meta.runBits?.length ? { run_bits: meta.runBits.slice(0, 200) } : {}),
+    ...(meta.splits?.length ? { splits: meta.splits.slice(0, 2000) } : {}),
   };
   recs = [r, ...recs];
   notify();

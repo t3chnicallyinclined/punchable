@@ -1,9 +1,9 @@
 // You (from the avatar): who is signed in, how, and Sign out. Settings, Connections and Learned are one tap down.
 // Name, email and photo come from the ID token's claims (src/lib/session.ts); nothing here calls the API.
 // Sign out waits while a tape runs (rules/signinRules signOutGate): greyed out, with the reason under it.
-import { router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useState, useSyncExternalStore } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { signOut, signOutBlocked, useSession } from '@/lib/auth';
 import { onRecording } from '@/lib/audioBusy';
@@ -22,6 +22,13 @@ export default function ProfilePage() {
 
   return (
     <Screen title="You" back testID="profile">
+      {/* the first page of the sheet behind the avatar (SPEC 2026-11-16 Slice 6): the standard Close on the leading edge
+          (HIG/sheets; design review); the pages pushed inside it keep Back */}
+      {Platform.OS !== 'web' && (
+        <Stack.Toolbar placement="left">
+          <Stack.Toolbar.Button icon="xmark" accessibilityLabel="Close" onPress={() => (router.canDismiss() ? router.dismiss() : router.navigate('/bits' as any))}>Close</Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      )}
       {!sess.enabled ? (
         <Card testID="profile-local" style={{ gap: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>

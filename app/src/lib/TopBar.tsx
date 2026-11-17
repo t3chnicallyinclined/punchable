@@ -8,12 +8,12 @@ import { useOnline } from './api';
 import { useSession } from './auth';
 import { Icon, SignInBtn, useUI } from './ui';
 
-// The three tabs: Rant · Bits · Sets (SPEC 2026-11-06 R1: Rant took Tonight's place at '/'; the key stays
-// `tonight` inside the app so the remembered last tab and the back fallback keep working). Ask is the Bits search.
+// The three tabs: Bits · Sets · Tapes (SPEC 2026-11-16 Slice 6: a rant is a set he films, so the Rant tab went; '/'
+// opens Bits). Ask is the Bits search.
 export const ROOTS = [
-  { key: 'tonight', label: 'Rant', path: '/' },
   { key: 'bits', label: 'Bits', path: '/bits' },
   { key: 'sets', label: 'Sets', path: '/sets' },
+  { key: 'tapes', label: 'Tapes', path: '/tapes' },
 ];
 
 export function goRoot(key: string) {
@@ -21,7 +21,7 @@ export function goRoot(key: string) {
   if (r) router.navigate(r.path as any);
 }
 
-const ROOT_LABEL: Record<string, string> = { tonight: 'Rant', bits: 'Bits', sets: 'Sets' };
+const ROOT_LABEL: Record<string, string> = { bits: 'Bits', sets: 'Sets', tapes: 'Tapes' };
 /** The bar itself. The safe-area inset is NOT added here: `Screen` wraps every header (this one or a custom one) in it. */
 export function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
   const ui = useUI();
@@ -30,7 +30,7 @@ export function TopBar({ title, back, onBack, right, task, left, backLabel }: { 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52, paddingTop: 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
       {left ? left : back ? (
-        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('tonight')))}
+        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('bits')))}
           style={{ minWidth: 44, height: 44, maxWidth: 140, borderRadius: 22, flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
           <Icon name="back" size={24} color={C.amber} sw={2.4} />
           <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 16, color: C.amber, marginLeft: -4 }}>{label}</Text>

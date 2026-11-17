@@ -22,7 +22,7 @@ export default function TakeScreen() {
   const recId = decodeURIComponent(String(p.rec || ''));
   const ui = useUI();
   const recs = useRecordings();
-  const r = useMemo(() => recs.find((x) => x.id === recId && x.kind === 'film') || null, [recs, recId]);
+  const r = useMemo(() => recs.find((x) => x.id === recId && (x.kind === 'film' || x.mode === 'video')) || null, [recs, recId]);
   const [vid, setVid] = useState<VideoModule | null | undefined>(undefined);
   // the native player is held in state (render reads it, so it is not a ref); it is made and released by the effect
   const [player, setPlayer] = useState<any>(null);

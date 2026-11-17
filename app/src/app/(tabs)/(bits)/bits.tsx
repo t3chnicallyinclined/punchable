@@ -171,6 +171,8 @@ export default function Bits() {
       <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="mic" accessibilityLabel="Record a memo" onPress={recordMemo}>Record a memo</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
+      {/* You and Settings behind the avatar on every tab root (SPEC 2026-11-16 Slice 6: they lived in the Rant tab) */}
+      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
     </Stack.Toolbar>
   ) : (
     <Stack.Toolbar placement="right">
@@ -185,6 +187,8 @@ export default function Bits() {
         </Stack.Toolbar.Menu>
       </Stack.Toolbar.Menu>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
+      {/* You and Settings behind the avatar on every tab root (SPEC 2026-11-16 Slice 6: they lived in the Rant tab) */}
+      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
     </Stack.Toolbar>
   );
   const right = native ? undefined : (

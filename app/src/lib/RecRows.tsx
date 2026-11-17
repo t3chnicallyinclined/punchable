@@ -45,8 +45,8 @@ function Row({ r }: { r: LocalRec }) {
   const key = `rec:${r.id}`;
   const on = p.key === key && p.playing;
   const target = openTarget(r);
-  const film = r.kind === 'film';
-  const kindWord = r.kind === 'memo' ? 'memo' : film ? 'take' : 'set';
+  const film = r.kind === 'film' || r.mode === 'video';   // a filmed set too (SPEC 2026-11-16 Slice 5)
+  const kindWord = r.kind === 'memo' ? 'memo' : r.kind === 'film' ? 'take' : 'set';
   const inPhotos = film && !!r.video_gone;
   const srt = film ? srtUriOf(r) : null;
 
@@ -81,6 +81,8 @@ function Row({ r }: { r: LocalRec }) {
 
   const items: MenuItem[] = [
     film ? { label: inPhotos ? 'Open Photos' : 'Play', icon: inPhotos ? 'photo.on.rectangle' : 'play.fill', onPress: play } : { label: on ? 'Pause' : 'Play', icon: on ? 'pause.fill' : 'play.fill', onPress: play },
+    // a set taped from the walk-through (SPEC 2026-11-16 Slice 5): what he said on each bit
+    ...(r.run_bits?.length ? [{ label: 'By bit', icon: 'list.bullet', onPress: () => router.push(`/after/${enc(r.id)}` as any) }] : []),
     ...(srt ? [{ label: 'Share captions…', icon: 'square.and.arrow.up', onPress: shareCaptions }] : []),
     ...(target && !film ? [{ label: r.state === 'filed' ? 'Open the bit' : 'Open the idea', icon: 'doc.text', onPress: () => router.push(target as any) }] : []),
     ...(r.state === 'filed' && r.merge_id && !film ? [{ label: 'Not this bit', icon: 'arrow.uturn.backward', onPress: detach }] : []),
@@ -118,6 +120,11 @@ function Row({ r }: { r: LocalRec }) {
 }
 
 /** A list of this phone's recordings, newest first. */
+/** One row, for a list that mixes the phone's recordings with other rows (Tapes, SPEC 2026-11-16 Slice 6). */
+export function RecRow({ r }: { r: LocalRec }) {
+  return <Row r={r} />;
+}
+
 export function RecRows({ recs, testID }: { recs: LocalRec[]; testID?: string }) {
   const rows = [...recs].sort((a, b) => b.recorded_at.localeCompare(a.recorded_at));
   return (

@@ -1,4 +1,6 @@
-// The topic (SPEC 2026-11-06 §12.3): a page of his own words, pushed in the Rant stack (the tab bar stays). The bar:
+// The topic (SPEC 2026-11-06 §12.3): a page of his own words. Since SPEC 2026-11-16 Slice 6 (the Rant tab went) it is
+// pushed in the Sets stack, and a topic that `cargo xtask rants-to-sets` made into a set opens THAT set instead (the
+// list seeded with it, rules/tapesRules boardOfTopic); a topic not made into a set yet opens this page as before. The bar:
 // Back · the topic · ⋯ (Rename… · Start another rant · Delete topic). The system search field, "Find a bit to add"
 // (results replace the page as he types, the same cards; the page has no other add). Then the rant so far (its
 // first three lines, its takes), Jot a thought, Kept · N, Found · N (the same N as the tab's row: one server read),
@@ -7,7 +9,9 @@
 // Requests: GET /api/topics/<id>, GET /api/topics/<id>/material, PATCH /api/topics/<id>, POST /api/ideas.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import type { BoardListItem } from '@/lib/creative';
+import { boardOfTopic } from '@/rules/tapesRules';
 import { ApiError, post, undo, useApi, useOnline } from '@/lib/api';
 import { rant, topicsChanged } from '@/lib/rant';
 import { scripts } from '@/lib/scriptStore';
@@ -33,7 +37,19 @@ const SEARCH_SETTLE_MS = 250;
 const BAR_CHARS = 24;
 const NO_MARKS: Record<string, R.State | null> = {};
 
-export default function TopicPage() {
+export default function TopicOrSet() {
+  const p = useLocalSearchParams<{ topic: string }>();
+  const id = decodeURIComponent(String(p.topic || ''));
+  const live = useApi<{ boards: BoardListItem[] }>('/api/boards');
+  const arch = useApi<{ boards: BoardListItem[] }>('/api/boards?archived=1');
+  const set = boardOfTopic([...(live.data?.boards || []), ...(arch.data?.boards || [])], id);
+  if (set) return <Redirect href={{ pathname: '/list/[id]', params: { id: set.id } } as any} />;
+  // nothing typed on the topic page may be lost to a redirect a moment later: wait for both lists (iOS dev review)
+  if ((!live.data && !live.rawError) || (!arch.data && !arch.rawError)) return <Screen title="Topic" backLabel="Sets"><Skeleton lines={4} height={22} /></Screen>;
+  return <TopicPage />;
+}
+
+function TopicPage() {
   const p = useLocalSearchParams<{ topic: string }>();
   const tid = decodeURIComponent(String(p.topic || ''));
   const ui = useUI();
@@ -200,7 +216,7 @@ export default function TopicPage() {
   const writeLabel = theRant ? 'Keep writing' : 'Write the rant';
 
   return (
-    <Screen title={long ? `${title.slice(0, BAR_CHARS - 1).trimEnd()}…` : title} testID="topic" backLabel="Rant" onRefresh={() => pg.reload()}
+    <Screen title={long ? `${title.slice(0, BAR_CHARS - 1).trimEnd()}…` : title} testID="topic" backLabel="Sets" onRefresh={() => pg.reload()}
       search={native ? { placeholder: 'Find a bit to add', hideWhenScrolling: true, placement: 'stacked', autoCapitalize: 'none', onChangeText: (e: any) => setQ(e.nativeEvent.text || ''), onCancelButtonPress: () => setQ('') } as any : undefined}
       right={native ? undefined : <Btn small label="More" onPress={menu} />}>
       {native && (

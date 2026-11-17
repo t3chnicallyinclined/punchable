@@ -7,6 +7,7 @@
 // and the .mov leaves Documents once the words exist (the one copy is in Photos). rules/filmRules holds what is the
 // camera's alone. lib/recordings.native.ts is the wiring (files, the queue, the network); everything that decides is here.
 import { backoffMs } from './uploadsCore.ts';
+import { splitsForSend, type RunBit, type Split } from './runRules.ts';
 
 export type RecKind = 'memo' | 'set' | 'film';
 export type RecState =
@@ -44,6 +45,12 @@ export type LocalRec = {
   script?: string | null;
   /** the .mov left Documents once the words existed (the copy in Photos is the one that stays) */
   video_gone?: boolean;
+  /** a set taped from the walk-through (SPEC 2026-11-16 Slice 5): sound or video, the set's bits in order, the span of
+   *  the recording he spent on each (rules/runRules), and once transcribed what he said per bit (keyed by joke id) */
+  mode?: 'sound' | 'video';
+  run_bits?: RunBit[];
+  splits?: Split[];
+  bit_words?: Record<string, string> | null;
   attempts: number; next_at: number;
 };
 export type Seg = { text: string; start: number; end: number };
@@ -219,11 +226,23 @@ export function ideaBody(r: LocalRec, text: string) {
     reason: `[memo] voice memo recorded on the phone ${dayOf(r.recorded_at)}${len}, transcribed on the phone${r.bit ? ` (from ${r.bit.title})` : ''}`,
   };
 }
-/** POST /api/sets/transcript: seconds, at most 5000 segments, 200-character title. */
-export function setBody(r: LocalRec, segs: Seg[], engine: string) {
+/** POST /api/sets/transcript: seconds, at most 5000 segments, 200-character title. A set taped from a set list also
+ *  names the list (`board`), how it was taped (`mode`) and, from the walk-through, the span per bit (`splits`, SPEC
+ *  2026-11-16 §3.4). `plain`: the words alone, for a second try after the server refused the list or its splits (the
+ *  bit left the list since, the list was deleted): the words are never lost over a split. */
+export function setBody(r: LocalRec, segs: Seg[], engine: string, plain = false) {
   const title = (r.title || r.board?.title || (r.kind === 'memo' ? `Voice memo ${dayOf(r.recorded_at)}` : r.kind === 'film' ? `Film it ${dayOf(r.recorded_at)}` : `Set ${dayOf(r.recorded_at)}`)).slice(0, 200);
-  return { segments: capSegments(segs), title, recorded_at: r.recorded_at, duration_s: Math.max(0, Math.round(r.duration_s)), engine };
+  const body: Record<string, unknown> = { segments: capSegments(segs), title, recorded_at: r.recorded_at, duration_s: Math.max(0, Math.round(r.duration_s)), engine };
+  if (plain || r.kind !== 'set' || !r.board?.id) return body;
+  body.board = r.board.id;
+  if (r.mode) body.mode = r.mode;
+  const ids = (r.run_bits || []).map((b) => b.id);
+  const splits = r.splits?.length ? splitsForSend(r.splits, r.duration_s * 1000, ids) : [];
+  if (splits.length) body.splits = splits;
+  return body;
 }
+/** A set's walk-through fields were refused (400): send the words again without them. */
+export const walkFieldsRefused = (status: number | null, body: Record<string, unknown>) => status === 400 && 'board' in body;
 /** What filing a memo started on a bit takes, from what POST /api/ideas answered: nothing (it auto-attached there),
  *  an attach, or an undo of the auto-attach to another bit and then the attach. */
 export function filingSteps(bitId: string | null | undefined, attach: { decision?: string; into?: string; id?: string } | null | undefined): { undo?: string; attach?: boolean } {
@@ -273,7 +292,7 @@ export function statusWords(r: LocalRec, online = true): string {
 /** The Delete sheet's message (SPEC §6): only a filed or sent row keeps its words anywhere. A filmed take's video is
  *  his in Photos either way (Film it SPEC §2.7: the video in Photos is his to delete there). */
 export function deleteMessage(r: LocalRec): string {
-  const video = r.kind === 'film' ? ' The video stays in Photos.' : '';
+  const video = r.kind === 'film' || r.mode === 'video' ? ' The video stays in Photos.' : '';
   if (r.state === 'filed') return `The words stay on ${r.filed_on?.title || 'the bit'}.${video}`;
   if (r.state === 'new_idea' || r.state === 'sent') return `The words stay in Punchable.${video}`;
   if (r.text) return `The words haven’t reached Punchable yet. This can’t be undone.${video}`;

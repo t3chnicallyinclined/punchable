@@ -13,6 +13,8 @@ export default function BitsStack() {
   return (
     <Stack screenOptions={{ headerShown: false, headerTintColor: C.amber, contentStyle: { backgroundColor: C.bg } }}>
       <Stack.Screen name="bits" options={{ title: t('Bits') }} />
+      {/* '/' (SPEC 2026-11-16 Slice 6): pops back to Bits at once; no slide at launch (iOS dev review) */}
+      <Stack.Screen name="index" options={{ animation: 'none', title: t('Bits') }} />
       <Stack.Screen name="joke/[id]" options={{ title: t('Joke') }} />
       <Stack.Screen name="joke/[id]/tape" options={{ title: t('On tape') }} />
       {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4): removed once the owner has answered them */}

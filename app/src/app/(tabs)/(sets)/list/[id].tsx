@@ -28,6 +28,7 @@ import { useBoards } from '@/lib/boards';
 import { Build, Step } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { stageNotes } from '@/lib/stageNotes';
+import { AlsoKept, useTopicOf } from '@/lib/AlsoKept';
 import { Seam, seamLabel, seamOf, undoLabel } from '@/rules/setNoteRules';
 import { SwipeRow } from '@/lib/SwipeRow';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
@@ -112,6 +113,7 @@ export default function SetListScreen() {
   const ui = useUI();
   const boards = useBoards();
   const b = useApi<Build>(`/api/boards/${enc(id)}/build`, { poll: 30000 });
+  const topic = useTopicOf(id);   // a set made from a Rant topic (SPEC 2026-11-16 Slice 6): Also kept, Draft it as one piece…
   const [add, setAdd] = useState<null | { mode: 'add' } | { mode: 'swap'; at: number; old: Step }>(null);
   const [gap, setGap] = useState<Gap | null>(null);
   const [rename, setRename] = useState<Step | null>(null);
@@ -224,7 +226,11 @@ export default function SetListScreen() {
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
   const addLabel = `Add a bit${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`;
-  const stage = () => router.push(`/stage/${enc(id)}` as any);
+  // the walk-through (SPEC 2026-11-16 Slice 5): Record (sound) or Film, one bit at a time with his notes
+  const stage = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'sound' } } as any);
+  const film = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'video' } } as any);
+  // the Rant tab's "Draft a rant from a topic" (§3.6, §7 Q4): the topic's rant script, for a set made from a topic
+  const draftOne = () => topic && router.push({ pathname: '/topic/[topic]/script', params: { topic } } as any);
 
   // the list's own menu: Rename… · Duplicate · Share… (the plain-text list, HIG/activity-views) · Delete (not undoable: an action sheet confirms)
   const share = async () => {
@@ -267,6 +273,7 @@ export default function SetListScreen() {
     { label: 'Length…', onPress: openLength, testID: 'list-length' },
     { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
     { label: 'Share…', onPress: share, testID: 'list-share' },
+    ...(topic ? [{ label: 'Draft it as one piece…', onPress: draftOne, testID: 'list-draft-one' }] : []),
     { label: 'Delete', onPress: del, destructive: true, testID: 'list-delete' },
   ];
 
@@ -291,8 +298,11 @@ export default function SetListScreen() {
               <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
+              {!!topic && <Stack.Toolbar.MenuAction icon="sparkles" onPress={draftOne}>Draft it as one piece…</Stack.Toolbar.MenuAction>}
               <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
             </Stack.Toolbar.Menu>
+            {/* Film beside Record (design review: "a rant can be a set but its just recorded with video"); Record stays the one prominent action */}
+            <Stack.Toolbar.Button icon="video" accessibilityLabel="Film this set" onPress={film}>Film</Stack.Toolbar.Button>
             <Stack.Toolbar.Button icon="record.circle" variant="prominent" accessibilityLabel="Record this set" onPress={stage}>Record</Stack.Toolbar.Button>
           </Stack.Toolbar>
           {/* the dock becomes a bottom toolbar inside the tab's stack, so the tab bar stays visible (HIG/tab-bars) */}
@@ -348,6 +358,7 @@ export default function SetListScreen() {
 
       {!native && <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
         onPick={(pk) => (add?.mode === 'swap' ? swap(add.at, add.old, pk) : addJoke(pk))} />}
+      <AlsoKept topic={topic} />
       <BridgeSheet key={gap ? `${gap.from}>${gap.to}` : 'none'} gap={gap} boardId={id} titleOf={titleOf} onClose={() => setGap(null)} />
       <Sheet visible={!!rename} onClose={() => setRename(null)} label="Rename short name" testID="rename-sheet">
         <SheetHead title="Short name" onCancel={() => setRename(null)} testID="rename" />

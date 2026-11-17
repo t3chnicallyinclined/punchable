@@ -24,6 +24,7 @@ import { CrashScreen } from '@/lib/CrashScreen';
 import { startRecordings } from '@/lib/recordings';
 import { useOnline } from '@/lib/api';
 import { flushBitDrafts } from '@/lib/bitDraft';
+import { flushScriptDrafts } from '@/lib/scriptFlush';
 import type { ErrorBoundaryProps } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -53,12 +54,13 @@ function RecordingsQueue() {
 
 /** Words typed into a bit that no version holds yet (lib/bitDraft, SPEC 2026-11-16 Slice 2: typed offline, or the app
  *  died mid-sentence): sent as a version of their bit once he is signed in, and again whenever the connection comes
- *  back. A bit whose page is open saves its own. */
+ *  back. A bit whose page is open saves its own. A rant script kept only on the phone goes the same way (lib/scriptFlush,
+ *  moved here from the Rant tab, SPEC 2026-11-16 Slice 6). */
 function BitDrafts() {
   const sess = useSession();
   const online = useOnline();
   useEffect(() => {
-    if (online && (!sess.enabled || sess.signedIn)) void flushBitDrafts();
+    if (online && (!sess.enabled || sess.signedIn)) { void flushBitDrafts(); void flushScriptDrafts(); }
   }, [online, sess.enabled, sess.signedIn]);
   return null;
 }
@@ -181,6 +183,13 @@ function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
                 {/* Full-screen tasks (HIG/modality: "a full-screen modal style for ... a complex task"); nothing swipes him off the stage. */}
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
+                {/* The walk-through (SPEC 2026-11-16 Slice 5): one screen records sound or films a set, one bit at a time;
+                    After is the take cut up by bit. Nothing swipes him off a running take. */}
+                <Stack.Screen name="run/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
+                <Stack.Screen name="after/[rec]" options={{ ...fullScreen, title: t('After') }} />
+                {/* Settings, You, Voice profile, What it has learned, Usage: one stack behind the avatar on every tab (Slice 6,
+                    the Rant tab's stack before); a page sheet on the phone, swipe down to close */}
+                <Stack.Screen name="(me)" options={{ ...(Platform.OS === 'web' ? {} : { presentation: 'modal' }) }} />
                 <Stack.Screen name="record" options={{ ...fullScreen, gestureEnabled: false, title: t('Record') }} />
                 {/* Film it (SPEC 2026-11-03): the camera is a full-screen modal like the stage; a take plays in its own */}
                 <Stack.Screen name="film/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('Film it') }} />
