@@ -229,6 +229,12 @@ and …/configure-private-email-relay-service/, fetched 2026-11-16):
    (https://support.google.com/cloud/answer/15549945, fetched 2026-11-16). The T11 plan believes the project is "In
    production" (`PLAN…:383-385`, INFERRED there too). Invited testers who use Google must be test users while it is
    in Testing. Sign-in alone, with basic scopes, has no 7-day expiry and no warning screen.
+   **Answered 2026-11-17 (owner, Q8): "it says testing".** So the T11 plan's belief is wrong, and the Drive token his
+   Docs sync holds (scope `drive`) is subject to the 7-day expiry. Lead's recommendation: publish the project to "In
+   production" under the personal-use case (fewer than 100 users, known to him): no verification is needed for that,
+   the unverified-app screen shows only on the Drive grant (never on sign-in, which asks basic scopes), and refresh
+   tokens stop expiring weekly; then reconnect Google once so the sync holds a token issued after publishing
+   (INFERRED: a token issued in Testing keeps its expiry). Testers' import stays in the separate project (item 3).
 3. **For the testers' Doc import (Slice 7 only):** a **separate Google Cloud project** for the Picker client with
    `drive.file`. That keeps his own project, which holds the restricted Drive scope for his sync, under Google's
    personal-use case ("only a few users, all of whom are known personally to you", restricted-scope verification
