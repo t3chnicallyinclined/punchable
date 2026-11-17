@@ -1,7 +1,11 @@
 //! The daily spend cap of the hosted provider (`engine/budget.py`): one small JSON ledger keyed by UTC day,
 //! `{"2026-10-27": {"usd": 0.41, "calls": 7, "tasks": {"creative_riff": 0.3}}}`, trimmed to 14 days; list prices
 //! per million tokens; `check` before a call, `charge` after it from the response's usage. A model not in the
-//! table is priced as Opus so a mistake can only over-count. Nothing here ever sees a key.
+//! table is priced as the most expensive model in it, so a mistake can only over-count. Nothing here ever sees a key.
+//!
+//! [`PRICES`] is the one price table: the cap charges from it and the usage meter (pk-api `usage`) prices every
+//! recorded call from it, so the two never disagree. [`PRICES_READ`] and [`PRICES_SOURCE`] say where and when it was
+//! read; re-read the page and move both when Anthropic's prices change.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -16,59 +20,19 @@ use crate::error::LlmError;
 /// The cap when `PK_AI_DAILY_USD` is not set.
 pub const DEFAULT_DAILY_USD: f64 = 2.00;
 
-/// USD per million tokens: input, output, cache write (1.25x input), cache read.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct Prices {
-    /// Uncached input.
-    pub input: f64,
-    /// Output.
-    pub output: f64,
-    /// Cache write.
-    pub cache_write: f64,
-    /// Cache read.
-    pub cache_read: f64,
-}
-
-const fn p(input: f64, output: f64, cache_write: f64, cache_read: f64) -> Prices {
-    Prices {
-        input,
-        output,
-        cache_write,
-        cache_read,
-    }
-}
-
-/// Model id prefix → prices (first-party list prices, cached 2026-10-06); the longest matching prefix wins.
-pub const PRICES: &[(&str, Prices)] = &[
-    ("claude-opus-5-5", p(4.00, 20.00, 5.00, 0.20)),
-    ("claude-sonnet-5-5", p(2.00, 10.00, 2.50, 0.20)),
-    ("claude-haiku-5-5", p(0.10, 0.50, 0.125, 0.01)),
-    ("claude-opus-5", p(5.00, 25.00, 6.25, 0.50)),
-    ("claude-sonnet-5", p(2.00, 10.00, 2.50, 0.20)),
-    ("claude-haiku-4-5", p(1.00, 5.00, 1.25, 0.10)),
-];
-
-/// The price of a model not in the table: Opus.
-pub const FALLBACK_PRICE: Prices = PRICES[0].1;
-
-/// `budget.py` `price_of`: case-insensitive prefix match, the longest prefix wins, Opus when none matches.
-pub fn price_of(model: &str) -> Prices {
-    let m = model.to_lowercase();
-    PRICES
-        .iter()
-        .filter(|(k, _)| m.starts_with(k))
-        .max_by_key(|(k, _)| k.len())
-        .map_or(FALLBACK_PRICE, |(_, v)| *v)
-}
+pub use pk_core::prices::{
+    FALLBACK_PRICE, LONG_PRICES, PRICES, PRICES_READ, PRICES_SOURCE, Prices, price_for, price_of, tokens_usd,
+};
 
 /// USD for one response from its usage numbers (missing fields count as 0).
 pub fn usage_usd(model: &str, usage: &Usage) -> f64 {
-    let pr = price_of(model);
-    (usage.input_tokens as f64 * pr.input
-        + usage.output_tokens as f64 * pr.output
-        + usage.cache_write() as f64 * pr.cache_write
-        + usage.cache_read() as f64 * pr.cache_read)
-        / 1_000_000.0
+    tokens_usd(
+        model,
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.cache_write(),
+        usage.cache_read(),
+    )
 }
 
 /// One day of the ledger.
@@ -275,6 +239,15 @@ fn round4(x: f64) -> f64 {
 mod tests {
     use super::*;
 
+    const fn p(input: f64, output: f64, cache_write: f64, cache_read: f64) -> Prices {
+        Prices {
+            input,
+            output,
+            cache_write,
+            cache_read,
+        }
+    }
+
     #[test]
     fn prices_match_by_longest_prefix() {
         assert_eq!(price_of("claude-sonnet-5-5-20260101"), PRICES[1].1);
@@ -286,7 +259,34 @@ mod tests {
             ..Usage::default()
         };
         assert!((usage_usd("claude-opus-5-5", &big) - 4.0).abs() < 1e-12);
-        assert!((usage_usd("claude-haiku-5-5", &big) - 0.1).abs() < 1e-12);
+        // one million input tokens is over Haiku 5.5's 100,000-token threshold: the long prices
+        assert!((usage_usd("claude-haiku-5-5", &big) - 0.5).abs() < 1e-12);
+    }
+
+    /// The page read on 2026-11-17: each model's four prices, Sonnet 5.5's cache hits at 0.05x, and the most
+    /// expensive model as the fallback.
+    #[test]
+    fn the_table_is_the_page_read_on_the_day_it_names() {
+        assert_eq!(PRICES_READ, "2026-11-17");
+        assert_eq!(price_of("claude-opus-5-5"), p(4.00, 20.00, 5.00, 0.20));
+        assert_eq!(price_of("claude-sonnet-5-5"), p(2.00, 10.00, 2.50, 0.10));
+        assert_eq!(price_of("claude-haiku-5-5"), p(0.10, 0.50, 0.125, 0.01));
+        let dearest = PRICES.iter().map(|(_, v)| v.output).fold(0.0_f64, f64::max);
+        assert!((FALLBACK_PRICE.output - dearest).abs() < 1e-12);
+        assert_eq!(price_of("claude-unknown-9"), FALLBACK_PRICE);
+    }
+
+    /// Haiku 5.5 is priced by prompt length, counting cache reads and writes: 100,000 is still short, one more is
+    /// long, and the long prices apply to the whole request (its output too).
+    #[test]
+    fn a_long_haiku_prompt_pays_the_long_prices() {
+        assert_eq!(price_for("claude-haiku-5-5", 100_000), p(0.10, 0.50, 0.125, 0.01));
+        assert_eq!(price_for("claude-haiku-5-5", 100_001), p(0.50, 2.50, 0.625, 0.05));
+        assert_eq!(price_for("claude-sonnet-5-5", 900_000), price_of("claude-sonnet-5-5"));
+        // 60k uncached + 50k cache read = 110k: long, even though most of it is a cache hit
+        let usd = tokens_usd("claude-haiku-5-5", 60_000, 1_000, 0, 50_000);
+        let want = (60_000.0 * 0.50 + 1_000.0 * 2.50 + 50_000.0 * 0.05) / 1e6;
+        assert!((usd - want).abs() < 1e-12, "{usd} vs {want}");
     }
 
     #[test]

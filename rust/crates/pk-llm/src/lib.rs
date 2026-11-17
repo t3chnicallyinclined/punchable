@@ -24,9 +24,9 @@ pub mod router;
 pub mod schema;
 
 pub use api::{Request, Response, Usage};
-pub use backend::{AnthropicBackend, Called, ChatMessage};
+pub use backend::{AnthropicBackend, Called, ChatMessage, Spent};
 pub use budget::{Budget, BudgetConfig};
 pub use client::Client;
 pub use config::{Config, LlmConfig, ProviderCfg, TaskCfg};
 pub use error::LlmError;
-pub use router::{Completion, Router};
+pub use router::{CallTag, Completion, Router, current_tag, tagged};

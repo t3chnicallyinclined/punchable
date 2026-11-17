@@ -241,7 +241,7 @@
     "cache_read_input_tokens": 12000
    },
    "task": "ask_chat",
-   "usd": 0.006,
+   "usd": 0.0048,
    "remaining_before": 4.97
   },
   {
@@ -255,7 +255,7 @@
    },
    "task": "merge_judge",
    "usd": 5.5e-05,
-   "remaining_before": 4.964
+   "remaining_before": 4.9652
   },
   {
    "day": "2026-10-29",
@@ -268,7 +268,7 @@
    },
    "task": "ask_plan",
    "usd": 0.0003,
-   "remaining_before": 4.9639
+   "remaining_before": 4.9651
   },
   {
    "day": "2026-10-29",
@@ -281,7 +281,7 @@
    },
    "task": "ask_plan",
    "usd": 0.0003,
-   "remaining_before": 4.9636
+   "remaining_before": 4.9648
   },
   {
    "day": "2026-10-29",
@@ -293,8 +293,47 @@
     "cache_read_input_tokens": 0
    },
    "task": "ask_answer",
-   "usd": 0.0006,
-   "remaining_before": 4.9633
+   "usd": 0.0015,
+   "remaining_before": 4.9645
+  },
+  {
+   "day": "2026-10-29",
+   "model": "claude-mystery-9",
+   "usage": {
+    "input_tokens": 100,
+    "output_tokens": 10,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+   },
+   "task": "ask_answer",
+   "usd": 0.0015,
+   "remaining_before": 4.963
+  },
+  {
+   "day": "2026-10-29",
+   "model": "claude-haiku-5-5",
+   "usage": {
+    "input_tokens": 60000,
+    "output_tokens": 1000,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 50000
+   },
+   "task": "merge_judge",
+   "usd": 0.035,
+   "remaining_before": 4.9615
+  },
+  {
+   "day": "2026-10-29",
+   "model": "claude-haiku-5-5",
+   "usage": {
+    "input_tokens": 50000,
+    "output_tokens": 1000,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 50000
+   },
+   "task": "merge_judge",
+   "usd": 0.006,
+   "remaining_before": 4.9265
   },
   {
    "day": "2026-10-29",
@@ -307,7 +346,7 @@
    },
    "task": "creative_punchup",
    "usd": 4.0,
-   "remaining_before": 4.9627
+   "remaining_before": 4.9205
   }
  ],
  "ledger": {
@@ -403,35 +442,35 @@
    "usd": 0.00015
   },
   "2026-10-29": {
-   "calls": 7,
+   "calls": 10,
    "tasks": {
-    "ask_answer": 0.0006,
-    "ask_chat": 0.006,
+    "ask_answer": 0.003,
+    "ask_chat": 0.0048,
     "ask_plan": 0.0006,
     "creative_punchup": 4.0,
     "creative_riff": 0.03,
-    "merge_judge": 5.5e-05
+    "merge_judge": 0.041055
    },
-   "usd": 4.037255
+   "usd": 4.079455
   }
  },
  "status": {
   "daily_usd": 5.0,
-  "spent_usd": 4.0373,
-  "calls": 7,
+  "spent_usd": 4.0795,
+  "calls": 10,
   "tasks": {
-   "ask_answer": 0.0006,
-   "ask_chat": 0.006,
+   "ask_answer": 0.003,
+   "ask_chat": 0.0048,
    "ask_plan": 0.0006,
    "creative_punchup": 4.0,
    "creative_riff": 0.03,
-   "merge_judge": 0.0001
+   "merge_judge": 0.0411
   },
   "over": false
  },
- "remaining": 0.962745,
- "spent_today": 4.037255,
- "reason": "over today's AI budget ($4.04 of $5.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD",
+ "remaining": 0.9205449999999997,
+ "spent_today": 4.079455,
+ "reason": "over today's AI budget ($4.08 of $5.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD",
  "exceeded": null,
  "prices": {
   "claude-opus-5-5": [
@@ -444,7 +483,7 @@
    2.0,
    10.0,
    2.5,
-   0.2
+   0.1
   ],
   "claude-haiku-5-5": [
    0.1,
@@ -474,7 +513,7 @@
    2.0,
    10.0,
    2.5,
-   0.2
+   0.1
   ],
   "CLAUDE-OPUS-5-5": [
    4.0,
@@ -483,22 +522,22 @@
    0.2
   ],
   "claude-fable-5-1": [
-   4.0,
-   20.0,
-   5.0,
-   0.2
+   10.0,
+   50.0,
+   12.5,
+   0.25
   ],
   "": [
-   4.0,
-   20.0,
-   5.0,
-   0.2
+   10.0,
+   50.0,
+   12.5,
+   0.25
   ],
   "gpt-x": [
-   4.0,
-   20.0,
-   5.0,
-   0.2
+   10.0,
+   50.0,
+   12.5,
+   0.25
   ]
  },
  "zero_cap_exceeded": "over today's AI budget ($0.00 of $0.00); queued jobs run again after midnight UTC or a higher PK_AI_DAILY_USD",

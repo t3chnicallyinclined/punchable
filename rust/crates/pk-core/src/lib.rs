@@ -14,6 +14,7 @@
 
 pub mod config;
 pub mod legal;
+pub mod prices;
 pub mod py;
 pub mod text;
 pub mod time;

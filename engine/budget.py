@@ -7,8 +7,10 @@
 
 The ledger is one small JSON file keyed by UTC day: {"2026-10-27": {"usd": 0.41, "tasks": {"creative_riff": 0.3, ...},
 "calls": 7}}. Days older than 14 are dropped. Prices are first-party Claude API list prices per million tokens
-(cached 2026-10-06): input, output, cache write (1.25x input), cache read. A model not in the table is priced as
-Opus so a mistake can only over-count. Nothing here ever sees a key.
+(read 2026-11-17 off https://platform.claude.com/docs/en/about-claude/pricing; the same table as
+rust/crates/pk-llm/src/budget.rs): input, output, cache write (5-minute), cache read. Haiku 5.5 prompts over 100,000
+tokens (every input token, cache reads and writes included) pay its long prices. A model not in the table is priced as
+the most expensive model in it, so a mistake can only over-count. Nothing here ever sees a key.
 """
 from __future__ import annotations
 
@@ -22,26 +24,44 @@ DEFAULT_DAILY_USD = 2.00
 # model id prefix -> (input $/MTok, output $/MTok, cache write $/MTok, cache read $/MTok)
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20),
-    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
+    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.10),
     "claude-haiku-5-5": (0.10, 0.50, 0.125, 0.01),
     "claude-opus-5": (5.00, 25.00, 6.25, 0.50),
     "claude-sonnet-5": (2.00, 10.00, 2.50, 0.20),
     "claude-haiku-4-5": (1.00, 5.00, 1.25, 0.10),
+    "claude-fable-5-2": (8.00, 40.00, 10.00, 0.20),
+    "claude-fable-5-1": (10.00, 50.00, 12.50, 0.25),
 }
-FALLBACK_PRICE = PRICES["claude-opus-5-5"]
+# model prefix -> (prompt tokens it may have before the long prices apply, the long prices)
+LONG_PRICES = {"claude-haiku-5-5": (100_000, (0.50, 2.50, 0.625, 0.05))}
+FALLBACK_PRICE = PRICES["claude-fable-5-1"]
 
 
 class BudgetExceeded(RuntimeError):
     """Today's cap is spent: the caller keeps its job queued and says why (never silently drops it)."""
 
 
-def price_of(model: str) -> tuple[float, float, float, float]:
+def _match(model: str):
     m = (model or "").lower()
     best = None
     for k, v in PRICES.items():
         if m.startswith(k) and (best is None or len(k) > len(best[0])):
             best = (k, v)
+    return best
+
+
+def price_of(model: str) -> tuple[float, float, float, float]:
+    best = _match(model)
     return best[1] if best else FALLBACK_PRICE
+
+
+def price_for(model: str, prompt_tokens: int) -> tuple[float, float, float, float]:
+    """price_of, or the model's long prices when its prompt (every input token) is over the threshold."""
+    best = _match(model)
+    if not best:
+        return FALLBACK_PRICE
+    over, long = LONG_PRICES.get(best[0], (None, None))
+    return long if over is not None and prompt_tokens > over else best[1]
 
 
 def usage_usd(model: str, usage) -> float:
@@ -49,7 +69,8 @@ def usage_usd(model: str, usage) -> float:
     def n(name):
         v = getattr(usage, name, None) if not isinstance(usage, dict) else usage.get(name)
         return int(v or 0)
-    pi, po, pw, pr = price_of(model)
+    prompt = n("input_tokens") + n("cache_creation_input_tokens") + n("cache_read_input_tokens")
+    pi, po, pw, pr = price_for(model, prompt)
     return (n("input_tokens") * pi + n("output_tokens") * po + n("cache_creation_input_tokens") * pw
             + n("cache_read_input_tokens") * pr) / 1_000_000
 
