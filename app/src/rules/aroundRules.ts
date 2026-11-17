@@ -238,11 +238,13 @@ export function hasChanges(diff: { add: string[]; remove: string[] }, typed: str
   return diff.add.length > 0 || diff.remove.length > 0 || newSetTitle(typed).length > 0;
 }
 /** Done as calls, in the order they are sent: the new set (made with the bit in it), each add, each remove. */
-export function pickerCalls(joke: string, diff: { add: string[]; remove: string[] }, typed = ''): Call[] {
+export function pickerCalls(joke: string, diff: { add: string[]; remove: string[] }, typed = '', note = ''): Call[] {
   const title = newSetTitle(typed);
+  // words he took from the bit (Slice 3, Take it elsewhere) go under it as a note in each set it is added to
+  const n = note.trim();
   return [
     ...(title ? [{ method: 'POST' as const, path: '/api/boards', body: { title, joke_ids: [joke] } }] : []),
-    ...diff.add.map((b) => ({ method: 'POST' as const, path: `/api/boards/${enc(b)}/items`, body: { joke_id: joke } })),
+    ...diff.add.map((b) => ({ method: 'POST' as const, path: `/api/boards/${enc(b)}/items`, body: n ? { joke_id: joke, note: n } : { joke_id: joke } })),
     ...diff.remove.map((b) => ({ method: 'PATCH' as const, path: `/api/boards/${enc(b)}`, body: { remove: { joke_id: joke } } })),
   ];
 }

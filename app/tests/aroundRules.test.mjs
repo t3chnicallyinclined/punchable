@@ -158,6 +158,10 @@ check(eq(A.pickerCalls(BIT, { add: ["sb:2", "sb:3"], remove: ["sb:1"] }, " Late 
   { method: "PATCH", path: "/api/boards/sb%3A1", body: { remove: { joke_id: BIT } } },
 ]), "Done: the new set first (made with the bit in it), then each add, then each remove");
 check(A.pickerCalls(BIT, { add: [], remove: [] }, "").length === 0, "nothing staged is no call");
+check(eq(A.pickerCalls(BIT, { add: ["sb:2"], remove: ["sb:1"] }, "", " the wifi line "), [
+  { method: "POST", path: "/api/boards/sb%3A2/items", body: { joke_id: BIT, note: "the wifi line" } },
+  { method: "PATCH", path: "/api/boards/sb%3A1", body: { remove: { joke_id: BIT } } },
+]), "words taken elsewhere (Slice 3) go as the note on each add, never on a remove");
 check(A.newSetTitle("  x  ") === "x" && A.newSetTitle("y".repeat(300)).length === 200, "a new set's name is trimmed to the route's limit");
 check(eq(A.pickerUndo(BIT, { added: ["sb:2"], removed: ["sb:1"], created: ["sb:9"] }, { "sb:1": 2 }), [
   { method: "PATCH", path: "/api/boards/sb%3A2", body: { remove: { joke_id: BIT } } },

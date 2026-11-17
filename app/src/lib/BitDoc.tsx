@@ -16,6 +16,10 @@
 // The caret is kept above the keyboard by the page's scroll view: a hidden copy of the text up to the caret, laid out
 // at the input's width, gives the caret's height in the document; rules/lineRules caretScroll decides whether to move.
 // Rules and their tests: rules/lineRules.ts, tests/lineRules.test.mjs.
+// Slice 3 (the Redline loop): the page hears the selection (`onSelection`: what a mark would be on) and the marks he
+// has not sent are drawn as quiet highlights behind his words while the keyboard is down (`marks`; a copy of the text
+// laid out exactly as the input lays it out, in transparent ink, its marked runs on a tinted ground: lib/MarkedText
+// MarkLayer). Nothing in the text changes: a mark is a highlight, never a character.
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { AppState, PixelRatio, Platform, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +27,8 @@ import { decide } from './api';
 import { addVersion } from './bitWork';
 import { bitDocOpen, dropBitDraft, readBitDraft, setBitPending, writeBitDraft } from './bitDraft';
 import { C, F } from './theme';
+import { MarkLayer } from './MarkedText';
+import type { Mark } from '@/rules/markRules';
 import { PROSE_CAP, sourceFor, type Cut } from '@/rules/bitLines';
 import { nameFromFirstLine } from '@/rules/bitWorkRules';
 import * as L from '@/rules/lineRules';
@@ -55,6 +61,7 @@ export type BitDocHandle = {
   /** A version of ours was undone: take the server's text again when it arrives. */ undone: () => void;
   /** The scroll view changed height (the keyboard): bring the caret into view. */ follow: () => void;
   /** Put the keyboard away (Done). */ blur: () => void;
+  /** The version the words on the page are (null while they are not a version yet). */ unit: () => string | null;
 };
 
 export type BitDocProps = {
@@ -73,6 +80,10 @@ export type BitDocProps = {
   onState: (s: BitDocState) => void;
   /** The page's scroll view: its ref, and where it is (kept by the page from the shell's scrollWatch). */
   scroll: { ref: React.MutableRefObject<any>; y: React.MutableRefObject<number>; h: React.MutableRefObject<number> };
+  /** The marks he has not sent, drawn behind his words while the keyboard is down (Slice 3). */ marks?: readonly Mark[];
+  /** Where the selection is (a caret is start = end), and the text it is in: what a mark would be on (Slice 3). */
+  onSelection?: (sel: { start: number; end: number }, text: string) => void;
+  /** The height of a bar the page puts on the keyboard while he types here (the marks bar): the caret stays above it. */ barH?: number;
   testID?: string;
 };
 
@@ -278,7 +289,7 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
     const scale = Math.min(PROSE_CAP, Math.max(1, PixelRatio.getFontScale()));
     const bottom = top.current + caretY.current;
     // the footnote line sits above the keyboard (the shell pins it `ins.bottom` up): the caret stays clear of it
-    const margin = 16 + (props.current.noteOn ? ins.bottom + NOTE_H : 0);
+    const margin = 16 + (props.current.noteOn ? ins.bottom + NOTE_H : 0) + (props.current.barH || 0);
     const y = L.caretScroll({ top: bottom - LINE * scale, bottom, offset: s.y.current, height: s.h.current, guardTop: ins.top + 52, margin });
     if (y != null) s.ref.current?.scrollTo?.({ y, animated: true });
   }, [ins.top, ins.bottom]);
@@ -310,6 +321,7 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
     undone: () => { expect.current = null; },
     follow,
     blur: () => input.current?.blur(),
+    unit: () => (dirty() || inFlight.current ? null : baseUnit.current),
   }), [save, show, follow]);
 
   const onBlur = () => {
@@ -343,14 +355,19 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
           onLayout={(e) => { caretY.current = e.nativeEvent.layout.height; follow(); }}
           style={[style, { position: 'absolute', left: 0, right: 0, top: 0, opacity: 0 }]}>{mirror + '​'}</Text>
       )}
+      {!typing && !!p.marks?.length && (
+        // his marks, quiet, behind his words (the input above draws the words themselves)
+        <MarkLayer text={text.current} marks={p.marks} style={style} />
+      )}
       <TextInput key={mount.n} ref={input} testID={p.testID ? `${p.testID}-input` : undefined} multiline scrollEnabled={false} defaultValue={mount.text}
         autoFocus={!!p.autoFocus && mount.n === 0} textAlignVertical="top" maxFontSizeMultiplier={PROSE_CAP}
-        accessibilityLabel="Bit text" accessibilityHint="Saves by itself"
+        accessibilityLabel="Bit text" accessibilityHint={p.marks?.length ? `Saves by itself. ${p.marks.length === 1 ? 'One mark' : `${p.marks.length} marks`} on it, in the marks tray` : 'Saves by itself'}
         placeholder={p.fresh ? 'Write the bit. The first line names it.' : 'Write the bit.'} placeholderTextColor={C.dim}
         onChangeText={onChange}
         onSelectionChange={(e) => {
           caret.current = e.nativeEvent.selection.end;
           if (native) setMirror(L.mirrorText(text.current, caret.current));
+          props.current.onSelection?.(e.nativeEvent.selection, text.current);
         }}
         onFocus={() => { typingRef.current = true; setFillH(props.current.scroll.h.current || 0); setTyping(true); measureTop(); }}
         onBlur={onBlur}

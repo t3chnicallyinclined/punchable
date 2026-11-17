@@ -22,8 +22,14 @@
 // `source`, rules/bitLines cutOf). The body shows the newest STAGE version; the stepper walks every version and says
 // the cut; on a rant version a "Rant cut" row sits above the text and a write or Restore writes that cut. The sparkle
 // opens the sessions sheet (/session/[bit]) with its two rows, Make it a rant and Pick a hook, on the version shown.
+// The Redline loop (SPEC 2026-11-16 §3.2 and Slice 3 as built; owner: "when i say redline, i mean our repo redline"):
+// while he types, a bar above the keyboard (lib/DocMarkBar) marks the selected words, or the caret's line, Change, Ask
+// or Keep, or takes them elsewhere (a set, a new bit). The marks wait in a tray on the phone (lib/marks; /marks) and
+// show as quiet highlights in his words while the keyboard is down; Send sends them once (the bottom bar, or the tray),
+// after his typing is saved as a version. The round's line sits right under the document: "Reading your marks…", then
+// "A new draft is ready", which opens the whole new draft (joke/[id]/draft). The older editor has no marks.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Share, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Keyboard, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
@@ -50,6 +56,15 @@ import { Pile } from '@/lib/Pile';
 import { AroundInline, SetsInline, aroundChanged, aroundPath } from '@/lib/Around';
 import * as AR from '@/rules/aroundRules';
 import { DragList } from '@/lib/DragList';
+import { DocMarkBar, type DocMarkBarHandle, type MarkSaid } from '@/lib/DocMarkBar';
+import { MARK_BAR_H } from '@/lib/MarkBar';
+import type { BarAction } from '@/lib/MarkBar';
+import { markId, peekMarks, sendAsked, useMarks } from '@/lib/marks';
+import { openTray } from '@/lib/MarkTray';
+import { useRound } from '@/lib/redline';
+import { sendRound, takeElsewhere } from '@/lib/redlineActions';
+import { actionSheet } from '@/lib/actionSheet';
+import * as MR from '@/rules/markRules';
 
 type V = R.BitVersion;
 type Note = { id: string; text?: string | null; date?: string | null; reasons?: unknown[] | null; score?: number | null };
@@ -93,6 +108,17 @@ export default function BitPage() {
   }), []);
   // the last write from a card's sheet: its non-timed Undo sits on the Around row (HIG.md §7)
   const [lastAround, setLastAround] = useState<{ undo: () => Promise<void> } | null>(null);
+  // the Redline loop: his marks not sent yet (kept on the phone), the bar that makes them, the round on the bit
+  const marks = useMarks(id, null);
+  const markBar = useRef<DocMarkBarHandle>(null);
+  // the document's last selection: the bar is mounted after the tap that focused it and starts from this
+  const lastSel = useRef<{ sel: { start: number; end: number }; text: string } | null>(null);
+  const rr = useRound(id);
+  const round = rr.data?.round || null;
+  const rstate = MR.roundState(round);
+  const [sending, setSending] = useState(false);
+  const docStateRef = useRef<BitDocState>(QUIET);
+  useEffect(() => { docStateRef.current = docState; }, [docState]);
   // which version is shown: null = the newest stage version (home), 'rant' = the newest rant cut (after a rant write),
   // a number = the one he stepped to
   const [pos, setPos] = useState<number | 'rant' | null>(null);
@@ -159,6 +185,10 @@ export default function BitPage() {
   const scraps = useMemo(() => R.pileScraps((cand.data?.history?.notes || []).filter((n: Note) => !takeNotes.has(n.id)), memos), [cand.data, memos, takeNotes]);
   const barOn = R.barEnabled(lines, J?.summary) && !fresh;
   const typing = !classic && docState.typing;
+  // marks live on the newest stage document (the rant cut and older versions are other texts: iOS dev review)
+  const marksHere = !classic && !reading && vCut === 'stage';
+  // the marks bar sits on the keyboard while he types (the phone); the web draws it in the shell's bottom bar
+  const barOnKeys = native && typing && marksHere;
   // the page's own writes (a reorder, a line from the pile, a restore, Cut): online, on the newest version, nothing else open
   const canWrite = online && !reading && editing == null && order == null && !typing;
   // the one line above the bottom: an older version being read, else why his words are not a version yet
@@ -334,6 +364,87 @@ export default function BitPage() {
     }
   };
 
+  /** Send the marks once: his typing is saved as a version first (the marks are on the words he sees), then one
+   *  round on that version. A draft already waiting is replaced, so that asks first. One send at a time from the first
+   *  tap (iOS dev review: two quick taps both got past a guard set after the save). */
+  const sendBusy = useRef(false);
+  const sendMarks = async () => {
+    if (sendBusy.current || classic || reading) return;
+    if (!online) return ui.snack('Offline. Your marks wait on this iPhone.');
+    sendBusy.current = true;
+    setSending(true);
+    const done = () => { sendBusy.current = false; setSending(false); };
+    let unit: string | null = null;
+    try {
+      await doc.current?.save('done');
+      unit = doc.current?.unit() ?? null;
+    } catch {
+      unit = null;
+    }
+    if (!unit) {
+      done();
+      // the note as it is now (a save that found the words too long says so while it ran)
+      const note = docStateRef.current.note;
+      return ui.snack(note ? `${note}. Your marks wait here.` : 'Your words are still saving. Send again in a moment.');
+    }
+    // the words as the server holds them (the route strips the blank ends; the marks are found by their words anyway)
+    const text = L.docText(doc.current?.text() ?? v?.text ?? '');
+    const go = async () => {
+      // the tray as it is now: a note typed a moment ago in the sheet is in it (never a render's older copy)
+      try {
+        const ok = await sendRound(ui, id, { unit }, text, peekMarks(id, null));
+        if (ok) void rr.reload();
+      } finally {
+        done();
+      }
+    };
+    if (rstate === 'ready') {
+      const n = peekMarks(id, null).length;
+      actionSheet({
+        title: `Send ${MR.markCount(n)}?`, message: 'The draft waiting on this bit is replaced by the new one.',
+        options: [{ label: MR.sendLabel(n), onPress: () => void go() }, { label: 'Cancel', cancel: true, onPress: done }],
+      });
+    } else void go();
+  };
+  // Send from the tray sheet
+  useEffect(() => sendAsked.subscribe((a) => { if (a.bit === id && !a.on) void sendMarks(); }));
+  // VoiceOver hears the round change (accessibilityLiveRegion is Android only: design review)
+  // only a change he did not just see: never the first read after the page opens (design review, second look)
+  const lastRound = useRef<MR.RoundState | null>(null);
+  useEffect(() => {
+    if (!rr.data) return;
+    if (lastRound.current != null && lastRound.current !== rstate && rstate !== 'none') {
+      AccessibilityInfo.announceForAccessibilityWithOptions(MR.roundLine(round) || '', { queue: true });
+    }
+    lastRound.current = rstate;
+  }, [rstate, round, rr.data]);
+  /** A mark from the bar: on the selected words, or the caret's line. Keep is made at once ("Kept" in the bar, with
+   *  Undo); Change and Ask open the tray at that mark's note; Copy to… offers a set or a new bit. */
+  const markAct = (a: BarAction, target: { text: string; at: number }): MarkSaid => {
+    if (a === 'elsewhere') { doc.current?.blur(); takeElsewhere(ui, id, shortName, target.text); return null; }
+    const m: MR.Mark = { id: markId(), type: a, text: target.text, at: target.at, note: '' };
+    const r = MR.addMark(doc.current?.text() ?? '', peekMarks(id, null), m);
+    if (r.error) { haptics.warning(); return { word: r.error }; }
+    haptics.selection();
+    void marks.replace(r.marks);
+    if (a === 'keep') return { word: 'Kept', undo: () => void marks.replace(peekMarks(id, null).filter((x) => x.id !== m.id)) };
+    doc.current?.blur();
+    openTray(id, null, m.id);
+    return null;
+  };
+  // the keyboard's top in this screen, for the marks bar that sits on it (lib/KeyboardBar's pattern, script.tsx)
+  const root = useRef<any>(null);
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    if (!native) return;
+    const show = Keyboard.addListener('keyboardWillChangeFrame', (e) => {
+      root.current?.measureInWindow((_x: number, y: number, _w: number, h: number) => setKb(Math.max(0, y + h - e.endCoordinates.screenY)));
+    });
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKb(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+  const openDraft = () => router.push(`/joke/${enc(id)}/draft` as any);
+
   if (d.rawError && !d.data) return <Screen title="Bit" back><ErrorCard error={String(d.rawError)} onRetry={d.reload} /></Screen>;
   if (!d.data) return <Screen title="Bit" back><Skeleton lines={6} height={18} testID="bit-skeleton" /></Screen>;
 
@@ -378,13 +489,17 @@ export default function BitPage() {
   const done = () => doc.current?.blur();
 
   return (
-    <Screen title={shortName} back testID="bitpage" maxWidth={760} offlineAt="bottom" footnote={footnote}
+    <View ref={root} collapsable={false} style={{ flex: 1 }}>
+    <Screen title={shortName} back testID="bitpage" maxWidth={760} offlineAt={barOnKeys ? 'none' : 'bottom'} footnote={footnote}
+      bar={!native && marksHere ? <DocMarkBar ref={markBar} testID="bit-markbar" count={marks.marks.length} onAct={markAct} offline={!online} seed={() => lastSel.current} onTray={() => openTray(id, null)} /> : undefined}
       offlineNote={classic ? undefined : 'Offline · kept on this iPhone'} scrollRef={scrollRef} scrollWatch={classic ? undefined : scrollWatch}
       right={native ? undefined : typing ? (
         <Btn small v="primary" testID="bit-done" label="Done" onPress={done} />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {classic && <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />}
+          {!classic && marks.marks.length > 0 && <Btn small v="plain" testID="bit-marks" label={MR.markCount(marks.marks.length)} onPress={() => openTray(id, null)} />}
+          {!classic && marks.marks.length > 0 && <Btn small v="primary" testID="bit-send" label={sending ? 'Sending…' : MR.sendLabel(marks.marks.length)} disabled={!online || sending || rstate === 'waiting' || reading} onPress={() => void sendMarks()} />}
           <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={canAsk ? C.amber : C.dim} /></IconBtn>
           <IconBtn testID="bit-more" label="More" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>
         </View>
@@ -425,6 +540,17 @@ export default function BitPage() {
               <Stack.Toolbar.MenuAction icon="archivebox" destructive onPress={retire}>Retire</Stack.Toolbar.MenuAction>
             </Stack.Toolbar.Menu>
           </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
+      )}
+      {native && !classic && !typing && !reading && (marks.marks.length > 0 || rstate === 'ready') && (
+        // the marks (Slice 3): the tray leading, the one prominent action trailing: Send, or the draft that waits
+        <Stack.Toolbar placement="bottom">
+          {marks.marks.length > 0 && <Stack.Toolbar.Button accessibilityLabel={`${MR.markCount(marks.marks.length)}. Open the marks`} onPress={() => openTray(id, null)}>{MR.markCount(marks.marks.length)}</Stack.Toolbar.Button>}
+          <Stack.Toolbar.Spacer />
+          {marks.marks.length > 0
+            ? <Stack.Toolbar.Button variant="prominent" disabled={!online || sending || rstate === 'waiting'} accessibilityLabel={MR.sendLabel(marks.marks.length)}
+                accessibilityHint={!online ? 'Offline' : rstate === 'waiting' ? 'A round is still being written' : 'Claude answers your Asks and sends back a whole new draft'} onPress={() => void sendMarks()}>{sending ? 'Sending…' : MR.sendLabel(marks.marks.length)}</Stack.Toolbar.Button>
+            : <Stack.Toolbar.Button variant="prominent" accessibilityLabel="Open the new draft" onPress={openDraft}>Open the new draft</Stack.Toolbar.Button>}
         </Stack.Toolbar>
       )}
       {native && classic && (
@@ -494,8 +620,9 @@ export default function BitPage() {
           ) : (
             // keyed by the cut: the stage document and the rant cut are two documents, each with its own draft
             <BitDoc key={vCut} ref={doc} testID="bit-doc" bit={id} cut={vCut} unit={v?.key ?? null} saved={v?.text || ''} said={said} fresh={fresh} autoFocus={p.edit === '1'} online={online}
-              noteOn={!online || !!footnote} onSaved={docSaved} onFailed={() => ui.snack('Couldn’t save. Trying again.')} onState={setDocState}
-              scroll={{ ref: scrollRef, y: scrollY, h: scrollH }} />
+              noteOn={!barOnKeys && (!online || !!footnote)} onSaved={docSaved} onFailed={() => ui.snack('Couldn’t save. Trying again.')} onState={setDocState}
+              scroll={{ ref: scrollRef, y: scrollY, h: scrollH }} marks={marksHere ? marks.marks : undefined} barH={barOnKeys ? MARK_BAR_H : 0}
+              onSelection={(sel, text) => { lastSel.current = { sel, text }; markBar.current?.select(sel, text); }} />
           )}
         </>
       )}
@@ -503,6 +630,15 @@ export default function BitPage() {
       {/* everything under the document is out of the way while the keyboard is up: nothing sits between him and typing */}
       {!typing && (
         <View testID="bit-rows" style={{ borderTopWidth: 1, borderTopColor: C.hairline }}>
+          {!classic && rstate !== 'none' && (
+            // the round on this bit (Slice 3): what it is doing, and the way to the draft; a disclosure row (HIG)
+            <Pressable testID="row-round" accessibilityRole="button" accessibilityLabel={`${MR.roundLine(round)}. Open`} onPress={openDraft}
+              style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, backgroundColor: pressed ? C.card2 : 'transparent', borderBottomWidth: 1, borderBottomColor: C.hairline })}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: rstate === 'ready' ? C.amber : rstate === 'waiting' ? C.borderStrong : C.redSoft }} />
+              <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={R.ROW_CAP} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>{MR.roundLine(round)}</Text>
+              <Icon name="chevron" size={18} color={C.dim} />
+            </Pressable>
+          )}
           {/* first under the document: its Undo is the Undo of the save he just made (shown from the first save on) */}
           {(versions.length > 1 || canUndoWrite) && (
             <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
@@ -536,6 +672,15 @@ export default function BitPage() {
       </Sheet>
       <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} title={title} testID="bit-menu" />
     </Screen>
+    {barOnKeys && kb > 0 && (
+      // the marks bar on the keyboard while he types (SPEC 2026-11-16 Slice 3): a plain view at the keyboard's top, as
+      // lib/KeyboardBar; it also carries the page's footnote line meanwhile (one line above the keys, never two)
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: kb, zIndex: 8 }}>
+        <DocMarkBar ref={markBar} testID="bit-markbar" count={marks.marks.length} onAct={markAct} note={!online ? 'Offline · kept on this iPhone' : footnote}
+          offline={!online} seed={() => lastSel.current} onTray={() => { doc.current?.blur(); openTray(id, null); }} />
+      </View>
+    )}
+    </View>
   );
 }
 

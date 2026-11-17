@@ -11,6 +11,8 @@
 // 2026-11-07 (SPEC 2026-11-06 R2, Tonight retired): "N to sort" (the morning inbox, its count the Bits tab's badge) is
 // the first row here, and Record a memo / Import a recording… are in the toolbar's ⋯ with the sort; "Ask your
 // material" was always this search field (a question goes to the conversation).
+// 2026-11-17 (SPEC 2026-11-16 Slice 3): a bit whose new draft is ready shows as "Waiting for you" under "N to sort"
+// (GET /api/redlines; the draft survives a restart on the server), each row opening that draft.
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, PixelRatio, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -31,6 +33,7 @@ import { actionSheet } from '@/lib/actionSheet';
 import { useUI } from '@/lib/ui';
 import { useTonight } from '@/lib/tonight';
 import { Screen } from '@/lib/Screen';
+import type { Waiting } from '@/lib/redline';
 
 type View_ = 'bits' | 'notes';
 type Sort = 'recent' | 'performed' | 'strongest';
@@ -114,6 +117,9 @@ export default function Bits() {
     return () => { alive = false; };
   }, []);
   const items = list.data?.items || [];
+  // the bits whose new draft is ready (the redline round, Slice 3); a server without the route answers nothing here
+  const drafts = useApi<{ open: Waiting[] }>('/api/redlines', { poll: 60000, cache: false });
+  const ready = (drafts.data?.open || []).filter((w) => w.state === 'ready');
   useEffect(() => { if (!dq) { setSelecting(false); setPicked([]); } }, [dq]);
   const toggle = useCallback((jid: string) => setPicked((p) => (p.includes(jid) ? p.filter((x) => x !== jid) : [...p, jid])), []);
   const makeOne = () => {
@@ -232,6 +238,16 @@ export default function Bits() {
           <Icon name="chevron" size={18} color={C.dim} />
         </Pressable>
       )}
+      {!dq && ready.map((w) => (
+        // HIG/lists-and-tables: a disclosure row to the draft; the word says it, the dot is not the only signal
+        <Pressable key={w.joke} testID={`waiting-${w.joke}`} accessibilityRole="button" accessibilityLabel={`Waiting for you: a new draft of ${w.short_name || w.title}. Open`}
+          onPress={() => router.push(`/joke/${encodeURIComponent(w.joke)}/draft` as any)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.amber }} />
+          <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>Waiting for you · {w.short_name || shortNameOf(w.title)}</Text>
+          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 14, color: C.mut2 }}>New draft</Text>
+          <Icon name="chevron" size={18} color={C.dim} />
+        </Pressable>
+      ))}
       <Seg<View_> testID="bits-seg" items={[['bits', 'Bits'], ['notes', 'Memos']]} value={view} onChange={(v) => { haptics.selection(); setView(v); }} />
       {view === 'bits' && !dq && !native && (
         <View testID="bits-sort" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Sort">

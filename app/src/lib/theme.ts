@@ -41,6 +41,7 @@ export const DARK = {
   greenBorder: 'rgba(34,197,94,.45)',
   blue: '#38bdf8',
   blueSoft: 'rgba(56,189,248,.15)',
+  violetSoft: 'rgba(142,140,255,.24)', // an Ask mark's ground (Slice 3)
   // a bit's status dot (Bits, the all-bits map): kills · working · fresh · resting; systemGreen / amber / systemCyan / the off tab
   statusKills: '#30D158',
   statusWorking: '#FFB340',
@@ -110,6 +111,7 @@ export const LIGHT_TOKENS: Tokens = {
   greenBorder: 'rgba(21,128,61,.45)',
   blue: '#0369a1',
   blueSoft: 'rgba(3,105,161,.12)',
+  violetSoft: 'rgba(70,65,201,.14)', // an Ask mark's ground (Slice 3)
   statusKills: '#248a3d',
   statusWorking: '#b47a0e',
   statusFresh: '#0a6e9e',
