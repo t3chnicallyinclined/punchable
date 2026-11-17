@@ -91,6 +91,8 @@ struct Inner {
     recordings_ok: std::sync::atomic::AtomicBool,
     /// Permits for recordings streaming at once ([`crate::writes::uploads::UPLOAD_SLOTS`]).
     upload_slots: Arc<tokio::sync::Semaphore>,
+    /// The usage meter (SPEC 2026-11-17 §13).
+    usage: crate::usage::Meter,
 }
 
 /// The judge's pairs as parsed, with the sha of the row they came from.
@@ -193,12 +195,18 @@ impl AppState {
             recordings,
             recordings_ok,
             upload_slots: Arc::new(tokio::sync::Semaphore::new(crate::writes::uploads::UPLOAD_SLOTS)),
+            usage: crate::usage::Meter::default(),
         }))
     }
 
     /// The `/api/live` hub.
     pub fn live(&self) -> &crate::live::LiveHub {
         &self.0.live
+    }
+
+    /// The usage meter.
+    pub fn usage(&self) -> &crate::usage::Meter {
+        &self.0.usage
     }
 
     /// The vector sweeper's status.

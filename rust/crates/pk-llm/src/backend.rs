@@ -172,37 +172,86 @@ impl AnthropicBackend {
         task: &TaskCfg,
         task_name: &str,
     ) -> Result<Called, LlmError> {
-        if let Some(b) = &self.budget {
-            b.check()?; // the worker keeps the job queued and says why
+        self.call_spent(model, messages, schema, task, task_name).await.0
+    }
+
+    /// [`AnthropicBackend::call`], with what the response cost whenever there was one: a refusal and a cut answer are
+    /// billed and charged like any answer, so the router records their tokens and USD too (the usage meter and the
+    /// `pk_ai_*` metrics would otherwise miss money the ledger counted).
+    pub async fn call_spent(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        schema: Option<&Value>,
+        task: &TaskCfg,
+        task_name: &str,
+    ) -> (Result<Called, LlmError>, Option<Spent>) {
+        if let Some(b) = &self.budget
+            && let Err(e) = b.check()
+        {
+            return (Err(e), None); // the worker keeps the job queued and says why
         }
-        let request = self.build_request(model, messages, schema, task)?;
-        let response = self.client.send(&request).await?;
+        let request = match self.build_request(model, messages, schema, task) {
+            Ok(r) => r,
+            Err(e) => return (Err(e), None),
+        };
+        let response = match self.client.send(&request).await {
+            Ok(r) => r,
+            Err(e) => return (Err(e), None),
+        };
         let u = &response.usage;
         let usd = match &self.budget {
-            Some(b) => Some(round6(b.charge(model, u, task_name)?)),
+            Some(b) => match b.charge(model, u, task_name) {
+                Ok(v) => Some(round6(v)),
+                Err(e) => return (Err(e), None),
+            },
             None => None,
+        };
+        let spent = Spent {
+            tokens_in: u.input_tokens,
+            tokens_out: u.output_tokens,
+            cache_read: u.cache_read(),
+            cache_write: u.cache_write(),
+            usd,
         };
         if response.stop_reason.as_deref() == Some("refusal") {
             let (category, explanation) = response
                 .stop_details
                 .as_ref()
                 .map_or((None, None), |d| (d.category.clone(), d.explanation.clone()));
-            return Err(LlmError::Refusal { category, explanation });
+            return (Err(LlmError::Refusal { category, explanation }), Some(spent));
         }
         if response.stop_reason.as_deref() == Some("max_tokens") {
-            return Err(LlmError::CutShort {
+            let cut = LlmError::CutShort {
                 max_tokens: request.max_tokens,
-            });
+            };
+            return (Err(cut), Some(spent));
         }
-        Ok(Called {
+        let called = Called {
             text: response.text(),
             tokens_in: u.input_tokens,
             tokens_out: u.output_tokens,
             cache_read: u.cache_read(),
             cache_write: u.cache_write(),
             usd,
-        })
+        };
+        (Ok(called), Some(spent))
     }
+}
+
+/// What one response cost: its usage and what the budget charged (none without a budget).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Spent {
+    /// Uncached input tokens.
+    pub tokens_in: u64,
+    /// Output tokens.
+    pub tokens_out: u64,
+    /// Cache reads.
+    pub cache_read: u64,
+    /// Cache writes.
+    pub cache_write: u64,
+    /// What the budget charged, 6 decimals.
+    pub usd: Option<f64>,
 }
 
 /// Python's `round(usd, 6)`.

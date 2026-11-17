@@ -17,6 +17,8 @@ use crate::value::as_str;
 pub const SCHEMA: &str = include_str!("../../../../db/schema.surql");
 /// `db/schema_extra.surql`: the tables added for hosting (`creative_event`, `srcfile`), the search indexes.
 pub const SCHEMA_EXTRA: &str = include_str!("../../../../db/schema_extra.surql");
+/// `db/schema_usage.surql`: the usage meter's tables (pk-api's own; not part of [`schema_shas`]).
+pub const SCHEMA_USAGE: &str = include_str!("../../../../db/schema_usage.surql");
 
 /// Tables that carry a change feed (the future phone sync pulls these). Checked at startup.
 pub const CHANGEFEED_TABLES: [&str; 7] = [
@@ -146,6 +148,13 @@ impl Store {
             .await?;
         }
         Ok(true)
+    }
+
+    /// Apply `schema_usage.surql` (the usage meter's tables): additive and idempotent, so it runs whenever pk-api
+    /// connects. It is pk-api's own file, outside [`schema_shas`], so it never moves the stored shas the Python and
+    /// the uploads' gate compare.
+    pub async fn apply_usage_schema(&self) -> Result<()> {
+        self.query(SCHEMA_USAGE, Object::new()).await.map(drop)
     }
 
     /// The sha of `schema_extra.surql` as last applied (`meta:state.extra_sha`); none when none is stored.

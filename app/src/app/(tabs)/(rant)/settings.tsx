@@ -14,6 +14,7 @@ import { getPrefs, onPrefs, setPrefs, SchemePref } from '@/lib/prefs';
 import * as Photos from '@/lib/photos';
 import { recordingsSupported, useRecordings } from '@/lib/recordings';
 import { isPending } from '@/rules/memoRules';
+import { UsageAccess, showUsageRow } from '@/rules/usageRules';
 import { C, F } from '@/lib/theme';
 import { Btn, Card, Dot, List, ListRow, Seg, Sheet, SheetHead, T, s, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -194,6 +195,8 @@ const ROUTES: [string, string][] = [
 export default function SettingsPage() {
   const ui = useUI();
   const remote = useApi<Partial<Settings>>('/api/settings', { cache: false });
+  // Settings › Usage is the owner's (SPEC 2026-11-17 §13): shown only where the page answers (rules/usageRules)
+  const usageAccess = useApi<UsageAccess>('/api/usage/access', { cache: false });
   const [st, setSt] = useState<Settings>(() => {
     try { return { ...DEFAULTS, ...JSON.parse((globalThis as any).localStorage?.getItem(KEY) || '{}') }; } catch { return DEFAULTS; }
   });
@@ -293,6 +296,7 @@ export default function SettingsPage() {
       <Card testID="about" style={{ gap: 4 }}>
         <T v="eb">About</T>
         <List>
+          {showUsageRow(usageAccess.data) && <ListRow testID="open-usage" title="Usage" sub="AI cost this month, and how much you used Punchable" onPress={() => router.push('/usage' as any)} />}
           <ListRow testID="about-version" title="Punchable" sub={APP_VERSION} chevron={false} />
           {/* the device checks (SPEC 2026-11-03 §4.1, SPEC 2026-11-16 §4); phone only; removed once they are answered */}
           {Platform.OS !== 'web' && <ListRow testID="open-spike" title="Device checks" sub="Seven checks for the next builds" onPress={() => router.push('/spike' as any)} />}

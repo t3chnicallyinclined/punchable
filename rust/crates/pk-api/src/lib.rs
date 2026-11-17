@@ -32,6 +32,7 @@ pub mod state;
 pub mod sweep;
 pub mod tape;
 pub mod today;
+pub mod usage;
 pub mod worker;
 pub mod writes;
 
@@ -52,7 +53,7 @@ pub const VERSION: &str = "0.1.0";
 /// The paths this service answers itself (T9). Everything else goes to the Python. The Ingress manifest that moves
 /// them lists exactly these (`infra/k8s/prepared/t10-api-rs.yaml`, not applied). A path here whose write is
 /// answered here too is in [`OWN_WRITE_PATHS`] as well.
-pub const OWN_PATHS: [&str; 43] = [
+pub const OWN_PATHS: [&str; 45] = [
     "/api/jokes",
     "/api/search",
     "/api/today",
@@ -97,6 +98,9 @@ pub const OWN_PATHS: [&str; 43] = [
     "/api/rants",
     // the redesign, slice 3 (SPEC 2026-11-16 §3.2): every bit with a redline round open (Bits: "Waiting for you")
     "/api/redlines",
+    // the usage meter (SPEC 2026-11-17 §13): the owner's page, pk-api only (the Python has no such route)
+    "/api/admin/usage",
+    "/api/usage/access",
 ];
 
 /// The parametric paths answered here (axum patterns). The prepared Ingress moves them with regex paths
@@ -140,7 +144,7 @@ pub const OWN_PATTERNS: [&str; 26] = [
 /// The paths whose writes (POST, PATCH or PUT, as the Python takes them) this service answers itself (T10, groups
 /// 1 to 5). An exact Ingress path moves every method: a method the Python has on the path and this service does
 /// not is forwarded and answered by it.
-pub const OWN_WRITE_PATHS: [&str; 40] = [
+pub const OWN_WRITE_PATHS: [&str; 41] = [
     "/api/ideas",
     "/api/sets/transcript",
     "/api/decision",
@@ -184,6 +188,8 @@ pub const OWN_WRITE_PATHS: [&str; 40] = [
     // the redesign, slice 1 (SPEC 2026-11-16 §3.1): "not connected", remembered, and its Undo
     "/api/links/dismiss",
     "/api/links/undismiss",
+    // the usage meter (SPEC 2026-11-17 §13): the worker's model calls, pk-api only
+    "/api/worker/usage",
 ];
 
 /// The parametric paths whose writes this service answers itself (T10): one bit's version, punch-up, rant and hook, a set
@@ -607,6 +613,10 @@ pub fn app(st: AppState) -> Router {
             write_route(&st, writes::redline::resolve),
         )
         .route("/api/redlines", read_route(&st, writes::redline::list))
+        // the usage meter (SPEC 2026-11-17 §13): the owner's page and the worker's calls
+        .route("/api/admin/usage", read_route(&st, routes::usage::admin))
+        .route("/api/usage/access", read_route(&st, routes::usage::access))
+        .route("/api/worker/usage", write_route(&st, routes::usage::worker))
         // T11 round 3: "delete my material" (the Python's `delete_me`: records a request, deletes nothing)
         .route(
             "/api/me",
@@ -687,6 +697,10 @@ pub async fn serve(config: ApiConfig) -> anyhow::Result<()> {
     // the live hub: one subscription, flushed every 150 ms
     tokio::spawn(st.live().clone().run(st.clone()));
     tokio::spawn(st.live().clone().flush_loop());
+    // the usage meter: the counts and the rollup once a minute, off every request's path
+    if let Some(every) = st.config().usage_every {
+        tokio::spawn(usage::run(st.clone(), every));
+    }
     // the vector sweeper, when there is a model to run and `PK_VEC_SWEEP_S` is not 0
     if let Some(every) = st.config().sweep_every
         && !matches!(st.config().embedder, embed::Choice::None | embed::Choice::Missing(_))

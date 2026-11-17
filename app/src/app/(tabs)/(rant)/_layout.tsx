@@ -26,6 +26,8 @@ export default function RantStack() {
       <Stack.Screen name="profile" options={{ title: t('You') }} />
       <Stack.Screen name="today" options={{ title: t('After a show') }} />
       <Stack.Screen name="learned" options={{ title: t('What I’ve learned') }} />
+      {/* SPEC 2026-11-17 §13: what Punchable costs and how much it is used (owner only on the server) */}
+      <Stack.Screen name="usage" options={{ title: t('Usage') }} />
     </Stack>
   );
 }

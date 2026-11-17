@@ -1,7 +1,9 @@
 # SPEC 2026-11-17: social sign-in on the phone, invite-only testers, and importing Google Docs
 
-Status: **spec only. Nothing is built, no config is changed, nothing is deployed.** Written by the lead on main
-`a313f47`, branch `docs/social-signin-import`. Reviewed by four experts on 2026-11-16: the iOS dev expert (phone
+Status: **Slice 1 is built and merged (`e0ac18d`, no phone build yet). The usage meter's phase 1 (§13) is built on
+branch `app/usage-metering` (not merged, not pushed, not deployed). Everything else is spec only; no config is
+changed, nothing is deployed.** The owner answered §11 on 2026-11-17. Written by the lead on main `a313f47`, branch
+`docs/social-signin-import`. Reviewed by four experts on 2026-11-16: the iOS dev expert (phone
 auth flow, guideline 4.8, the Docs picker on iPhone), the identity and access expert (Keycloak, Apple and Google
 brokering, linking), `gw-security` (takeover, scopes, the import's legal check, dedupe), and the cloud architect
 (the live Keycloak, read-only; no change was made on the server).
@@ -671,6 +673,11 @@ Punchable" or "Not yet", and pull one in now.
   Import it again → "Already in Punchable"; edit the Doc → the same bit updates; trash the Doc. A Doc in a legal
   folder never appears in the list.
 
+### Slices U1 and U2: the usage meter (§13)
+
+U1 (phase 1, one account) is **built** on branch `app/usage-metering`; U2 (per account, tester caps, cost per
+active user) waits for Slice 4. Both are written out in §13.9.
+
 ### Slice 7: Import a Google Doc, for testers
 
 **After it:** a tester picks Docs with Google's own picker and they become bits in their own Punchable.
@@ -685,33 +692,20 @@ Punchable" or "Not yet", and pull one in now.
 
 ## 11. Questions for the owner (each re-explains itself; the lead's recommendation first)
 
-1. **Upgrade the shared sign-in server while we add Apple?** Apple sign-in needs an add-on installed on the one
-   Keycloak that signs in all your products, which means a short restart. The version running has a known
-   account-takeover bug (fixed in later releases). Slice 2 avoids the risky setting anyway, so we are safe without
-   the upgrade. *Recommended: yes, upgrade in the same restart* (one outage instead of two), done with the other
-   product's lane, because its image is shared.
-2. **When may we restart the shared sign-in server?** It pauses sign-in on every product briefly. *Recommended: a
-   quiet hour you name, after the add-on is proven on a throwaway copy.*
-3. **Which legal rules for testers' Docs?** Your private court-document rules are about your documents. *Recommended:
-   testers get the generic court-document check only; your private rules stay on your account and are never
-   shown.*
-4. **Who may invite, and how much AI may each tester use?** Testers' drafts run on your Anthropic key. *Recommended:
-   only you invite, from Settings on the website; each tester gets a small daily AI cap you set, inside your
-   overall cap.*
-5. **Do you want "Import from Google Docs" for yourself?** Your Docs already come in automatically every minute, so
-   for you it is "pull this Doc in now". *Recommended: build it (Slice 6), because it proves the import path on
-   your own Docs before any tester uses it. If you would rather not, skip to testers (Slice 7) after Slice 5.*
-6. **Apple through the web sign-in sheet, not Apple's native button?** It needs no new app capability. Whether App
-   Review accepts it is not certain. *Recommended: web sheet first; switch to the native button only if Review
-   asks.*
-7. **Retire "email-only sign-in on the phone" (ADR 0005)?** *Recommended: yes. The phone offers email, Google and
-   Apple, distribution stays TestFlight-only, and Docs sync stays a website button for you.*
-8. **One check only you can make:** in the Google Cloud console, is the sign-in project "In production" or
-   "Testing" (Google Auth Platform › Audience)? In Testing, invited Google users must be listed by hand, and
-   Drive access expires every 7 days.
-9. **Your Punchable email: is it your Gmail?** The realm's notes say both yes and no. It decides how exposed the
-   current Google auto-link is until Slice 2 lands. *Recommended: tell us, or let the lead read it from the account
-   list (read-only).*
+**Answered 2026-11-17.** The owner, word for word: **"yes to all your recommendations"**. Each answer below is the
+recommendation he said yes to; nothing was added to it. Two questions only he can answer are still open (8 and 9).
+
+| # | Question | His answer (2026-11-17) | What it decides |
+|---|---|---|---|
+| 1 | Upgrade the shared sign-in server while we add Apple? | **Yes**: upgrade in the same restart as the Apple add-on, done with the other product's lane (the image is shared) | One planned outage, not two. Slice 3 matches the jar to the upgraded version (§3.4) |
+| 2 | When may we restart the shared sign-in server? | **Yes** to "a quiet hour you name, after the add-on is proven on a throwaway copy" | The hour itself is his to name: asked when the add-on is proven (Slice 3), not before |
+| 3 | Which legal rules for testers' Docs? | **Yes**: testers get the generic court-document check only; his private rules stay on his account and are never shown | Slice 7 and §6.2 "Legal rules" |
+| 4 | Who may invite, and how much AI may each tester use? | **Yes**: only he invites, from Settings on the website; each tester gets a small daily AI cap he sets, inside his overall cap | Slice 5; the per-tester cap is read from the usage meter's rows (§13.8, phase 2) |
+| 5 | "Import from Google Docs" for himself? | **Yes**: build it (Slice 6), so the import path is proven on his Docs before any tester uses it | Slice 6 stays in the plan |
+| 6 | Apple through the web sign-in sheet, not Apple's native button? | **Yes**: the web sheet first; the native button only if App Review asks | Slice 3 as written; `expo-apple-authentication` stays a fallback |
+| 7 | Retire "email-only sign-in on the phone" (ADR 0005)? | **Yes**. Already done: ADR 0005 was amended on main (`561192b`) | The phone offers email, Google, then Apple; distribution stays TestFlight-only |
+| 8 | **Still open.** In the Google Cloud console, is the sign-in project "In production" or "Testing" (Google Auth Platform › Audience)? | **Not answered yet** (only he can read it) | In Testing, invited Google users must be listed by hand, and Drive access expires every 7 days |
+| 9 | **Still open.** Is your Punchable email your Gmail? | **Not answered yet** (only he knows; the realm's notes say both). Or let the lead read it from the account list, read-only, with his go | How exposed the current Google auto-link is until Slice 2 lands (§3.7) |
 
 ## 12. What is not known (UNKNOWN), and how each gets settled
 
@@ -730,3 +724,207 @@ Punchable" or "Not yet", and pull one in now.
 | pk-api memory with several tenant snapshots | Measured in 4b |
 | Whether Keycloak's database backups include Punchable's users (shared schedule) | Cloud architect, before Slice 5 |
 | Whether the live `test_realm.py` is run or red | Slice 2 runs it |
+| Whether pk-api's database login (an editor) may define the usage tables on the live server (§13.4) | pk-api's first rollup after the U1 deploy: the log says "usage: the flush or the rollup failed" if not |
+| Whether `Share.share({url})` hands Numbers a real `.csv` file on iOS 26 (§13.6) | Owner's check 3 on the U1 build |
+
+## 13. Usage metering: how much each account uses Punchable, and what it costs
+
+### 13.1 What the owner said (word for word)
+
+| When | What | What it decides |
+|---|---|---|
+| 2026-11-17 | "lets make sure we monitor account usage so we can tell how much users are using and how actinve/how much a user would cost or pay per month" | This section. Phase 1 (one account, his) is built; phase 2 (per account, tester caps, cost per active user) follows Slice 4 |
+
+### 13.2 What existed before (read on `e0ac18d`)
+
+| Fact | Evidence | Tag |
+|---|---|---|
+| The worker keeps one spend ledger: a JSON file keyed by UTC day (`usd`, `calls`, USD per router task), 14 days kept | `rust/crates/pk-llm/src/budget.rs` (`Budget::charge`) | CONFIRMED |
+| The file is `/tmp/pk-worker/ai_spend.json` on the pod's `emptyDir` | `infra/k8s/35-worker.yaml:70`, `:113-116` | CONFIRMED |
+| **It survives a container restart, not a pod replacement.** An `emptyDir` lives as long as the pod; the worker rolls out with `Recreate`, so every rollout, eviction or node restart starts the day's ledger at $0 (the cap then allows a second day's spend that day) | the manifest; Kubernetes `emptyDir` semantics | CONFIRMED (manifest); INFERRED (the second day's spend: not observed) |
+| **It is not per account and not per job**: one ledger for the process, by router task | `budget.rs` `Day` | CONFIRMED |
+| Prometheus: `pk_ai_calls_total{model}`, `pk_ai_tokens_total{model,direction}`, `pk_ai_spend_usd_total{model,task}` (since the process started: reset on every restart), `pk_ai_spend_usd_today` and `pk_ai_budget_usd` read off the ledger | `rust/crates/pk-obs/src/metrics.rs` (worker half), `pk-worker/src/runner.rs` `count_calls` | CONFIRMED |
+| **A refused or cut-short answer was charged in the ledger but missing from the call record**, so `pk_ai_*` (and any meter built on the records) under-counted money the ledger counted. Found by this work: in the worker differential, `bridge_refused` had 1 model answer and 0 recorded calls, `punchup_refused` 2 and 0, six scenarios in all | `pk-llm/src/backend.rs` charged before the refusal check; `router.rs` logged the error path with 0 tokens and no USD | CONFIRMED (the differential run, 2026-11-17); **fixed in U1** |
+| The price table was cached 2026-10-06. Against the page read 2026-11-17: **Sonnet 5.5 cache hits are $0.10 per million, the table had $0.20**; **Haiku 5.5 prompts over 100,000 tokens pay five times the short price**, the table had one price; the fallback for an unknown model was Opus 5.5, which is no longer the dearest model (Fable 5.1 is), so "a mistake can only over-count" was false | <https://platform.claude.com/docs/en/about-claude/pricing>, fetched 2026-11-17 | CONFIRMED; **fixed in U1** |
+| Hosting is one shared server (a fixed cost across the owner's products); transcription runs on the iPhone (free to us); the app has no per-request cost beyond the server | `docs/HANDOVER.md`; ADR 0014/0015 | CONFIRMED |
+
+### 13.3 What is measured, per account and per day
+
+| Measure | How | Where it lands | Phase |
+|---|---|---|---|
+| AI spend | every model call the budget charged: job kind, router task, model, uncached input, output, cache read, cache write tokens; priced by pk-api from the one price table (`pk_core::prices`, read 2026-11-17) | `usage_call` (one row per call, keyed by the call id) | 1 |
+| AI spend per day, by kind and model | recomputed from `usage_call` (never added up twice) | `usage_day.ai`, `.ai_usd`, `.ai_calls` | 1 |
+| Activity | app requests answered (2xx/3xx; never health probes, the worker, or the meter's own page), writes, bits and versions saved, Redline rounds sent, AI jobs asked for, `/api/live` sockets opened | `usage_day` counters, flushed once a minute | 1 |
+| Active days | a day with at least one app request | derived from `usage_day.requests` | 1 |
+| Recordings and transcripts | how long (`duration_s` the phone sends) and how big (the request's `Content-Length`; an upload's byte count), never what was said | `usage_media` | 1 |
+| Storage | rows (bits, units, sets, decisions, creative events, files) and bytes (file rows, recordings) of the database, sampled hourly. Single tenant: all of it is his | `usage_day.storage` | 1 (whole database); 2 (per tenant database) |
+| Transcription minutes | the same seconds as recordings; they cost nothing (on the phone) | `usage_media` | 1 |
+| Cost per active user per month | the month's AI spend divided by the accounts active that month | the report | 2 |
+| What a price would need to be | projected month ÷ (1 − margin); **the margin, 70%, is the lead's assumption**; AI only, hosting, Apple's cut and taxes not counted | the report, `month.price_to_cover` | 1 (him), 2 (per user) |
+
+Not measured: sessions as a person would mean them (the socket count is a proxy: it counts reconnects and web tabs
+too, and is labelled "Times the app connected"); time spent in the app; anything on the phone that never reaches the
+server.
+
+### 13.4 Where it lives, and why
+
+- **SurrealDB, three new tables** (`db/schema_usage.surql`): `usage_call`, `usage_media`, `usage_day`. Keyed by the
+  account (phase 1: `PK_OWNER_ID`; phase 2: the account of the token's `sub`, §5). Identity stays in Keycloak.
+- **pk-api's own schema file**, outside the shared schema shas: the Python never reads or writes these tables, so the
+  file does not move the uploads' schema gate or ask the Python (still the schema owner, `PK_SCHEMA_OWNER=0`) for
+  anything. pk-api applies it after it connects; it is additive and idempotent (tables and indexes `IF NOT EXISTS`,
+  which never rebuilds an index). pk-api connects as a database editor, which may define tables (the same login the
+  Python applies `schema_extra.surql` with). INFERRED for the role's rights on the live server (proved on the scratch
+  server as root).
+- **Not a creative store.** `creative_event` is one of the four tables `/api/live` watches (`pk-store/src/live.rs:19`):
+  a usage row there would push a change event to the phone on every model call, and every append replays the whole
+  store. CONFIRMED (code).
+- **Off the request path** (owner rule): a request adds to a counter in memory (one short lock); a task writes the
+  counters and recomputes the day's AI totals once a minute (`PK_USAGE_FLUSH_S`, default 60). The worker hands each
+  charged call to an outbox when its job ends and posts the outbox every 20 s on a task of its own. A failed post or
+  flush keeps its data for the next turn; the worker's outbox is capped at 5,000 calls (the oldest go, counted).
+- **Prometheus gets aggregates only**: `pk_usage_ai_usd_today{kind}`, `pk_usage_ai_calls_today{kind}`,
+  `pk_usage_ai_usd_month`, `pk_usage_active_days_month`, `pk_usage_requests_today`, read from the last rollup (no
+  database read at scrape time). `kind` is the queue's fixed list or `other`. **Never an account, a `sub` or an
+  email as a label.** Per-account views read SurrealDB through the owner's page.
+- **The owner's page**: Settings › Usage on the phone and the web (`GET /api/admin/usage?from&to`, this month by
+  default; `format=csv` for the export). `GET /api/usage/access` tells the app whether to show the row.
+- **Who may read it**: `/api/admin/*` answers only a token whose `sub` is `PK_OWNER_SUB` (checked in the auth layer for
+  the whole prefix, and again in the handler). Unset, every token is refused (fail closed). This is stricter than every
+  other route today (single tenant: any app token is him), on purpose: once testers exist this page shows every
+  account. It is the start of §6.4 round 4a's pinned owner.
+
+### 13.5 Privacy
+
+- Counts, kind and model names, and money. Never a prompt, an answer, a title or a word of his material, and no
+  personal identifier in a metric or a log line.
+- The one pointer kept is the **job id** on each call (`job:<kind>-<12 hex>`): it names the queue's row, which holds
+  that job's input in the same database, so a cost can be traced to the job that spent it. It is never in the report,
+  the export, a metric or a log. `gw-security` flagged that this is a join key to his material (2026-11-17); the lead
+  kept it because the owner's question is "how much does each thing cost" and the job is that thing. **The owner may
+  overrule: dropping it is one line.**
+- A recording's usage row is keyed by a hash of the route's dedupe key (a transcript's digest, an upload's file
+  name), never the key itself.
+- **The sentence for the invite screen** (Slice 5), in plain words:
+
+  > Punchable keeps count of how you use it, so we can see what it costs to run: how often you ask the AI and what
+  > that costs, how many bits you save, which days you use it, and how long your recordings are. Those counts never
+  > include anything you write or say.
+
+### 13.6 Phase 1 as built (slice U1, branch `app/usage-metering`)
+
+| Piece | What | Where |
+|---|---|---|
+| One price table | moved to `pk_core::prices` (`PRICES_READ = 2026-11-17`, `PRICES_SOURCE`), re-exported by `pk_llm::budget`; Sonnet 5.5 cache hits $0.10; Haiku 5.5's long-prompt prices over 100,000 prompt tokens (every input token counts, cache reads included); Fable 5.2 and 5.1 rows; the fallback is the dearest row. The Python oracle `engine/budget.py` carries the same table, and the budget golden was regenerated from it (three new steps: an unknown model, a 110k Haiku prompt, an exactly-100k one) | `rust/crates/pk-core/src/prices.rs`, `engine/budget.py`, `rust/tools/gen_llm_goldens.py` |
+| Refusals and cut answers recorded | the backend hands back what each response cost (`Spent`) with its result; the call record carries it in `billed` on every path, while its Python fields stay as they were (0 tokens and no USD on a refusal: the `ask` result's token counts and the runs log read those, and must equal the Python's) | `pk-llm/src/backend.rs` (`call_spent`), `router.rs` |
+| Each call tagged with its job | a task-local tag (`pk_llm::tagged`) set around a job's run; never written to the runs log | `pk-llm/src/router.rs`, `pk-worker/src/runner.rs` |
+| The worker's outbox and flusher | `POST /api/worker/usage`, batches of at most 500, every 20 s and once more on SIGTERM after the jobs hand back | `pk-worker/src/usage.rs`, `pk-wire/src/worker/usage.rs` |
+| pk-api: the meter | ingest (validated, priced, upserted by call id; a posted time is kept only when it is an RFC 3339 instant within 7 days, else the time received), the counters, the rollup, the storage sample, the report, the CSV, the gauges | `pk-api/src/usage.rs`, `routes/usage.rs` |
+| pk-api: the hooks | the request counter in `instrument`, a session on each signed-in `/api/live` socket, a media row after a 2xx transcript and after an upload | `instrument.rs`, `routes/live.rs`, `writes/transcript.rs`, `writes/uploads.rs` |
+| The owner gate | `owner_only` (the `sub` must be `PK_OWNER_SUB`), run by `authorize` for every `/api/admin/` path | `pk-api/src/auth/mod.rs` |
+| The app | Settings › About › Usage (shown only where the page answers), the page (this month, the pace, active days, what it cost by kind, "if you charged for it", what you did, Share or Download as a spreadsheet, the prices' date and the privacy line), all words in `rules/usageRules.ts` | `app/src/app/(tabs)/(rant)/usage.tsx`, `app/src/rules/usageRules.ts`, `app/src/lib/shareCsv*.ts` |
+| Config | `PK_OWNER_SUB` (a placeholder filled from the private `infra/config.env`, empty by default), `PK_USAGE_FLUSH_S` | `infra/k8s/prepared/t10-api-rs.yaml`, `infra/render.sh`, `infra/config.env.example` |
+
+**Calls the lead made** (the owner may flip any):
+
+1. New tables, not a creative store (§13.4); pk-api applies its own schema file.
+2. pk-api prices every call from tokens, so one table decides; the worker's `usd` is not trusted for the meter.
+3. Activity is counted per process in memory and added (`+=`) once a minute: at most a minute of counts is lost if
+   a pod dies. AI totals are recomputed (`=`), so they are exact whatever happens.
+4. `/api/admin/*` is pinned to `PK_OWNER_SUB` now and fails closed; the page says "Usage isn't switched on yet" until
+   the SRE sets it.
+5. The job id stays on each call (§13.5).
+6. The margin for "what to charge" is 70% (the lead's assumption), shown on the page as "To keep 70¢ of every dollar,
+   charge about $N a month", labelled "An assumption, not a price".
+7. No retention limit in phase 1 (a call row is about 300 bytes; at the owner's pace a year is a few megabytes,
+   INFERRED). Phase 2 sets one.
+
+**Proof** (2026-11-17, owner's PC):
+
+- `pk-api/tests/usage.rs` on a scratch SurrealDB 3.3.4 with signed tokens, three red arms, each also proven by
+  planting the bug in the source and seeing the test go red, then restoring it:
+  - a call not recorded: `call abcdef012345: 0 rows`;
+  - a cost priced wrong (the old Sonnet 5.5 cache price): `0.006 vs the page's 0.0048`;
+  - another account reading the page (the gate weakened to any app token): `another account: 200`.
+- The worker differential now asserts one posted call per model answer, with the scenario's job id and kind, in
+  every scenario. Before the refusal fix, six scenarios would have failed it.
+- Unit tests: prices, the long tier, `when_of`, the CSV, the month's arithmetic, the outbox cap; `tests/client.rs`
+  pins a refusal's record (the Python's zeros) and its `billed` cost.
+- `cargo xtask gate` green with `PK_REQUIRE_EXTERNAL=1` (no test skipped).
+- The API differentials on the owner's PC: reads **510 of 510 equal**; writes **2,762 checks equal** with one
+  difference, `Connection: close` on a large unread body sent to an unknown route (pk-api's fallback to the Python,
+  not touched here). Main `e0ac18d` shows the same on this PC (its 256 KiB case; the 300 KiB case on the branch), so
+  it is pre-existing and environmental (CONFIRMED by running both). The new routes are pk-api only, outside both
+  differentials' matrices; the three new metric families are taken out of the metrics golden's Python comparison
+  and checked on their own (the `RUST_ONLY_BUILD` pattern).
+- App: `tests/usageRules.test.mjs` with four red arms; tsc, `test:unit`, the static checks and expo-doctor 20/20.
+
+**Reviews** (2026-11-17):
+
+- `gw-security`: nothing exploitable. Its two must-fixes are landed: the job-id comment was wrong, and the privacy
+  check skipped `usage_day`. Its should-fixes are landed too: a canonical, bounded `at` and `day`; the gate on the
+  whole `/api/admin/` prefix; red arms for a token with no `sub` and a worker token carrying the owner's `sub`; media
+  rows created once; transcript rows only after a 2xx; the object URL revoked.
+- `ios-design-expert`: five must-fixes, all landed:
+  - the row is shown only where the page answers (`GET /api/usage/access`);
+  - Try again on a failure;
+  - the export is a real file through the Share sheet;
+  - the margin line is in plain words, in whole dollars, and hidden in a month with no spend;
+  - "App opens" became "Times the app connected".
+  Its should-fixes are landed as well: the stale line, the skeleton, "AI cost, November so far", no guess before day
+  3, "asked 7 times", "What you did in November", the row moved to the About card.
+
+### 13.7 Deploy order (the SRE's, each step the owner's go and a private deploy-log line with its rollback)
+
+1. **`infra/config.env`**: set `PK_OWNER_SUB` to his Keycloak user id (realm `punchable` › Users › him › ID; a
+   read-only lookup). Without it the page says it is not switched on, and nothing else changes.
+2. **pk-api** (new image; it applies `db/schema_usage.surql` itself on its first write or rollup), then re-apply the
+   Ingresses of `infra/k8s/prepared/t10-api-rs.yaml` (three new Exact paths: `/api/admin/usage`,
+   `/api/usage/access`, `/api/worker/usage`). **No Python change and no shared schema change.** Rollback: the
+   previous digest; the three tables stay and nothing reads them.
+3. **pk-worker** (new image). An older pk-api answers its posts 404: the calls wait in the outbox (capped) and the
+   worker logs it once, which is why pk-api goes first. An older worker beside the new pk-api simply posts nothing.
+   Rollback: the previous digest.
+4. **The phone build** with Settings › Usage. A build that meets a server without the routes hides the row (no
+   access answer).
+5. After a day: `pk_usage_ai_usd_today{kind}` in Grafana should match the worker's `pk_ai_spend_usd_today` within a
+   cent (the ledger and the meter use one table). A panel for it is a follow-up in the observability ConfigMaps.
+
+The meter does not change the cap: `PK_AI_DAILY_USD` and the ledger file stay as they are. Note that the corrected
+Sonnet 5.5 cache price makes the cap's arithmetic slightly lower per call (more fits under $2.00), and long Haiku
+prompts now count higher.
+
+### 13.8 Phase 2 (slice U2, spec only; after Slice 4)
+
+- **Per account.** The account of the token's `sub` (§6.2's registry) on every row, from the claim pk-api issued for
+  the job (never the worker's body). Usage rows move to the registry's database (`punchable/control`) so the owner's
+  page reads every account in one query; a tester's own database holds none of them.
+- **Tester caps** (§11 Q4, his yes): at claim time pk-api reads the tester's `usage_day.ai_usd` for today plus the
+  jobs it has handed out and not seen posted, and refuses the claim over the tester's cap (the job stays queued with
+  "over today's AI allowance"); the global `PK_AI_DAILY_USD` still applies to everyone together. A test: a tester at
+  their cap gets no job; the owner still does (red arm: the cap read from the wrong account).
+- **Cost per active user per month**: the month's AI spend ÷ accounts with at least one active day; per account: its
+  spend, its active days, its spend per active day, and "to keep 70¢ of every dollar, charge about $N" (the lead's
+  margin; the owner may set his own). The owner's page gets an "Accounts" list; the export gets an account column
+  (the account's tenant id, never an email).
+- **Retention**: call rows 13 months, day rows for as long as the account exists. **Delete my account** removes the
+  account's rows (or keeps them with the account replaced by "deleted"; an owner question when Slice 4 lands).
+- **Prometheus** stays aggregate: `pk_usage_active_accounts_month` and the per-kind totals, never a per-account series.
+- **Invite screen**: the sentence in §13.5.
+
+### 13.9 Slices
+
+| Slice | After it | Server | App | Proof | State |
+|---|---|---|---|---|---|
+| U1 | He sees this month's AI cost, what cost what, the pace, active days, what he did, and can export it | pk-api meter + routes; pk-worker outbox; one price table; refusals recorded | Settings › About › Usage | §13.6 | **Built** on `app/usage-metering`; not merged, not deployed |
+| U2 | Per account, tester caps, cost per active user | §13.8 | the Accounts list | the tenant test of §6.3 extended to usage rows; the cap test | Spec; after Slice 4 |
+
+**Owner's checks on the U1 phone build** (after steps 1-3 of §13.7):
+
+1. Settings: the About card's first row is **Usage**. Tap it: "AI cost, November so far" with a dollar figure, and
+   "Used on N of M days".
+2. Ask for a riff on a bit, wait for it, then a minute later pull down on Usage: the figure rises and "Riffs" is in
+   "What it cost" (the worker posts its calls every 20 s).
+3. "Share as a spreadsheet": the Share sheet offers a file; Save to Files, then open it in Numbers: one line a day.
+4. Tell us whether the figure looks like what the Anthropic console shows for the same days (it should be within a
+   few cents; the console is the bill).

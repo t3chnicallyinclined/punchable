@@ -134,11 +134,19 @@ pub async fn transcript(
             .map_or_else(|| "phone".to_string(), py::str),
         40,
     );
+    // the usage meter: how long and how big, never the words (spawned after the answer is decided, off its path)
+    let seconds = fields.get("duration_s").and_then(Value::as_f64).unwrap_or(0.0);
+    let size = headers
+        .get(axum::http::header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .unwrap_or(0);
     let mut input = Map::new();
     input.insert("segments".into(), Value::Array(segs));
     input.extend(fields);
     input.insert("received_at".into(), json!(pk_core::time::now_iso()));
     input.insert("engine".into(), json!(engine));
+    let meter = (st.clone(), key.clone());
     let (status, out) = detached(async move {
         let _cr = st.creative_lock().lock().await;
         let cr = Creative::new(st.clone());
@@ -153,6 +161,17 @@ pub async fn transcript(
         .await
     })
     .await?;
+    let (st, key) = meter;
+    if status.is_success()
+        && let Some(store) = st.store_handle()
+    {
+        tokio::spawn(async move {
+            let account = st.config().owner_id.clone();
+            st.usage()
+                .media(&store, &account, &key, "transcript", seconds, size)
+                .await;
+        });
+    }
     Ok(json_response(status, &out))
 }
 

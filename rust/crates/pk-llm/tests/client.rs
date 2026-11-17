@@ -234,6 +234,19 @@ async fn a_refusal_on_opus_is_retried_once_on_the_default_model() {
         .map(|q| q["body"].clone())
         .collect();
     same("fallback.requests", &json!(got), &json!(want));
+    // the refusal was billed and charged: its record keeps the Python's fields (0 tokens, no USD, which `tokens_for`
+    // and the runs log read) and carries what it cost in `billed`, which the usage meter and the metrics read
+    let calls = router.calls();
+    assert_eq!(calls.len(), 2);
+    let (refused, answered) = (&calls[0], &calls[1]);
+    assert!(!refused.ok && refused.error.as_deref().is_some_and(|e| e.starts_with("Refusal")));
+    assert_eq!((refused.tokens_in, refused.tokens_out, refused.usd), (0, 0, None));
+    let billed = refused.billed.expect("a refusal is billed");
+    assert!(
+        billed.usd.is_some_and(|u| u > 0.0) && billed.tokens_in > 0,
+        "{billed:?}"
+    );
+    assert!(answered.ok && answered.billed.is_some_and(|b| b.usd == answered.usd));
 
     // both refuse: the plain words reach the caller, never "failed on all providers"
     let server = serve(&[sse(refusal_sse)]).await;

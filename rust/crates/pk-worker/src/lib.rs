@@ -12,6 +12,7 @@
 //! - [`legal`]: the court-material net and the paths a worker may write.
 //! - `pyjson`: the files written byte for byte as the Python writes them.
 //! - [`heartbeat`], [`metrics_server`]: liveness and observability.
+//! - [`usage`]: every charged model call, posted to the API's usage meter off the job's path.
 //! - [`error`]: how a failed job reaches the API.
 //!
 //! Proof: `rust/tools/gen_worker_goldens.py` runs the Python worker against a fixture API, a mock Anthropic and a
@@ -28,6 +29,7 @@ pub mod metrics_server;
 pub mod mirror;
 pub(crate) mod pyjson;
 pub mod runner;
+pub mod usage;
 pub mod voice;
 
 pub use config::{RunArgs, WorkerConfig};

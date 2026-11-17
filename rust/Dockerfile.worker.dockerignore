@@ -4,6 +4,7 @@
 !engine/config.hosted.toml
 !db/schema.surql
 !db/schema_extra.surql
+!db/schema_usage.surql
 !rust/
 !engine/*.py
 !tools/kb/fetch_bge.py

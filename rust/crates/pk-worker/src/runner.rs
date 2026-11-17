@@ -99,6 +99,8 @@ pub struct Worker {
     ask_vectors: Arc<crate::kinds::ask::AskVectors>,
     model_line: Option<String>,
     counted: Mutex<usize>,
+    /// The charged calls waiting for the usage meter (posted by [`crate::usage::run`]).
+    usage: Arc<crate::usage::Outbox>,
     /// Jobs started and not finished. A job decrements it (through `Running`, so a panic does too) before its slot
     /// is released, so the `--once` loop, which claims only after taking a slot, reads 0 only when no job can still
     /// post.
@@ -159,6 +161,7 @@ impl Worker {
             mirror: Mirror::new(),
             ask_vectors,
             counted: Mutex::new(0),
+            usage: Arc::new(crate::usage::Outbox::default()),
             running: AtomicUsize::new(0),
         })
     }
@@ -166,6 +169,11 @@ impl Worker {
     /// The settings.
     pub fn config(&self) -> &WorkerConfig {
         &self.cfg
+    }
+
+    /// The calls waiting for the usage meter.
+    pub fn usage(&self) -> &crate::usage::Outbox {
+        &self.usage
     }
 
     /// What the claim says the worker writes with.
@@ -238,20 +246,26 @@ impl Worker {
     }
 
     /// Count the model calls made since the last count into the `pk_ai_*` metrics (charged calls only, as the
-    /// Python's budget listener).
+    /// Python's budget listener), and hand each to the usage meter's outbox (posted later, off this path).
     fn count_calls(&self) {
         // the cursor first, then the snapshot: two jobs ending together cannot count one call twice
         let mut seen = self.counted.lock().unwrap_or_else(PoisonError::into_inner);
         let calls = self.router.calls();
         for rec in calls.get(*seen..).unwrap_or_default() {
-            if let Some(usd) = rec.usd {
+            // what was billed: an answer's, and a refusal's or a cut answer's too (the ledger charged those)
+            if let Some(b) = rec.billed
+                && let Some(usd) = b.usd
+            {
                 let usage = pk_obs::Usage {
-                    input_tokens: rec.tokens_in,
-                    output_tokens: rec.tokens_out,
-                    cache_read_input_tokens: rec.cache_read.unwrap_or(0),
-                    cache_creation_input_tokens: rec.cache_write.unwrap_or(0),
+                    input_tokens: b.tokens_in,
+                    output_tokens: b.tokens_out,
+                    cache_read_input_tokens: b.cache_read,
+                    cache_creation_input_tokens: b.cache_write,
                 };
                 self.metrics.on_charge(Some(&rec.model), &usage, usd, Some(&rec.task));
+            }
+            if let Some(call) = crate::usage::call_of(rec) {
+                self.usage.push(call);
             }
         }
         *seen = calls.len();
@@ -359,7 +373,12 @@ impl Worker {
         async {
             tracing::info!("job claimed");
             let timer = self.metrics.job(Some(&job.kind));
-            let exec = self.execute(kind, &job);
+            // every model call the run makes is recorded as made for this job (the usage meter's job and kind)
+            let tag = pk_llm::CallTag {
+                job: job.id.clone(),
+                kind: job.kind.clone(),
+            };
+            let exec = pk_llm::tagged(tag, self.execute(kind, &job));
             tokio::pin!(exec);
             let outcome = tokio::select! {
                 biased;
@@ -460,6 +479,12 @@ impl Worker {
         );
         let slots = Arc::new(Semaphore::new(self.cfg.jobs));
         let mut jobs: JoinSet<()> = JoinSet::new();
+        // the usage meter's flusher: stopped only after the jobs have handed back, so their calls are posted too
+        let usage_stop = CancellationToken::new();
+        let flusher = {
+            let (w, s) = (Arc::clone(self), usage_stop.clone());
+            tokio::spawn(async move { crate::usage::run(&w.usage, &w.api, s).await })
+        };
         let mut backoff = BACKOFF_MIN;
         self.heartbeat().await;
         let outcome = loop {
@@ -541,6 +566,13 @@ impl Worker {
         if tokio::time::timeout(DRAIN, drain).await.is_err() {
             tracing::warn!("jobs still running after the drain; aborted");
             jobs.abort_all();
+        }
+        usage_stop.cancel();
+        if tokio::time::timeout(crate::usage::LAST_POST + Duration::from_secs(1), flusher)
+            .await
+            .is_err()
+        {
+            tracing::warn!("usage: the flusher did not finish");
         }
         outcome
     }

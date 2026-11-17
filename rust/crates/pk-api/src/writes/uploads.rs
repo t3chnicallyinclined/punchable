@@ -309,11 +309,22 @@ pub async fn upload(
         ApiError::unavailable("too many recordings are being uploaded at once; the phone keeps it, try again shortly")
     })?;
     let meta_headers = headers.clone();
+    let meter = (st.clone(), name.clone());
     let out = detached(async move {
         let _permit = permit;
         stage_and_queue(st, body, n, kind, orig, name, meta_headers).await
     })
     .await?;
+    // the usage meter: the recording's size, never its name or sound (a task of its own, after the answer)
+    let (st, key) = meter;
+    if let Some(store) = st.store_handle() {
+        tokio::spawn(async move {
+            let account = st.config().owner_id.clone();
+            st.usage()
+                .media(&store, &account, &key, "upload", 0.0, u64::try_from(n).unwrap_or(0))
+                .await;
+        });
+    }
     Ok(ok(&out))
 }
 

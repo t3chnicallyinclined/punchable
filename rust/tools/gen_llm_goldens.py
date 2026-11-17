@@ -280,7 +280,10 @@ def gen_budget(tmp: Path) -> dict:
                ("claude-haiku-5-5", U(300, 50), "merge_judge"),
                ("claude-sonnet-5-5-20260101", U(100, 10), "ask_plan"),      # longest prefix wins: sonnet-5-5
                ("claude-sonnet-5", U(100, 10), "ask_plan"),                 # the older sonnet row
-               ("claude-fable-5-1", U(100, 10), "ask_answer"),              # not in the table: priced as Opus
+               ("claude-fable-5-1", U(100, 10), "ask_answer"),              # the dearest row (and the fallback)
+               ("claude-mystery-9", U(100, 10), "ask_answer"),              # not in the table: priced as the dearest
+               ("claude-haiku-5-5", U(60_000, 1000, 0, 50_000), "merge_judge"),  # 110k prompt: Haiku's long prices
+               ("claude-haiku-5-5", U(50_000, 1000, 0, 50_000), "merge_judge"),  # exactly 100k: still short
                ("claude-opus-5-5", U(1_000_000, 0), "creative_punchup")]    # $4.00: over the cap
     for model, usage, task in charges:
         before = b.status()

@@ -177,7 +177,11 @@ def test_budget_guard_keeps_the_cap_and_goes_red_when_broken(env):
     from engine.budget import Budget, BudgetExceeded, usage_usd
     cfg = anth_cfg(env, "ANTHROPIC_API_KEY=sk-x\n")
     big = dict(input_tokens=1_000_000, output_tokens=0, cache_creation_input_tokens=0, cache_read_input_tokens=0)
-    assert usage_usd("claude-opus-5-5", big) == 4.0 and usage_usd("claude-haiku-5-5", big) == 0.1
+    # Haiku 5.5 is priced by prompt length (the price page, read 2026-11-17): 1M input tokens is over its 100,000-token
+    # threshold and pays $0.50 per million; 100,000 is still the short price ($0.10 per million)
+    short = dict(big, input_tokens=100_000)
+    assert usage_usd("claude-opus-5-5", big) == 4.0 and usage_usd("claude-haiku-5-5", big) == 0.5
+    assert abs(usage_usd("claude-haiku-5-5", short) - 0.01) < 1e-12
     seen = []
     AnthropicBackend.client_factory = staticmethod(lambda: fake_client(seen, usage=big))
     AnthropicBackend.budget = Budget(5.0, env["tmp"] / "spend.json")

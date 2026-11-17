@@ -26,7 +26,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY engine/config.hosted.toml engine/config.hosted.toml
-COPY db/schema.surql db/schema_extra.surql db/
+COPY db/schema.surql db/schema_extra.surql db/schema_usage.surql db/
 COPY rust/ rust/
 WORKDIR /src/rust
 RUN cargo build --release --locked -p pk-worker \

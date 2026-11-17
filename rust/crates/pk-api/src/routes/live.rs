@@ -179,6 +179,7 @@ async fn session(st: AppState, mut sock: WebSocket) {
     let mut last_rx = tokio::time::Instant::now();
     let mut next_ping = last_rx + ping_every;
     let _client = Client::open(&st.metrics().live_clients);
+    st.usage().session();
     let hello = json!({"type": "hello", "rev": st.data_now().map(|d| d.rev()), "live": hub.connected()});
     if !send(&mut sock, Message::Text(hello.to_string().into())).await {
         return;

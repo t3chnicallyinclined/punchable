@@ -42,7 +42,7 @@ pub use creative::{Reconcile, Reconciled, line_hash, same_line};
 pub use error::{Result, StoreError};
 pub use kbmap::{CreativeEvent, DecisionRow, EdgeKind, EdgeRow, Field, MetaState, NodeRow, SrcFile};
 pub use live::{Change, Changes, LIVE_TABLES};
-pub use schema::{CHANGEFEED_TABLES, SCHEMA, SCHEMA_EXTRA, schema_shas};
+pub use schema::{CHANGEFEED_TABLES, SCHEMA, SCHEMA_EXTRA, SCHEMA_USAGE, schema_shas};
 pub use store::{Appended, MIN_VERSION, Snapshot, Store, Vars, vars};
 pub use sync::{SyncInput, SyncOutcome};
 pub use value::{from_db, to_db};

@@ -14,7 +14,7 @@ use sha2::{Digest as _, Sha256};
 
 use pk_core::py;
 
-use crate::backend::{AnthropicBackend, Called, ChatMessage};
+use crate::backend::{AnthropicBackend, Called, ChatMessage, Spent};
 use crate::budget::Budget;
 use crate::client::Client;
 use crate::config::{Config, LlmConfig, TaskCfg};
@@ -87,6 +87,39 @@ pub struct CallRecord {
     /// `Kind: words` on failure.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// What the response cost whenever there was one: an answer, and also a refusal or a cut answer, which are
+    /// billed and charged like any answer while the fields above stay the Python's (0 tokens, no USD). Read by the
+    /// usage meter and the `pk_ai_*` metrics; never written to the runs log.
+    #[serde(skip)]
+    pub billed: Option<Spent>,
+    /// The job the call was made for ([`tagged`]); never written to the runs log (its lines are the Python's).
+    #[serde(skip)]
+    pub tag: Option<CallTag>,
+}
+
+/// Which job a model call was made for: set around a job's run with [`tagged`], read by the router when it records
+/// the call, so a call made while two jobs run at once is still counted against its own job.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTag {
+    /// The job id.
+    pub job: String,
+    /// The job kind (`riff`, `ask`, ...).
+    pub kind: String,
+}
+
+tokio::task_local! {
+    static CALL_TAG: CallTag;
+}
+
+/// Run `fut` with every model call it makes (on this task) recorded as made for `tag`. A call made on a task the
+/// future spawns is not tagged: it is still recorded, with no job.
+pub async fn tagged<F: std::future::Future>(tag: CallTag, fut: F) -> F::Output {
+    CALL_TAG.scope(tag, fut).await
+}
+
+/// The tag of the job this task is running, when it runs inside [`tagged`].
+pub fn current_tag() -> Option<CallTag> {
+    CALL_TAG.try_with(Clone::clone).ok()
 }
 
 /// The task router over the configured backends.
@@ -260,12 +293,15 @@ impl Router {
         for _ in 0..2 {
             let t0 = Instant::now();
             let call_id = uuid::Uuid::new_v4().simple().to_string()[..12].to_string();
-            let called: Called = match b.call(model, &msgs, schema, tcfg, ctx.task).await {
+            let (res, spent) = b.call_spent(model, &msgs, schema, tcfg, ctx.task).await;
+            let called: Called = match res {
                 Ok(c) => c,
                 Err(e) => {
                     let ms = t0.elapsed().as_millis() as u64;
                     let words = format!("{}: {}", e.kind(), cut(&e.to_string(), 200));
-                    self.log(ctx, &call_id, &b.name, model, 0, 0, ms, false, Some(words), None);
+                    // the record is the Python's (0 tokens, no USD: `tokens_for` and the runs log read it); what a
+                    // refusal or a cut answer was billed and charged rides along in `billed` for the usage meter
+                    self.log(ctx, &call_id, &b.name, model, 0, 0, ms, false, Some(words), None, spent);
                     if !matches!(e, LlmError::Budget(_)) {
                         attempts.push((b.name.clone(), e.kind().to_string()));
                     }
@@ -290,7 +326,8 @@ impl Router {
                 ms,
                 err.is_none(),
                 err.as_ref().map(ToString::to_string),
-                Some(&called),
+                spent,
+                spent,
             );
             let Some(err) = err else {
                 return Ok(Completion {
@@ -332,7 +369,8 @@ impl Router {
         ms: u64,
         ok: bool,
         error: Option<String>,
-        called: Option<&Called>,
+        spent: Option<Spent>,
+        billed: Option<Spent>,
     ) {
         let rec = CallRecord {
             ts: pk_core::time::now_iso(),
@@ -347,10 +385,12 @@ impl Router {
             tokens_out,
             ms,
             ok,
-            usd: called.and_then(|c| c.usd),
-            cache_read: called.map(|c| c.cache_read),
-            cache_write: called.map(|c| c.cache_write),
+            usd: spent.and_then(|c| c.usd),
+            cache_read: spent.map(|c| c.cache_read),
+            cache_write: spent.map(|c| c.cache_write),
             error,
+            billed,
+            tag: current_tag(),
         };
         if let Some(path) = &self.log_path
             && let Err(e) = append_line(path, &rec)
