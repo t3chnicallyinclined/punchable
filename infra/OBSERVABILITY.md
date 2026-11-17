@@ -92,7 +92,10 @@ certmanager_certificate_expiration_timestamp_seconds{namespace="punchable"}   # 
   BugsinkDown) could not fire. Now `infra/observability/kube-state-metrics.yaml` runs one exporter in `observability` that
   watches namespace `punchable` only (pods, jobs, cronjobs, deployments; a read-only Role in `punchable`, no ClusterRole),
   scraped by the static job `punchable-kube-state-metrics` that `apply_prometheus.py` adds. `infra/ship.sh observability`
-  applies both.
+  applies both. Proven 2026-11-17 with a throwaway Job named `punchable-backup-alerttest-*` that exited 1:
+  PunchableBackupFailed went pending at the first scrape, firing 10 minutes later, reached `punchable-email` (one real
+  email), and cleared within 30 s of deleting the Job (the resolved email followed at the next group interval). A
+  red-arm test of this alert sends the owner a real critical email: say so before running one.
 - **certmanager_\*: still empty** (cert-manager's `:9402/metrics` is not scraped), so PunchableCertificateExpiringSoon cannot
   fire; the certificate is checked by `kubectl get certificate -n punchable`.
 
