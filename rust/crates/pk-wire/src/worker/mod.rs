@@ -348,6 +348,27 @@ pub struct SetTextInput {
     pub received_at: String,
     /// The phone's transcription engine, or `"phone"`.
     pub engine: String,
+    /// The set list the walk-through followed (`sb:…`), when it followed one (Rust only, redesign slice 5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board: Option<String>,
+    /// Where he left each bit on the recording, from his own Next and Back taps (Rust only, redesign slice 5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub splits: Option<Vec<Split>>,
+    /// `sound` or `video` (Rust only, redesign slice 5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
+}
+
+/// One stretch of a recording he spent on one bit of the set list: milliseconds from the recording's start.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+pub struct Split {
+    /// The bit (`joke:…`), on the set list.
+    pub joke_id: String,
+    /// Start, in milliseconds.
+    pub start_ms: u64,
+    /// End, in milliseconds.
+    pub end_ms: u64,
 }
 
 /// One segment the phone sent: `start` and `end` (seconds) are kept only when it sent them.

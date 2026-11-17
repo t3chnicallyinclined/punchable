@@ -308,6 +308,11 @@ pub async fn run_at(ctx: Ctx<'_>, inp: &SetTextInput, now: NaiveDateTime) -> Res
     put("transcript_sha256", json!(sha));
     put("audio", audio.clone());
     put("received_at", json!(inp.received_at));
+    // the walk-through (redesign slice 5): the set list it followed, his taps per bit, sound or video; kept for the
+    // night's page (slice 7 turns each split into a performance of that bit, his)
+    put("board", json!(inp.board));
+    put("splits", json!(inp.splits));
+    put("mode", json!(inp.mode));
     let analysis = json!({"set": set_dir, "source": "set_text", "run_id": run_id, "audio": audio, "rows": rows,
         "summary": {"material_s": null, "laugh_s_total": null, "laugh_s_per_min": null, "pct_laughing": null,
                     "laughs_merged": null, "laughs_per_min_merged": null, "applause_s": null,
@@ -394,6 +399,9 @@ mod tests {
             duration_s: None,
             received_at: "2026-10-20T21:30:00Z".into(),
             engine: String::new(),
+            board: None,
+            splits: None,
+            mode: None,
         }
     }
 

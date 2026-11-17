@@ -20,6 +20,7 @@ pub mod index;
 pub mod instrument;
 pub mod jokes;
 pub mod live;
+pub mod migrate;
 pub mod pages;
 pub mod proxy;
 pub mod query;

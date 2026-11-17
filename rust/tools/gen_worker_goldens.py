@@ -155,7 +155,7 @@ def job(kind: str, inp, n: int = 1) -> dict:
 
 
 def set_text_input(segs, *, timed=False, title="Open mic", recorded_at="2026-10-20T21:00:00-04:00", venue="a room",
-                   duration_s=None, engine="speech"):
+                   duration_s=None, engine="speech", board=None, splits=None, mode=None):
     out = []
     t = 0.0
     for s in segs:
@@ -164,8 +164,13 @@ def set_text_input(segs, *, timed=False, title="Open mic", recorded_at="2026-10-
             t += 2.5
         else:
             out.append({"text": s})
-    return {"segments": out, "title": title, "recorded_at": recorded_at, "venue": venue, "duration_s": duration_s,
-            "received_at": "2026-10-20T21:30:00Z", "engine": engine}
+    inp = {"segments": out, "title": title, "recorded_at": recorded_at, "venue": venue, "duration_s": duration_s,
+           "received_at": "2026-10-20T21:30:00Z", "engine": engine}
+    # the walk-through's fields (redesign slice 5), only when given: the older scenarios are unchanged
+    for k, v in (("board", board), ("splits", splits), ("mode", mode)):
+        if v is not None:
+            inp[k] = v
+    return inp
 
 
 OPUS, SONNET = "claude-opus-5-5", "claude-sonnet-5-5"
@@ -261,6 +266,12 @@ SCENARIOS = [
      "voice": voice_doc(learned=LEARNED), "model": [answer(SPLIT, OPUS)]},
     {"name": "set_text_device_named", "env": NAMED,
      "job": job("set_text", set_text_input(SEGS, timed=True, title="", venue=None, duration_s=0, engine="")),
+     "voice": voice_doc(), "model": [answer(SPLIT, OPUS)]},
+    {"name": "set_text_splits", "env": {},
+     "job": job("set_text", set_text_input(SEGS, timed=True, duration_s=30, board="sb:open-mic-1a2b3c4d",
+                                           splits=[{"joke_id": "joke:bins", "start_ms": 2500, "end_ms": 9800},
+                                                   {"joke_id": "joke:parrot", "start_ms": 9800, "end_ms": 16000}],
+                                           mode="sound")),
      "voice": voice_doc(), "model": [answer(SPLIT, OPUS)]},
     {"name": "set_text_legal", "env": {}, "job": job("set_text", set_text_input(LEGAL_SEGS)), "voice": voice_doc(),
      "model": [answer(json.dumps({"units": [{"first": 0, "last": 2, "kind": "bit", "name": "Decaf", "funny": True}]}),

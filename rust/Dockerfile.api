@@ -34,7 +34,8 @@ COPY db/schema.surql db/schema_extra.surql db/schema_usage.surql db/
 COPY rust/ rust/
 WORKDIR /src/rust
 RUN cargo build --release --locked -p pk-api \
- && cp target/release/pk-api /pk-api
+ && cp target/release/pk-api /pk-api \
+ && cp target/release/pk-rants-to-sets /pk-rants-to-sets
 
 FROM python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530 AS model
 ARG PK_WITH_BGE=1
@@ -48,6 +49,8 @@ RUN mkdir -p /opt/punchable/models/bge-small-en-v1.5 \
 
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 COPY --from=build /pk-api /pk-api
+# redesign slice 6: the rants-to-sets migration, run by hand with kubectl exec (a dry run unless told to write)
+COPY --from=build /pk-rants-to-sets /pk-rants-to-sets
 COPY --from=model /opt/punchable/models /opt/punchable/models
 ARG PK_BUILD_SHA=dev
 ENV PK_BUILD_SHA=$PK_BUILD_SHA \

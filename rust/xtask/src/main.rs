@@ -41,6 +41,14 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         "deny" => run(&["deny", "check"]),
-        other => anyhow::bail!("unknown task {other}; tasks: gate, deny"),
+        // redesign slice 6: rants and topics become set lists (pk-api src/migrate.rs). A dry run unless
+        // `--write --i-have-a-backup`; it reads the same environment as pk-api.
+        "rants-to-sets" => {
+            let rest: Vec<String> = std::env::args().skip(2).collect();
+            let mut args = vec!["run", "-p", "pk-api", "--bin", "pk-rants-to-sets", "--"];
+            args.extend(rest.iter().map(String::as_str));
+            run(&args)
+        }
+        other => anyhow::bail!("unknown task {other}; tasks: gate, deny, rants-to-sets"),
     }
 }

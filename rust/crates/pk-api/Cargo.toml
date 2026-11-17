@@ -18,6 +18,12 @@ diagnostics = ["dep:aws-lc-rs"]
 name = "pk-api"
 path = "src/main.rs"
 
+# Rants and topics become set lists (redesign slice 6, src/migrate.rs): a dry run by default; shipped in the image so
+# it runs inside the pk-api pod with its environment (cargo xtask rants-to-sets runs it from a checkout).
+[[bin]]
+name = "pk-rants-to-sets"
+path = "src/bin/pk_rants_to_sets.rs"
+
 [[bin]]
 name = "pk-s3-standin"
 path = "src/bin/pk_s3_standin.rs"

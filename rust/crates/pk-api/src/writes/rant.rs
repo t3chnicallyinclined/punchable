@@ -591,7 +591,7 @@ pub async fn draft(
 }
 
 /// One row of the tab's Drafts: a bit with a rant cut.
-fn rant_row(view: &View, jid: &str) -> Option<(String, usize, Value)> {
+pub(crate) fn rant_row(view: &View, jid: &str) -> Option<(String, usize, Value)> {
     let vs = versions_of(view, jid);
     let rants: Vec<(usize, &pk_kb::Rec)> = vs
         .iter()

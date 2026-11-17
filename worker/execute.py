@@ -176,6 +176,10 @@ def analyze_transcript(inp: dict, complete=None, make_inbox=None) -> dict:
             "show_date": date, "show_date_source": "the phone (when it was recorded)" if inp.get("recorded_at") else "today",
             "show_venue": inp.get("venue"), "duration_s": dur or None, "transcript_sha256": sha, "audio": audio,
             "received_at": inp.get("received_at")}
+    # the walk-through (redesign slice 5): the set list it followed, his taps per bit, sound or video (when sent)
+    for k in ("board", "splits", "mode"):
+        if inp.get(k) is not None:
+            meta[k] = inp[k]
     analysis = {"set": set_dir, "source": "set_text", "run_id": run_id, "audio": audio, "rows": rows,
                 "summary": {"material_s": None, "laugh_s_total": None, "laugh_s_per_min": None, "pct_laughing": None,
                             "laughs_merged": None, "laughs_per_min_merged": None, "applause_s": None,

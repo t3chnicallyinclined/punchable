@@ -3141,3 +3141,200 @@ The appellate division of my fridge."
         "nothing queued"
     );
 }
+
+/// Redesign slice 5 (Rust only): a set taped from a set list carries the list, his taps per bit and sound or video
+/// into the `set_text` job; a tap on a bit that is not on that list, taps with no list, or a list he does not have is
+/// a 400 and nothing is queued. The red arm (run once): the on-the-list check removed, the first refusal queued a job
+/// and this failed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_phone_set_with_splits_keeps_its_board_and_splits() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let (s, b) = post(
+        &st,
+        "/api/boards",
+        json!({"title": "Walk-through", "joke_ids": ["joke:cat", "joke:meters"]}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{b}");
+    let bid = b["board"]["id"].as_str().expect("a board id").to_string();
+    let tx = |words: &str, extra: Value| {
+        let mut v = json!({"segments": [{"text": words, "start": 0, "end": 2.5}], "title": "Walk-through",
+                           "recorded_at": "2026-11-17T20:00:00Z", "duration_s": 3, "engine": "phone"});
+        if let (Some(o), Value::Object(e)) = (v.as_object_mut(), extra) {
+            o.extend(e);
+        }
+        v
+    };
+    let splits = json!([{"joke_id": "joke:cat", "start_ms": 0, "end_ms": 1200},
+                        {"joke_id": "joke:meters", "start_ms": 1200, "end_ms": 2900}]);
+    let (s, r) = post(
+        &st,
+        "/api/sets/transcript",
+        tx(
+            "Cats and meters.",
+            json!({"board": bid, "splits": splits, "mode": "sound"}),
+        ),
+    )
+    .await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    let job = r["job"]["id"].as_str().expect("a job").to_string();
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let input = &jobs[&job]["input"];
+    assert_eq!(input["board"], json!(bid));
+    assert_eq!(input["splits"], splits);
+    assert_eq!(input["mode"], "sound");
+    // without the walk-through's fields the input is what it always was (the writes differential's case)
+    let (s, r) = post(&st, "/api/sets/transcript", tx("Just a set.", json!({}))).await;
+    assert_eq!(s, StatusCode::ACCEPTED, "{r}");
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let plain = &jobs[r["job"]["id"].as_str().unwrap()]["input"];
+    assert!(
+        plain.get("board").is_none() && plain.get("splits").is_none() && plain.get("mode").is_none(),
+        "{plain}"
+    );
+
+    let n_jobs = Creative::new(st.clone()).lines("jobs").await.unwrap().len();
+    let off_list = json!([{"joke_id": "joke:talks", "start_ms": 0, "end_ms": 1000}]);
+    let refused = [
+        (
+            tx("A bit not on it.", json!({"board": bid, "splits": off_list})),
+            "a split names joke:talks, which is not on that set list",
+        ),
+        (
+            tx("No list.", json!({"splits": splits})),
+            "splits need the board they follow",
+        ),
+        (
+            tx("Not his list.", json!({"board": "sb:nope-12345678", "splits": splits})),
+            "board must be a set list you have",
+        ),
+    ];
+    for (body, msg) in refused {
+        let (s, r) = post(&st, "/api/sets/transcript", body.clone()).await;
+        assert_eq!((s.as_u16(), r["error"].as_str().unwrap_or("")), (400, msg), "{body}");
+    }
+    assert_eq!(
+        Creative::new(st.clone()).lines("jobs").await.unwrap().len(),
+        n_jobs,
+        "nothing queued for a refused walk-through"
+    );
+}
+
+/// A version of `j` with a rant cut (`GET /api/rants` lists it).
+async fn rant_cut(st: &AppState, j: &str) {
+    let (s, r) = send(
+        st,
+        "POST",
+        &format!("/api/jokes/{j}/versions"),
+        json!({"text": format!("A rant about {j}.\nStill going."), "source": "rant_draft", "draft": true}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+}
+
+/// Redesign slice 6: rants and topics become set lists. A topic with a rant, a kept bit, a kept moment and a dropped
+/// moment becomes one list (the rant first, then the kept bit; the moments are not items); a deleted
+/// topic becomes none; a rant no topic holds becomes its own one-bit list. The dry run writes nothing; the write adds
+/// `storyboards` rows only (the `topics` and `script` rows are byte for byte what they were); a second write makes
+/// nothing. The red arm (run once): the seed check removed, the second write made two more lists and this failed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[expect(
+    clippy::many_single_char_names,
+    reason = "s, r are the file's own status / reply names; w, c, t, n the run, its counts, a list and a count"
+)]
+async fn rants_to_sets_makes_one_board_per_topic_and_is_safe_twice() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let (_, r) = send(&st, "POST", "/api/topics", json!({"text": "parking meters"})).await;
+    let tid = r["topic"]["id"].as_str().expect("a topic").to_string();
+    rant_cut(&st, "joke:meters").await;
+    for b in [
+        json!({"ranted": "joke:meters"}),
+        json!({"keep": "joke:cat"}),
+        json!({"keep": "perf:p1"}),
+        json!({"drop": "perf:p2"}),
+    ] {
+        let (s, r) = send(&st, "PATCH", &format!("/api/topics/{tid}"), b.clone()).await;
+        assert_eq!(s, StatusCode::OK, "{b}: {r}");
+    }
+    let (_, r) = send(&st, "POST", "/api/topics", json!({"text": "gone topic"})).await;
+    let dead = r["topic"]["id"].as_str().expect("a topic").to_string();
+    let (s, _) = send(&st, "PATCH", &format!("/api/topics/{dead}"), json!({"delete": true})).await;
+    assert_eq!(s, StatusCode::OK);
+    rant_cut(&st, "joke:talks").await;
+
+    let cr = Creative::new(st.clone());
+    let topics0 = cr.lines("topics").await.unwrap();
+    let script0 = cr.lines("script").await.unwrap();
+    let boards0 = cr.lines("storyboards").await.unwrap().len();
+
+    let dry = pk_api::migrate::rants_to_sets(&st, false).await.expect("dry run");
+    assert!(!dry.wrote && dry.made.is_empty());
+    assert_eq!(dry.plan.sets.len(), 2, "{:?}", dry.plan);
+    assert_eq!(
+        cr.lines("storyboards").await.unwrap().len(),
+        boards0,
+        "a dry run writes nothing"
+    );
+    eprintln!(
+        "dry run counts (synthetic): {}",
+        serde_json::to_string(&dry.plan.counts).unwrap()
+    );
+
+    let w = pk_api::migrate::rants_to_sets(&st, true).await.expect("write");
+    assert!(w.wrote);
+    assert_eq!(w.made.len(), 2);
+    let boards = cr.items("storyboards").await.unwrap();
+    let by_seed = |k: &str, v: &str| {
+        boards
+            .values()
+            .find(|b| b["seed"][k] == json!(v))
+            .cloned()
+            .unwrap_or_else(|| panic!("no list seeded {k}={v}"))
+    };
+    let t = by_seed("topic", &tid);
+    assert_eq!(t["title"], "parking meters");
+    assert_eq!(
+        t["joke_ids"],
+        json!(["joke:meters", "joke:cat"]),
+        "the rant first, then the kept bit"
+    );
+    assert_eq!(t["source"], "his");
+    assert_eq!(by_seed("rant", "joke:talks")["joke_ids"], json!(["joke:talks"]));
+    assert!(
+        boards.values().all(|b| b["seed"]["topic"] != json!(dead)),
+        "a deleted topic makes no list"
+    );
+    let c = &w.plan.counts;
+    assert_eq!(
+        (
+            c.topics_made,
+            c.tombstones,
+            c.rant_boards_made,
+            c.also_kept_moments,
+            c.items_total
+        ),
+        (1, 1, 1, 1, 3)
+    );
+    let (s, built) = get_path(&st, &format!("/api/boards/{}/build", w.made[0])).await;
+    assert_eq!(s, StatusCode::OK, "{built}");
+    assert_eq!(cr.lines("topics").await.unwrap(), topics0, "topics untouched");
+    assert_eq!(cr.lines("script").await.unwrap(), script0, "script untouched");
+
+    let n = cr.lines("storyboards").await.unwrap().len();
+    let again = pk_api::migrate::rants_to_sets(&st, true).await.expect("again");
+    assert!(again.made.is_empty(), "a second run makes nothing: {:?}", again.made);
+    assert_eq!(
+        (
+            again.plan.counts.topics_skipped_already,
+            again.plan.counts.rant_boards_skipped
+        ),
+        (1, 1)
+    );
+    assert_eq!(cr.lines("storyboards").await.unwrap().len(), n);
+}
