@@ -169,6 +169,30 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
 
 ## Open, in order
 
+0n. **One notebook: no tabs; a bit is a page; marking is selecting (owner on build 33, 2026-11-17: "i feel like the ux
+   is still clonky, i think people are used to google docs/notes how can we simplify it but keep it as powerful", and
+   on the mockup: "ok lets deploy this"). Built on branch `app/one-notebook` (not merged, not pushed, not deployed, no
+   phone build).** `docs/design/SPEC-2026-11-17-one-notebook.md` (the screens, what is removed, every old URL, §9
+   "Built": twenty differences from the mockup with their reasons, the calls, the reviews); the mockup is kept in
+   `docs/design/mockups/2026-11-17-one-notebook/`.
+   - **What it is:** the app opens on one list, Notebook (search, All · Bits · Sets · Tapes, Pinned, the microphone
+     and the pencil); a bit is a page with one bar above the keyboard (Say it · Film it · Punch it up; with words
+     selected: Funnier · Shorter · 3 options · Note); the new draft is a sheet with every change underlined (Put mine
+     back, Try again, the options); a set is a page with a row he types in to add a bit; the stage is restyled.
+     Nothing stored changes shape.
+   - **Server (Rust only, small):** a Change mark takes an optional `intent`; the worker's prompt gains one line for
+     it and, for 3 options, `options` beside the draft. No new store, op, job kind, route, Ingress path or schema.
+   - **Deploy order:** pk-worker → pk-api → web → the phone build. No Python image. An older pk-worker treats an
+     intent as a plain Change, an older pk-api drops it, and either can be rolled back alone; the server goes first
+     only so the phone's Funnier / Shorter / 3 options mean something. **Web must roll** (every screen changed).
+   - **Phone checks:** the spec's §8, fifteen lines. The four things only a phone can say: whether the bar sits on
+     the keyboard and follows it down, whether the tinted marks stay under their words while he types, whether the
+     draft sheet's bar draws with Keep mine and Use it, whether the large title collapses over the one list.
+   - **Found on the way:** the web threw on every change of a round's state on a bit's page (a VoiceOver call the
+     web does not have; also on `main`): fixed, `lib/announce`. The conversation's input bar could be left undrawn
+     on iOS 26 (R11 of the earlier spec): fixed with the tab bar's removal. On this PC the writes differential
+     reports "POST unknown body 256/300 KiB: header connection" on one or two of 2,763 checks, differently each
+     run, in a transport check this branch does not touch (CI on Linux is the judge).
 0m. **Redesign Slices 5 and 6: the walk-through, and the tabs become Bits · Sets · Tapes (owner on build 32,
    2026-11-17: "it still seems like its part of the old ux/ui on the phone i see rant bits sets tabs"). Built on branch
    `app/redesign-slice5-6` (not merged, not pushed, not deployed, no phone build).**

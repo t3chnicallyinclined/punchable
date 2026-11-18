@@ -511,7 +511,14 @@ pub fn checked_options(data: Option<&Value>, marks: &[Mark], base: &str, draft: 
             continue;
         };
         let mut texts: Vec<String> = Vec::new();
-        for t in o.get("texts").and_then(Value::as_array).into_iter().flatten() {
+        // a few more than are kept, never a whole answer's worth: each one costs a pass over the draft below
+        for t in o
+            .get("texts")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .take(2 * rl::OPTION_COUNT)
+        {
             let t = py::strip(t.as_str().unwrap_or("")).to_string();
             if !t.is_empty() && py::len(&t) <= MAX_OPTION_CHARS && !texts.contains(&t) {
                 texts.push(t);
@@ -526,6 +533,18 @@ pub fn checked_options(data: Option<&Value>, marks: &[Mark], base: &str, draft: 
         let Some(at) = draft.find(lead.as_str()) else {
             continue;
         };
+        // never on a Keep: each take below is checked alone, and two rows that each sit on one copy of a Keep's words
+        // could pass alone and break it together (security review, second look). A Keep is not where options go.
+        let end = at + lead.len();
+        let on_keep = marks.iter().filter(|m| m.kind == Kind::Keep).any(|m| {
+            draft
+                .match_indices(m.text.as_str())
+                .any(|(k, _)| k < end && at < k + m.text.len())
+        });
+        if on_keep {
+            dropped.push(json!({"item": item, "reason": "its place is on a Keep"}));
+            continue;
+        }
         let mut kept = vec![lead.clone()];
         for t in texts {
             if kept.len() >= rl::OPTION_COUNT {
@@ -846,25 +865,29 @@ would pick in the draft and list all three under `options`.\n\n    about the doo
         let (o, d) = checked_options(Some(&twice), &m, BIT, &draft);
         assert_eq!(o, Vec::<Value>::new(), "a take that is in the draft twice is no anchor");
         assert_eq!(d.len(), 1);
-        // the lead is the Keep's own sentence (once in the draft): any other take there would change the Keep
+        // the lead is the Keep's own sentence: options never sit on a Keep, whatever the other takes say
         let keep = json!({"options": [{"item": 4, "texts": ["My fridge has an app now.", "My fridge has two apps now.", "My fridge has an app now. Mostly."]}]});
         let (o, d) = checked_options(Some(&keep), &m, BIT, &draft);
-        assert_eq!(o.len(), 1, "{o:?} {d:?}");
-        assert_eq!(
-            o[0]["texts"],
-            json!(["My fridge has an app now.", "My fridge has an app now. Mostly."]),
-            "a take that keeps the Keep's words byte for byte may stay; one that changes them is left out"
-        );
-        assert!(
-            d.iter()
-                .any(|x| x["reason"] == "an option would have changed a Keep or lost an idea"),
-            "{d:?}"
-        );
+        assert_eq!(o, Vec::<Value>::new(), "{d:?}");
+        assert_eq!(d[0]["reason"], "its place is on a Keep");
+        // a lead beside the Keep (the next line of the same idea): a take that would lose the idea is left out
+        let draft2 = draft.replace("It texts me when the milk is sad.", "It texts me about the milk.");
+        let beside = json!({"options": [{"item": 4, "texts": ["reviews my outfits", "grades my outfits", ""]}]});
+        let (o, _) = checked_options(Some(&beside), &m, BIT, &draft2);
+        assert_eq!(o[0]["texts"], json!(["reviews my outfits", "grades my outfits"]));
         // every take the phone can swap in leaves a draft that passes the round's own checks
         for t in o[0]["texts"].as_array().unwrap() {
-            let swapped = draft.replacen("My fridge has an app now.", t.as_str().unwrap(), 1);
+            let swapped = draft2.replacen("reviews my outfits", t.as_str().unwrap(), 1);
             assert_eq!(refusals(BIT, &swapped, &m), Vec::<String>::new());
         }
+        // more takes than could ever be kept are not even read
+        let many: Vec<String> = (0..50).map(|k| format!("take number {k}")).collect();
+        let flood = json!({"options": [{"item": 4, "texts": many}]});
+        let (o, d) = checked_options(Some(&flood), &m, BIT, &draft);
+        assert!(
+            o.is_empty() && d.len() == 1,
+            "none of the first few stands in the draft: one row, one reason"
+        );
         // the red arm: the rule before the review (the take anywhere in the draft, every take kept)
         let lenient = |texts: &[&str]| texts.iter().any(|t| draft.contains(t)).then_some(texts.len());
         assert_eq!(

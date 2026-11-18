@@ -7,7 +7,8 @@
 // (lib/recordings): only the words go to the server. The web cannot transcribe a file: a set taped there goes to the
 // upload queue and waits on the server (ADR 0012), and there is no memo recorder on the web.
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Linking, Platform, View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
+import { announce } from '@/lib/announce';
 import { router, useLocalSearchParams } from 'expo-router';
 import { haptics } from '@/lib/haptics';
 import { actionSheet } from '@/lib/actionSheet';
@@ -80,8 +81,7 @@ export default function RecordScreen() {
       setState(nextRecordState('idle', 'start'));
       // queued, so VoiceOver finishes reading the screen first instead of cutting the word off
       if (memo) {
-        if (AccessibilityInfo.announceForAccessibilityWithOptions) AccessibilityInfo.announceForAccessibilityWithOptions('Recording', { queue: true });
-        else AccessibilityInfo.announceForAccessibility?.('Recording');
+        announce('Recording');
       }
     } catch (e: any) {
       const msg = String(e?.message || 'Microphone not available');

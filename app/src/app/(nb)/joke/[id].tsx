@@ -22,7 +22,7 @@
 // bit"; prefs.bitEditor 'classic'): the bit as 44-pt lines, one bottom button, Write, and the one-box editor with
 // Save, with none of the above. One of the two is drawn, never both.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Keyboard, Platform, Share, Text, TextInput, View } from 'react-native';
+import { Keyboard, Platform, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
@@ -53,6 +53,7 @@ import { markId, peekMarks, useMarks } from '@/lib/marks';
 import { useRound } from '@/lib/redline';
 import { sendRound } from '@/lib/redlineActions';
 import { actionSheet } from '@/lib/actionSheet';
+import { announce } from '@/lib/announce';
 import * as MR from '@/rules/markRules';
 import * as PG from '@/rules/pageRules';
 import { togglePin } from '@/rules/notebookRules';
@@ -423,13 +424,16 @@ export default function BitPage() {
   useEffect(() => {
     if (!rr.data) return;
     if (lastRound.current != null && lastRound.current !== rstate && rstate !== 'none') {
-      AccessibilityInfo.announceForAccessibilityWithOptions(MR.roundLine(round) || '', { queue: true });
+      announce(MR.roundLine(round));
     }
     lastRound.current = rstate;
   }, [rstate, round, rr.data]);
   /** A tap on Funnier, Shorter, 3 options or Note with words selected (rules/pageRules: each is a switch). */
   const onAsk = (ask: PG.Ask, target: Target) => {
     const text = doc.current?.text() ?? '';
+    // the web: a click on the bar has already taken the cursor out of the text, and no selection event follows, so
+    // the bar lets go of the words once it has acted on them (the footer and its button are then in sight)
+    if (!native) setTimeout(() => pageBar.current?.select({ start: 0, end: 0 }, ''), 0);
     if (ask === 'note') {
       const r = PG.markForNote(text, peekMarks(id, null), target, markId());
       if (r.error || !r.mark) { haptics.warning(); ui.snack(r.error || 'Those words could not be marked'); return; }
@@ -440,7 +444,7 @@ export default function BitPage() {
       return;
     }
     const r = PG.toggleAsk(text, peekMarks(id, null), target, ask, markId());
-    AccessibilityInfo.announceForAccessibilityWithOptions(r.said, { queue: true });
+    announce(r.said);
     if (r.error) { haptics.warning(); ui.snack(r.error); return; }
     haptics.selection();
     void marks.replace(r.marks);
@@ -738,11 +742,15 @@ function PageTitle({ value, editable, onSave, onNext, testID }: { value: string;
     setSeen(value);
     if (!inField) setV(value);
   }
-  useEffect(() => { if (!inField) sent.current = value; }, [value, inField]);
+  // only when the server's title changes: re-running it when he leaves the field would forget the title just sent,
+  // and the second blur of a Return would save it twice (iOS dev review, second look)
+  useEffect(() => { if (!inField) sent.current = value; }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
   const leave = () => {
     setInField(false);
     const t = v.replace(/\s+/g, ' ').trim();
-    if (!t || t === sent.current) return;
+    // left empty: the field shows the title the page has (it may have been named while he was in the field)
+    if (!t) { setV(value); return; }
+    if (t === sent.current) return;
     sent.current = t;
     onSave(t);
   };

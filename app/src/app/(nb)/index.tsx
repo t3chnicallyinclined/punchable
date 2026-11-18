@@ -6,7 +6,7 @@
 // pencil (a blank page with the keyboard up; a new set while the filter is on Sets).
 // A row is a title, one line under it (a sentence of his from the page: the server's `punch`, an exact substring of
 // the newest version; never the app's wording), and a status line only when there is something to say: "New draft
-// ready" (GET /api/redlines; the row opens the draft), "2 marks · 1 tape" (the marks kept on this phone, lib/marks; the
+// ready" (GET /api/redlines; the page's own button then opens the draft), "2 marks · 1 tape" (the marks kept on this phone, lib/marks; the
 // recordings of it on this phone). A recording kept on this phone draws itself (lib/RecRows: its state, play, Delete).
 // What the old tab roots' toolbars held is in ⋯: every bit with sort and merge, every set with its drafts, the inbox,
 // the merge review, the joke map, Record a set, Import a recording, Archived sets.

@@ -71,7 +71,8 @@ export function bitRow(j: BitLike, o: { round?: 'waiting' | 'ready' | 'refused' 
     // a draft he asked for lifts its page to when he asked: it is the newest thing about it
     at: o.sentAt && o.sentAt > at ? o.sentAt : at,
     status: st?.text ?? null, hot: !!st?.hot,
-    href: o.round === 'ready' ? `/joke/${enc(j.id)}/draft` : `/joke/${enc(j.id)}`, tag: null,
+    // the page itself, also when a draft waits: its main button then reads "New draft ready" and opens the sheet over it
+    href: `/joke/${enc(j.id)}`, tag: null,
   };
 }
 

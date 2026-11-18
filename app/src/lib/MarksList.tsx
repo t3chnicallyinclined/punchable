@@ -24,8 +24,13 @@ export function MarksList({ text, marks, editing, onEdit, onSave, onRemove, test
   const open = editing ? marks.find((m) => m.id === editing) || null : null;
   // what is in the note field now: a tap outside the sheet, or a swipe down, keeps it exactly as Done does (HIG/sheets:
   // unsaved words are never dropped without a word)
-  const typed = useRef<string | null>(null);
-  const close = () => { if (open && typed.current != null) onSave(open.id, typed.current); else onEdit(null); typed.current = null; };
+  const typed = useRef<{ id: string; text: string } | null>(null);
+  const close = () => {
+    const t = typed.current;
+    typed.current = null;
+    // only the words typed into THIS mark's field (never a note left over from another)
+    if (open && t && t.id === open.id) onSave(open.id, t.text); else onEdit(null);
+  };
   return (
     <View testID={testID} style={{ gap: 2 }}>
       {rows.map(({ mark, gone }) => {
@@ -49,7 +54,7 @@ export function MarksList({ text, marks, editing, onEdit, onSave, onRemove, test
         );
       })}
       <Sheet visible={!!open} onClose={close} label="A mark" testID={testID ? `${testID}-sheet` : undefined}>
-        {open && <NoteForm key={open.id} mark={open} onTyped={(t) => { typed.current = t; }} onCancel={() => { typed.current = null; onEdit(null); }} onSave={(n) => { typed.current = null; onSave(open.id, n); }} onRemove={() => { typed.current = null; onRemove(open.id); }} testID={testID} />}
+        {open && <NoteForm key={open.id} mark={open} onTyped={(t) => { typed.current = { id: open.id, text: t }; }} onCancel={() => { typed.current = null; onEdit(null); }} onSave={(n) => { typed.current = null; onSave(open.id, n); }} onRemove={() => { typed.current = null; onRemove(open.id); }} testID={testID} />}
       </Sheet>
     </View>
   );

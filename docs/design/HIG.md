@@ -76,7 +76,13 @@ other hand. Standard, familiar, intuitive. Every rule below is the HIG's; the or
 
 ## 2. Navigation model
 
-**Claim: three native tabs, each with its own native stack; modals are form sheets (short tasks) or full-screen
+**Amended 2026-11-17 (one notebook, `SPEC-2026-11-17-one-notebook.md`; owner: "people are used to google docs/notes"):
+there is no tab bar. The app is ONE native stack with Notebook at its root (a large title, the system search field, a
+segmented filter All · Bits · Sets · Tapes); every other screen is pushed from it, and the modals are as before, plus
+the new draft of a bit (a page sheet: Keep mine leading, Use it trailing). The tab-bar rules below are kept as the
+record of what the three tabs were built to; §2.1's route tree now lives under one group, `(nb)`.**
+
+**Claim (until 2026-11-17): three native tabs, each with its own native stack; modals are form sheets (short tasks) or full-screen
 modals (stage, record); nothing else is modal.**
 
 Rules (CONFIRMED):
@@ -264,6 +270,11 @@ showing placeholder text, graphics, or animations as content loads"). Errors are
   make people stop listening to music from another app if you don't need to" applies to playback, not to recording).
 
 ### 3.9 Stage (`/stage/{id}`, full-screen modal) and Record (`/record`): the record control (2026-10-29)
+- **Amended 2026-11-17 (one notebook, screen 6): while a set's sound take runs in the walk-through (`/run/{id}`) the
+  bit's name is the hero (44 pt) and the clock is 28 pt beside the red dot and the status word; the slot's bar, the
+  room's level, "Paused by a call" and the 60-pt Resume are kept; Back and Next are 84 pt; "Hold to end the set" is a
+  700 ms hold, and a tap or a VoiceOver activate opens the Save / Discard sheet instead. The 84-pt clock below is the
+  free recorder's (`/record`) and the walk-through's before the disc.**
 - `autoHideHomeIndicator: true`, `gestureEnabled: false`, `useKeepAwake` (kept). Title "Record"; Close top-leading.
 - **Nothing records until he taps the red disc** (`lib/RecordControl`): on open the clock reads 0:00, status "Ready",
   the set list in marker text. Next bit before the disc runs the clock alone ("Clock only").

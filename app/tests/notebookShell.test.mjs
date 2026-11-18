@@ -74,6 +74,11 @@ check(["Keep mine", "Use it", "Put mine back", "Try again"].every((w) => draft.i
 // accessory on and nothing drawing it, no bar was drawn on iOS 26)
 const acc = src("src/lib/accessory.native.ts").split(NL).filter((l) => !l.trimStart().startsWith("//")).join(NL);
 check(acc.includes("export const ACCESSORY = false;") && !acc.includes("isLiquidGlassAvailable"), "the input bar is never left to a tab-bar accessory");
+// ---- VoiceOver announcements go through lib/announce: the web has no announceForAccessibilityWithOptions, and a
+// direct call there throws inside a timer or an effect (the bit page did, on every change of a round's state)
+const direct = (red ? ["src/app/(tabs)/(bits)/joke/[id].tsx", "src/app/(tabs)/(bits)/joke/[id]/draft.tsx", "src/app/record.tsx"] : files.filter((f) => !f.includes(".native.") && !f.endsWith("/lib/announce.ts")).map((f) => f.slice(f.indexOf("/src/") + 1)))
+  .filter((f) => src(f).split(NL).some((l) => l.includes("AccessibilityInfo.announceForAccessibilityWithOptions(") && !l.trimStart().startsWith("if (AccessibilityInfo.announceForAccessibilityWithOptions)")));
+check(direct.length === 0 && src("src/lib/announce.ts").includes("export function announce"), `no shared file calls announceForAccessibilityWithOptions itself (got ${direct.length ? direct.join(", ") : "none"})`);
 // ---- what the old first tab did at launch still happens
 check(src("src/app/_layout.tsx").includes("flushScriptDrafts()"), "a rant script kept on the phone is sent from the root layout");
 check(home.includes("useTonight()"), "Notebook keeps the inbox count right from launch");

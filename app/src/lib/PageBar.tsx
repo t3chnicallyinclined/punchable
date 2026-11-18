@@ -12,7 +12,8 @@
 // bar and never the page. Every target is 44 pt and says its name; VoiceOver hears the bar change face once.
 // Rules: rules/pageRules.ts.
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { AccessibilityInfo, PixelRatio, Pressable, Text, View } from 'react-native';
+import { PixelRatio, Pressable, Text, View } from 'react-native';
+import { announce } from './announce';
 import { BarGround } from './BarGround';
 import { Icon } from './Icon';
 import { C, F } from './theme';
@@ -65,7 +66,7 @@ export const PageBar = forwardRef<PageBarHandle, {
   useEffect(() => {
     if (lastFace.current === face) return;
     lastFace.current = face;
-    const t = setTimeout(() => AccessibilityInfo.announceForAccessibilityWithOptions(face === 'words' ? 'Actions for the selected words' : 'Page actions', { queue: true }), 600);
+    const t = setTimeout(() => announce(face === 'words' ? 'Actions for the selected words' : 'Page actions'), 600);
     return () => clearTimeout(t);
   }, [face]);
 

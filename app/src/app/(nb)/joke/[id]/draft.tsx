@@ -12,10 +12,11 @@
 //   - No draft (the checks refused it, or the job failed): why, and "Put the marks back on the page".
 // His choices are kept on the phone (lib/putBacks), so the draft opens the way he left it.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { undo, useApi, useOnline } from '@/lib/api';
 import { actionSheet } from '@/lib/actionSheet';
+import { announce } from '@/lib/announce';
 import { addVersion } from '@/lib/bitWork';
 import { BarGround } from '@/lib/BarGround';
 import { haptics } from '@/lib/haptics';
@@ -94,14 +95,14 @@ export default function DraftPage() {
     const next = hs.map((_, k) => (k === i ? c : choices[k] ?? 0));
     setChoices(next);
     remember(next, auto);
-    AccessibilityInfo.announceForAccessibilityWithOptions(c === 'mine' ? 'Your words are back' : 'The new wording is in', { queue: true });
+    announce(c === 'mine' ? 'Your words are back' : 'The new wording is in');
   };
   // VoiceOver hears the round change: writing, then ready (never the first read)
   const lastState = useRef<M.RoundState | null>(null);
   useEffect(() => {
     if (!rr.data) return;
     if (lastState.current != null && lastState.current !== state && state !== 'none') {
-      AccessibilityInfo.announceForAccessibilityWithOptions(M.roundLine(round) || '', { queue: true });
+      announce(M.roundLine(round));
     }
     lastState.current = state;
   }, [state, round, rr.data]);
@@ -279,7 +280,8 @@ export default function DraftPage() {
               // first change; a tap on a change itself picks that one
               const first = para.runs.find((r) => r.hunk != null)?.hunk ?? null;
               return (
-                <Pressable key={k} accessible={false} disabled={first == null} hitSlop={{ top: 9, bottom: 9 }} onPress={() => { if (first != null) { haptics.selection(); setOpen(open === first ? null : first); } }}>
+                <View key={k}>
+                <Pressable accessible={false} disabled={first == null} hitSlop={{ top: 9, bottom: 9 }} onPress={() => { if (first != null) { haptics.selection(); setOpen(open === first ? null : first); } }}>
                   <Text testID={`draft-para-${k}`} maxFontSizeMultiplier={R.PROSE_CAP} style={DOC}
                     accessibilityLabel={changed ? `Changed. ${para.runs.map((r) => r.text).join('')}` : undefined}
                     accessibilityActions={acts} onAccessibilityAction={acts ? (e) => {
@@ -291,12 +293,14 @@ export default function DraftPage() {
                       // a change: underlined on a tint (the new wording), or dotted with no tint (his words, put back); never colour alone
                       <Text key={j} testID={`draft-change-${r.hunk}`} suppressHighlighting onPress={() => { haptics.selection(); setOpen(open === r.hunk ? null : r.hunk); }}
                         style={r.kind === 'new'
-                          ? { backgroundColor: C.amberPill, color: C.text, fontFamily: open === r.hunk ? F.bold : F.body, textDecorationLine: 'underline', textDecorationStyle: open === r.hunk ? 'double' : 'solid', textDecorationColor: C.amber }
-                          : { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: C.mut2, fontFamily: open === r.hunk ? F.bold : F.body, backgroundColor: open === r.hunk ? C.card : 'transparent' }}>{r.text}</Text>
+                          ? { backgroundColor: C.amberPill, color: C.text, textDecorationLine: 'underline', textDecorationStyle: open === r.hunk ? 'double' : 'solid', textDecorationColor: open === r.hunk ? C.text : C.amber }
+                          : { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: open === r.hunk ? C.text : C.mut2, backgroundColor: open === r.hunk ? C.card : 'transparent' }}>{r.text}</Text>
                     )))}
                   </Text>
-                  {open != null && para.ends.includes(open) && pills(open)}
                 </Pressable>
+                {/* a sibling of the paragraph's target, never inside it: a near miss between two pills must not close the change */}
+                {open != null && para.ends.includes(open) && pills(open)}
+                </View>
               );
             })}
           </View>

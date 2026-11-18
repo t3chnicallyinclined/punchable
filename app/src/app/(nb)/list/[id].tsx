@@ -18,9 +18,10 @@
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
+import { announce } from '@/lib/announce';
 import { JokeSummary, decide, patch, undo, useApi, useOnline } from '@/lib/api';
 import { BarGround } from '@/lib/BarGround';
 import { creative } from '@/lib/creative';
@@ -194,7 +195,7 @@ export default function SetListScreen() {
   // VoiceOver hears the list under the field change (it is drawn below the cursor, where it would not be found)
   useEffect(() => {
     if (!adding || !SP.asked(typed)) return;
-    const t = setTimeout(() => AccessibilityInfo.announceForAccessibilityWithOptions(offered ? `${offered} to choose from` : 'Nothing by that name', { queue: true }), 600);
+    const t = setTimeout(() => announce(offered ? `${offered} to choose from` : 'Nothing by that name'), 600);
     return () => clearTimeout(t);
   }, [offered, adding, typed]);
   const titleOf = (j: string) => { const x = steps.find((y) => y.joke_id === j); return x ? nameOf(x) : ''; };
@@ -491,11 +492,15 @@ function SetTitle({ value, editable, autoFocus, onSave }: { value: string; edita
     setSeen(value);
     if (!inField) setV(value);
   }
-  useEffect(() => { if (!inField) sent.current = value; }, [value, inField]);
+  // only when the server's title changes: re-running it when he leaves the field would forget the title just sent,
+  // and the second blur of a Return would save it twice (iOS dev review, second look)
+  useEffect(() => { if (!inField) sent.current = value; }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
   const leave = () => {
     setInField(false);
     const t = v.replace(/\s+/g, ' ').trim();
-    if (!t || t === sent.current) return;
+    // left empty: the field shows the title the page has (it may have been named while he was in the field)
+    if (!t) { setV(value); return; }
+    if (t === sent.current) return;
     sent.current = t;
     onSave(t);
   };

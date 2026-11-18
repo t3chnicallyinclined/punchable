@@ -123,7 +123,7 @@ if (red) {
   check(s.line === "5 bits · about 7 min · last taped Sunday" && s.href === "/list/sb%3Aa" && s.tag === "Set", "a set's line (the mockup's words)");
   check(N.setRow({ id: "sb:b", title: "", n: 1 }).line === "1 bit" && N.setRow({ id: "sb:b", title: "", n: 1 }).title === "Untitled set", "a set with nothing known says only what it knows");
   check(N.aboutMin(420) === "about 7 min" && N.aboutMin(20) === "under a minute" && N.aboutMin(0) === null && N.aboutMin(null) === null, "about N min");
-  check(N.bitRow(BITS[0], { round: "ready" }).href === "/joke/joke%3Acheckout/draft" && N.bitRow(BITS[0]).href === "/joke/joke%3Acheckout", "a page whose draft waits opens on the draft");
+  check(N.bitRow(BITS[0], { round: "ready" }).href === "/joke/joke%3Acheckout" && N.bitRow(BITS[0]).href === "/joke/joke%3Acheckout", "a row opens its page, also when a draft waits (the page's button opens the draft over it)");
   check(N.bitRow({ id: "joke:n", title: "Untitled bit 2026-11-17 21:04" }).title === "New page", "a page the pencil made, not named yet");
   check(N.bitRow(BITS[0], { round: "failed", marks: 1 }).status === "No draft came · 1 mark", "a round that made no draft says so");
   check(N.bitAt({ id: "x", title: "x", touched: "2026-11-01T10:00:00.123+00:00", last_seen: "2026-11-03" }) === "2026-11-03", "a bit's time is the newest thing known about it");
