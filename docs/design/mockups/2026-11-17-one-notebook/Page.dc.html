@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A bit as a page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#FFB340}a:hover{color:#ffc76b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0B0D; color: #f3f4f6; font-family: -apple-system, 'SF Pro Text', Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="padding: 56px 12px 0 12px; display: flex; justify-content: space-between; align-items: center">
+<a href="Main.dc.html" style="height: 44px; padding: 0 8px; display: flex; align-items: center; gap: 4px; text-decoration: none; font-size: 17px">
+<svg aria-hidden="true" width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#FFB340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"></path></svg>
+Notebook</a>
+<div style="display: flex; align-items: center; gap: 4px">
+<div style="font-size: 13px; color: #A1A1A8; padding-right: 6px">Saved</div>
+<button aria-label="Undo" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB340" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h10a6 6 0 010 12h-3"></path><path d="M8 5L4 9l4 4"></path></svg>
+</button>
+<button aria-label="More: versions, add to a set, share" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="#FFB340"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>
+</button>
+</div>
+</div>
+<div style="padding: 10px 22px 0 22px; display: flex; flex-direction: column; gap: 14px; flex-grow: 1">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.3px">Self-checkout</h1>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">The machine says "unexpected item in the bagging area" like I'm the one who built it wrong.</p>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">I work here now. No training, no vest, and somehow I'm already in trouble with my manager, who is a screen.</p>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">Then a real employee walks over, waves a card, and looks at me like I tried to steal a lime.<span aria-hidden="true" style="display: inline-block; width: 2px; height: 22px; background: #FFB340; margin-left: 2px; vertical-align: -4px"></span></p>
+<p style="margin: 0; font-size: 18px; line-height: 1.5; color: #878d97">Other ideas: the lime costs 40 cents. The court case.</p>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #161618; border-top: 1px solid #1F1F22">
+<button style="height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: #f3f4f6; font-size: 15px; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0014 0M12 18v3"></path></svg>
+Say it</button>
+<button style="height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: #f3f4f6; font-size: 15px; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f3f4f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg>
+Film it</button>
+<a href="Draft.dc.html" style="height: 44px; padding: 0 16px; border-radius: 22px; background: #FFB340; color: #1a1200; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1200" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 6.3L20 12l-5.8 2.7L12 21l-2.2-6.3L4 12l5.8-2.7z"></path></svg>
+Punch it up</a>
+</div>
+<div style="height: 300px; background: #161618; display: flex; align-items: center; justify-content: center; color: #878d97; font-size: 14px">iPhone keyboard</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

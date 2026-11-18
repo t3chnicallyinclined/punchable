@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Select words to mark them</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#FFB340}a:hover{color:#ffc76b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0B0D; color: #f3f4f6; font-family: -apple-system, 'SF Pro Text', Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="padding: 56px 12px 0 12px; display: flex; justify-content: space-between; align-items: center">
+<a href="Main.dc.html" style="height: 44px; padding: 0 8px; display: flex; align-items: center; gap: 4px; text-decoration: none; font-size: 17px">
+<svg aria-hidden="true" width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#FFB340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"></path></svg>
+Notebook</a>
+<div style="font-size: 13px; color: #A1A1A8; padding-right: 14px">Saved</div>
+</div>
+<div style="padding: 10px 22px 0 22px; display: flex; flex-direction: column; gap: 14px; flex-grow: 1">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.3px">Self-checkout</h1>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">The machine says "unexpected item in the bagging area" like I'm the one who built it wrong.</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="align-self: center; display: flex; background: #2a2a2e; border-radius: 12px; overflow: hidden">
+<button style="height: 44px; padding: 0 12px; border: 0; background: transparent; color: #FFB340; font-size: 15px; font-weight: 600">Funnier</button>
+<button style="height: 44px; padding: 0 12px; border: 0; border-left: 1px solid #3a3a3f; background: transparent; color: #FFB340; font-size: 15px; font-weight: 600">Shorter</button>
+<button style="height: 44px; padding: 0 12px; border: 0; border-left: 1px solid #3a3a3f; background: transparent; color: #FFB340; font-size: 15px; font-weight: 600">3 options</button>
+<button style="height: 44px; padding: 0 12px; border: 0; border-left: 1px solid #3a3a3f; background: transparent; color: #f3f4f6; font-size: 15px">Note</button>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">I work here now. No training, no vest, and <span style="background: #7f5700; border-radius: 3px; padding: 2px 0">somehow I'm already in trouble with my manager, who is a screen.</span></p>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.5">Then a real employee walks over, waves a card, and <span style="border-bottom: 2px solid #FFB340">looks at me like I tried to steal a lime.</span></p>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #A1A1A8">
+<span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #FFB340"></span>
+Your note: "this is the laugh, build to it"
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.5; color: #878d97">Other ideas: the lime costs 40 cents. The court case.</p>
+</div>
+<div style="padding: 12px 20px 40px 20px; display: flex; flex-direction: column; gap: 10px; background: #161618; border-top: 1px solid #1F1F22">
+<div style="font-size: 14px; color: #A1A1A8; text-align: center">2 marks on this page. Anything you didn't mark stays word for word.</div>
+<a href="Draft.dc.html" style="height: 50px; border-radius: 14px; background: #FFB340; color: #1a1200; font-size: 17px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center">Get a new draft</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
