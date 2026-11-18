@@ -807,12 +807,12 @@ would pick in the draft and list all three under `options`.\n\n    about the doo
         // none of the takes is in the draft: there is no place to swap them in
         let lost = json!({"options": [{"item": 4, "texts": ["grades my outfits", "has notes on my outfits"]}]});
         let (o, d) = checked_options(Some(&lost), &m, &draft);
-        assert!(o.is_empty());
+        assert_eq!(o, Vec::<Value>::new());
         assert_eq!(d[0]["reason"], "none of its options is in the draft");
         // one take alone is not a choice
         let one = json!({"options": [{"item": 4, "texts": ["reviews my outfits", ""]}]});
-        assert!(checked_options(Some(&one), &m, &draft).0.is_empty());
-        assert!(checked_options(None, &m, &draft).0.is_empty());
+        assert_eq!(checked_options(Some(&one), &m, &draft).0, Vec::<Value>::new());
+        assert_eq!(checked_options(None, &m, &draft).0, Vec::<Value>::new());
     }
 
     #[test]

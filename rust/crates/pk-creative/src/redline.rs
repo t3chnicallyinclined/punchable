@@ -352,7 +352,7 @@ My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers
     fn an_intent_has_one_wire_name_and_an_unknown_one_is_none() {
         for i in [Intent::Funnier, Intent::Shorter, Intent::Options, Intent::Again] {
             assert_eq!(Intent::parse(i.name()), Some(i));
-            assert!(!i.ask().is_empty());
+            assert_ne!(i.ask(), "");
         }
         assert_eq!(Intent::parse("louder"), None);
         assert_eq!(Intent::parse(""), None);
