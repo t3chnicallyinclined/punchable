@@ -157,7 +157,9 @@ function withOptions(mine: string, draft: string, hs: Hunk[], options: readonly 
     const texts = (o.texts || []).filter((t) => typeof t === 'string' && t.trim());
     if (texts.length < 2) continue;
     const s = locate(draft, { text: texts[0], at: o.at || 0 });
-    if (s == null) continue;
+    // the take in the draft must stand there once: a take that is also somewhere else names no one place, and a swap
+    // could land on words he never marked (the worker drops such rows; an older one may not)
+    if (s == null || draft.indexOf(texts[0]) !== draft.lastIndexOf(texts[0])) continue;
     const e = s + texts[0].length;
     const hit = out.filter((h) => h.b0 < e && h.b1 > s);
     if (hit.some((h) => h.options)) continue;

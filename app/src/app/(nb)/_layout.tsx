@@ -23,7 +23,7 @@ export default function NotebookStack() {
       <Stack.Screen name="filmed" options={{ ...pop, title: t('Notebook') }} />
       {/* a bit is a page; its new draft is a sheet over it (HIG/sheets: Keep mine and Use it are Cancel and Done) */}
       <Stack.Screen name="joke/[id]" options={{ title: t('Page') }} />
-      <Stack.Screen name="joke/[id]/draft" options={{ title: t('New draft'), ...(Platform.OS === 'web' ? {} : { presentation: 'modal' as const }) }} />
+      <Stack.Screen name="joke/[id]/draft" options={{ title: t('New draft'), ...(Platform.OS === 'web' ? {} : { presentation: 'modal' as const, headerShown: true, headerTintColor: C.amber }) }} />
       <Stack.Screen name="joke/[id]/tape" options={{ title: t('On tape') }} />
       {/* a set is a page too; a performed set is a tape */}
       <Stack.Screen name="list/[id]" options={{ title: t('Set') }} />

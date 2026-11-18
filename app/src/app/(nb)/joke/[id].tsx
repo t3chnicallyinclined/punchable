@@ -35,7 +35,7 @@ import * as L from '@/rules/lineRules';
 import { shortNameOf } from '@/lib/say';
 import { C, F, linkColor, stageWord } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
-import { getPrefs, onPrefs } from '@/lib/prefs';
+import { getPrefs, onPrefs, setPrefs } from '@/lib/prefs';
 import { useRecordings } from '@/lib/recordings';
 import { Btn, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
@@ -55,6 +55,7 @@ import { sendRound } from '@/lib/redlineActions';
 import { actionSheet } from '@/lib/actionSheet';
 import * as MR from '@/rules/markRules';
 import * as PG from '@/rules/pageRules';
+import { togglePin } from '@/rules/notebookRules';
 
 type V = R.BitVersion;
 type Note = { id: string; text?: string | null; date?: string | null; reasons?: unknown[] | null; score?: number | null };
@@ -83,7 +84,11 @@ export default function BitPage() {
   const ar = useApi<AR.Around>(aroundPath(id));
   // which editor this phone draws: the page (default) or the older Write button (a preference, the fallback)
   const [classic, setClassic] = useState(() => getPrefs().bitEditor === 'classic');
-  useEffect(() => onPrefs((x) => setClassic(x.bitEditor === 'classic')), []);
+  // pinned to the top of Notebook (kept on this device; the row's long press does the same)
+  const pinKey = `bit:${id}`;
+  const [pinned, setPinned] = useState(() => getPrefs().pins.includes(pinKey));
+  useEffect(() => onPrefs((x) => { setClassic(x.bitEditor === 'classic'); setPinned(x.pins.includes(pinKey)); }), [pinKey]);
+  const pinIt = () => { haptics.selection(); setPrefs({ pins: togglePin(getPrefs().pins, pinKey) }); };
   // the document: its handle, what it says about itself, and the page's scroll view it keeps the caret visible in
   const doc = useRef<BitDocHandle>(null);
   const [docState, setDocState] = useState<BitDocState>(QUIET);
@@ -182,7 +187,7 @@ export default function BitPage() {
   const nMarks = marksHere ? marks.marks.length : 0;
   // the page's bar: on the keyboard while he types (the phone), in the shell's bottom slot otherwise and on the web
   const barShown = !classic && !reading && order == null;
-  const barOnKeys = native && typing && barShown;
+  const typingBar = native && typing && barShown;
   // the page's own writes (a reorder, a line from the pile, a restore, Cut): online, on the newest version, nothing else open
   const canWrite = online && !reading && editing == null && order == null && !typing;
   // the one line above the bottom: an older version being read, else why his words are not a version yet
@@ -476,6 +481,9 @@ export default function BitPage() {
   // the keyboard's top in this screen, for the bar that sits on it (lib/KeyboardBar's pattern)
   const root = useRef<any>(null);
   const [kb, setKb] = useState(0);
+  // the bar rides the keyboard only once its top is known; with a hardware keyboard there is none, and the bar stays
+  // in the page's bottom slot while he types (iOS dev review)
+  const barOnKeys = typingBar && kb > 0;
   useEffect(() => {
     if (!native) return;
     const show = Keyboard.addListener('keyboardWillChangeFrame', (e) => {
@@ -519,6 +527,7 @@ export default function BitPage() {
     { label: versions.length > 1 ? `Versions · ${versions.length}` : 'Versions', onPress: showVersions, disabled: versions.length < 2, testID: 'menu-versions' },
     { label: 'Add to a set…', onPress: pickSets, disabled: !barOn || !online, testID: 'menu-sets' },
     { label: 'Share…', onPress: () => void share() },
+    { label: pinned ? 'Unpin from the top' : 'Pin to the top', onPress: pinIt, testID: 'menu-pin' },
     { label: 'Reorder lines', onPress: startReorder, disabled: !canWrite || lines.length < 2, testID: 'menu-reorder' },
     { label: 'Make it a rant, pick a hook…', onPress: openSessions, disabled: !canAsk, testID: 'menu-ask' },
     { label: 'Idea…', onPress: () => setIdea(true), testID: 'menu-idea' },
@@ -533,7 +542,10 @@ export default function BitPage() {
   const bar = (onKeys: boolean) => (
     <PageBar ref={pageBar} testID="page-bar" marks={marksHere ? marks.marks : []} text={docNow} punch={pstate}
       onSay={sayIt} onFilm={filmIt} onPunch={punchIt} onAsk={onAsk} filmOff={!native ? 'Filming is on the iPhone app' : !lines.length && !typing ? 'Nothing to read yet' : null}
-      note={onKeys ? barNote : null} footer={!onKeys && !typing && nMarks > 0} seed={marksHere ? () => lastSel.current : undefined} />
+      note={onKeys ? barNote : null} footer={!onKeys && !typing && nMarks > 0}
+      // only the bar on the keyboard starts from the document's last selection: once the keyboard is down nothing is
+      // selected on screen, and a remembered range would hide the footer behind four buttons (iOS dev review)
+      seed={onKeys && marksHere ? () => lastSel.current : undefined} />
   );
 
   return (
@@ -569,6 +581,7 @@ export default function BitPage() {
             <Stack.Toolbar.MenuAction icon="clock.arrow.circlepath" disabled={versions.length < 2} subtitle={versions.length > 1 ? String(versions.length) : undefined} onPress={showVersions}>Versions</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="text.badge.plus" disabled={!barOn || !online} subtitle={online ? undefined : 'offline'} onPress={pickSets}>Add to a set…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={() => void share()}>Share…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon={pinned ? 'pin.slash' : 'pin'} onPress={pinIt}>{pinned ? 'Unpin from the top' : 'Pin to the top'}</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.Menu inline>
               <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="sparkles" disabled={!canAsk} subtitle={!online ? 'offline' : undefined} onPress={openSessions}>Make it a rant, pick a hook…</Stack.Toolbar.MenuAction>
@@ -600,7 +613,7 @@ export default function BitPage() {
       )}
 
       {/* what sits above the document never changes when the keyboard comes up: a tap must land where he aimed it */}
-      <PageTitle key={`${id}|${title}`} testID="bit-title" value={title} editable={online && !reading && order == null} onSave={(t) => void saveTitle(t)} onNext={() => doc.current?.focus()} />
+      <PageTitle key={id} testID="bit-title" value={title} editable={online && !reading && order == null} onSave={(t) => void saveTitle(t)} onNext={() => doc.current?.focus()} />
 
       {editing != null ? (
         <View testID="bit-edit" style={{ padding: 12, borderRadius: 16, backgroundColor: C.card, gap: 10, borderWidth: 1, borderColor: C.amber }}>
@@ -701,7 +714,7 @@ export default function BitPage() {
       </Sheet>
       <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} title={title || shortName} testID="bit-menu" />
     </Screen>
-    {barOnKeys && kb > 0 && (
+    {barOnKeys && (
       // the page's bar on the keyboard while he types: a plain view at the keyboard's top (never an InputAccessoryView);
       // it carries the page's one line of status meanwhile (one line above the keys, never two)
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: kb, zIndex: 8 }}>{bar(true)}</View>
@@ -716,7 +729,18 @@ function PageTitle({ value, editable, onSave, onNext, testID }: { value: string;
   const [v, setV] = useState(value);
   // one save per title: blur can come twice (Return, then the focus moving on)
   const sent = useRef(value);
+  // the server's title changes under the page (his own rename landing; the first save naming a new page from its
+  // first line): the field takes it only while he is not typing in it, and is never remounted (a remount would drop
+  // the keyboard and what he typed: iOS dev review)
+  const [inField, setInField] = useState(false);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    if (!inField) setV(value);
+  }
+  useEffect(() => { if (!inField) sent.current = value; }, [value, inField]);
   const leave = () => {
+    setInField(false);
     const t = v.replace(/\s+/g, ' ').trim();
     if (!t || t === sent.current) return;
     sent.current = t;
@@ -724,7 +748,7 @@ function PageTitle({ value, editable, onSave, onNext, testID }: { value: string;
   };
   return (
     <TextInput testID={testID} value={v} onChangeText={(t) => setV(t.replace(/\n/g, ' '))} editable={editable} multiline scrollEnabled={false}
-      submitBehavior="submit" blurOnSubmit returnKeyType="next" onSubmitEditing={() => { leave(); onNext(); }} onBlur={leave}
+      submitBehavior="submit" blurOnSubmit returnKeyType="next" onFocus={() => setInField(true)} onSubmitEditing={() => { leave(); onNext(); }} onBlur={leave}
       accessibilityLabel="Title" accessibilityHint="Renames the page when you leave the field" maxFontSizeMultiplier={1.8} maxLength={160}
       placeholder="Title" placeholderTextColor={C.dim}
       style={[{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text, padding: 0, margin: 0 }, native ? null : ({ outlineStyle: 'none' } as any)]} />

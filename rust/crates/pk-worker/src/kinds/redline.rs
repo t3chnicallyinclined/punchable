@@ -152,10 +152,10 @@ pub struct WireMark {
     /// A Keep carried from the round before.
     #[serde(default)]
     pub carried: bool,
-    /// How he asked for a Change: `funnier` | `shorter` | `options` | `again` (absent on a plain mark; an unknown
-    /// word is a plain Change).
+    /// How he asked for a Change: `funnier` | `shorter` | `options` | `again` (absent on a plain mark; anything that
+    /// is not one of those words, of any JSON type, is a plain Change: read leniently, as every field here).
     #[serde(default)]
-    pub intent: Option<String>,
+    pub intent: Value,
 }
 
 /// The job.
@@ -210,7 +210,7 @@ impl RoundJob {
                     carried: w.carried,
                     intent: w
                         .intent
-                        .as_deref()
+                        .as_str()
                         .and_then(Intent::parse)
                         .filter(|_| kind == Kind::Change),
                 }),
@@ -484,10 +484,13 @@ pub fn checked_notes(
 }
 
 /// The options, checked: one row per item that asked for them (the first), each take trimmed, not empty, within
-/// [`MAX_OPTION_CHARS`] and different from the others; at least two takes, at most [`rl::OPTION_COUNT`]; and the first is
-/// the take that stands in the draft (a row whose takes are none of them in the draft is dropped: there is no place to
-/// put the others). They are the model's words, shown as the draft is. `(options, dropped)`.
-pub fn checked_options(data: Option<&Value>, marks: &[Mark], draft: &str) -> (Vec<Value>, Vec<Value>) {
+/// [`MAX_OPTION_CHARS`] and different from the others; at most [`rl::OPTION_COUNT`], at least two. The first is the take
+/// that stands in the draft, and it must stand there **exactly once**: the phone swaps the others in at that place, and
+/// a take that also occurs somewhere else could be swapped into a Keep or an idea he never marked (security review).
+/// Every other take is kept only when the draft with it swapped in passes the checks the draft itself passed
+/// ([`refusals`]: every Keep byte for byte, no unmarked idea gone), so no choice he can make on the phone undoes what
+/// the round was checked for. They are the model's words, shown as the draft is. `(options, dropped)`.
+pub fn checked_options(data: Option<&Value>, marks: &[Mark], base: &str, draft: &str) -> (Vec<Value>, Vec<Value>) {
     let (mut out, mut dropped) = (Vec::new(), Vec::new());
     let mut seen: HashSet<usize> = HashSet::new();
     let rows = data.and_then(|d| d.get("options")).and_then(Value::as_array);
@@ -514,20 +517,33 @@ pub fn checked_options(data: Option<&Value>, marks: &[Mark], draft: &str) -> (Ve
                 texts.push(t);
             }
         }
-        // the take in the draft leads (the phone swaps the others in at its place)
-        let Some(k) = texts.iter().position(|t| draft.contains(t.as_str())) else {
-            dropped.push(json!({"item": item, "reason": "none of its options is in the draft"}));
+        // the take in the draft leads, and only one place in the draft says it
+        let Some(k) = texts.iter().position(|t| draft.matches(t.as_str()).count() == 1) else {
+            dropped.push(json!({"item": item, "reason": "none of its options stands in the draft exactly once"}));
             continue;
         };
-        texts.swap(0, k);
-        texts.truncate(rl::OPTION_COUNT);
-        if texts.len() < 2 {
-            dropped.push(json!({"item": item, "reason": "fewer than two different options"}));
+        let lead = texts.remove(k);
+        let Some(at) = draft.find(lead.as_str()) else {
+            continue;
+        };
+        let mut kept = vec![lead.clone()];
+        for t in texts {
+            if kept.len() >= rl::OPTION_COUNT {
+                break;
+            }
+            let swapped = format!("{}{t}{}", &draft[..at], &draft[at + lead.len()..]);
+            if refusals(base, &swapped, marks).is_empty() {
+                kept.push(t);
+            } else {
+                dropped.push(json!({"item": item, "reason": "an option would have changed a Keep or lost an idea"}));
+            }
+        }
+        if kept.len() < 2 {
+            dropped.push(json!({"item": item, "reason": "fewer than two usable options"}));
             continue;
         }
-        let at = draft.find(texts[0].as_str()).map_or(0, |b| rl::utf16_of(draft, b));
         out.push(
-            json!({"item": item, "quote": marks[item - 1].text, "texts": texts, "at": at,
+            json!({"item": item, "quote": marks[item - 1].text, "texts": kept, "at": rl::utf16_of(draft, at),
                         "draft": true, "label": DRAFT_LABEL}),
         );
     }
@@ -654,7 +670,8 @@ impl Runner for Redline {
                 dropped.extend(d2);
                 if options {
                     // only a round that asked for them carries the key (a round without is the result it always was)
-                    let (opts, d3) = checked_options(r.data.as_ref(), &marks, draft.as_deref().unwrap_or(""));
+                    let (opts, d3) =
+                        checked_options(r.data.as_ref(), &marks, &job.base, draft.as_deref().unwrap_or(""));
                     dropped.extend(d3);
                     base.insert("options".into(), Value::Array(opts));
                 }
@@ -793,7 +810,7 @@ would pick in the draft and list all three under `options`.\n\n    about the doo
             {"item": 4, "texts": ["a second row", "for the same item"]},
             {"item": 2, "texts": ["not asked", "for options"]},
             {"item": 9, "texts": ["no such", "item"]}]});
-        let (o, d) = checked_options(Some(&data), &m, &draft);
+        let (o, d) = checked_options(Some(&data), &m, BIT, &draft);
         assert_eq!(o.len(), 1, "{o:?}");
         assert_eq!(o[0]["item"], 4);
         assert_eq!(
@@ -806,13 +823,61 @@ would pick in the draft and list all three under `options`.\n\n    about the doo
         assert_eq!(d.len(), 3, "{d:?}");
         // none of the takes is in the draft: there is no place to swap them in
         let lost = json!({"options": [{"item": 4, "texts": ["grades my outfits", "has notes on my outfits"]}]});
-        let (o, d) = checked_options(Some(&lost), &m, &draft);
+        let (o, d) = checked_options(Some(&lost), &m, BIT, &draft);
         assert_eq!(o, Vec::<Value>::new());
-        assert_eq!(d[0]["reason"], "none of its options is in the draft");
+        assert_eq!(d[0]["reason"], "none of its options stands in the draft exactly once");
         // one take alone is not a choice
         let one = json!({"options": [{"item": 4, "texts": ["reviews my outfits", ""]}]});
-        assert_eq!(checked_options(Some(&one), &m, &draft).0, Vec::<Value>::new());
-        assert_eq!(checked_options(None, &m, &draft).0, Vec::<Value>::new());
+        assert_eq!(checked_options(Some(&one), &m, BIT, &draft).0, Vec::<Value>::new());
+        assert_eq!(checked_options(None, &m, BIT, &draft).0, Vec::<Value>::new());
+    }
+
+    /// The security review's case: a take that the phone would swap in somewhere he did not ask. A take that stands in
+    /// the draft twice names no one place (the row goes); a take that would change a Keep's words once swapped in is
+    /// left out. The red arm is the rule this replaced (`draft.contains`, every take kept): it keeps both.
+    #[test]
+    fn an_option_can_never_be_swapped_into_a_keep_or_a_second_place() {
+        let j = intent_job();
+        let (m, _) = j.marks();
+        // item 1 is the Keep "My fridge has an app now."; item 4 asked for options on "judges my outfits"
+        let draft = BIT.replace("judges my outfits", "reviews my outfits");
+        // "my" stands in the draft more than once: it names no place
+        let twice = json!({"options": [{"item": 4, "texts": ["my", "grades my outfits"]}]});
+        let (o, d) = checked_options(Some(&twice), &m, BIT, &draft);
+        assert_eq!(o, Vec::<Value>::new(), "a take that is in the draft twice is no anchor");
+        assert_eq!(d.len(), 1);
+        // the lead is the Keep's own sentence (once in the draft): any other take there would change the Keep
+        let keep = json!({"options": [{"item": 4, "texts": ["My fridge has an app now.", "My fridge has two apps now.", "My fridge has an app now. Mostly."]}]});
+        let (o, d) = checked_options(Some(&keep), &m, BIT, &draft);
+        assert_eq!(o.len(), 1, "{o:?} {d:?}");
+        assert_eq!(
+            o[0]["texts"],
+            json!(["My fridge has an app now.", "My fridge has an app now. Mostly."]),
+            "a take that keeps the Keep's words byte for byte may stay; one that changes them is left out"
+        );
+        assert!(
+            d.iter()
+                .any(|x| x["reason"] == "an option would have changed a Keep or lost an idea"),
+            "{d:?}"
+        );
+        // every take the phone can swap in leaves a draft that passes the round's own checks
+        for t in o[0]["texts"].as_array().unwrap() {
+            let swapped = draft.replacen("My fridge has an app now.", t.as_str().unwrap(), 1);
+            assert_eq!(refusals(BIT, &swapped, &m), Vec::<String>::new());
+        }
+        // the red arm: the rule before the review (the take anywhere in the draft, every take kept)
+        let lenient = |texts: &[&str]| texts.iter().any(|t| draft.contains(t)).then_some(texts.len());
+        assert_eq!(
+            lenient(&["my", "grades my outfits"]),
+            Some(2),
+            "the old rule kept the row that names no place"
+        );
+        let broken = draft.replacen("My fridge has an app now.", "My fridge has two apps now.", 1);
+        assert_eq!(
+            refusals(BIT, &broken, &m).len(),
+            1,
+            "and the take it kept breaks the Keep"
+        );
     }
 
     #[test]

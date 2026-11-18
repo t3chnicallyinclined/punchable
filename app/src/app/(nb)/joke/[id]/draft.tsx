@@ -65,8 +65,14 @@ export default function DraftPage() {
   const [choices, setChoices] = useState<D.Choice[]>([]);
   const [auto, setAuto] = useState<boolean[]>([]);
   const keysOf = (cs: readonly D.Choice[], want: (c: D.Choice, i: number) => boolean) => hs.filter((_, i) => want(cs[i] ?? 0, i)).map((h) => D.hunkKey(mine, h));
-  const remember = (cs: readonly D.Choice[], au: readonly boolean[]) =>
-    void savePutBacks(id, job, keysOf(cs, (c) => c === 'mine'), keysOf(cs, (c, i) => c !== 'mine' && !!au[i]));
+  const remember = (cs: readonly D.Choice[], au: readonly boolean[]) => {
+    const back = keysOf(cs, (c) => c === 'mine');
+    const used = keysOf(cs, (c, i) => c !== 'mine' && !!au[i]);
+    // the copy this screen reads from follows what is kept: the next draft (Try again) opens from what he chose in
+    // this sitting, never from what the phone held when the sheet opened (iOS dev review)
+    setKept({ job, back: new Set(back), used: new Set(used) });
+    void savePutBacks(id, job, back, used);
+  };
   // the draft opens the way he left it; a new draft keeps what he put back
   const opened = useRef('');
   useEffect(() => {
@@ -178,11 +184,18 @@ export default function DraftPage() {
     back();
   };
 
-  if (rr.rawError && !rr.data) return <Screen title="New draft" back><ErrorCard error={String(rr.rawError)} onRetry={rr.reload} /></Screen>;
-  if (!rr.data || !d.data) return <Screen title="New draft" back><Skeleton lines={6} height={18} testID="draft-skeleton" /></Screen>;
+  // a sheet always has a way out (HIG/modality), while it loads and when it failed too
+  const closer = native ? (
+    <Stack.Toolbar placement="left">
+      <Stack.Toolbar.Button accessibilityLabel="Close" onPress={back}>Close</Stack.Toolbar.Button>
+    </Stack.Toolbar>
+  ) : null;
+  if (rr.rawError && !rr.data) return <Screen title="New draft" back backLabel="Close">{closer}<ErrorCard error={String(rr.rawError)} onRetry={rr.reload} /></Screen>;
+  if (!rr.data || !d.data) return <Screen title="New draft" back backLabel="Close">{closer}<Skeleton lines={6} height={18} testID="draft-skeleton" /></Screen>;
 
   const ready = state === 'ready';
-  const canUse = online && !busy && ready;
+  // Use it saves the text on screen: not before his choices (what is put back) are in place
+  const canUse = online && !busy && ready && choices.length === hs.length;
   const answers = round?.result?.answers || [];
 
   /** The buttons of the tapped change, under its paragraph (44-pt pills; HIG/context-menus: never only in a menu). */
@@ -259,27 +272,31 @@ export default function DraftPage() {
                 const was = D.brief(mine.slice(hs[i].a0, hs[i].a1) || 'nothing here');
                 return (choices[i] ?? 0) === 'mine'
                   ? [{ name: `usenew:${i}`, label: `Use the new one, in place of: ${was}` }]
-                  : [{ name: `back:${i}`, label: `Put mine back: ${was}` }, ...(D.againTarget(draft, hs[i]) && online && !busy ? [{ name: `again:${i}`, label: 'Try again on this change' }] : [])];
+                  : [{ name: `back:${i}`, label: `Put mine back: ${was}` }, ...(D.againTarget(draft, hs[i]) && online && !busy ? [{ name: `again:${i}`, label: 'Try again on this change' }] : []),
+                    ...(hs[i].options || []).map((o, k) => ({ name: `option:${i}:${k}`, label: `Option ${k + 1}: ${D.brief(o, 60)}` }))];
               }) : undefined;
+              // a change can be one short word: the whole paragraph is the target too (HIG/buttons: 44 pt), opening its
+              // first change; a tap on a change itself picks that one
+              const first = para.runs.find((r) => r.hunk != null)?.hunk ?? null;
               return (
-                <View key={k}>
+                <Pressable key={k} accessible={false} disabled={first == null} hitSlop={{ top: 9, bottom: 9 }} onPress={() => { if (first != null) { haptics.selection(); setOpen(open === first ? null : first); } }}>
                   <Text testID={`draft-para-${k}`} maxFontSizeMultiplier={R.PROSE_CAP} style={DOC}
                     accessibilityLabel={changed ? `Changed. ${para.runs.map((r) => r.text).join('')}` : undefined}
                     accessibilityActions={acts} onAccessibilityAction={acts ? (e) => {
-                      const [what, n] = e.nativeEvent.actionName.split(':');
+                      const [what, n, k] = e.nativeEvent.actionName.split(':');
                       const i = Number(n);
-                      if (what === 'back') choose(i, 'mine'); else if (what === 'usenew') choose(i, 0); else if (what === 'again') void tryAgain(i);
+                      if (what === 'back') choose(i, 'mine'); else if (what === 'usenew') choose(i, 0); else if (what === 'again') void tryAgain(i); else if (what === 'option') choose(i, Number(k));
                     } : undefined}>
                     {para.runs.map((r, j) => (r.hunk == null ? r.text : (
                       // a change: underlined on a tint (the new wording), or dotted with no tint (his words, put back); never colour alone
                       <Text key={j} testID={`draft-change-${r.hunk}`} suppressHighlighting onPress={() => { haptics.selection(); setOpen(open === r.hunk ? null : r.hunk); }}
                         style={r.kind === 'new'
-                          ? { backgroundColor: open === r.hunk ? C.amber : C.amberPill, color: open === r.hunk ? C.bg : C.text, textDecorationLine: 'underline', textDecorationStyle: 'solid', textDecorationColor: C.amber }
-                          : { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: C.mut2, backgroundColor: open === r.hunk ? C.card : 'transparent' }}>{r.text}</Text>
+                          ? { backgroundColor: C.amberPill, color: C.text, fontFamily: open === r.hunk ? F.bold : F.body, textDecorationLine: 'underline', textDecorationStyle: open === r.hunk ? 'double' : 'solid', textDecorationColor: C.amber }
+                          : { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: C.mut2, fontFamily: open === r.hunk ? F.bold : F.body, backgroundColor: open === r.hunk ? C.card : 'transparent' }}>{r.text}</Text>
                     )))}
                   </Text>
                   {open != null && para.ends.includes(open) && pills(open)}
-                </View>
+                </Pressable>
               );
             })}
           </View>

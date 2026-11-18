@@ -18,7 +18,7 @@
 // Every edit is one of the board's own per-item ops (add / remove / move): never a whole-list replace, so two
 // devices open at once don't clobber each other. Undo in the snackbar is the inverse op (a real write by him).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
 import { JokeSummary, decide, patch, undo, useApi, useOnline } from '@/lib/api';
@@ -32,6 +32,8 @@ import { haptics } from '@/lib/haptics';
 import { stackMeta } from '@/rules/bitLines';
 import { mmss } from '@/rules/format';
 import { useBoards } from '@/lib/boards';
+import { getPrefs, onPrefs, setPrefs } from '@/lib/prefs';
+import { togglePin } from '@/rules/notebookRules';
 import { Build, Step } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { stageNotes } from '@/lib/stageNotes';
@@ -130,6 +132,15 @@ export default function SetListScreen() {
   const [typed, setTyped] = useState('');
   const allBits = useApi<{ items: JokeSummary[] }>('/api/jokes?sort=recent&limit=500');
   const addInput = useRef<any>(null);
+  // while he types in the last row the bottom bar is out of the way and the row is scrolled above the keyboard
+  const [adding, setAdding] = useState(false);
+  const scrollRef = useRef<any>(null);
+  const scrollWatch = useMemo(() => ({ keyboardDismissMode: 'interactive' as const }), []);
+  // pinned to the top of Notebook (kept on this device; the row's long press does the same)
+  const pinKey = `set:${id}`;
+  const [pinned, setPinned] = useState(() => getPrefs().pins.includes(pinKey));
+  useEffect(() => onPrefs((x) => setPinned(x.pins.includes(pinKey))), [pinKey]);
+  const pinIt = () => { haptics.selection(); setPrefs({ pins: togglePin(getPrefs().pins, pinKey) }); };
   // the last change made on this screen that can be taken back, for the menu's Undo: no clock on it, unlike the
   // snack's (HIG.md §7; HIG/accessibility: prefer an explicit action to a timed one)
   const [lastUndo, setLastUndo] = useState<{ what: string; run: () => Promise<void> } | null>(null);
@@ -176,6 +187,16 @@ export default function SetListScreen() {
   const steps = B?.steps || [];
   const inSet = useMemo(() => steps.map((x, i) => ({ joke_id: x.joke_id, position: i })), [steps]);
   const nameOf = (x: Step) => x.short_name || shortNameOf(x.title);
+  // what the typing row offers for his letters, and the name a new bit would get
+  const found = SP.offers(allBits.data?.items || [], steps.map((x) => x.joke_id), typed);
+  const newName = online ? SP.newBitName(allBits.data?.items || [], typed) : null;
+  const offered = found.length + (newName ? 1 : 0);
+  // VoiceOver hears the list under the field change (it is drawn below the cursor, where it would not be found)
+  useEffect(() => {
+    if (!adding || !SP.asked(typed)) return;
+    const t = setTimeout(() => AccessibilityInfo.announceForAccessibilityWithOptions(offered ? `${offered} to choose from` : 'Nothing by that name', { queue: true }), 600);
+    return () => clearTimeout(t);
+  }, [offered, adding, typed]);
   const titleOf = (j: string) => { const x = steps.find((y) => y.joke_id === j); return x ? nameOf(x) : ''; };
   // the notes sheet reads the build from lib/stageNotes (no fetch); no onNext here, so its footer opens the bit
   const openNotes = (i: number) => {
@@ -256,10 +277,6 @@ export default function SetListScreen() {
   const target = B.board.target_s;
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
-  // what the typing row offers for his letters, and the name a new bit would get
-  const taken = new Set(steps.map((x) => x.joke_id));
-  const found = SP.offers(allBits.data?.items || [], taken, typed);
-  const newName = online ? SP.newBitName(allBits.data?.items || [], typed) : null;
   // the walk-through (SPEC 2026-11-16 Slice 5): Record (sound) or Film, one bit at a time with his notes
   const stage = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'sound' } } as any);
   const film = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'video' } } as any);
@@ -306,6 +323,7 @@ export default function SetListScreen() {
     { label: 'Add a bit that fits…', onPress: () => openAdd({ mode: 'add' }), testID: 'list-add-fits' },
     { label: 'Length…', onPress: openLength, testID: 'list-length' },
     { label: seams ? 'Hide how the bits connect' : 'Show how the bits connect', onPress: () => setSeams((v) => !v), testID: 'list-seams' },
+    { label: pinned ? 'Unpin from the top' : 'Pin to the top', onPress: pinIt, testID: 'list-pin' },
     { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
     { label: 'Share…', onPress: share, testID: 'list-share' },
     ...(topic ? [{ label: 'Draft it as one piece…', onPress: draftOne, testID: 'list-draft-one' }] : []),
@@ -334,7 +352,7 @@ export default function SetListScreen() {
   );
 
   return (
-    <Screen title={B.board.title} testID="setlist-screen" back backLabel="Notebook" onRefresh={b.reload} bar={bar}
+    <Screen title={B.board.title} testID="setlist-screen" back backLabel="Notebook" onRefresh={b.reload} bar={adding ? undefined : bar} scrollRef={scrollRef} scrollWatch={scrollWatch}
       // the set's name is the big title field under the bar, so the bar itself stays empty (as on a bit's page)
       nativeHeader={{ headerTitle: () => null }}
       right={native ? undefined : <IconBtn testID="list-more" label="More: undo, length, duplicate, share or delete the set" onPress={() => setListMenu(true)}><Icon name="more" size={22} color={C.amber} /></IconBtn>}>
@@ -346,6 +364,7 @@ export default function SetListScreen() {
             <Stack.Toolbar.MenuAction icon="text.badge.plus" onPress={() => openAdd({ mode: 'add' })}>Add a bit that fits…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="link" isOn={seams} onPress={() => setSeams((v) => !v)}>Show how the bits connect</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon={pinned ? 'pin.slash' : 'pin'} onPress={pinIt}>{pinned ? 'Unpin from the top' : 'Pin to the top'}</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
             {!!topic && <Stack.Toolbar.MenuAction icon="sparkles" onPress={draftOne}>Draft it as one piece…</Stack.Toolbar.MenuAction>}
@@ -354,7 +373,7 @@ export default function SetListScreen() {
         </Stack.Toolbar>
       )}
       <View style={{ gap: 4 }}>
-        <SetTitle key={`${id}|${B.board.title}`} value={B.board.title} editable={online} autoFocus={title} onSave={(t) => { setTitle(false); saveTitle(t); }} />
+        <SetTitle key={id} value={B.board.title} editable={online} autoFocus={title} onSave={(t) => { setTitle(false); saveTitle(t); }} />
         {/* the mockup's line; a tap sets how long he has (HIG/typography: Subheadline) */}
         <Pressable testID="list-summary" accessibilityRole="button" accessibilityLabel={`${SP.summaryLine(steps.length, B.runtime_s, target)}. ${B.status_words}`} accessibilityHint="Sets how long the slot is" onPress={openLength} style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text testID="list-runtime" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 15, color: B.status === 'over' ? C.gapText : C.mut2 }}>{SP.summaryLine(steps.length, B.runtime_s, target)}</Text>
@@ -395,6 +414,7 @@ export default function SetListScreen() {
           <View style={{ width: 44, alignItems: 'center' }}><Icon name="plus" size={18} color={C.mut2} /></View>
           <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.body, fontSize: 17, color: C.mut2, textAlign: 'right' }}>{steps.length + 1}</Text>
           <TextInput ref={addInput} testID="add-input" value={typed} onChangeText={setTyped} editable={online} autoCapitalize="none" autoCorrect={false} returnKeyType="done"
+            onFocus={() => { setAdding(true); setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 250); }} onBlur={() => setAdding(false)}
             submitBehavior="submit" blurOnSubmit={false} onSubmitEditing={() => { if (found.length) addOffered(found[0]); else if (newName) addNew(newName); }}
             placeholder={online ? (steps.length ? 'Add a bit' : 'Add a bit: type its name') : 'Add a bit · offline'} placeholderTextColor={C.dim}
             accessibilityLabel="Add a bit" accessibilityHint="Type its name; the bits that match are listed under this field" maxFontSizeMultiplier={1.6}
@@ -465,14 +485,22 @@ function ShortNameForm({ x, onSave }: { x: Step; onSave: (v: string) => void }) 
 function SetTitle({ value, editable, autoFocus, onSave }: { value: string; editable: boolean; autoFocus?: boolean; onSave: (t: string) => void }) {
   const [v, setV] = useState(value);
   const sent = useRef(value);
+  const [inField, setInField] = useState(false);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    if (!inField) setV(value);
+  }
+  useEffect(() => { if (!inField) sent.current = value; }, [value, inField]);
   const leave = () => {
+    setInField(false);
     const t = v.replace(/\s+/g, ' ').trim();
     if (!t || t === sent.current) return;
     sent.current = t;
     onSave(t);
   };
   return (
-    <TextInput testID="list-title" value={v} onChangeText={(t) => setV(t.replace(/\n/g, ' '))} editable={editable} autoFocus={autoFocus} multiline scrollEnabled={false}
+    <TextInput testID="list-title" onFocus={() => setInField(true)} value={v} onChangeText={(t) => setV(t.replace(/\n/g, ' '))} editable={editable} autoFocus={autoFocus} multiline scrollEnabled={false}
       submitBehavior="blurAndSubmit" blurOnSubmit returnKeyType="done" onBlur={leave} maxLength={120}
       accessibilityLabel="Set title" accessibilityHint="Renames the set when you leave the field" maxFontSizeMultiplier={1.8} placeholder="Title" placeholderTextColor={C.dim}
       style={[{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text, padding: 0, margin: 0 }, native ? null : ({ outlineStyle: 'none' } as any)]} />

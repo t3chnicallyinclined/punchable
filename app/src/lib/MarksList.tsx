@@ -3,7 +3,7 @@
 // order: how he asked (Funnier, Shorter, 3 options, Note), the words it is on, and his note ("Your note: …"). A tap
 // opens the one sheet a mark has: its note, and Remove. This replaces the marks tray. A mark whose words he has since
 // rewritten is shown as such and is never sent (rules/markRules placed).
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { C, F, linkColor } from './theme';
 import { Btn, Sheet, SheetHead, T } from './ui';
@@ -22,6 +22,10 @@ export function MarksList({ text, marks, editing, onEdit, onSave, onRemove, test
 }) {
   const rows = placed(text(), [...marks]);
   const open = editing ? marks.find((m) => m.id === editing) || null : null;
+  // what is in the note field now: a tap outside the sheet, or a swipe down, keeps it exactly as Done does (HIG/sheets:
+  // unsaved words are never dropped without a word)
+  const typed = useRef<string | null>(null);
+  const close = () => { if (open && typed.current != null) onSave(open.id, typed.current); else onEdit(null); typed.current = null; };
   return (
     <View testID={testID} style={{ gap: 2 }}>
       {rows.map(({ mark, gone }) => {
@@ -44,22 +48,22 @@ export function MarksList({ text, marks, editing, onEdit, onSave, onRemove, test
           </Pressable>
         );
       })}
-      <Sheet visible={!!open} onClose={() => onEdit(null)} label="A mark" testID={testID ? `${testID}-sheet` : undefined}>
-        {open && <NoteForm key={open.id} mark={open} onCancel={() => onEdit(null)} onSave={(n) => onSave(open.id, n)} onRemove={() => onRemove(open.id)} testID={testID} />}
+      <Sheet visible={!!open} onClose={close} label="A mark" testID={testID ? `${testID}-sheet` : undefined}>
+        {open && <NoteForm key={open.id} mark={open} onTyped={(t) => { typed.current = t; }} onCancel={() => { typed.current = null; onEdit(null); }} onSave={(n) => { typed.current = null; onSave(open.id, n); }} onRemove={() => { typed.current = null; onRemove(open.id); }} testID={testID} />}
       </Sheet>
     </View>
   );
 }
 
 /** One mark's sheet: Cancel leading, Done trailing (HIG/sheets), the words it is on, the note, Remove. */
-function NoteForm({ mark, onCancel, onSave, onRemove, testID }: { mark: Mark; onCancel: () => void; onSave: (note: string) => void; onRemove: () => void; testID?: string }) {
+function NoteForm({ mark, onTyped, onCancel, onSave, onRemove, testID }: { mark: Mark; onTyped: (t: string) => void; onCancel: () => void; onSave: (note: string) => void; onRemove: () => void; testID?: string }) {
   const [v, setV] = useState(mark.note);
   const word = askWord(mark);
   return (
     <View style={{ gap: 10 }}>
       <SheetHead title={word === 'Note' ? 'Note' : `${word} · note`} onCancel={onCancel} onDone={() => onSave(v)} testID={testID ? `${testID}-note` : undefined} />
       <T v="mut" numberOfLines={3}>On “{brief(mark.text, 160)}”</T>
-      <TextInput testID={testID ? `${testID}-note-input` : undefined} value={v} onChangeText={setV} multiline autoFocus maxLength={MAX_NOTE} accessibilityLabel="Your note on these words"
+      <TextInput testID={testID ? `${testID}-note-input` : undefined} value={v} onChangeText={(t) => { setV(t); onTyped(t); }} multiline autoFocus maxLength={MAX_NOTE} accessibilityLabel="Your note on these words"
         placeholder={word === 'Note' ? 'What should change here?' : 'Anything to add? (optional)'} placeholderTextColor={C.dim}
         style={{ minHeight: 88, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: C.text, fontFamily: F.body, fontSize: 17, lineHeight: 24 }} />
       <Btn testID={testID ? `${testID}-remove` : undefined} v="ghost" label="Remove this mark" textStyle={{ color: linkColor() }} onPress={onRemove} />

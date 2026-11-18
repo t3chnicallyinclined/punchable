@@ -33,7 +33,9 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
   useEffect(() => {
     if (scrollKey != null) sv.current?.scrollTo?.({ y: 0, animated: true });
   }, [scrollKey]);
-  const barH = bar ? 120 : 0;
+  // the bar's own height once it is laid out (a page's footer grows with the text size); 120 until then
+  const [barMeasured, setBarMeasured] = useState(0);
+  const barH = bar ? barMeasured || 120 : 0;
   const dockH = dock ? 96 : 0;
   // the bottom note (the offline line or the one reason under the bottom button, SPEC 2026-11-03 §3.1): one footnote
   // line pinned above the system's bottom inset, which counts the tab bar (and, INFERRED, the native bottom toolbar)
@@ -115,7 +117,7 @@ function Body({ title, children, back, onBack, right, dock, task, header, testID
           </View>
         )}
         {bar && (
-          <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom, zIndex: 6, paddingBottom: 4, backgroundColor: ground }}>
+          <View testID="say-dock" onLayout={(e) => setBarMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: ins.bottom, zIndex: 6, paddingBottom: 4, backgroundColor: ground }}>
             {bar}
           </View>
         )}

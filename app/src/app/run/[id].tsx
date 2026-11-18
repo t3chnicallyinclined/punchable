@@ -94,7 +94,7 @@ function StageClock({ ms, status, targetS, level, interrupted, live }: { ms: num
   return (
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {live && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: DARK.rec }} />}
+        {live && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.rec }} />}
         <Text testID="run-clock" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.semi, fontSize: 28, color: lit ? C.gapText : C.text, fontVariant: ['tabular-nums'] }}>{clockMs(ms)}</Text>
         <Text testID="run-status" maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 15, color: live ? C.rec : C.mut2 }}>{status}{lit ? ' · light' : ''}</Text>
       </View>
@@ -119,15 +119,18 @@ function StageClock({ ms, status, targetS, level, interrupted, live }: { ms: num
 function HoldToEnd({ onEnd, onAsk, disabled }: { onEnd: () => void; onAsk: () => void; disabled?: boolean }) {
   const [fill] = useState(() => new Animated.Value(0));
   const reduce = useReduceMotion();
-  const held = useRef(false);
-  const down = () => { held.current = false; if (!reduce) Animated.timing(fill, { toValue: 1, duration: RR.HOLD_MS, useNativeDriver: false }).start(); };
-  const up = () => { fill.stopAnimation(); fill.setValue(0); };
+  // the words change while he holds, so the hold is seen without the bar's motion too (Reduce Motion; no haptic: the
+  // microphone is live)
+  const [holding, setHolding] = useState(false);
+  const down = () => { setHolding(true); if (!reduce) Animated.timing(fill, { toValue: 1, duration: RR.HOLD_MS, useNativeDriver: false }).start(); };
+  const up = () => { setHolding(false); fill.stopAnimation(); fill.setValue(0); };
   return (
     <Pressable testID="run-end" accessibilityRole="button" accessibilityLabel="End the set" accessibilityHint="Hold to end and save. Double tap for Save, Discard or Keep going"
       accessibilityState={{ disabled: !!disabled }} disabled={disabled} delayLongPress={RR.HOLD_MS}
-      onPressIn={down} onPressOut={up} onLongPress={() => { held.current = true; up(); onEnd(); }} onPress={() => { if (!held.current) onAsk(); }}
+      // a long press never also fires onPress (react-native Pressability): the tap is the question, the hold is the end
+      onPressIn={down} onPressOut={up} onLongPress={() => { up(); onEnd(); }} onPress={onAsk}
       style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled ? 0.4 : 1 }}>
-      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 17, color: C.gapText }}>Hold to end the set</Text>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: holding ? F.semi : F.body, fontSize: 17, color: C.gapText }}>{holding ? 'Keep holding…' : 'Hold to end the set'}</Text>
       <View style={{ width: 160, height: 3, borderRadius: 2, backgroundColor: C.card, overflow: 'hidden' }}>
         <Animated.View style={{ height: '100%', backgroundColor: C.gapText, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
       </View>
@@ -257,8 +260,10 @@ function RunSound({ id, video }: { id: string; video: boolean }) {
   // while it tapes the dock is the stage's (the mockup): what comes next, Back and Next at 84 pt, Hold to end. Before
   // the disc it is the recorder's own dock: nothing tapes until the red disc.
   const names = bits.map((x) => x.name);
+  // the stage's dock is taller than the recorder's (and taller again with Resume): the words get that much room under them
+  const [dockH, setDockH] = useState(0);
   const stageDock = (
-    <View testID="run-stage-dock" style={{ gap: 14 }}>
+    <View testID="run-stage-dock" onLayout={(e) => setDockH(Math.ceil(e.nativeEvent.layout.height))} style={{ gap: 14 }}>
       <Text testID="run-next-line" maxFontSizeMultiplier={1.4} numberOfLines={1} style={{ fontFamily: F.body, fontSize: 17, color: C.mut2 }}>{RR.nextLine(names, run.i)}</Text>
       {(intr || rec === 'paused') && (
         // a call, or his own Pause: one 60-pt Resume (the standing rule of the recorder), above the two keys
@@ -300,7 +305,7 @@ function RunSound({ id, video }: { id: string; video: boolean }) {
           <BitPane step={steps[run.i]} i={run.i} n={steps.length} targetS={target} view={view} onToggle={() => setView((v) => (v === 'notes' ? 'lines' : 'notes'))} />
           {rec === 'idle' && <T v="small" style={{ textAlign: 'center' }}>Tap the red button to record · Next marks where each bit ends</T>}
           {/* the stage's dock is taller than the recorder's: room under the words so the last line clears it */}
-          {taping && <View style={{ height: 150 }} />}
+          {taping && <View style={{ height: Math.max(0, (dockH || 230) - 96) + 24 }} />}
         </View>
       )}
     </Screen>

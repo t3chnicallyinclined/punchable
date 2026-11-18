@@ -130,6 +130,8 @@ export default function Notebook() {
     return () => { alive = false; };
   }, [])); // eslint-disable-line react-hooks/exhaustive-deps
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
+  // one function for every row, so a keystroke in the search does not re-draw the rows on screen (memo)
+  const rowMenu = useCallback((r: N.Row) => setMenu({ title: r.title, items: [{ label: getPrefs().pins.includes(r.key) ? 'Unpin' : 'Pin', onPress: () => togglePin(r.key) }] }), [togglePin]);
   const now = useMemo(() => new Date(), [list.data, boards.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = useMemo(() => {
@@ -294,13 +296,13 @@ export default function Notebook() {
             const rec = recs.find((x) => x.id === item.rec);
             return rec ? <View testID={`nb-${item.key}`}><RecRow r={rec} /></View> : null;
           }
-          return <NbRow r={item} pinned={pins.includes(item.key)} onPin={togglePin} onMenu={(r) => setMenu({ title: r.title, items: [{ label: pins.includes(r.key) ? 'Unpin' : 'Pin', onPress: () => togglePin(r.key) }] })} />;
+          return <NbRow r={item} pinned={pins.includes(item.key)} onPin={togglePin} onMenu={rowMenu} />;
         }}
         renderSectionHeader={({ section }) => (
           <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', color: C.mut2, paddingTop: 18, paddingBottom: 6, backgroundColor: C.bg }}>{section.title}</Text>
         )}
         initialNumToRender={16} windowSize={9} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
-        contentContainerStyle={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 12, paddingBottom: 140, maxWidth: wide ? 1120 : 720, width: '100%', alignSelf: 'center' }}
+        contentContainerStyle={{ paddingHorizontal: wide ? 32 : 20, paddingTop: 12, paddingBottom: 24, maxWidth: wide ? 1120 : 720, width: '100%', alignSelf: 'center' }}
         ListHeaderComponent={header} ListFooterComponent={footer}
         ListEmptyComponent={loading ? <Skeleton lines={8} height={18} testID="nb-skeleton" />
           : list.rawError && !list.data ? <ErrorCard error={list.rawError} onRetry={list.reload} />

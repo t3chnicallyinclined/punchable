@@ -12,7 +12,7 @@
 // bar and never the page. Every target is 44 pt and says its name; VoiceOver hears the bar change face once.
 // Rules: rules/pageRules.ts.
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
+import { AccessibilityInfo, PixelRatio, Pressable, Text, View } from 'react-native';
 import { BarGround } from './BarGround';
 import { Icon } from './Icon';
 import { C, F } from './theme';
@@ -107,8 +107,11 @@ export const PageBar = forwardRef<PageBarHandle, {
                 // lit = marked that way: a filled ground and a check, never colour alone (HIG/color)
                 backgroundColor: on[a.k] ? C.amber : pressed ? C.card2 : C.card,
               })}>
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} maxFontSizeMultiplier={BAR_CAP}
-                style={{ fontFamily: F.semi, fontSize: 15, color: on[a.k] ? C.bg : a.k === 'note' ? C.text : C.amber }}>{on[a.k] ? `✓ ${a.label}` : a.label}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+                {on[a.k] && <Icon name="check" size={14} color={C.bg} sw={2.6} />}
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} maxFontSizeMultiplier={BAR_CAP}
+                  style={{ flexShrink: 1, fontFamily: F.semi, fontSize: 15, color: on[a.k] ? C.bg : a.k === 'note' ? C.text : C.amber }}>{a.label}</Text>
+              </View>
             </Pressable>
           ))}
         </View>
@@ -117,13 +120,16 @@ export const PageBar = forwardRef<PageBarHandle, {
   }
 
   const punchOff = p.punch.does === 'none';
+  // at the larger text sizes the two side buttons are their symbols alone (their names stay for VoiceOver), so the
+  // main button's words always fit (HIG/typography: never truncate the one action)
+  const tight = PixelRatio.getFontScale() >= 1.3;
   const side = (testID: string, label: string, icon: 'mic' | 'video', onPress: () => void, off?: string | null) => (
     <Pressable testID={p.testID ? `${p.testID}-${testID}` : undefined} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={off || undefined}
       accessibilityState={{ disabled: !!off }} disabled={!!off} onPress={onPress}
       style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: pressed ? C.card2 : 'transparent', opacity: off ? 0.45 : 1 })}>
       {/* the label colour, never red: red is "recording now" (HIG/color: one meaning per colour) */}
       <Icon name={icon} size={20} color={C.text} />
-      <Text numberOfLines={1} maxFontSizeMultiplier={BAR_CAP} style={{ fontFamily: F.body, fontSize: 15, color: C.text }}>{label}</Text>
+      {!tight && <Text numberOfLines={1} maxFontSizeMultiplier={BAR_CAP} style={{ fontFamily: F.body, fontSize: 15, color: C.text }}>{label}</Text>}
     </Pressable>
   );
   return (
@@ -134,9 +140,9 @@ export const PageBar = forwardRef<PageBarHandle, {
         {side('film', 'Film it', 'video', p.onFilm, p.filmOff)}
         <Pressable testID={p.testID ? `${p.testID}-punch` : undefined} accessibilityRole="button" accessibilityLabel={p.punch.label} accessibilityHint={p.punch.hint}
           accessibilityState={{ disabled: punchOff }} disabled={punchOff} onPress={p.onPunch}
-          style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 16, borderRadius: 22, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.amber, opacity: punchOff ? 0.45 : pressed ? 0.85 : 1 })}>
+          style={({ pressed }) => ({ minHeight: 44, flexShrink: 1, paddingHorizontal: 16, borderRadius: 22, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.amber, opacity: punchOff ? 0.45 : pressed ? 0.85 : 1 })}>
           <Icon name="spark" size={18} color={C.bg} />
-          <Text numberOfLines={1} maxFontSizeMultiplier={BAR_CAP} style={{ fontFamily: F.semi, fontSize: 15, color: C.bg }}>{p.punch.label}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} maxFontSizeMultiplier={BAR_CAP} style={{ flexShrink: 1, fontFamily: F.semi, fontSize: 15, color: C.bg }}>{p.punch.label}</Text>
         </Pressable>
       </View>
     </BarGround>

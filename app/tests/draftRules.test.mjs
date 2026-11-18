@@ -165,6 +165,8 @@ if (red) {
   check(D.compose("x\r\ny", "x\r\nz", D.hunks("x\r\ny", "x\r\nz"), [0]) === "x\nz", "Windows line ends are read as line ends");
   const none = D.hunks(MINE, DRAFT, [{ item: 1, texts: ["not in the draft", "another"], at: 0 }]);
   check(none.every((h) => !h.options), "options whose take is not in the draft are left out");
+  const twice = D.hunks(MINE, DRAFT, [{ item: 1, texts: ["the", "a"], at: 0 }]);
+  check(twice.every((h) => !h.options), "options whose take stands in the draft more than once are left out: they name no one place");
 }
 
 if (fails.length) {
