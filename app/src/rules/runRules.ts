@@ -125,6 +125,22 @@ export function backControl(i: number): { label: string; disabled: boolean } {
   return { label: 'Back', disabled: i <= 0 };
 }
 
+/** On stage (SPEC 2026-11-17 one notebook, screen 6): the small line beside the clock, "2 of 5 · 8 min slot" (the slot
+ *  left out when the set has none). */
+export function stageHeader(i: number, n: number, targetS?: number | null): string {
+  const at = n > 0 ? `${Math.min(i, n - 1) + 1} of ${n}` : '';
+  const slot = targetS && targetS > 0 ? `${Math.round(targetS / 60)} min slot` : '';
+  return [at, slot].filter(Boolean).join(' · ');
+}
+/** The line over Back and Next: the bit that comes after this one by name, so a glance says what is coming; on the
+ *  last bit there is none. */
+export function nextLine(names: readonly string[], i: number): string {
+  return i >= 0 && i < names.length - 1 ? `Next: ${names[i + 1]}` : names.length ? 'Last bit' : '';
+}
+/** How long "Hold to end the set" is held before the set is saved: long enough that a brush never ends a set, short
+ *  enough to do with one thumb while walking off. */
+export const HOLD_MS = 700;
+
 /** A filmed set's longest take (§4.4: video ends at a cap; Film it's one bit keeps ten minutes). Twenty minutes covers
  *  a feature spot; heat and file size at that length are a device check. */
 export const SET_TAKE_S = 20 * 60;

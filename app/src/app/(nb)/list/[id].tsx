@@ -1,3 +1,9 @@
+// A set is a page (docs/design/SPEC-2026-11-17-one-notebook.md screen 5): the title is a field at the top (tap and
+// type); under it "5 bits · about 7 min · you have 8" (tap it: the slot's length); a numbered list of bits, each with
+// his notes under it and its time; a last row he types in: `@` plus letters, or just letters, lists the bits that
+// match (rules/setPageRules offers: never one already here) and "New bit called …"; the grip moves a row (hold and
+// drag; VoiceOver: Move up / Move down); at the bottom Record this set and Film (the walk-through, /run/<id>). The
+// seams between bits are off until ⋯ › Show how the bits connect. What follows is the screen as it was built before:
 // Inside a set list (MixBuild, docs/UX_2026-10.md). A set list IS a board: this screen is the board's set builder
 // (GET /api/boards/<id>/build) drawn as the paper list: numbered rows with the short name and the time, his bullet
 // notes under each (lib/BulletNotes; SPEC 2026-11-16 §3.3: Return adds a note, Backspace on an empty one removes it;
@@ -15,7 +21,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PixelRatio, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { actionSheet } from '@/lib/actionSheet';
-import { decide, patch, undo, useApi, useOnline } from '@/lib/api';
+import { JokeSummary, decide, patch, undo, useApi, useOnline } from '@/lib/api';
+import { BarGround } from '@/lib/BarGround';
 import { creative } from '@/lib/creative';
 import { AddJokeSheet, Pick } from '@/lib/AddJokeSheet';
 import { BridgeSheet, Gap } from '@/lib/bridge';
@@ -30,12 +37,12 @@ import { shortNameOf } from '@/lib/say';
 import { stageNotes } from '@/lib/stageNotes';
 import { AlsoKept, useTopicOf } from '@/lib/AlsoKept';
 import { Seam, seamLabel, seamOf, undoLabel } from '@/rules/setNoteRules';
+import * as SP from '@/rules/setPageRules';
 import { SwipeRow } from '@/lib/SwipeRow';
 import { RowMenu, rowActions } from '@/lib/RowMenu';
 import { C, F } from '@/lib/theme';
-import { AIBadge, Btn, Empty, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
+import { AIBadge, Btn, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
-import { TopBar } from '@/lib/TopBar';
 
 const enc = encodeURIComponent;
 const boardPatch = (id: string, body: any) => patch<any>(`/api/boards/${enc(id)}`, body);
@@ -48,22 +55,17 @@ type Len = { mins: number; custom: string };
 const lenMinutes = (l: Len) => (l.custom.trim() ? Number(l.custom) : l.mins);
 const lenValid = (l: Len) => { const m = lenMinutes(l); return Number.isInteger(m) && m >= 1 && m <= 240; };
 
-function Row({ x, i, handle, onOpen, onMenu, onNotes, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; onNotes: () => void; items: MenuItem[] }) {
+function Row({ x, i, handle, onOpen, onMenu, items }: { x: Step; i: number; handle: React.ReactNode; onOpen: () => void; onMenu: () => void; items: MenuItem[] }) {
   const name = x.short_name || shortNameOf(x.title);
   return (
-    <View testID={`row-${i}`} style={{ borderRadius: 16, paddingVertical: 4 }}>
+    <View testID={`row-${i}`} style={{ borderRadius: 16, paddingVertical: 2 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${i + 1}. ${name}, ${mmss(x.duration_s)}. Open the bit; long press for actions`} onPress={onOpen} onLongPress={ios ? undefined : onMenu} delayLongPress={350}
         {...rowActions(items)}
-        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, paddingRight: 4, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
+        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingRight: 4, borderRadius: 16, backgroundColor: st.hovered ? C.card2 : 'transparent' })}>
         {handle}
-        <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.semi, fontSize: 14, color: C.mut2, textAlign: 'right' }}>{i + 1}</Text>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text testID={`row-name-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.bold, fontSize: 17, color: C.text }}>{name}</Text>
-          {!!x.stage_line && <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 12, color: x.proven ? C.green : C.mut2 }}>{x.stage_line}</Text>}
-        </View>
-        <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 14, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{mmss(x.duration_s)}</Text>
-        {/* HIG/accessibility: the notes have a button, not only a menu item; 44 pt, its own VoiceOver element */}
-        <IconBtn testID={`row-notes-${i}`} label={`Notes for ${name}`} onPress={onNotes}><Icon name="lines" size={20} color={C.mut2} /></IconBtn>
+        <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.body, fontSize: 17, color: C.mut2, textAlign: 'right' }}>{i + 1}</Text>
+        <Text testID={`row-name-${i}`} numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ flex: 1, minWidth: 0, fontFamily: F.semi, fontSize: 18, color: C.text }}>{name}</Text>
+        <Text testID={`row-time-${i}`} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 15, color: C.mut2, fontVariant: ['tabular-nums'] }}>{x.estimated ? '~' : ''}{mmss(x.duration_s)}</Text>
         {/* HIG/context-menus: one of a context menu or an edit menu, not both; the phone has the long press (and the row's VoiceOver actions) */}
         {!native && <Pressable testID={`row-more-${i}`} accessibilityRole="button" accessibilityLabel={`More for ${name}`} onPress={onMenu} hitSlop={6} style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           <Text style={{ color: C.mut2, fontSize: 18, fontFamily: F.g7 }}>…</Text>
@@ -122,6 +124,12 @@ export default function SetListScreen() {
   const [menu, setMenu] = useState<{ title: string; items: MenuItem[] } | null>(null);
   const [listMenu, setListMenu] = useState(false);
   const [openSeam, setOpenSeam] = useState<string | null>(null);
+  // the seams between bits (why two sit together) are drawn only when he asks: the page is the list first
+  const [seams, setSeams] = useState(false);
+  // the last row: what he is typing (`@par`), and every bit it can find (the notebook's own list, already on the phone)
+  const [typed, setTyped] = useState('');
+  const allBits = useApi<{ items: JokeSummary[] }>('/api/jokes?sort=recent&limit=500');
+  const addInput = useRef<any>(null);
   // the last change made on this screen that can be taken back, for the menu's Undo: no clock on it, unlike the
   // snack's (HIG.md §7; HIG/accessibility: prefer an explicit action to a timed one)
   const [lastUndo, setLastUndo] = useState<{ what: string; run: () => Promise<void> } | null>(null);
@@ -188,6 +196,29 @@ export default function SetListScreen() {
     setAdd(null);
     act(() => creative.addItem(id, pk.joke_id), `Added ${pk.short_name}`, () => boardPatch(id, { remove: { joke_id: pk.joke_id } }));
   };
+  /** A tap on a bit the typing row offers: it goes on the end of the set, the row empties and keeps the cursor. */
+  const addOffered = (j: JokeSummary) => {
+    setTyped('');
+    act(() => creative.addItem(id, j.id), `Added ${SP.nameOf(j)}`, () => boardPatch(id, { remove: { joke_id: j.id } }));
+  };
+  /** "New bit called …": a page with that title is made and put on the end of the set (he writes it when he opens it). */
+  const addNew = (name: string) => {
+    setTyped('');
+    let made: { id: string; indexes: number[] } | null = null;
+    act(async () => {
+      const w = await decide({ target: 'node', action: 'add', after: { type: 'joke', title: name, stage: 'idea' }, reason: 'a new bit named on a set' });
+      const jid = w.decisions?.[0]?.id;
+      if (!jid) throw new Error('no id came back');
+      made = { id: jid, indexes: w.indexes };
+      await creative.addItem(id, jid);
+      void allBits.reload();
+    }, `Made “${name}” and added it`, async () => {
+      if (!made) return;
+      await boardPatch(id, { remove: { joke_id: made.id } });
+      await undo(made.indexes);
+      void allBits.reload();
+    });
+  };
   const swap = (at: number, old: Step, pk: Pick) => {
     setAdd(null);
     act(() => boardPatch(id, { add: { joke_id: pk.joke_id, at }, remove: { joke_id: old.joke_id } }), `Swapped ${nameOf(old)} for ${pk.short_name}`,
@@ -220,12 +251,15 @@ export default function SetListScreen() {
     setMenu({ title: nameOf(x), items: rowItems(x, i) });
   };
 
-  if (b.rawError && !B) return <Screen title="Set list" back backLabel="Sets"><ErrorCard error={String(b.rawError)} onRetry={b.reload} /></Screen>;
-  if (!B) return <Screen title="Set list" back backLabel="Sets"><Skeleton lines={6} height={22} testID="setlist-skeleton" /></Screen>;
+  if (b.rawError && !B) return <Screen title="Set" back backLabel="Notebook"><ErrorCard error={String(b.rawError)} onRetry={b.reload} /></Screen>;
+  if (!B) return <Screen title="Set" back backLabel="Notebook"><Skeleton lines={6} height={22} testID="setlist-skeleton" /></Screen>;
   const target = B.board.target_s;
   const left = target ? target - B.runtime_s : null;
   const pct = target ? Math.min(100, (B.runtime_s / target) * 100) : 0;
-  const addLabel = `Add a bit${left != null ? ` · ${left > 0 ? `${mmss(left)} left` : 'full'}` : ''}`;
+  // what the typing row offers for his letters, and the name a new bit would get
+  const taken = new Set(steps.map((x) => x.joke_id));
+  const found = SP.offers(allBits.data?.items || [], taken, typed);
+  const newName = online ? SP.newBitName(allBits.data?.items || [], typed) : null;
   // the walk-through (SPEC 2026-11-16 Slice 5): Record (sound) or Film, one bit at a time with his notes
   const stage = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'sound' } } as any);
   const film = () => router.push({ pathname: '/run/[id]', params: { id, mode: 'video' } } as any);
@@ -247,7 +281,7 @@ export default function SetListScreen() {
   };
   const del = () => actionSheet({ title: `Delete ${B.board.title}?`, message: 'The bits stay; only this list goes.', options: [
     { label: 'Delete the set list', destructive: true, onPress: async () => {
-      try { await boardPatch(id, { delete: true }); ui.snack(`Deleted ${B.board.title}`); if (router.canGoBack()) router.back(); else router.navigate('/sets' as any); }
+      try { await boardPatch(id, { delete: true }); ui.snack(`Deleted ${B.board.title}`); if (router.canGoBack()) router.back(); else router.navigate('/' as any); }
       catch (e: any) { ui.snack(`Couldn't delete: ${e.message}`); }
     } },
     { label: 'Cancel', cancel: true },
@@ -269,69 +303,70 @@ export default function SetListScreen() {
   };
   const listItems: MenuItem[] = [
     { label: undoLabel(lastUndo?.what), onPress: () => void undoLast(), disabled: !lastUndo, testID: 'list-undo' },
-    { label: 'Rename…', onPress: () => setTitle(true), testID: 'list-rename' },
+    { label: 'Add a bit that fits…', onPress: () => openAdd({ mode: 'add' }), testID: 'list-add-fits' },
     { label: 'Length…', onPress: openLength, testID: 'list-length' },
+    { label: seams ? 'Hide how the bits connect' : 'Show how the bits connect', onPress: () => setSeams((v) => !v), testID: 'list-seams' },
     { label: 'Duplicate', onPress: duplicate, testID: 'list-duplicate' },
     { label: 'Share…', onPress: share, testID: 'list-share' },
     ...(topic ? [{ label: 'Draft it as one piece…', onPress: draftOne, testID: 'list-draft-one' }] : []),
     { label: 'Delete', onPress: del, destructive: true, testID: 'list-delete' },
   ];
 
-  const header = native ? undefined : (
-    <TopBar title={B.board.title} back backLabel="Sets" onBack={() => (router.canGoBack() ? router.back() : router.navigate('/sets' as any))}
-      right={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable testID="list-more" accessibilityRole="button" accessibilityLabel="More: rename, set the length, duplicate, share or delete the set list" onPress={() => setListMenu(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.amber, fontSize: 20, fontFamily: F.g7 }}>…</Text></Pressable>
-        <TextBtn testID="stage" label="Record" onPress={stage} />
-      </View>} />
+  const saveTitle = (t: string) => { const old = B.board.title; act(() => boardPatch(id, { title: t }), `Renamed to ${t}`, () => boardPatch(id, { title: old })); };
+  // the mockup's bottom: Record this set, and Film beside it. The record dot is red, the button is not: nothing tapes
+  // until the disc on the next screen (HIG/color: red means recording)
+  const bar = (
+    <BarGround testID="set-bar">
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6 }}>
+        <Pressable testID="stage" accessibilityRole="button" accessibilityLabel="Record this set" accessibilityHint="Opens the walk-through; nothing tapes until the red disc" onPress={stage}
+          style={({ pressed }) => ({ flex: 1, minHeight: 50, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: pressed ? C.card2 : C.card })}>
+          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.rec }} />
+          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.bold, fontSize: 17, color: C.text }}>Record this set</Text>
+        </Pressable>
+        {native && (
+          <Pressable testID="film" accessibilityRole="button" accessibilityLabel="Film this set" onPress={film}
+            style={({ pressed }) => ({ width: 50, minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? C.card2 : C.card })}>
+            <Icon name="video" size={22} color={C.text} />
+          </Pressable>
+        )}
+      </View>
+    </BarGround>
   );
 
   return (
-    <Screen title={B.board.title} testID="setlist-screen" header={header} backLabel="Sets" onRefresh={b.reload}
-      dock={native ? undefined : <Btn testID="add-joke" v="primary" label={addLabel} onPress={() => openAdd({ mode: 'add' })} />}>
+    <Screen title={B.board.title} testID="setlist-screen" back backLabel="Notebook" onRefresh={b.reload} bar={bar}
+      // the set's name is the big title field under the bar, so the bar itself stays empty (as on a bit's page)
+      nativeHeader={{ headerTitle: () => null }}
+      right={native ? undefined : <IconBtn testID="list-more" label="More: undo, length, duplicate, share or delete the set" onPress={() => setListMenu(true)}><Icon name="more" size={22} color={C.amber} /></IconBtn>}>
       {native && (
-        <>
-          {/* HIG/toolbars: one prominent action (Record: the record glyph, never play, which means playback) on the trailing side; the rest in a menu; destructive last */}
-          <Stack.Toolbar placement="right">
-            <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel="More">
-              <Stack.Toolbar.MenuAction icon="arrow.uturn.backward" disabled={!lastUndo} onPress={() => void undoLast()}>{undoLabel(lastUndo?.what)}</Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setTitle(true)}>Rename…</Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
-              {!!topic && <Stack.Toolbar.MenuAction icon="sparkles" onPress={draftOne}>Draft it as one piece…</Stack.Toolbar.MenuAction>}
-              <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
-            </Stack.Toolbar.Menu>
-            {/* Film beside Record (design review: "a rant can be a set but its just recorded with video"); Record stays the one prominent action */}
-            <Stack.Toolbar.Button icon="video" accessibilityLabel="Film this set" onPress={film}>Film</Stack.Toolbar.Button>
-            <Stack.Toolbar.Button icon="record.circle" variant="prominent" accessibilityLabel="Record this set" onPress={stage}>Record</Stack.Toolbar.Button>
-          </Stack.Toolbar>
-          {/* the dock becomes a bottom toolbar inside the tab's stack, so the tab bar stays visible (HIG/tab-bars) */}
-          <Stack.Toolbar placement="bottom">
-            <Stack.Toolbar.Spacer />
-            <Stack.Toolbar.Button variant="prominent" accessibilityLabel={addLabel} onPress={() => openAdd({ mode: 'add' })}>{addLabel}</Stack.Toolbar.Button>
-            <Stack.Toolbar.Spacer />
-          </Stack.Toolbar>
-        </>
+        // HIG/toolbars: the rest in a menu; destructive last. Record and Film are the page's bottom bar.
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More">
+            <Stack.Toolbar.MenuAction icon="arrow.uturn.backward" disabled={!lastUndo} onPress={() => void undoLast()}>{undoLabel(lastUndo?.what)}</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="text.badge.plus" onPress={() => openAdd({ mode: 'add' })}>Add a bit that fits…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="timer" onPress={openLength}>Length…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="link" isOn={seams} onPress={() => setSeams((v) => !v)}>Show how the bits connect</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="plus.square.on.square" onPress={duplicate}>Duplicate</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={share}>Share…</Stack.Toolbar.MenuAction>
+            {!!topic && <Stack.Toolbar.MenuAction icon="sparkles" onPress={draftOne}>Draft it as one piece…</Stack.Toolbar.MenuAction>}
+            <Stack.Toolbar.MenuAction icon="trash" destructive onPress={del}>Delete</Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
       )}
-      <View style={{ gap: 6 }}>
-        {!native && <Pressable testID="list-title" accessibilityRole="button" accessibilityLabel={`${B.board.title}. Rename the set list`} onPress={() => setTitle(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: F.black, fontSize: 24, letterSpacing: -0.4, color: C.text }}>{B.board.title} <Text style={{ color: C.amber, fontSize: 16, fontFamily: F.medium }}>Rename</Text></Text>
-        </Pressable>}
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text testID="list-runtime" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 30, letterSpacing: -0.5, color: C.text, fontVariant: ['tabular-nums'] }}>{mmss(B.runtime_s)}</Text>
-          {!!target && <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.medium, fontSize: 16, color: C.mut2 }}>/ {mmss(target)}</Text>}
-          <Text testID="list-status" maxFontSizeMultiplier={1.4} style={{ marginLeft: 8, fontFamily: F.semi, fontSize: 13, color: B.status === 'on' ? C.green : B.status === 'over' ? C.gapText : C.mut2 }}>{B.status_words}</Text>
-        </View>
-        <View style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }} accessibilityLabel={`${Math.round(pct)} percent of the slot`}>
+      <View style={{ gap: 4 }}>
+        <SetTitle key={`${id}|${B.board.title}`} value={B.board.title} editable={online} autoFocus={title} onSave={(t) => { setTitle(false); saveTitle(t); }} />
+        {/* the mockup's line; a tap sets how long he has (HIG/typography: Subheadline) */}
+        <Pressable testID="list-summary" accessibilityRole="button" accessibilityLabel={`${SP.summaryLine(steps.length, B.runtime_s, target)}. ${B.status_words}`} accessibilityHint="Sets how long the slot is" onPress={openLength} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text testID="list-runtime" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 15, color: B.status === 'over' ? C.gapText : C.mut2 }}>{SP.summaryLine(steps.length, B.runtime_s, target)}</Text>
+        </Pressable>
+        <View style={{ height: 4, borderRadius: 2, backgroundColor: C.card, overflow: 'hidden' }} accessibilityLabel={`${Math.round(pct)} percent of the slot`}>
           <View style={{ width: `${pct}%`, height: '100%', backgroundColor: B.status === 'over' ? C.gap : C.amber }} />
         </View>
       </View>
 
-      {/* a fresh list (SPEC 2026-10-30 §3): what to do next, and the name it was born with is one tap from here (44 pt, TextBtn) */}
-      {!steps.length && <Empty text="Nothing on it yet. Add a bit below."><TextBtn testID="list-name-it" label="Name it" accessibilityLabel={`Name it. The list is called ${B.board.title}`} onPress={() => setTitle(true)} /></Empty>}
       <DragList testID="list-rows" items={steps} keyOf={(x) => x.joke_id} onReorder={reorder}
         render={(x: Step, i, handle) => {
-          const seam = i > 0 ? seamOf(x.transition_in) : null;
+          const seam = seams && i > 0 ? seamOf(x.transition_in) : null;
           return (
           <View>
             {seam && (
@@ -344,7 +379,7 @@ export default function SetListScreen() {
               second={{ label: 'Swap', onPress: () => openAdd({ mode: 'swap', at: i, old: x }), testID: `row-swipe-swap-${i}` }}
               onLongPress={ios ? undefined : () => openMenu(x, i)}>
               <RowMenu href={`/joke/${enc(x.joke_id)}`} items={rowItems(x, i)}>
-                <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} onNotes={() => openNotes(i)} />
+                <Row x={x} i={i} handle={handle} items={rowItems(x, i)} onOpen={() => router.push(`/joke/${enc(x.joke_id)}` as any)} onMenu={() => openMenu(x, i)} />
               </RowMenu>
             </SwipeRow>
             {/* his notes for this bit in this set, under its row; they travel with the bit when it is dragged */}
@@ -354,6 +389,35 @@ export default function SetListScreen() {
           </View>
           );
         }} />
+      {/* the last row: type to add (the mockup's `@par`); the list under it is the bits that match, then a new one */}
+      <View testID="add-row" style={{ gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, borderBottomWidth: 1, borderBottomColor: C.hairline }}>
+          <View style={{ width: 44, alignItems: 'center' }}><Icon name="plus" size={18} color={C.mut2} /></View>
+          <Text maxFontSizeMultiplier={1.4} style={{ width: 22, fontFamily: F.body, fontSize: 17, color: C.mut2, textAlign: 'right' }}>{steps.length + 1}</Text>
+          <TextInput ref={addInput} testID="add-input" value={typed} onChangeText={setTyped} editable={online} autoCapitalize="none" autoCorrect={false} returnKeyType="done"
+            submitBehavior="submit" blurOnSubmit={false} onSubmitEditing={() => { if (found.length) addOffered(found[0]); else if (newName) addNew(newName); }}
+            placeholder={online ? (steps.length ? 'Add a bit' : 'Add a bit: type its name') : 'Add a bit · offline'} placeholderTextColor={C.dim}
+            accessibilityLabel="Add a bit" accessibilityHint="Type its name; the bits that match are listed under this field" maxFontSizeMultiplier={1.6}
+            style={[{ flex: 1, minWidth: 0, minHeight: 44, fontFamily: F.body, fontSize: 18, color: C.text, padding: 0 }, native ? null : ({ outlineStyle: 'none' } as any)]} />
+        </View>
+        {(found.length > 0 || !!newName) && (
+          <View testID="add-offers" style={{ borderRadius: 12, backgroundColor: C.card, marginLeft: inset }}>
+            {found.map((j, k) => (
+              <Pressable key={j.id} testID={`add-offer-${k}`} accessibilityRole="button" accessibilityLabel={`Add ${SP.nameOf(j)} to this set`} onPress={() => addOffered(j)}
+                style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: pressed ? C.card2 : 'transparent' })}>
+                <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 16, color: C.text }}>{SP.nameOf(j)}</Text>
+              </Pressable>
+            ))}
+            {!!newName && (
+              <Pressable testID="add-new" accessibilityRole="button" accessibilityLabel={SP.newBitLabel(newName)} accessibilityHint="Makes the bit and adds it to this set" onPress={() => addNew(newName)}
+                style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', backgroundColor: pressed ? C.card2 : 'transparent' })}>
+                <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 16, color: C.amber }}>{SP.newBitLabel(newName)}</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+        <Text testID="add-hint" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 14, color: C.mut2, paddingTop: 6 }}>{SP.HINT}</Text>
+      </View>
       {B.notes.map((n) => <T key={n.rule} v="small" testID={`note-${n.rule}`}>{n.text}</T>)}
 
       {!native && <AddJokeSheet visible={!!add} onClose={() => setAdd(null)} boardId={id} inSet={inSet} fits={B.next} left={left} mode={add?.mode || 'add'}
@@ -363,10 +427,6 @@ export default function SetListScreen() {
       <Sheet visible={!!rename} onClose={() => setRename(null)} label="Rename short name" testID="rename-sheet">
         <SheetHead title="Short name" onCancel={() => setRename(null)} testID="rename" />
         {rename && <ShortNameForm x={rename} onSave={(v) => saveShortName(rename, v)} />}
-      </Sheet>
-      <Sheet visible={title} onClose={() => setTitle(false)} label="Rename the set list" testID="title-sheet">
-        <SheetHead title="Rename the set list" onCancel={() => setTitle(false)} testID="title" />
-        <TitleForm title={B.board.title} onSave={(t) => { setTitle(false); const old = B.board.title; act(() => boardPatch(id, { title: t }), `Renamed to ${t}`, () => boardPatch(id, { title: old })); }} />
       </Sheet>
       {/* HIG/sheets: a short request for one value; Cancel leading, Done trailing (the kit's Sheet until A5's route sheet lands) */}
       <Sheet visible={!!len} onClose={() => setLen(null)} label="How long is the set?" testID="length-sheet">
@@ -400,12 +460,21 @@ function ShortNameForm({ x, onSave }: { x: Step; onSave: (v: string) => void }) 
     </View>
   );
 }
-function TitleForm({ title, onSave }: { title: string; onSave: (t: string) => void }) {
-  const [t, setT] = useState(title);
+/** The set's title: a field he types straight into (HIG/typography Title 1). Leaving it with other words renames the
+ *  set (Undo in the message). `autoFocus` when he came from "Rename" on a new set's message. */
+function SetTitle({ value, editable, autoFocus, onSave }: { value: string; editable: boolean; autoFocus?: boolean; onSave: (t: string) => void }) {
+  const [v, setV] = useState(value);
+  const sent = useRef(value);
+  const leave = () => {
+    const t = v.replace(/\s+/g, ' ').trim();
+    if (!t || t === sent.current) return;
+    sent.current = t;
+    onSave(t);
+  };
   return (
-    <View style={{ gap: 8 }}>
-      <TextInput testID="title-input" value={t} onChangeText={setT} autoFocus clearButtonMode="while-editing" accessibilityLabel="Set list title" style={{ minHeight: 44, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, color: C.text, fontFamily: F.body, fontSize: 16 }} />
-      <Btn label="Save" v="primary" disabled={!t.trim()} onPress={() => onSave(t.trim())} />
-    </View>
+    <TextInput testID="list-title" value={v} onChangeText={(t) => setV(t.replace(/\n/g, ' '))} editable={editable} autoFocus={autoFocus} multiline scrollEnabled={false}
+      submitBehavior="blurAndSubmit" blurOnSubmit returnKeyType="done" onBlur={leave} maxLength={120}
+      accessibilityLabel="Set title" accessibilityHint="Renames the set when you leave the field" maxFontSizeMultiplier={1.8} placeholder="Title" placeholderTextColor={C.dim}
+      style={[{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text, padding: 0, margin: 0 }, native ? null : ({ outlineStyle: 'none' } as any)]} />
   );
 }

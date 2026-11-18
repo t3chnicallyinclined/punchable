@@ -26,7 +26,7 @@ export default function ProfilePage() {
           (HIG/sheets; design review); the pages pushed inside it keep Back */}
       {Platform.OS !== 'web' && (
         <Stack.Toolbar placement="left">
-          <Stack.Toolbar.Button icon="xmark" accessibilityLabel="Close" onPress={() => (router.canDismiss() ? router.dismiss() : router.navigate('/bits' as any))}>Close</Stack.Toolbar.Button>
+          <Stack.Toolbar.Button icon="xmark" accessibilityLabel="Close" onPress={() => (router.canDismiss() ? router.dismiss() : router.navigate('/' as any))}>Close</Stack.Toolbar.Button>
         </Stack.Toolbar>
       )}
       {!sess.enabled ? (

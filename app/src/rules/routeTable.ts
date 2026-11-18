@@ -14,6 +14,9 @@ export const REQUIRED_URLS = [
   '/around', '/setpick', '/marks', '/joke/x/draft', '/usage',
   // SPEC 2026-11-16 Slices 5 and 6: the walk-through, After, the Tapes tab
   '/tapes', '/run/x', '/after/x',
+  // SPEC 2026-11-17 one notebook: the old Bits and Sets roots as lists behind Notebook's ⋯ (/bits, /sets and /tapes
+  // stay above: they open Notebook with their filter)
+  '/allbits', '/allsets',
 ];
 /** Served as static files by the web image (app/public), outside the router. */
 export const STATIC_URLS: Record<string, string> = { '/privacy': 'privacy.html', '/terms': 'terms.html' };

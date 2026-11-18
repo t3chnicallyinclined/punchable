@@ -1,71 +1,28 @@
-// The screen shell on the web: the custom TopBar, the bottom tab bar (phone width) or the sidebar (>= 900 px), the
-// pinned input bar / dock. The phone has its own shell (Screen.native.tsx): native tabs and, from B3, native headers.
+// The screen shell on the web: the custom TopBar, a slim sidebar at >= 900 px (the brand, Notebook, You), the pinned
+// input bar / dock. No tabs (docs/design/SPEC-2026-11-17-one-notebook.md): the app is one list, Notebook, and pages
+// pushed from it. The phone has its own shell (Screen.native.tsx): the system's headers.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from './theme';
 import { useSession } from './auth';
-import { haptics } from './haptics';
 import type { ScreenProps } from './screenTypes';
-import { OfflineStrip, ROOTS, TopBar, goRoot, useBottomNote } from './TopBar';
+import { OfflineStrip, TopBar, goHome, useBottomNote } from './TopBar';
 import { Face, Icon, SignInBtn, useUI, useWide } from './ui';
 
 export type { ScreenProps } from './screenTypes';
 
-// The three tabs: Bits · Sets · Tapes (SPEC 2026-11-16 Slice 6; lib/TopBar ROOTS). Settings and You sit behind the avatar.
-// screens one tap down, and the tab they belong under (the old tabs Write / Boards / Notebook stay as routes)
-const PUSHED_ROOT: Record<string, string> = {
-  joke: 'bits', bit: 'bits', map: 'bits', notes: 'bits', desk: 'bits', notebook: 'bits', shows: 'bits', venue: 'bits', calendar: 'bits',
-  merge: 'bits', write: 'bits', import: 'bits', inbox: 'bits', say: 'bits', ask: 'bits',
-  board: 'sets', builder: 'sets', list: 'sets', archived: 'sets', bitnotes: 'sets', boards: 'sets', workingset: 'sets', setlist: 'sets', myset: 'sets', stage: 'sets',
-  run: 'sets', topic: 'sets', today: 'sets', 'new-topic': 'sets',
-  set: 'tapes', take: 'tapes', after: 'tapes', record: 'tapes', filmed: 'tapes',
-};
-
-function rootOf(pathname: string, last: string) {
-  if (pathname === '/' || pathname === '') return 'bits';
-  const k = pathname.split('/')[1];
-  if (ROOTS.some((r) => r.key === k)) return k;
-  return PUSHED_ROOT[k] && !ROOTS.some((r) => r.key === last) ? PUSHED_ROOT[k] : last;
-}
-
-
-function BottomNav({ active }: { active: string }) {
-  const ins = useSafeAreaInsets();
-  const tab = (r: (typeof ROOTS)[number]) => {
-    const on = active === r.key;
-    return (
-      <Pressable key={r.key} testID={`tab-${r.key}`} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={r.label}
-        onPress={() => { if (!on) haptics.selection(); goRoot(r.key); }} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48 }}>
-        <Icon name={r.key} color={on ? C.amber : C.tabOff} size={24} />
-        <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: F.semi, fontSize: 11, color: on ? C.amber : C.tabOff }}>{r.label}</Text>
-      </Pressable>
-    );
-  };
-  return (
-    <View testID="bottom-nav" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, flexDirection: 'row', height: 64 + ins.bottom, paddingBottom: ins.bottom, backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.hairline }}>
-      {ROOTS.map(tab)}
-    </View>
-  );
-}
-
-function Sidebar({ active }: { active: string }) {
+function Sidebar({ home }: { home: boolean }) {
   const ui = useUI();
-  const item = (key: string, label: string, onPress: () => void, icon?: string) => {
-    const on = active === key;
-    return (
-      <Pressable key={key} testID={`side-${key}`} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress}
-        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, backgroundColor: on || st.hovered ? C.surface2 : 'transparent' })}>
-        {icon && <Icon name={icon} size={18} color={on ? C.amber : C.mut} />}
-        <Text style={{ fontFamily: F.medium, fontSize: 15, color: on ? C.amber : C.mut, flex: 1 }}>{label}</Text>
-      </Pressable>
-    );
-  };
   return (
     <View testID="sidebar" style={{ width: 232, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.border, paddingVertical: 18, paddingHorizontal: 12, gap: 2 }}>
       <Text style={{ fontFamily: F.g7, fontSize: 20, color: C.text, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 16 }}>Punchable</Text>
-      {ROOTS.map((r) => item(r.key, r.label, () => goRoot(r.key), r.key))}
+      <Pressable testID="side-notebook" accessibilityRole="button" accessibilityState={{ selected: home }} onPress={goHome}
+        style={(st: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, backgroundColor: home || st.hovered ? C.surface2 : 'transparent' })}>
+        <Icon name="notebook" size={18} color={home ? C.amber : C.mut} />
+        <Text style={{ fontFamily: F.medium, fontSize: 15, color: home ? C.amber : C.mut, flex: 1 }}>Notebook</Text>
+      </Pressable>
       <View style={{ flex: 1 }} />
       {ui.workingSet && (
         <Pressable testID="side-working-set" accessibilityRole="button" onPress={() => router.push(`/workingset/${encodeURIComponent(ui.workingSet!.id)}` as any)}
@@ -97,11 +54,9 @@ function SidebarYou() {
   );
 }
 
-
 /**
- * A screen. Root tabs get the bottom nav (phone) or the sidebar (>= 900 px).
- * Pushed screens get a back button. Tasks (Record, Import, Set list) get their own header and a dock pinned to the bottom.
- * `scroll={false}` hands the body to the child (a virtualized list).
+ * A screen. Notebook is the root; pushed screens get a back button. Tasks (Record, Import, the walk-through) get their
+ * own header and a dock pinned to the bottom. `scroll={false}` hands the body to the child (a virtualized list).
  */
 export function Screen({ title, children, back, onBack, right, dock, task, header, testID, deep, scrollKey, scroll = true, maxWidth, scrollRef, bar, onRefresh, backLabel, largeTitle, offlineAt = 'top', footnote, offlineNote, scrollWatch }: ScreenProps) {
   const wide = useWide();
@@ -111,19 +66,14 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
   }, [scrollKey]);
   const ui = useUI();
   const pathname = usePathname();
-  const active = rootOf(pathname, ui.lastRoot);
-  useEffect(() => {
-    if (ROOTS.some((r) => r.key === active) && active !== ui.lastRoot && rootOf(pathname, '') === active) ui.setLastRoot(active);
-  }, [active, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   const ins = useSafeAreaInsets();
-  const showNav = !wide && !task && !dock;
   const noteOn = useBottomNote(footnote) && offlineAt === 'bottom';
   const [noteMeasured, setNoteMeasured] = useState(0);
   const noteH = noteOn ? noteMeasured : 0;
-  const bottomPad = (dock ? (wide ? 160 : 200) : (showNav ? 104 + ins.bottom : 48) + (bar ? 120 : 0)) + noteH;
+  const bottomPad = (dock ? (wide ? 160 : 200) : 48 + (bar ? 120 : 0)) + noteH;
   const mw = maxWidth || (wide ? 1120 : 720);
-  // the snackbar sits above whatever is pinned at the bottom (the input bar, the dock, the tabs)
-  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + (showNav ? 64 : 0) + noteH + (dock || showNav ? ins.bottom : 0);
+  // the snackbar sits above whatever is pinned at the bottom (the bar, the dock)
+  const pinned = (dock ? 96 : 0) + (bar ? 120 : 0) + noteH + (dock || bar ? ins.bottom : 0);
   useEffect(() => {
     ui.setPinnedHeight(pinned);
   }, [pinned]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -138,11 +88,12 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
     }
   }, [onRefresh]);
   const [collapsed, setCollapsed] = useState(false);
-  const barTitle = largeTitle && !collapsed ? '' : title;
+  // a list that owns its scrolling (`scroll={false}`) cannot report where it is: its large title is the bar's title
+  const barTitle = largeTitle && scroll && !collapsed ? '' : title;
   const kav = (node: React.ReactNode) => (Platform.OS === 'ios' ? <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>{node}</KeyboardAvoidingView> : <>{node}</>);
   return (
     <View testID={testID} style={{ flex: 1, flexDirection: 'row', backgroundColor: deep ? C.bgDeep : C.bg }}>
-      {wide && !task && <Sidebar active={active} />}
+      {wide && !task && <Sidebar home={pathname === '/' || pathname === ''} />}
       {kav(
       <View style={{ flex: 1, minWidth: 0 }}>
         {/* HIG/layout: every header, custom or not, starts below the status bar and the Dynamic Island (the inset is the
@@ -162,10 +113,10 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
             </View>
           </ScrollView>
         ) : (
-          <View style={{ flex: 1, paddingBottom: (showNav ? 64 + ins.bottom : 0) + (bar ? 112 : 0) }}>{children}</View>
+          <View style={{ flex: 1, paddingBottom: bar ? 80 : 0 }}>{children}</View>
         )}
         {bar && (
-          <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom, zIndex: 6, paddingBottom: showNav ? 4 : 12, backgroundColor: deep ? C.bgDeep : C.bg }}>
+          <View testID="say-dock" style={{ position: 'absolute', left: 0, right: 0, bottom: wide ? 0 : ins.bottom, zIndex: 6, paddingBottom: 12, backgroundColor: deep ? C.bgDeep : C.bg }}>
             {bar}
           </View>
         )}
@@ -175,13 +126,11 @@ export function Screen({ title, children, back, onBack, right, dock, task, heade
           </View>
         )}
         {offlineAt === 'bottom' && noteOn && (
-          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: (showNav ? 64 + ins.bottom : wide ? 0 : ins.bottom) + (dock ? 96 : 0) + (bar ? 120 : 0), zIndex: 5, backgroundColor: deep ? C.bgDeep : C.bg }}>
+          <View testID="bottom-note" pointerEvents="none" onLayout={(e) => setNoteMeasured(Math.ceil(e.nativeEvent.layout.height))} style={{ position: 'absolute', left: 0, right: 0, bottom: (wide ? 0 : ins.bottom) + (dock ? 96 : 0) + (bar ? 120 : 0), zIndex: 5, backgroundColor: deep ? C.bgDeep : C.bg }}>
             <OfflineStrip placement="bottom" note={footnote} offlineNote={offlineNote} />
           </View>
         )}
-        {showNav && <BottomNav active={active} />}
       </View>)}
     </View>
   );
 }
-

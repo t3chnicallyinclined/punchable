@@ -16,8 +16,9 @@ export type Prefs = {
   /** Desktop (web ≥ 1280): the bit page's side panes collapsed to edge handles; his last choice is kept (SPEC 2026-11-03 §3.12) */ focus: boolean;
   /** A bit's page: the document he types straight into (default), or the older Write button and one-box editor, kept
    *  as the fallback if the document misbehaves on his phone (SPEC 2026-11-16 Slice 2) */ bitEditor: BitEditor;
+  /** Notebook's Pinned section: the rows he pinned (`bit:<id>`, `set:<id>`), the newest pin first (SPEC 2026-11-17) */ pins: string[];
 };
-export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud', draftsOpen: false, tips: { pile: false }, focus: false, bitEditor: 'doc' };
+export const DEFAULT_PREFS: Prefs = { appearance: 'system', haptics: true, mapLegend: true, bitsSort: 'recent', mapMode: 'cloud', draftsOpen: false, tips: { pile: false }, focus: false, bitEditor: 'doc', pins: [] };
 
 const KEY = 'pk.prefs.v1';
 let cache: Prefs = { ...DEFAULT_PREFS };
@@ -36,6 +37,7 @@ function clean(raw: any): Prefs {
     if (raw.tips && typeof raw.tips === 'object' && typeof raw.tips.pile === 'boolean') p.tips = { pile: raw.tips.pile };
     if (typeof raw.focus === 'boolean') p.focus = raw.focus;
     if (raw.bitEditor === 'doc' || raw.bitEditor === 'classic') p.bitEditor = raw.bitEditor;
+    if (Array.isArray(raw.pins)) p.pins = raw.pins.filter((k: unknown) => typeof k === 'string').slice(0, 50);
   }
   return p;
 }

@@ -1,35 +1,28 @@
-// A bit's page: the bit is a document (owner 2026-11-16: "a bit is a document, it just has a bunch of ideas for the
-// same topic ... it should be as easy as editing a google doc on your phone, with the power of punchable"; SPEC
-// 2026-11-16 B11, §4.3, Slice 2). The page opens on his words; a tap anywhere in them puts the caret there and brings
-// up the keyboard (lib/BitDoc: one multiline input over the whole text). There is no Write screen and no Save: the
-// words are kept on the phone as he types and a version is saved when he leaves the text, the page or the app, or
-// pauses, only when the words changed. Saving is quiet (HIG/feedback: he expects it to work): the footnote line reads
-// "Saved as v9" for a moment and the Versions row, right under the document, carries the non-timed Undo; only a save
-// made as he LEAVES the page says so in a snack (he is no longer looking at the row). While the keyboard is up
-// nothing else is on the page: the bar holds Done alone and everything under the document is out of the way.
-// Under the document, when he is not typing (SPEC 2026-11-16 §3.1, §4.6; owner on build 28: "when i open a bit i dont
-// automatically see other connections"): Around this bit drawn on the page itself (each group that holds something,
-// its first two cards, "See all N"; lib/Around AroundInline) and In these sets (the sets by name, Add to a set), both
-// from one read, GET /api/jokes/<id>/around, with skeleton rows while it is on its way; then the collapsed rows of
-// the 3c page (docs/design/SPEC-2026-11-03-bit-page-3c.md): the Pile and the Versions (inline), On tape (a push).
-// The bar: his short name; the sparkle, To a set, More. More › Reorder lines is its own mode (a drag list over the
-// document's lines and the gaps between its ideas). Every write is a new version (POST /api/jokes/<id>/versions, the
-// old ones stay).
-// The older flow is kept behind a preference (Settings › About › "Write button on a bit"; prefs.bitEditor 'classic'):
-// the bit as 44-pt lines, one bottom button, Write, and the one-box editor with Save. One of the two is drawn, never
-// both.
-// Film it's rant half (SPEC 2026-11-03 D10, D11, §2.5, §2.6; build 24): a version is the stage cut or a rant cut (its
-// `source`, rules/bitLines cutOf). The body shows the newest STAGE version; the stepper walks every version and says
-// the cut; on a rant version a "Rant cut" row sits above the text and a write or Restore writes that cut. The sparkle
-// opens the sessions sheet (/session/[bit]) with its two rows, Make it a rant and Pick a hook, on the version shown.
-// The Redline loop (SPEC 2026-11-16 §3.2 and Slice 3 as built; owner: "when i say redline, i mean our repo redline"):
-// while he types, a bar above the keyboard (lib/DocMarkBar) marks the selected words, or the caret's line, Change, Ask
-// or Keep, or takes them elsewhere (a set, a new bit). The marks wait in a tray on the phone (lib/marks; /marks) and
-// show as quiet highlights in his words while the keyboard is down; Send sends them once (the bottom bar, or the tray),
-// after his typing is saved as a version. The round's line sits right under the document: "Reading your marks…", then
-// "A new draft is ready", which opens the whole new draft (joke/[id]/draft). The older editor has no marks.
+// A bit is a page (docs/design/SPEC-2026-11-17-one-notebook.md screens 2 and 3; owner 2026-11-16: "a bit is a
+// document ... it should be as easy as editing a google doc on your phone, with the power of punchable"; on build 33:
+// "people are used to google docs/notes how can we simplify it but keep it as powerful").
+//   - The title is its own field at the top: tap and type; Return goes to the text. Under it the document
+//     (lib/BitDoc: one text field over the whole bit; the words are kept on the phone as he types and a version is
+//     saved when he leaves the text, the page or the app, or pauses, only when the words changed).
+//   - The bar: a quiet "Saved", Undo (the last save: his older words come back), and ⋯ (Versions, Add to a set,
+//     Share, then the rest). While the keyboard is up, Done sits beside Undo.
+//   - One bar above the keyboard, and at the bottom of the page when the keyboard is down (lib/PageBar): Say it (a
+//     memo filed on this bit) · Film it · Punch it up. With words selected the same bar is Funnier · Shorter ·
+//     3 options · Note for exactly those words; each is a switch. A marked range stays marked in the text. The marks
+//     are kept on the phone (lib/marks) and listed under the document with their notes (lib/MarksList). With marks on
+//     the page the bar is the sentence "N marks on this page. Anything you didn't mark stays word for word." and
+//     Get a new draft: his typing is saved as a version, then one redline round goes out (lib/redlineActions).
+//     Punch it up with nothing marked asks which: this paragraph, or the whole page. The round's state is that same
+//     button (Writing…, New draft ready), which opens the draft (joke/[id]/draft).
+//   - Under the document, when he is not typing: his marks, then Around this bit and In these sets from one read
+//     (GET /api/jokes/<id>/around), the Pile, On tape; Versions when he opened it from ⋯ or is reading an older one.
+// Every write is a new version (POST /api/jokes/<id>/versions; the old ones stay).
+// A version is the stage cut or a rant cut (rules/bitLines cutOf): the page shows the newest stage version; marks
+// live on that document only. The older flow is kept behind a preference (Settings › This device › "Write button on a
+// bit"; prefs.bitEditor 'classic'): the bit as 44-pt lines, one bottom button, Write, and the one-box editor with
+// Save, with none of the above. One of the two is drawn, never both.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Keyboard, Platform, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Keyboard, Platform, Share, Text, TextInput, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { decide, undo, useApi, useOnline } from '@/lib/api';
 import { useBoards } from '@/lib/boards';
@@ -44,11 +37,9 @@ import { C, F, linkColor, stageWord } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
 import { getPrefs, onPrefs } from '@/lib/prefs';
 import { useRecordings } from '@/lib/recordings';
-import { afterWrite } from '@/lib/feedback';
 import { Btn, ErrorCard, Icon, IconBtn, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { SectionRow } from '@/lib/SectionRow';
-import { IdeaLine } from '@/lib/IdeaLine';
 import { VersionStepper } from '@/lib/VersionStepper';
 import { BitLines, type LineAction } from '@/lib/BitLines';
 import { BitDoc, type BitDocHandle, type BitDocState, type SaveWhy } from '@/lib/BitDoc';
@@ -56,15 +47,14 @@ import { Pile } from '@/lib/Pile';
 import { AroundInline, SetsInline, aroundChanged, aroundPath } from '@/lib/Around';
 import * as AR from '@/rules/aroundRules';
 import { DragList } from '@/lib/DragList';
-import { DocMarkBar, type DocMarkBarHandle, type MarkSaid } from '@/lib/DocMarkBar';
-import { MARK_BAR_H } from '@/lib/MarkBar';
-import type { BarAction } from '@/lib/MarkBar';
-import { markId, peekMarks, sendAsked, useMarks } from '@/lib/marks';
-import { openTray } from '@/lib/MarkTray';
+import { PAGE_BAR_H, PAGE_NOTE_H, PageBar, type PageBarHandle, type Target } from '@/lib/PageBar';
+import { MarksList } from '@/lib/MarksList';
+import { markId, peekMarks, useMarks } from '@/lib/marks';
 import { useRound } from '@/lib/redline';
-import { sendRound, takeElsewhere } from '@/lib/redlineActions';
+import { sendRound } from '@/lib/redlineActions';
 import { actionSheet } from '@/lib/actionSheet';
 import * as MR from '@/rules/markRules';
+import * as PG from '@/rules/pageRules';
 
 type V = R.BitVersion;
 type Note = { id: string; text?: string | null; date?: string | null; reasons?: unknown[] | null; score?: number | null };
@@ -91,7 +81,7 @@ export default function BitPage() {
   const cand = useApi<{ history?: { notes?: Note[] } }>(`/api/merge/candidates?joke=${enc(id)}`, { cache: false });
   // everything tied to the bit, and the sets it is in (one read; the half sheet reads the same path from the cache)
   const ar = useApi<AR.Around>(aroundPath(id));
-  // which editor this phone draws: the document (default) or the older Write button (a preference, the fallback)
+  // which editor this phone draws: the page (default) or the older Write button (a preference, the fallback)
   const [classic, setClassic] = useState(() => getPrefs().bitEditor === 'classic');
   useEffect(() => onPrefs((x) => setClassic(x.bitEditor === 'classic')), []);
   // the document: its handle, what it says about itself, and the page's scroll view it keeps the caret visible in
@@ -108,11 +98,15 @@ export default function BitPage() {
   }), []);
   // the last write from a card's sheet: its non-timed Undo sits on the Around row (HIG.md §7)
   const [lastAround, setLastAround] = useState<{ undo: () => Promise<void> } | null>(null);
-  // the Redline loop: his marks not sent yet (kept on the phone), the bar that makes them, the round on the bit
+  // marking is selecting: his marks not sent yet (kept on the phone), the bar that makes them, the round on the bit
   const marks = useMarks(id, null);
-  const markBar = useRef<DocMarkBarHandle>(null);
+  const pageBar = useRef<PageBarHandle>(null);
   // the document's last selection: the bar is mounted after the tap that focused it and starts from this
   const lastSel = useRef<{ sel: { start: number; end: number }; text: string } | null>(null);
+  // whether the page holds words right now (the document says so as he types; null until it has spoken)
+  const [typedWords, setTypedWords] = useState<boolean | null>(null);
+  // the mark whose note is being typed (the bar's Note, or a tap on a mark under the page)
+  const [noteFor, setNoteFor] = useState<string | null>(null);
   const rr = useRound(id);
   const round = rr.data?.round || null;
   const rstate = MR.roundState(round);
@@ -132,13 +126,9 @@ export default function BitPage() {
   const [order, setOrder] = useState<OrderRow[] | null>(null);   // Reorder mode: the document's rows being reordered
   const [pileOpen, setPileOpen] = useState<boolean | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
-  // the last write's undo handle: "v9 · just now · Undo" in the Versions row (non-timed, HIG.md §7)
+  // the last write's undo handle: the bar's Undo (non-timed, HIG.md §7)
   const [lastWrite, setLastWrite] = useState<{ indexes: number[]; n: number } | null>(null);
-  // "Saved as v9" in the footnote slot for a moment after the document saved itself (no snack, no haptic)
-  const [savedNote, setSavedNote] = useState<string | null>(null);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(savedTimer.current), []);
-  // opened from Bits "+": a fresh document, the keyboard up before anything else
+  // opened from the pencil: a fresh page, the keyboard up before anything else
   const [openedFresh, setOpenedFresh] = useState(false);
   useEffect(() => {
     if (p.edit !== '1' || !d.data || openedFresh) return;
@@ -146,10 +136,12 @@ export default function BitPage() {
     if (classic && editing == null) setEditing('');
   }, [p.edit, d.data, openedFresh, editing, classic]);
   const [saving, setSaving] = useState(false);
+  // he typed a title himself: the first save no longer names the page from its first line
+  const [titled, setTitled] = useState(false);
   const versions = useMemo(() => versionsOf(d.data), [d.data]);
   const reloadAll = useCallback(() => { d.reload(); sim.reload(); cand.reload(); ar.reload(); }, [d.reload, sim.reload, cand.reload, ar.reload]); // eslint-disable-line react-hooks/exhaustive-deps
-  // a card's sheet or the picker wrote something about this bit: read again; a new version shows its Undo on the
-  // Versions row, any other write on the Around row
+  // a card's sheet or the picker wrote something about this bit: read again; a new version's Undo is the bar's, any
+  // other write's sits on the Around row
   const versionCount = useRef(0);
   useEffect(() => { versionCount.current = versions.length; });
   useEffect(() => aroundChanged.subscribe((c) => {
@@ -166,10 +158,10 @@ export default function BitPage() {
   const takes = useMemo(() => recs.filter((r) => r.kind === 'film' && r.bit?.id === id), [recs, id]);
   const takeNotes = useMemo(() => new Set(takes.map((t) => t.merge_id).filter(Boolean) as string[]), [takes]);
   const J = d.data?.joke;
-  // a fresh bit (lib/newBit) carries a marker title until its first save names it; the page says "New bit" meanwhile
+  // a fresh bit (lib/newBit) carries a marker title until its first save names it; the page shows an empty title meanwhile
   const fresh = isFreshBit(J?.title);
-  const title = fresh ? 'New bit' : (J?.title || '').split(' (')[0] || J?.title || 'Bit';
-  const shortName = fresh ? 'New bit' : shortNameOf(J?.title || '', J?.short_name);
+  const title = fresh ? '' : (J?.title || '').split(' (')[0] || J?.title || '';
+  const shortName = fresh ? 'New page' : shortNameOf(J?.title || '', J?.short_name);
   const home = R.homeIndex(versions);
   const newestRant = R.newestOf(versions, 'rant');
   const vi = Math.min(typeof pos === 'number' ? pos : pos === 'rant' && newestRant >= 0 ? newestRant : home, Math.max(0, versions.length - 1));
@@ -179,20 +171,24 @@ export default function BitPage() {
   const lines = useMemo(() => R.linesOf(v?.text), [v?.text]);
   // what every version of this cut says: a draft on the phone that one of them already says is not newer words
   const said = useMemo(() => versions.filter((x) => x.cut === vCut).map((x) => x.text), [versions, vCut]);
-  const punch = useMemo(() => R.cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
+  const punchMarks = useMemo(() => R.cleanPunch(v?.punch, lines.length), [v?.punch, lines.length]);
   // reading = an older version of its cut: the text is not editable, Restore is on
   const reading = versions.length > 0 && !R.isNewestOfCut(versions, vi);
   const scraps = useMemo(() => R.pileScraps((cand.data?.history?.notes || []).filter((n: Note) => !takeNotes.has(n.id)), memos), [cand.data, memos, takeNotes]);
   const barOn = R.barEnabled(lines, J?.summary) && !fresh;
   const typing = !classic && docState.typing;
-  // marks live on the newest stage document (the rant cut and older versions are other texts: iOS dev review)
+  // marks live on the newest stage document (the rant cut and older versions are other texts)
   const marksHere = !classic && !reading && vCut === 'stage';
-  // the marks bar sits on the keyboard while he types (the phone); the web draws it in the shell's bottom bar
-  const barOnKeys = native && typing && marksHere;
+  const nMarks = marksHere ? marks.marks.length : 0;
+  // the page's bar: on the keyboard while he types (the phone), in the shell's bottom slot otherwise and on the web
+  const barShown = !classic && !reading && order == null;
+  const barOnKeys = native && typing && barShown;
   // the page's own writes (a reorder, a line from the pile, a restore, Cut): online, on the newest version, nothing else open
   const canWrite = online && !reading && editing == null && order == null && !typing;
   // the one line above the bottom: an older version being read, else why his words are not a version yet
-  const footnote = R.writeReason({ vi, count: versions.length, online: true, newest: !reading }) || (classic ? null : docState.note || savedNote);
+  const footnote = R.writeReason({ vi, count: versions.length, online: true, newest: !reading }) || (classic ? null : docState.note);
+  // the quiet word in the bar (HIG/feedback: status shown passively; he expects a save to work)
+  const savedWord = classic || reading ? '' : PG.savedWord({ pending: docState.pending, note: docState.note, typed: typing, versions: versions.length });
   // a selection outlives nothing: stepping clears it (onStep), a write clears it (wrote), a shorter version drops it
   const sel = selRaw != null && selRaw < lines.length ? selRaw : null;
   // an empty bit opens its Pile row on its one real action (frame d); otherwise the rows start closed
@@ -200,7 +196,7 @@ export default function BitPage() {
   /** The document as it stands: what he typed (the document owns it), else the version shown. */
   const docNow = () => (!classic && !reading ? doc.current?.text() : undefined) ?? v?.text ?? '';
 
-  /** Every write lands as a new version: the snack's timed Undo and the row's non-timed one share the indexes. */
+  /** Every write lands as a new version: the snack's timed Undo and the bar's non-timed one share the indexes. */
   const wrote = (indexes: number[], msg: string | null, cut: R.Cut = 'stage') => {
     setPos(cut === 'rant' ? 'rant' : null);
     setSel(null);
@@ -212,16 +208,10 @@ export default function BitPage() {
     if (!lastWrite) return;
     try { await undo(lastWrite.indexes); doc.current?.undone(); setLastWrite(null); reloadAll(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); }
   };
-  /** The document saved a version by itself. Quiet while he is on the page (HIG/feedback: a save is expected to
-   *  work): the footnote reads "Saved as v9" for a moment and the Versions row under the document has the Undo. Only a
-   *  save made as he leaves the page is a snack, because the row is no longer in front of him. */
+  /** The document saved a version by itself. Quiet while he is on the page: the bar reads "Saved" and its Undo takes
+   *  the save back. Only a save made as he leaves the page is a snack, because the bar is no longer in front of him. */
   const docSaved = (indexes: number[], why: SaveWhy) => {
     const word = fresh ? 'Saved' : `Saved as v${versionCount.current + 1}${vCut === 'rant' ? ' · rant' : ''}`;
-    if (why !== 'leave') {
-      setSavedNote(word);
-      clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setSavedNote(null), 4000);
-    }
     wrote(indexes, why === 'leave' ? word : null, vCut);
   };
 
@@ -288,18 +278,17 @@ export default function BitPage() {
   // a scrap goes in after the line the caret was last on (the older editor: the selected line), else at the end
   const addScrap = (s: R.Scrap) => void writeText(() => L.applyEdit(docNow(), { op: 'insert', at: classic ? sel : doc.current?.caretLine() ?? null, words: s.words }), 'added from the pile', 'Added');
   const restore = () => { if (v) void writeText(() => L.docText(v.text), `restored ${v.label}`, `Restored ${v.label} as v${versions.length + 1}`); };
-  const toSet = () => afterWrite(() => boards.add(id, title), (ok) => ok, haptics);
-  // the bar's To a set: the picker, with a tick on every set the bit is already in (SPEC 2026-11-16 §4.5)
+  // Add to a set: the picker, with a tick on every set the bit is already in (SPEC 2026-11-16 §4.5)
   const pickSets = () => boards.pick(id, shortName);
   const undoAround = async () => {
     if (!lastAround) return;
     try { await lastAround.undo(); setLastAround(null); reloadAll(); ui.snack('Undone'); } catch (e: any) { ui.snack(`Couldn't undo: ${e.message}`); }
   };
-  // a memo started here is filed on this bit (lib/recordings: POST /api/merge/attach after the idea)
-  const recordMemo = () => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any);
+  // Say it: a memo started here is filed on this bit (lib/recordings: POST /api/merge/attach after the idea)
+  const sayIt = () => { doc.current?.blur(); ui.withMic(() => router.push({ pathname: '/record', params: { kind: 'memo', bit: id, title: shortName } } as any)); };
   // Film it (SPEC 2026-11-03 §2.1): the front camera with the newest version's lines on the band; phone only
-  const filmIt = () => router.push(`/film/${enc(id)}` as any);
-  // Rant on this… (SPEC 2026-11-06 §12.7): a topic named for the bit, the bit kept on it, the topic opened in Rant
+  const filmIt = () => { doc.current?.blur(); router.push(`/film/${enc(id)}` as any); };
+  // Rant on this… (SPEC 2026-11-06 §12.7): a topic named for the bit, the bit kept on it, the topic opened
   const [ranting, setRanting] = useState(false);
   const rantOn = async () => {
     if (ranting) return;
@@ -315,14 +304,14 @@ export default function BitPage() {
       setRanting(false);
     }
   };
-  // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so the sparkle is off there);
-  // off too while words he typed are not a version yet (a session reads the saved version)
+  // the sessions sheet on the version shown (its unit; the typed-idea stand-in has none, so it is off there); off too
+  // while words he typed are not a version yet (a session reads the saved version)
   const canAsk = online && lines.length > 0 && !!v && v.key !== 'idea' && editing == null && order == null && !typing && !(!classic && docState.pending);
   const openSessions = () => {
     if (!canAsk || !v) return;
     router.push({ pathname: '/session/[bit]', params: { bit: id, unit: v.key, cut: v.cut, n: String(versions.length), title: shortName } } as any);
   };
-  const share = () => Share.share({ message: [title, docNow()].join('\n\n').trim(), title }).catch(() => ui.snack('Sharing is not available here'));
+  const share = () => Share.share({ message: [title, docNow()].join('\n\n').trim(), title: title || shortName }).catch(() => ui.snack('Sharing is not available here'));
   const retire = async () => {
     try {
       const w = await decide({ target: 'node', action: 'edit', id, after: { stage: 'retired' } });
@@ -363,13 +352,24 @@ export default function BitPage() {
       ui.snack(`Couldn't save the idea: ${e.message}`);
     }
   };
+  /** The title he typed: the page's name from now on (quiet, like a save; the snack only when it failed). */
+  const saveTitle = async (s: string) => {
+    const t = s.replace(/\s+/g, ' ').trim();
+    if (!t || t === title) return;
+    setTitled(true);
+    try {
+      await decide({ target: 'node', action: 'edit', id, after: { title: t }, reason: 'the title on the page' });
+      d.reload();
+    } catch (e: any) {
+      ui.snack(online ? `Couldn’t rename the page: ${e.message}` : 'Offline. The title was not saved.');
+    }
+  };
 
-  /** Send the marks once: his typing is saved as a version first (the marks are on the words he sees), then one
-   *  round on that version. A draft already waiting is replaced, so that asks first. One send at a time from the first
-   *  tap (iOS dev review: two quick taps both got past a guard set after the save). */
+  /** Get a new draft: his typing is saved as a version first (the marks are on the words he sees), then one round on
+   *  that version. A draft already waiting is replaced, so that asks first. One send at a time from the first tap. */
   const sendBusy = useRef(false);
   const sendMarks = async () => {
-    if (sendBusy.current || classic || reading) return;
+    if (sendBusy.current || !marksHere) return;
     if (!online) return ui.snack('Offline. Your marks wait on this iPhone.');
     sendBusy.current = true;
     setSending(true);
@@ -378,6 +378,14 @@ export default function BitPage() {
     try {
       await doc.current?.save('done');
       unit = doc.current?.unit() ?? null;
+      // a page that is still only its typed idea has no version to mark: its words become one now
+      if (unit === 'idea') {
+        const words = L.docText(doc.current?.text() ?? '');
+        const r = await addVersion(id, words, 'saved before a new draft', false, src);
+        doc.current?.adopt(words, r.unit);
+        unit = r.unit;
+        reloadAll();
+      }
     } catch {
       unit = null;
     }
@@ -385,12 +393,12 @@ export default function BitPage() {
       done();
       // the note as it is now (a save that found the words too long says so while it ran)
       const note = docStateRef.current.note;
-      return ui.snack(note ? `${note}. Your marks wait here.` : 'Your words are still saving. Send again in a moment.');
+      return ui.snack(note ? `${note}. Your marks wait here.` : 'Your words are still saving. Try again in a moment.');
     }
     // the words as the server holds them (the route strips the blank ends; the marks are found by their words anyway)
     const text = L.docText(doc.current?.text() ?? v?.text ?? '');
     const go = async () => {
-      // the tray as it is now: a note typed a moment ago in the sheet is in it (never a render's older copy)
+      // the marks as they are now: a note typed a moment ago is in them (never a render's older copy)
       try {
         const ok = await sendRound(ui, id, { unit }, text, peekMarks(id, null));
         if (ok) void rr.reload();
@@ -399,17 +407,13 @@ export default function BitPage() {
       }
     };
     if (rstate === 'ready') {
-      const n = peekMarks(id, null).length;
       actionSheet({
-        title: `Send ${MR.markCount(n)}?`, message: 'The draft waiting on this bit is replaced by the new one.',
-        options: [{ label: MR.sendLabel(n), onPress: () => void go() }, { label: 'Cancel', cancel: true, onPress: done }],
+        title: 'Get a new draft?', message: 'The draft waiting on this page is replaced by the new one.',
+        options: [{ label: 'Get a new draft', onPress: () => void go() }, { label: 'Cancel', cancel: true, onPress: done }],
       });
     } else void go();
   };
-  // Send from the tray sheet
-  useEffect(() => sendAsked.subscribe((a) => { if (a.bit === id && !a.on) void sendMarks(); }));
-  // VoiceOver hears the round change (accessibilityLiveRegion is Android only: design review)
-  // only a change he did not just see: never the first read after the page opens (design review, second look)
+  // VoiceOver hears the round change (accessibilityLiveRegion is Android only); never the first read after the page opens
   const lastRound = useRef<MR.RoundState | null>(null);
   useEffect(() => {
     if (!rr.data) return;
@@ -418,21 +422,58 @@ export default function BitPage() {
     }
     lastRound.current = rstate;
   }, [rstate, round, rr.data]);
-  /** A mark from the bar: on the selected words, or the caret's line. Keep is made at once ("Kept" in the bar, with
-   *  Undo); Change and Ask open the tray at that mark's note; Copy to… offers a set or a new bit. */
-  const markAct = (a: BarAction, target: { text: string; at: number }): MarkSaid => {
-    if (a === 'elsewhere') { doc.current?.blur(); takeElsewhere(ui, id, shortName, target.text); return null; }
-    const m: MR.Mark = { id: markId(), type: a, text: target.text, at: target.at, note: '' };
-    const r = MR.addMark(doc.current?.text() ?? '', peekMarks(id, null), m);
-    if (r.error) { haptics.warning(); return { word: r.error }; }
+  /** A tap on Funnier, Shorter, 3 options or Note with words selected (rules/pageRules: each is a switch). */
+  const onAsk = (ask: PG.Ask, target: Target) => {
+    const text = doc.current?.text() ?? '';
+    if (ask === 'note') {
+      const r = PG.markForNote(text, peekMarks(id, null), target, markId());
+      if (r.error || !r.mark) { haptics.warning(); ui.snack(r.error || 'Those words could not be marked'); return; }
+      haptics.selection();
+      void marks.replace(r.marks);
+      doc.current?.blur();
+      setNoteFor(r.mark.id);
+      return;
+    }
+    const r = PG.toggleAsk(text, peekMarks(id, null), target, ask, markId());
+    AccessibilityInfo.announceForAccessibilityWithOptions(r.said, { queue: true });
+    if (r.error) { haptics.warning(); ui.snack(r.error); return; }
     haptics.selection();
     void marks.replace(r.marks);
-    if (a === 'keep') return { word: 'Kept', undo: () => void marks.replace(peekMarks(id, null).filter((x) => x.id !== m.id)) };
-    doc.current?.blur();
-    openTray(id, null, m.id);
-    return null;
   };
-  // the keyboard's top in this screen, for the marks bar that sits on it (lib/KeyboardBar's pattern, script.tsx)
+  /** The note sheet closed: a mark that asks for nothing and says nothing goes with it. */
+  const closeNote = (note?: string) => {
+    const mid = noteFor;
+    setNoteFor(null);
+    if (!mid) return;
+    const now = peekMarks(id, null);
+    const m = now.find((x) => x.id === mid);
+    if (m) void marks.replace(PG.saveNote(now, mid, note ?? m.note));
+  };
+  const removeMark = (mid: string) => { setNoteFor(null); void marks.replace(MR.removeMark(peekMarks(id, null), mid)); };
+  const openDraft = () => { doc.current?.blur(); router.push(`/joke/${enc(id)}/draft` as any); };
+  // the bar's main button (rules/pageRules punch): send the marks, open the draft, or ask what to punch up
+  const pstate = PG.punch({ marks: nMarks, round: rstate, online, sending, empty: !marksHere || !(typedWords ?? !!(v?.text || '').trim()) });
+  const punchIt = () => {
+    if (pstate.does === 'open') return openDraft();
+    if (pstate.does === 'send') return void sendMarks();
+    if (pstate.does !== 'choose') return;
+    const t = PG.punchTargets(docNow(), doc.current?.caret() ?? null);
+    const go = (target: Target) => {
+      const r = PG.toggleAsk(docNow(), peekMarks(id, null), target, 'funnier', markId());
+      if (r.error) return ui.snack(r.error);
+      void marks.replace(r.marks).then(() => sendMarks());
+    };
+    const whole = t.whole && t.whole.text !== t.paragraph?.text ? t.whole : null;
+    const options = [
+      ...(t.paragraph ? [{ label: 'This paragraph', onPress: () => go(t.paragraph as Target) }] : []),
+      ...(whole ? [{ label: 'The whole page', onPress: () => go(whole) }] : []),
+    ];
+    if (!options.length) return ui.snack('Select the words you want punched up first.');
+    if (native) {
+      actionSheet({ title: 'Punch it up', message: 'A whole new draft comes back. Anything you didn’t mark stays word for word.', options: [...options, { label: 'Cancel', cancel: true }] });
+    } else setMenu(options);
+  };
+  // the keyboard's top in this screen, for the bar that sits on it (lib/KeyboardBar's pattern)
   const root = useRef<any>(null);
   const [kb, setKb] = useState(0);
   useEffect(() => {
@@ -443,13 +484,11 @@ export default function BitPage() {
     const hide = Keyboard.addListener('keyboardWillHide', () => setKb(0));
     return () => { show.remove(); hide.remove(); };
   }, []);
-  const openDraft = () => router.push(`/joke/${enc(id)}/draft` as any);
 
-  if (d.rawError && !d.data) return <Screen title="Bit" back><ErrorCard error={String(d.rawError)} onRetry={d.reload} /></Screen>;
-  if (!d.data) return <Screen title="Bit" back><Skeleton lines={6} height={18} testID="bit-skeleton" /></Screen>;
+  if (d.rawError && !d.data) return <Screen title="Page" back><ErrorCard error={String(d.rawError)} onRetry={d.reload} /></Screen>;
+  if (!d.data) return <Screen title="Page" back><Skeleton lines={6} height={18} testID="bit-skeleton" /></Screen>;
 
   const aiStage = !!d.data?.ai?.stage_ai && !d.data?.ai?.stage_confirmed;
-  const aiIdea = !!d.data?.ai?.summary_ai && !d.data?.ai?.summary_confirmed;
   const nights = sim.data?.performed.length || 0;
   const killed = R.killedCount((sim.data?.performed || []) as { rating?: string | null }[]);
   // what sounds like it is a group of "Around this bit" now (SPEC 2026-11-16 §2.2), so it no longer opens On tape
@@ -457,8 +496,7 @@ export default function BitPage() {
   // collapsed, the row reads the newest stage version (Film it §2.6: "unchanged"); right after a write, "just now"
   const vmeta = { count: versions.length - home, newestDate: versions[home]?.date, durationS: J?.duration_s, estimated: !!J?.duration_estimated, justWrote: !!lastWrite && lastWrite.n === versions.length };
   const canUndoWrite = !!lastWrite && vmeta.justWrote && !reading;
-  // the older editor's line actions (Move · Cut). Move is not shown on a one-line bit (a greyed control that leads
-  // nowhere is not rendered, 3c §14).
+  // the older editor's line actions (Move · Cut). Move is not shown on a one-line bit.
   const lineActions: LineAction[] | null = reading || !online || editing != null ? null : [
     ...(lines.length > 1 ? [{ label: 'Move', testID: 'line-move', onPress: startReorder }] : []),
     { label: 'Cut', testID: 'line-cut', onPress: (i: number) => cut(i) },
@@ -468,66 +506,77 @@ export default function BitPage() {
   const aroundShown = !!ar.data || !ar.rawError;
   // a card writes into the saved document: not offline, and not over words he typed that no version holds yet
   const cardsCanAct = online && !reading && order == null && !(!classic && docState.pending);
+  const versionsShown = versionsOpen || vi !== home;
   const pileRow = (
     <SectionRow testID="row-pile" kind="inline" label="Pile" meta={String(scraps.length)} open={pileIsOpen} onPress={() => setPileOpen(!pileIsOpen)}>
       <Pile testID="pile" scraps={scraps} recs={memos} lines={lines} onAdd={addScrap} />
     </SectionRow>
   );
-  // More, in frequency order, the destructive item last (§3.8); the same list on the web as a sheet
+  const showVersions = () => { doc.current?.blur(); setVersionsOpen(true); };
+  // ⋯ in the mockup's order (Versions, Add to a set, Share), then the rest by how often, the destructive item last;
+  // the same list on the web as a sheet
   const webMenu = (): MenuItem[] => [
-    { label: 'Reorder lines', onPress: startReorder, disabled: !canWrite || lines.length < 2, testID: 'menu-reorder' },
-    { label: 'Record a memo', onPress: recordMemo, disabled: true },
-    { label: `Add to ${boards.current?.title || 'the current set list'}`, onPress: () => void toSet(), disabled: !barOn || !boards.current },
-    { label: 'Rant on this…', onPress: () => void rantOn(), disabled: !online, testID: 'menu-rant-on' },
+    { label: versions.length > 1 ? `Versions · ${versions.length}` : 'Versions', onPress: showVersions, disabled: versions.length < 2, testID: 'menu-versions' },
     { label: 'Add to a set…', onPress: pickSets, disabled: !barOn || !online, testID: 'menu-sets' },
-    { label: 'Merge with…', onPress: () => router.push('/merge' as any) },
     { label: 'Share…', onPress: () => void share() },
+    { label: 'Reorder lines', onPress: startReorder, disabled: !canWrite || lines.length < 2, testID: 'menu-reorder' },
+    { label: 'Make it a rant, pick a hook…', onPress: openSessions, disabled: !canAsk, testID: 'menu-ask' },
+    { label: 'Idea…', onPress: () => setIdea(true), testID: 'menu-idea' },
+    { label: 'Rant on this…', onPress: () => void rantOn(), disabled: !online, testID: 'menu-rant-on' },
+    { label: 'Merge with…', onPress: () => router.push('/merge' as any) },
     { label: 'Rename short name…', onPress: () => setRename(true) },
     { label: 'Stage…', onPress: () => setMenu(STAGE_MENU.map(([k, w]) => ({ label: `${w}${J?.stage === k ? ' ✓' : ''}`, onPress: () => void setStage(k) }))) },
     { label: 'Retire', onPress: retire, destructive: true },
   ];
   const done = () => doc.current?.blur();
+  const barNote = !online ? 'Offline · kept on this iPhone' : docState.note;
+  const bar = (onKeys: boolean) => (
+    <PageBar ref={pageBar} testID="page-bar" marks={marksHere ? marks.marks : []} text={docNow} punch={pstate}
+      onSay={sayIt} onFilm={filmIt} onPunch={punchIt} onAsk={onAsk} filmOff={!native ? 'Filming is on the iPhone app' : !lines.length && !typing ? 'Nothing to read yet' : null}
+      note={onKeys ? barNote : null} footer={!onKeys && !typing && nMarks > 0} seed={marksHere ? () => lastSel.current : undefined} />
+  );
 
   return (
     <View ref={root} collapsable={false} style={{ flex: 1 }}>
-    <Screen title={shortName} back testID="bitpage" maxWidth={760} offlineAt={barOnKeys ? 'none' : 'bottom'} footnote={footnote}
-      bar={!native && marksHere ? <DocMarkBar ref={markBar} testID="bit-markbar" count={marks.marks.length} onAct={markAct} offline={!online} seed={() => lastSel.current} onTray={() => openTray(id, null)} /> : undefined}
+    <Screen title={shortName} back backLabel="Notebook" testID="bitpage" maxWidth={760} offlineAt={barOnKeys ? 'none' : 'bottom'} footnote={footnote}
+      bar={barShown && !barOnKeys ? bar(false) : undefined}
+      // the bar's centre is the quiet "Saved" (the page's name is the big title under it), never a button
+      nativeHeader={classic ? undefined : { headerTitle: () => <Text testID="page-saved" maxFontSizeMultiplier={1.3} accessibilityLabel={savedWord || undefined} style={{ fontFamily: F.body, fontSize: 13, color: C.mut2 }}>{savedWord}</Text> }}
       offlineNote={classic ? undefined : 'Offline · kept on this iPhone'} scrollRef={scrollRef} scrollWatch={classic ? undefined : scrollWatch}
-      right={native ? undefined : typing ? (
-        <Btn small v="primary" testID="bit-done" label="Done" onPress={done} />
-      ) : (
+      right={native ? undefined : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {!classic && !!savedWord && <Text testID="page-saved" style={{ fontFamily: F.body, fontSize: 13, color: C.mut2, paddingRight: 6 }}>{savedWord}</Text>}
           {classic && <Btn small v="primary" testID="bit-write" label="Write" disabled={!canWrite} onPress={() => openWrite()} />}
-          {!classic && marks.marks.length > 0 && <Btn small v="plain" testID="bit-marks" label={MR.markCount(marks.marks.length)} onPress={() => openTray(id, null)} />}
-          {!classic && marks.marks.length > 0 && <Btn small v="primary" testID="bit-send" label={sending ? 'Sending…' : MR.sendLabel(marks.marks.length)} disabled={!online || sending || rstate === 'waiting' || reading} onPress={() => void sendMarks()} />}
-          <IconBtn testID="bit-ask" label="Ask Claude" disabled={!canAsk} onPress={openSessions}><Icon name="star" size={20} color={canAsk ? C.amber : C.dim} /></IconBtn>
-          <IconBtn testID="bit-more" label="More" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>
+          {!classic && <IconBtn testID="page-undo" label="Undo the last save" disabled={!canUndoWrite} onPress={() => void undoLast()}><Icon name="undo" size={22} color={canUndoWrite ? C.amber : C.dim} /></IconBtn>}
+          {typing
+            ? <Btn small v="primary" testID="bit-done" label="Done" onPress={done} />
+            : <IconBtn testID="bit-more" label="More: versions, add to a set, share" onPress={() => setMenu(webMenu())}><Icon name="more" size={22} color={C.amber} /></IconBtn>}
         </View>
       )}>
       {native && typing && (
-        // the keyboard is up: Done alone, trailing (HIG/toolbars; Notes does the same). It puts the keyboard away,
-        // which saves a version if the words changed.
+        // the keyboard is up: Undo, and Done trailing and prominent (HIG/toolbars; Notes does the same). Done puts the
+        // keyboard away, which saves a version if the words changed.
         <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button icon="arrow.uturn.backward" disabled={!canUndoWrite} accessibilityLabel="Undo the last save" accessibilityHint="Your words from before it come back" onPress={() => void undoLast()} />
           <Stack.Toolbar.Button variant="prominent" accessibilityLabel="Done" accessibilityHint="Puts the keyboard away" onPress={done}>Done</Stack.Toolbar.Button>
         </Stack.Toolbar>
       )}
       {native && !typing && (
-        // HIG/toolbars: simple symbols (no circle borders), the important few in the bar, the rest under More
+        // HIG/toolbars: simple symbols, the important few in the bar, the rest under More (the mockup's Undo and ⋯)
         <Stack.Toolbar placement="right">
-          {/* Ask Claude: the sessions sheet (Film it's two rows until 3c Slice 4 adds the rest); off with its reason */}
-          <Stack.Toolbar.Button icon="sparkles" disabled={!canAsk} accessibilityLabel="Ask Claude" accessibilityHint={!online ? 'Offline' : !lines.length ? 'Nothing to read' : 'Make it a rant, or pick a hook'} onPress={openSessions} />
-          <Stack.Toolbar.Button icon="text.badge.plus" disabled={!barOn || !online} accessibilityLabel="Add to a set" accessibilityHint={online ? 'Tick the sets it belongs in' : 'Offline'} onPress={pickSets} />
-          <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More">
-            <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
-            <Stack.Toolbar.MenuAction icon="mic" onPress={recordMemo}>Record a memo</Stack.Toolbar.MenuAction>
-            {/* Film it sits with the two "make something from this bit" items; greyed with its one-word reason when there is nothing to read */}
-            <Stack.Toolbar.MenuAction icon="video" disabled={!lines.length} subtitle={lines.length ? undefined : 'nothing to read'} onPress={filmIt}>Film it…</Stack.Toolbar.MenuAction>
-            <Stack.Toolbar.MenuAction icon="megaphone" disabled={!online} subtitle={online ? undefined : 'offline'} onPress={() => void rantOn()}>Rant on this…</Stack.Toolbar.MenuAction>
+          {!classic && <Stack.Toolbar.Button icon="arrow.uturn.backward" disabled={!canUndoWrite} accessibilityLabel="Undo the last save" accessibilityHint="Your words from before it come back" onPress={() => void undoLast()} />}
+          <Stack.Toolbar.Menu icon="ellipsis" accessibilityLabel="More: versions, add to a set, share">
+            <Stack.Toolbar.MenuAction icon="clock.arrow.circlepath" disabled={versions.length < 2} subtitle={versions.length > 1 ? String(versions.length) : undefined} onPress={showVersions}>Versions</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="text.badge.plus" disabled={!barOn || !online} subtitle={online ? undefined : 'offline'} onPress={pickSets}>Add to a set…</Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={() => void share()}>Share…</Stack.Toolbar.MenuAction>
             <Stack.Toolbar.Menu inline>
+              <Stack.Toolbar.MenuAction icon="arrow.up.arrow.down" disabled={!canWrite || lines.length < 2} onPress={startReorder}>Reorder lines</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="sparkles" disabled={!canAsk} subtitle={!online ? 'offline' : undefined} onPress={openSessions}>Make it a rant, pick a hook…</Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction icon="megaphone" disabled={!online} subtitle={online ? undefined : 'offline'} onPress={() => void rantOn()}>Rant on this…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="arrow.triangle.merge" onPress={() => router.push('/merge' as any)}>Merge with…</Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={() => void share()}>Share…</Stack.Toolbar.MenuAction>
             </Stack.Toolbar.Menu>
             <Stack.Toolbar.Menu inline>
+              <Stack.Toolbar.MenuAction icon="lightbulb" onPress={() => setIdea(true)}>Idea…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.MenuAction icon="pencil" onPress={() => setRename(true)}>Rename short name…</Stack.Toolbar.MenuAction>
               <Stack.Toolbar.Menu icon="flag">
                 Stage
@@ -542,33 +591,16 @@ export default function BitPage() {
           </Stack.Toolbar.Menu>
         </Stack.Toolbar>
       )}
-      {native && !classic && !typing && !reading && (marks.marks.length > 0 || rstate === 'ready') && (
-        // the marks (Slice 3): the tray leading, the one prominent action trailing: Send, or the draft that waits
-        <Stack.Toolbar placement="bottom">
-          {marks.marks.length > 0 && <Stack.Toolbar.Button accessibilityLabel={`${MR.markCount(marks.marks.length)}. Open the marks`} onPress={() => openTray(id, null)}>{MR.markCount(marks.marks.length)}</Stack.Toolbar.Button>}
-          <Stack.Toolbar.Spacer />
-          {marks.marks.length > 0
-            ? <Stack.Toolbar.Button variant="prominent" disabled={!online || sending || rstate === 'waiting'} accessibilityLabel={MR.sendLabel(marks.marks.length)}
-                accessibilityHint={!online ? 'Offline' : rstate === 'waiting' ? 'A round is still being written' : 'Claude answers your Asks and sends back a whole new draft'} onPress={() => void sendMarks()}>{sending ? 'Sending…' : MR.sendLabel(marks.marks.length)}</Stack.Toolbar.Button>
-            : <Stack.Toolbar.Button variant="prominent" accessibilityLabel="Open the new draft" onPress={openDraft}>Open the new draft</Stack.Toolbar.Button>}
-        </Stack.Toolbar>
-      )}
       {native && classic && (
-        // the older editor only (HIG/toolbars: one prominent action, trailing). The document needs no button: he taps his words.
+        // the older editor only (HIG/toolbars: one prominent action, trailing). The page needs no button: he taps his words.
         <Stack.Toolbar placement="bottom">
           <Stack.Toolbar.Spacer />
-          {/* label only: UIKit draws a bar item that has an image as the image alone, and the word is the HIG-standard prominent action */}
           <Stack.Toolbar.Button variant="prominent" disabled={!canWrite} accessibilityLabel="Write" accessibilityHint={footnote || (online ? undefined : 'Offline')} onPress={() => openWrite()}>Write</Stack.Toolbar.Button>
         </Stack.Toolbar>
       )}
 
       {/* what sits above the document never changes when the keyboard comes up: a tap must land where he aimed it */}
-      <View style={{ gap: 2 }}>
-        {/* HIG/typography Title 1 (28 pt) for the full title, only when it says more than the bar's short name */}
-        {!fresh && title !== shortName && <Text testID="bit-title" accessibilityRole="header" maxFontSizeMultiplier={1.8} style={{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text }}>{title}</Text>}
-        {/* a new bit has one placeholder, the document's own; the idea line comes once the bit has a name */}
-        {!fresh && <IdeaLine testID="bit-idea" summary={J?.summary} ai={aiIdea} onEdit={() => setIdea(true)} />}
-      </View>
+      <PageTitle key={`${id}|${title}`} testID="bit-title" value={title} editable={online && !reading && order == null} onSave={(t) => void saveTitle(t)} onNext={() => doc.current?.focus()} />
 
       {editing != null ? (
         <View testID="bit-edit" style={{ padding: 12, borderRadius: 16, backgroundColor: C.card, gap: 10, borderWidth: 1, borderColor: C.amber }}>
@@ -612,40 +644,37 @@ export default function BitPage() {
           )}
           {classic ? (
             lines.length
-              ? <BitLines testID="bit-lines" lines={lines} punch={punch} selected={sel} onSelect={setSel} onOpenAt={(i) => openWrite(i)} actions={lineActions} />
+              ? <BitLines testID="bit-lines" lines={lines} punch={punchMarks} selected={sel} onSelect={setSel} onOpenAt={(i) => openWrite(i)} actions={lineActions} />
               : <Text testID="bit-empty" maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.mut2, paddingVertical: 8 }}>Nothing written yet.</Text>
           ) : reading ? (
             // an older version: read, select and copy; not typed into (Restore makes it the newest)
             <Text testID="bit-reading" selectable maxFontSizeMultiplier={R.PROSE_CAP} style={{ fontFamily: F.body, fontSize: 17, lineHeight: 26, color: C.text2 }}>{v?.text || ''}</Text>
           ) : (
             // keyed by the cut: the stage document and the rant cut are two documents, each with its own draft
-            <BitDoc key={vCut} ref={doc} testID="bit-doc" bit={id} cut={vCut} unit={v?.key ?? null} saved={v?.text || ''} said={said} fresh={fresh} autoFocus={p.edit === '1'} online={online}
+            <BitDoc key={vCut} ref={doc} testID="bit-doc" bit={id} cut={vCut} unit={v?.key ?? null} saved={v?.text || ''} said={said} fresh={fresh && !titled} autoFocus={p.edit === '1'} online={online}
               noteOn={!barOnKeys && (!online || !!footnote)} onSaved={docSaved} onFailed={() => ui.snack('Couldn’t save. Trying again.')} onState={setDocState}
-              scroll={{ ref: scrollRef, y: scrollY, h: scrollH }} marks={marksHere ? marks.marks : undefined} barH={barOnKeys ? MARK_BAR_H : 0}
-              onSelection={(sel, text) => { lastSel.current = { sel, text }; markBar.current?.select(sel, text); }} />
+              scroll={{ ref: scrollRef, y: scrollY, h: scrollH }} marks={marksHere ? marks.marks : undefined} barH={barOnKeys ? PAGE_BAR_H + (barNote ? PAGE_NOTE_H : 0) : 0}
+              onSelection={(s, text) => { lastSel.current = { sel: s, text }; setTypedWords(!!text.trim()); if (marksHere) pageBar.current?.select(s, text); }} />
           )}
         </>
+      )}
+
+      {/* his marks, in the page's order, with their notes; the sheet a mark opens lives here too (the bar's Note opens it) */}
+      {marksHere && (nMarks > 0 || !!noteFor) && (
+        <View testID="bit-marks" style={{ display: typing && !noteFor ? 'none' : 'flex', gap: 2 }}>
+          {nMarks > 0 && <T v="eb" accessibilityRole="header">{MR.markCount(nMarks)}</T>}
+          <MarksList testID="marks" text={docNow} marks={marks.marks} editing={noteFor} onEdit={(mid) => (mid ? setNoteFor(mid) : closeNote())}
+            onSave={(_mid, note) => closeNote(note)} onRemove={removeMark} />
+        </View>
       )}
 
       {/* everything under the document is out of the way while the keyboard is up: nothing sits between him and typing */}
       {!typing && (
         <View testID="bit-rows" style={{ borderTopWidth: 1, borderTopColor: C.hairline }}>
-          {!classic && rstate !== 'none' && (
-            // the round on this bit (Slice 3): what it is doing, and the way to the draft; a disclosure row (HIG)
-            <Pressable testID="row-round" accessibilityRole="button" accessibilityLabel={`${MR.roundLine(round)}. Open`} onPress={openDraft}
-              style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, backgroundColor: pressed ? C.card2 : 'transparent', borderBottomWidth: 1, borderBottomColor: C.hairline })}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: rstate === 'ready' ? C.amber : rstate === 'waiting' ? C.borderStrong : C.redSoft }} />
-              <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={R.ROW_CAP} style={{ flex: 1, fontFamily: F.semi, fontSize: 16, color: C.text }}>{MR.roundLine(round)}</Text>
-              <Icon name="chevron" size={18} color={C.dim} />
-            </Pressable>
-          )}
-          {/* first under the document: its Undo is the Undo of the save he just made (shown from the first save on) */}
-          {(versions.length > 1 || canUndoWrite) && (
+          {versionsShown && (
             <SectionRow testID="row-versions" kind="inline" label="Versions" meta={vi !== home ? R.stepperLabel(vi, versions.length, v?.date, v) : R.versionsMeta(vmeta)}
               accessibilityLabel={vi !== home ? `Versions, reading ${R.stepperValue(vi, versions.length, v?.date, v)}` : R.versionsLabel(vmeta)}
-              open={versionsOpen} onPress={() => setVersionsOpen((o) => !o)}
-              right={canUndoWrite ? <TextBtn testID="row-versions-undo" label="Undo" color={linkColor()} accessibilityLabel="Undo the last write" onPress={() => void undoLast()} /> : undefined}
-              extraActions={canUndoWrite ? [{ label: 'Undo the last write', onPress: () => void undoLast() }] : undefined}>
+              open onPress={() => { setVersionsOpen(false); setPos(null); }}>
               <VersionStepper testID="stepper" versions={versions} vi={vi} reading={reading} onStep={(i) => { setPos(i); setSel(null); }} onRestore={restore} durationS={J?.duration_s} estimated={!!J?.duration_estimated} />
             </SectionRow>
           )}
@@ -670,17 +699,35 @@ export default function BitPage() {
       <Sheet visible={idea} onClose={() => setIdea(false)} label="Idea" testID="bit-idea-sheet">
         {idea && <IdeaForm value={J?.summary || ''} onCancel={() => setIdea(false)} onSave={saveIdea} />}
       </Sheet>
-      <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} title={title} testID="bit-menu" />
+      <MenuSheet visible={!!menu} items={menu || []} onClose={() => setMenu(null)} title={title || shortName} testID="bit-menu" />
     </Screen>
     {barOnKeys && kb > 0 && (
-      // the marks bar on the keyboard while he types (SPEC 2026-11-16 Slice 3): a plain view at the keyboard's top, as
-      // lib/KeyboardBar; it also carries the page's footnote line meanwhile (one line above the keys, never two)
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: kb, zIndex: 8 }}>
-        <DocMarkBar ref={markBar} testID="bit-markbar" count={marks.marks.length} onAct={markAct} note={!online ? 'Offline · kept on this iPhone' : footnote}
-          offline={!online} seed={() => lastSel.current} onTray={() => { doc.current?.blur(); openTray(id, null); }} />
-      </View>
+      // the page's bar on the keyboard while he types: a plain view at the keyboard's top (never an InputAccessoryView);
+      // it carries the page's one line of status meanwhile (one line above the keys, never two)
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: kb, zIndex: 8 }}>{bar(true)}</View>
     )}
     </View>
+  );
+}
+
+/** The page's title: its own field, typed straight into (HIG/typography Title 1). Return goes on to the text; leaving
+ *  the field with other words in it renames the page. Not a controlled echo of the server: what he types stays put. */
+function PageTitle({ value, editable, onSave, onNext, testID }: { value: string; editable: boolean; onSave: (v: string) => void; onNext: () => void; testID?: string }) {
+  const [v, setV] = useState(value);
+  // one save per title: blur can come twice (Return, then the focus moving on)
+  const sent = useRef(value);
+  const leave = () => {
+    const t = v.replace(/\s+/g, ' ').trim();
+    if (!t || t === sent.current) return;
+    sent.current = t;
+    onSave(t);
+  };
+  return (
+    <TextInput testID={testID} value={v} onChangeText={(t) => setV(t.replace(/\n/g, ' '))} editable={editable} multiline scrollEnabled={false}
+      submitBehavior="submit" blurOnSubmit returnKeyType="next" onSubmitEditing={() => { leave(); onNext(); }} onBlur={leave}
+      accessibilityLabel="Title" accessibilityHint="Renames the page when you leave the field" maxFontSizeMultiplier={1.8} maxLength={160}
+      placeholder="Title" placeholderTextColor={C.dim}
+      style={[{ fontFamily: F.g7, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, color: C.text, padding: 0, margin: 0 }, native ? null : ({ outlineStyle: 'none' } as any)]} />
   );
 }
 

@@ -27,7 +27,7 @@ export default function TakeScreen() {
   // the native player is held in state (render reads it, so it is not a ref); it is made and released by the effect
   const [player, setPlayer] = useState<any>(null);
   const uri = r && !r.video_gone ? uriOf(r) : null;
-  const leave = () => (router.canGoBack() ? router.back() : router.navigate('/bits' as any));
+  const leave = () => (router.canGoBack() ? router.back() : router.navigate('/?show=tapes' as any));
 
   useEffect(() => {
     if (!native) return;

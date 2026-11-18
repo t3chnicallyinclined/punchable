@@ -50,6 +50,7 @@ export const P = {
   lines: 'M4 6h16M4 12h11M4 18h14',
   // worth a look (a seam with the same shape twice): a triangle with a mark
   warn: 'M12 4l9 16H3zM12 10v4M12 17h.01',
+  undo: 'M4 9h10a6 6 0 010 12h-3M8 5L4 9l4 4',
 } as const;
 export type IconName = keyof typeof P;
 

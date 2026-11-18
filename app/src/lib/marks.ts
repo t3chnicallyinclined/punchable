@@ -81,11 +81,3 @@ export function useMarks(bit: string, on: string | null) {
   const replace = useCallback((next: M.Mark[]) => setMarks(bit, on, next), [bit, on]);
   return { marks, replace };
 }
-
-/** The Send asked for from the tray sheet: the page that owns the text sends (it knows the version and can save first). */
-type SendAsk = { bit: string; on: string | null };
-const sendListeners = new Set<(a: SendAsk) => void>();
-export const sendAsked = {
-  emit(a: SendAsk) { sendListeners.forEach((l) => l(a)); },
-  subscribe(l: (a: SendAsk) => void) { sendListeners.add(l); return () => { sendListeners.delete(l); }; },
-};

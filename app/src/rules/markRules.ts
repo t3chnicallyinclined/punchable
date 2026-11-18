@@ -9,9 +9,13 @@
 // --red arm per rule.
 
 export type MarkType = 'change' | 'ask' | 'keep';
+/** How he asked for a Change from the selection's buttons (SPEC 2026-11-17 one notebook §4; pk-creative redline
+ *  `Intent`): absent on a plain Change with a note. `again` = another take on a range of a draft. */
+export type Intent = 'funnier' | 'shorter' | 'options' | 'again';
+export const INTENTS: readonly Intent[] = ['funnier', 'shorter', 'options', 'again'];
 /** One mark. `at` is where its words started when he made it (a UTF-16 index, the phone's own count): a hint, never
  *  the truth; the words are. */
-export type Mark = { id: string; type: MarkType; text: string; at: number; note: string; carried?: boolean };
+export type Mark = { id: string; type: MarkType; text: string; at: number; note: string; carried?: boolean; intent?: Intent };
 /** The marks on one text: his bit (`on` null) or the draft of a round (`on` = that round's job). */
 export type MarkSet = { v: 1; bit: string; on: string | null; marks: Mark[]; at: string };
 
@@ -119,11 +123,16 @@ export function highlights(text: string, set: readonly Mark[], tint?: readonly b
 
 /** What Send sends: the marks still in the text, in document order, with where they are now; the ones that are gone
  *  are left out and named. `error` when nothing can be sent (at least one Change or Ask; an Ask needs its question). */
-export function sendBody(text: string, set: Mark[]): { marks: { type: MarkType; text: string; at: number; note?: string }[]; gone: Mark[]; error?: string } {
+export function sendBody(text: string, set: Mark[]): { marks: { type: MarkType; text: string; at: number; note?: string; intent?: Intent }[]; gone: Mark[]; error?: string } {
   const p = placed(text, set);
   const live = p.filter((x) => !x.gone);
   const gone = p.filter((x) => x.gone).map((x) => x.mark);
-  const marks = live.map((x) => ({ type: x.mark.type, text: x.mark.text, at: x.start, ...(x.mark.type !== 'keep' && x.mark.note.trim() ? { note: x.mark.note.trim() } : {}) }));
+  const marks = live.map((x) => ({
+    type: x.mark.type, text: x.mark.text, at: x.start,
+    ...(x.mark.type !== 'keep' && x.mark.note.trim() ? { note: x.mark.note.trim() } : {}),
+    // how he asked rides only on a Change (the server drops it anywhere else, and refuses a word it does not know)
+    ...(x.mark.type === 'change' && x.mark.intent && INTENTS.includes(x.mark.intent) ? { intent: x.mark.intent } : {}),
+  }));
   if (live.some((x) => x.mark.type === 'ask' && !x.mark.note.trim())) return { marks, gone, error: 'An Ask needs its question' };
   if (!live.some((x) => x.mark.type !== 'keep')) return { marks, gone, error: 'Mark something to change or ask about' };
   return { marks, gone };
@@ -141,12 +150,14 @@ export type RoundResult = {
   status?: string; why?: string | null; draft?: string | null; mode?: string;
   answers?: { item: number; text: string; question?: string; quote?: string }[];
   notes?: { item: number; was: string | null; why: string | null }[];
-  marks?: { item: number; type: MarkType; text: string; at: number; note: string; carried?: boolean }[];
+  marks?: { item: number; type: MarkType; text: string; at: number; note: string; carried?: boolean; intent?: Intent }[];
+  /** The takes of each item that asked for 3 options (the first stands in the draft); only in such a round. */
+  options?: { item: number; quote?: string; texts: string[]; at?: number }[];
   dropped?: { item: number | null; reason: string }[]; refused?: string[]; tries?: number;
 };
 export type Round = {
   job: string; status: string; unit: string; on: string | null; n: number; sent_at: string;
-  marks: { type: MarkType; text: string; at: number; note: string; carried?: boolean }[];
+  marks: { type: MarkType; text: string; at: number; note: string; carried?: boolean; intent?: Intent }[];
   stale: boolean; newest: string | null; result: RoundResult | null; error?: string | null;
 };
 export type RoundState = 'none' | 'waiting' | 'ready' | 'refused' | 'failed';
@@ -215,7 +226,7 @@ export function marksAgain(text: string, r: Round, mkId: (i: number) => string):
   (r.marks || []).forEach((m, i) => {
     const at = locate(text, m);
     if (at == null) lost++;
-    else marks.push({ id: mkId(i), type: m.type, text: m.text, at, note: m.note || '' });
+    else marks.push({ id: mkId(i), type: m.type, text: m.text, at, note: m.note || '', ...(m.intent && m.intent !== 'again' ? { intent: m.intent } : {}) });
   });
   return { marks, lost };
 }
@@ -230,7 +241,7 @@ export function parseMarkSet(raw: string | null | undefined): MarkSet | null {
     const d = JSON.parse(raw);
     if (!d || d.v !== 1 || typeof d.bit !== 'string' || !Array.isArray(d.marks)) return null;
     const marks = d.marks.filter((m: any) => m && ['change', 'ask', 'keep'].includes(m.type) && typeof m.text === 'string' && m.text && typeof m.id === 'string')
-      .map((m: any) => ({ id: m.id, type: m.type, text: m.text, at: Number.isFinite(m.at) ? m.at : 0, note: typeof m.note === 'string' ? m.note : '', ...(m.carried ? { carried: true } : {}) }));
+      .map((m: any) => ({ id: m.id, type: m.type, text: m.text, at: Number.isFinite(m.at) ? m.at : 0, note: typeof m.note === 'string' ? m.note : '', ...(m.carried ? { carried: true } : {}), ...(INTENTS.includes(m.intent) ? { intent: m.intent } : {}) }));
     return { v: 1, bit: d.bit, on: typeof d.on === 'string' ? d.on : null, marks, at: typeof d.at === 'string' ? d.at : '' };
   } catch {
     return null;

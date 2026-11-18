@@ -3,7 +3,7 @@
 // Undo of a use), and the bits whose draft waits for him. Rules: rules/markRules.ts.
 import { useEffect } from 'react';
 import { get, post, useApi } from './api';
-import type { MarkType, Round } from '@/rules/markRules';
+import type { Intent, MarkType, Round } from '@/rules/markRules';
 
 const enc = encodeURIComponent;
 /** How often the page asks again while the worker is writing the draft. */
@@ -15,7 +15,7 @@ export type RoundRead = { joke: string; newest: string | null; round: Round | nu
 export type Waiting = { joke: string; title: string; short_name: string; job: string; status: string; state: 'waiting' | 'ready' | 'refused' | 'failed'; stale: boolean; sent_at: string };
 
 export const redline = {
-  send: (bit: string, body: { unit?: string; on?: string; marks: { type: MarkType; text: string; at: number; note?: string }[] }) =>
+  send: (bit: string, body: { unit?: string; on?: string; marks: { type: MarkType; text: string; at: number; note?: string; intent?: Intent }[] }) =>
     post<{ status: string; job: { id: string }; round: any }>(redlinePath(bit), body),
   read: (bit: string) => get<RoundRead>(redlinePath(bit)),
   resolve: (bit: string, job: string, verdict: 'used' | 'discarded' | 'open', unit?: string) =>

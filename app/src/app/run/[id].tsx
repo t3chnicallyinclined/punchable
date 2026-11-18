@@ -10,11 +10,15 @@
 //   ?mode=video: the front camera on top (expo-camera, as Film it), the bit below it, 3 · 2 · 1, the take capped at
 //     SET_TAKE_S; the square goes to the review (Redo / Keep); Keep puts the one copy in Photos (lib/film keepSetTake)
 //     and opens After. Locking the phone or a call ends a video take (the system stops the camera).
+// On stage (docs/design/SPEC-2026-11-17-one-notebook.md screen 6): while a sound take runs the screen is the stage's:
+// a small clock with the red dot and the word, "2 of 5 · 8 min slot", the bit's name huge, his note in amber, "Show
+// the full page", then "Next: …", Back and Next at 84 pt and "Hold to end the set" (a tap, or VoiceOver, opens the
+// Save / Discard sheet instead). The level bar, "Paused by a call" and Resume stay.
 // No haptic on Next or Back while a microphone is live (HIG/playing-haptics; Film it's rule). Next never turns into
 // Finish under the thumb: it greys as "Last bit". The web records sound only (MediaRecorder; the tape waits on the
 // server: ADR 0012) and has no After. /stage/<id> redirects here.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, AppState, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -24,7 +28,7 @@ import { actionSheet } from '@/lib/actionSheet';
 import { setRecording } from '@/lib/audioBusy';
 import { isWeb } from '@/lib/media';
 import { useRecorder } from '@/lib/recorder';
-import { RecordButton, RecordClock, RecordDock, SideButton } from '@/lib/RecordControl';
+import { RecordButton, RecordDock, SideButton } from '@/lib/RecordControl';
 import { enqueueUpload } from '@/lib/uploads';
 import { addRecording, recordingsSupported } from '@/lib/recordings';
 import * as Film from '@/lib/film';
@@ -32,7 +36,7 @@ import type { CameraModule, Take, VideoModule } from '@/lib/film';
 import type { Build, Step } from '@/lib/simple';
 import { shortNameOf } from '@/lib/say';
 import { C, DARK, F, linkColor } from '@/lib/theme';
-import { Btn, Empty, Skeleton, T, TextBtn, useUI } from '@/lib/ui';
+import { Btn, Empty, Icon, Skeleton, T, TextBtn, useReduceMotion, useUI } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TopBar } from '@/lib/TopBar';
 import { clockMs } from '@/rules/format';
@@ -47,8 +51,10 @@ const TICK_MS = 250;
 
 type View_ = 'notes' | 'lines';
 
-/** The bit on screen: its name, then his notes (or the app's, muted, while he has written none) or its full lines. */
-function BitPane({ step, i, n, view, onToggle }: { step: Step | undefined; i: number; n: number; view: View_; onToggle: () => void }) {
+/** The bit on screen (SPEC 2026-11-17 one notebook, screen 6: read at arm's length, in the dark): where he is, the
+ *  bit's name huge, his note in amber under it (the app's own pick, muted, while he has written none), and one switch,
+ *  "Show the full page", for the bit's own lines. The words are plain text VoiceOver reads. */
+function BitPane({ step, i, n, targetS, view, onToggle }: { step: Step | undefined; i: number; n: number; targetS?: number; view: View_; onToggle: () => void }) {
   if (!step) return null;
   const name = step.short_name || shortNameOf(step.title);
   const notes = step.notes || [];
@@ -56,27 +62,76 @@ function BitPane({ step, i, n, view, onToggle }: { step: Step | undefined; i: nu
   const lines = step.text ? [step.text.setup, step.text.reveal].filter((x): x is string => !!x) : step.idea ? [step.idea] : [];
   const showLines = view === 'lines' || !notes.length;
   return (
-    <View testID="run-bit" style={{ gap: 10 }}>
-      <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 15, color: C.mut }}>{`Bit ${i + 1} of ${n}`}</Text>
-      <Text testID="run-bit-name" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 36, lineHeight: 42, letterSpacing: -0.8, color: C.amber }}>{name}</Text>
-      {/* his words are plain text VoiceOver reads (design review); only the switch row below toggles them */}
+    <View testID="run-bit" style={{ gap: 18 }}>
+      <Text testID="run-where" accessibilityRole="header" maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 17, color: C.mut2 }}>{RR.stageHeader(i, n, targetS)}</Text>
+      <Text testID="run-bit-name" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.3} style={{ fontFamily: F.black, fontSize: 44, lineHeight: 48, letterSpacing: -0.8, color: C.text }}>{name}</Text>
       <View testID="run-words" style={{ gap: 8 }}>
         {showLines ? (
           lines.length ? lines.map((l, k) => (
             <Text key={k} maxFontSizeMultiplier={1.6} style={{ fontFamily: F.body, fontSize: 22, lineHeight: 30, color: C.text }}>{l}</Text>
           )) : <T v="mut">No words on this bit yet.</T>
         ) : notes.map((x, k) => (
-          <Text key={k} maxFontSizeMultiplier={1.6} style={{ fontFamily: his ? F.semi : F.body, fontSize: 24, lineHeight: 32, color: his ? C.text : C.mut }}>{`• ${x}`}</Text>
+          // his note in amber (11:1 on the stage's ground); the app's pick stays muted so it is never read as his
+          <Text key={k} maxFontSizeMultiplier={1.6} style={{ fontFamily: his ? F.semi : F.body, fontSize: 26, lineHeight: 35, color: his ? C.amber : C.mut }}>{notes.length > 1 ? `• ${x}` : x}</Text>
         ))}
       </View>
-      {/* Notes / Full lines (§4.4): one 44-pt switch row under the words */}
       {!!notes.length && (
         <Pressable testID="run-view" accessibilityRole="button"
           onPress={onToggle} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', opacity: pressed ? 0.7 : 1 })}>
-          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.semi, fontSize: 15, color: linkColor() }}>{showLines ? 'Show my notes' : 'Show full lines'}</Text>
+          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 17, color: C.mut2, textDecorationLine: 'underline' }}>{showLines ? 'Show my note' : 'Show the full page'}</Text>
         </Pressable>
       )}
     </View>
+  );
+}
+
+/** The stage's clock: small beside the bit's name (the name is the hero), with what a glance needs: the red dot and
+ *  the word while it tapes (never colour alone), "Paused by a call", the slot's bar with its light, the room's level. */
+function StageClock({ ms, status, targetS, level, interrupted, live }: { ms: number; status: string; targetS: number; level: number | null; interrupted: boolean; live: boolean }) {
+  const light = Math.max(0, targetS - 60);
+  const lit = targetS > 0 && ms >= light * 1000;
+  const pct = targetS ? Math.min(100, (ms / (targetS * 1000)) * 100) : 0;
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {live && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: DARK.rec }} />}
+        <Text testID="run-clock" maxFontSizeMultiplier={1.3} style={{ fontFamily: F.semi, fontSize: 28, color: lit ? C.gapText : C.text, fontVariant: ['tabular-nums'] }}>{clockMs(ms)}</Text>
+        <Text testID="run-status" maxFontSizeMultiplier={1.4} style={{ flex: 1, fontFamily: F.semi, fontSize: 15, color: live ? C.rec : C.mut2 }}>{status}{lit ? ' · light' : ''}</Text>
+      </View>
+      {targetS > 0 && (
+        <View accessibilityLabel={`${Math.round(pct)} percent of the slot`} style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }}>
+          <View style={{ width: `${pct}%`, height: '100%', backgroundColor: lit ? C.rec : C.amber }} />
+          <View style={{ position: 'absolute', left: `${(light / targetS) * 100}%`, top: 0, bottom: 0, width: 2, backgroundColor: C.text }} />
+        </View>
+      )}
+      {level != null && (
+        <View testID="run-level" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 6, borderRadius: 3, backgroundColor: C.card, overflow: 'hidden' }}>
+          <View style={{ width: `${Math.round(Math.max(0, Math.min(1, level)) * 100)}%`, height: '100%', backgroundColor: interrupted ? C.tabOff : level > 0.55 ? C.amber : C.border }} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** "Hold to end the set": held for RR.HOLD_MS it saves the set (a bar fills under the words while he holds; no
+ *  haptic, the microphone is live). Never the only way (HIG/accessibility: an alternative to every gesture): a tap,
+ *  and a VoiceOver activate, open the sheet that offers Save, Discard and Keep going. */
+function HoldToEnd({ onEnd, onAsk, disabled }: { onEnd: () => void; onAsk: () => void; disabled?: boolean }) {
+  const [fill] = useState(() => new Animated.Value(0));
+  const reduce = useReduceMotion();
+  const held = useRef(false);
+  const down = () => { held.current = false; if (!reduce) Animated.timing(fill, { toValue: 1, duration: RR.HOLD_MS, useNativeDriver: false }).start(); };
+  const up = () => { fill.stopAnimation(); fill.setValue(0); };
+  return (
+    <Pressable testID="run-end" accessibilityRole="button" accessibilityLabel="End the set" accessibilityHint="Hold to end and save. Double tap for Save, Discard or Keep going"
+      accessibilityState={{ disabled: !!disabled }} disabled={disabled} delayLongPress={RR.HOLD_MS}
+      onPressIn={down} onPressOut={up} onLongPress={() => { held.current = true; up(); onEnd(); }} onPress={() => { if (!held.current) onAsk(); }}
+      style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled ? 0.4 : 1 }}>
+      <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: F.body, fontSize: 17, color: C.gapText }}>Hold to end the set</Text>
+      <View style={{ width: 160, height: 3, borderRadius: 2, backgroundColor: C.card, overflow: 'hidden' }}>
+        <Animated.View style={{ height: '100%', backgroundColor: C.gapText, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -199,24 +254,53 @@ function RunSound({ id, video }: { id: string; video: boolean }) {
     ? <TextBtn testID="run-pause" label="Pause" onPress={pause} />
     : <View style={{ width: 66 }} />;
 
+  // while it tapes the dock is the stage's (the mockup): what comes next, Back and Next at 84 pt, Hold to end. Before
+  // the disc it is the recorder's own dock: nothing tapes until the red disc.
+  const names = bits.map((x) => x.name);
+  const stageDock = (
+    <View testID="run-stage-dock" style={{ gap: 14 }}>
+      <Text testID="run-next-line" maxFontSizeMultiplier={1.4} numberOfLines={1} style={{ fontFamily: F.body, fontSize: 17, color: C.mut2 }}>{RR.nextLine(names, run.i)}</Text>
+      {(intr || rec === 'paused') && (
+        // a call, or his own Pause: one 60-pt Resume (the standing rule of the recorder), above the two keys
+        <Pressable testID="run-resume" accessibilityRole="button" accessibilityLabel="Resume recording" onPress={resume}
+          style={({ pressed }) => ({ minHeight: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: C.amber, opacity: pressed ? 0.85 : 1 })}>
+          <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.bold, fontSize: 20, color: C.bg }}>Resume</Text>
+        </Pressable>
+      )}
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Pressable testID="run-back" accessibilityRole="button" accessibilityLabel="Back one bit" accessibilityState={{ disabled: back.disabled || rec === 'saving' }} disabled={back.disabled || rec === 'saving'} onPress={() => go(run.i - 1)}
+          style={({ pressed }) => ({ width: 84, height: 84, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, opacity: back.disabled ? 0.4 : pressed ? 0.8 : 1 })}>
+          <Icon name="back" size={28} color={C.mut2} sw={2.4} />
+        </Pressable>
+        <Pressable testID="run-next" accessibilityRole="button" accessibilityLabel={next.label} accessibilityState={{ disabled: next.disabled || rec === 'saving' }} disabled={next.disabled || rec === 'saving'} onPress={() => go(run.i + 1)}
+          style={({ pressed }) => ({ flex: 1, height: 84, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card, opacity: next.disabled ? 0.4 : pressed ? 0.8 : 1 })}>
+          <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: F.bold, fontSize: 26, color: C.text }}>{next.disabled ? 'Last bit' : 'Next'}</Text>
+        </Pressable>
+      </View>
+      <HoldToEnd disabled={rec === 'saving'} onEnd={() => void save()} onAsk={close} />
+    </View>
+  );
+
   return (
     <Screen title="Record" task deep testID="run"
       header={<TopBar task title={B?.board.title || ''} left={<TextBtn testID="run-close" label="Close" onPress={close} />} right={right} />}
-      dock={
+      dock={taping ? stageDock : (
         <RecordDock
-          left={<SideButton testID="run-back" label={back.label} disabled={back.disabled || !steps.length || rec === 'saving'} onPress={() => go(run.i - 1)} />}
-          right={<SideButton testID="run-next" prominent label={next.label} disabled={next.disabled || rec === 'saving'} onPress={() => go(run.i + 1)} />}>
+          left={<SideButton testID="run-back" label={back.label} disabled={back.disabled || !steps.length} onPress={() => go(run.i - 1)} />}
+          right={<SideButton testID="run-next" prominent label={next.label} disabled={next.disabled} onPress={() => go(run.i + 1)} />}>
           <RecordButton testID="run-rec" state={rec} interrupted={intr} busy={starting} onStart={start} onStop={() => void save()} onResume={resume} />
         </RecordDock>
-      }>
+      )}>
       {!B ? (b.rawError ? <Empty text={`Can’t open the set: ${b.rawError}`} /> : <Skeleton lines={5} height={28} />) : !steps.length ? (
         <Empty text="This set has no bits yet. Add a bit, then record it." />
       ) : (
         <View style={{ gap: 18 }}>
           {video && <T v="mut" testID="run-video-web">Filming a set is in the iPhone app. This records sound.</T>}
-          <RecordClock testID="run" ms={ms} status={status} targetS={target} level={taping ? lvl : null} interrupted={intr} />
-          <BitPane step={steps[run.i]} i={run.i} n={steps.length} view={view} onToggle={() => setView((v) => (v === 'notes' ? 'lines' : 'notes'))} />
+          <StageClock ms={ms} status={status} targetS={target} level={taping ? lvl : null} interrupted={intr} live={rec === 'recording' && !intr} />
+          <BitPane step={steps[run.i]} i={run.i} n={steps.length} targetS={target} view={view} onToggle={() => setView((v) => (v === 'notes' ? 'lines' : 'notes'))} />
           {rec === 'idle' && <T v="small" style={{ textAlign: 'center' }}>Tap the red button to record · Next marks where each bit ends</T>}
+          {/* the stage's dock is taller than the recorder's: room under the words so the last line clears it */}
+          {taping && <View style={{ height: 150 }} />}
         </View>
       )}
     </Screen>
@@ -519,7 +603,7 @@ function RunVideo({ id }: { id: string }) {
         {!B ? (b.rawError ? <Empty text={`Can’t open the set: ${b.rawError}`} /> : <Skeleton lines={4} height={24} />) : !steps.length ? (
           <Empty text="This set has no bits yet. Add a bit, then film it." />
         ) : (
-          <BitPane step={steps[run.i]} i={run.i} n={steps.length} view={view} onToggle={() => setView((v) => (v === 'notes' ? 'lines' : 'notes'))} />
+          <BitPane step={steps[run.i]} i={run.i} n={steps.length} targetS={B.board.target_s || 0} view={view} onToggle={() => setView((v) => (v === 'notes' ? 'lines' : 'notes'))} />
         )}
       </ScrollView>
     </Screen>

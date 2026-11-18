@@ -1,36 +1,27 @@
 // The custom top bar (web; on the phone only the full-screen tasks: Stage, Record, Review, Import, the old set list)
-// and the offline strip. The three tab roots live here because the bar's back fallback goes to one.
+// and the offline strip. The back button's fallback (nothing to go back to) is Notebook.
 import React, { useEffect } from 'react';
 import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { C, F, linkColor } from './theme';
 import { useOnline } from './api';
 import { useSession } from './auth';
-import { Icon, SignInBtn, useUI } from './ui';
+import { Icon, SignInBtn } from './ui';
 
-// The three tabs: Bits · Sets · Tapes (SPEC 2026-11-16 Slice 6: a rant is a set he films, so the Rant tab went; '/'
-// opens Bits). Ask is the Bits search.
-export const ROOTS = [
-  { key: 'bits', label: 'Bits', path: '/bits' },
-  { key: 'sets', label: 'Sets', path: '/sets' },
-  { key: 'tapes', label: 'Tapes', path: '/tapes' },
-];
-
-export function goRoot(key: string) {
-  const r = ROOTS.find((x) => x.key === key);
-  if (r) router.navigate(r.path as any);
+// No tabs (SPEC 2026-11-17 one notebook): the app's root is Notebook, and a back button with nowhere to go back to
+// goes there.
+export function goHome() {
+  router.navigate('/' as any);
 }
 
-const ROOT_LABEL: Record<string, string> = { bits: 'Bits', sets: 'Sets', tapes: 'Tapes' };
 /** The bar itself. The safe-area inset is NOT added here: `Screen` wraps every header (this one or a custom one) in it. */
 export function TopBar({ title, back, onBack, right, task, left, backLabel }: { title: string; back?: boolean; onBack?: () => void; right?: React.ReactNode; task?: boolean; left?: React.ReactNode; backLabel?: string }) {
-  const ui = useUI();
-  // HIG: the back button carries the previous screen's name (the tab he came from unless the screen says otherwise)
-  const label = backLabel ?? (ROOT_LABEL[ui.lastRoot] || 'Back');
+  // HIG: the back button carries the previous screen's name (Notebook unless the screen says otherwise)
+  const label = backLabel ?? 'Notebook';
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 52, paddingTop: 4, paddingBottom: 4, paddingHorizontal: 8, backgroundColor: task ? C.bgDeep : C.bg, borderBottomWidth: 1, borderBottomColor: C.border }}>
       {left ? left : back ? (
-        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goRoot('bits')))}
+        <Pressable testID="back" accessibilityRole="button" accessibilityLabel={`Back to ${label}`} onPress={onBack || (() => (router.canGoBack() ? router.back() : goHome()))}
           style={{ minWidth: 44, height: 44, maxWidth: 140, borderRadius: 22, flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
           <Icon name="back" size={24} color={C.amber} sw={2.4} />
           <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontFamily: F.medium, fontSize: 16, color: C.amber, marginLeft: -4 }}>{label}</Text>

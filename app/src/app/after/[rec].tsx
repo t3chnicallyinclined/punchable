@@ -31,7 +31,7 @@ export default function After() {
   const b = useApi<Build>(boardId ? `/api/boards/${enc(boardId)}/build` : null);
   const texts = useMemo(() => Object.fromEntries((b.data?.steps || []).map((s) => [s.joke_id, s.text ? [s.text.setup, s.text.reveal].filter(Boolean).join('\n') : s.idea || ''])), [b.data]);
   const rows = useMemo(() => (r ? afterRows(r.run_bits || [], r.splits || [], r.bit_words, texts) : []), [r, texts]);
-  const done = () => (router.canGoBack() ? router.back() : router.navigate((boardId ? `/list/${enc(boardId)}` : '/tapes') as any));
+  const done = () => (router.canGoBack() ? router.back() : router.navigate((boardId ? `/list/${enc(boardId)}` : '/?show=tapes') as any));
   const openBit = (id: string) => router.navigate(`/joke/${enc(id)}` as any);
   const reached = rows.filter((x) => !x.skipped).length;
   const header = <TopBar task title="After" left={<View style={{ width: 66 }} />} right={<TextBtn testID="after-done" label="Done" onPress={done} />} />;

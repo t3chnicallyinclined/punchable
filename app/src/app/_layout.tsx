@@ -76,7 +76,7 @@ function CrashContext() {
 
 /** The document title on the web; the native header title on the phone. */
 const t = (s: string) => (Platform.OS === 'web' ? `${s} · Punchable` : s);
-/** A full-screen modal on the phone (slides up, covers the tab bar); a plain route on the web. */
+/** A full-screen modal on the phone (slides up over everything); a plain route on the web. */
 const fullScreen = Platform.OS === 'web' ? { animation: 'slide_from_bottom' as const } : { animation: 'slide_from_bottom' as const, presentation: 'fullScreenModal' as const, autoHideHomeIndicator: true };
 /** A form sheet on the phone (HIG/sheets: the grabber, swipe anywhere to dismiss, the bar with Cancel leading); a plain route on the web, which draws the Modal sheet itself. */
 const sheet = (detents: number[] | 'fitToContents') => (Platform.OS === 'web' ? {} : {
@@ -179,8 +179,9 @@ function RootLayout() {
               <RecordingsQueue />
               <BitDrafts />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-                {/* The three tabs, each its own stack: app/(tabs). Route groups keep every URL (/joke/x, /list/x, /inbox, ...). */}
-                <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+                {/* One notebook (SPEC 2026-11-17): one stack, app/(nb), Notebook at its root. The group keeps every URL
+                    (/joke/x, /list/x, /inbox, ...). */}
+                <Stack.Screen name="(nb)" options={{ animation: 'none' }} />
                 {/* Full-screen tasks (HIG/modality: "a full-screen modal style for ... a complex task"); nothing swipes him off the stage. */}
                 <Stack.Screen name="stage/[id]" options={{ ...fullScreen, gestureEnabled: false, title: t('On stage') }} />
                 {/* The walk-through (SPEC 2026-11-16 Slice 5): one screen records sound or films a set, one bit at a time;
@@ -213,9 +214,8 @@ function RootLayout() {
                     detent first, large on drag; dimmed behind (the page must not change under a choice being made) */}
                 <Stack.Screen name="around" options={{ ...sheet([0.5, 1]), title: t('Around this bit'), contentStyle: { backgroundColor: C.surface } }} />
                 <Stack.Screen name="setpick" options={{ ...sheet([0.5, 1]), title: t('Add to a set'), contentStyle: { backgroundColor: C.surface } }} />
-                {/* The redesign, Slice 3 (SPEC 2026-11-16 §3.2): the marks tray. Medium detent first (the bit stays in sight
-                    above it), large on drag; dimmed behind (a note being typed is about the words he marked) */}
-                <Stack.Screen name="marks" options={{ ...sheet([0.5, 1]), title: t('Marks'), contentStyle: { backgroundColor: C.surface } }} />
+                {/* /marks was the marks tray: an old link opens the page it names (SPEC 2026-11-17 §3) */}
+                <Stack.Screen name="marks" options={{ animation: 'none', title: t('Notebook') }} />
                 <Stack.Screen name="login" options={{ animation: 'none', title: 'Sign in · Punchable' }} />
                 <Stack.Screen name="auth/callback" options={{ animation: 'none', title: 'Signing in · Punchable' }} />
                 <Stack.Screen name="auth/logout" options={{ animation: 'none', title: 'Signed out · Punchable' }} />

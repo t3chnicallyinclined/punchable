@@ -100,7 +100,7 @@ export default function MergeReview() {
     <Screen title="Merge" back testID="merge" maxWidth={760}>
       {err && !groups ? <ErrorCard error={err} onRetry={load} /> : null}
       {groups && !groups.length && <Empty text="Nothing looks like the same idea right now." />}
-      {groups && groups.length > 0 && !g && <Empty text="That’s all of them."><Btn small label="Back to Bits" onPress={() => router.navigate('/bits' as any)} /></Empty>}
+      {groups && groups.length > 0 && !g && <Empty text="That’s all of them."><Btn small label="Back to Notebook" onPress={() => router.navigate('/' as any)} /></Empty>}
       {g && (
         <View style={{ gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

@@ -1,14 +1,5 @@
-// Whether the input bar rides the tab bar as its bottom accessory (NativeTabs.BottomAccessory, the MiniPlayer
-// pattern: HIG/tab-bars "you can choose to minimize the tab bar and move the accessory inline with it when a person
-// scrolls down"). Only where the system draws Liquid Glass (iOS 26+); below that, and on Android, the bar stays an
-// absolute dock above the tab bar (lib/Screen.native).
-import { Platform } from 'react-native';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
-
-let glass = false;
-try {
-  glass = Platform.OS === 'ios' && isLiquidGlassAvailable();
-} catch {
-  glass = false;
-}
-export const ACCESSORY = glass;
+// The input bar once rode the tab bar as its bottom accessory on iOS 26 (NativeTabs.BottomAccessory). There is no tab
+// bar now (SPEC 2026-11-17 one notebook), so there is no accessory to draw it: the bar is always the screen's own dock
+// (lib/Screen.native). With this true and nothing drawing the accessory, a conversation's input bar was not drawn at
+// all on iOS 26 (SPEC 2026-11-16 §5 R11); tests/notebookShell.test.mjs pins it false.
+export const ACCESSORY = false;

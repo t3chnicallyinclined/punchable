@@ -7,5 +7,5 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 export default function NotesScreen() {
   const params = useLocalSearchParams<{ talk?: string }>();
   if (params.talk && Platform.OS !== 'web') return <Redirect href={{ pathname: '/record', params: { kind: 'memo' } } as any} />;
-  return <Redirect href={'/bits' as any} />;
+  return <Redirect href={'/?show=tapes' as any} />;
 }

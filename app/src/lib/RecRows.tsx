@@ -104,7 +104,7 @@ function Row({ r }: { r: LocalRec }) {
       onLongPress={Platform.OS === 'ios' ? undefined : () => actionSheet({ title, options: [...items.map((it) => ({ label: it.label, onPress: it.onPress, destructive: it.destructive })), { label: 'Cancel', cancel: true }] })}>
       {/* the play button is a sibling of the row's text, so VoiceOver reaches both (an accessible parent hides its children) */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56 }}>
-        <RowMenu href={target || '/bits'} items={items}>
+        <RowMenu href={target || '/'} items={items}>
           <Pressable testID={`rec-${r.id}`} accessible accessibilityRole={does ? 'button' : undefined} accessibilityLabel={label} accessibilityHint={hint}
             {...rowActions(items)} onPress={does ? tap : undefined} style={{ flex: 1, minWidth: 0, paddingVertical: 10 }}>
             <T v="semi" numberOfLines={3}>{title}</T>

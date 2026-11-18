@@ -510,8 +510,6 @@ type UIState = {
   quickVoiceNote: () => void;
   withMic: (then: () => void) => void;
   uploadFile: () => void;
-  lastRoot: string;
-  setLastRoot: (k: string) => void;
   importCount: number;
   setImportCount: (n: number) => void;
   workingSet: WSPin;
@@ -535,7 +533,6 @@ export const useUI = () => {
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [snack, setSnack] = useState<Snack | null>(null);
   const [sheet, setSheet] = useState<'' | 'cap' | 'mic'>('');
-  const [lastRoot, setLastRoot] = useState('bits');
   const [importCount, setImportCount] = useState(0);
   const [workingSet, setWorkingSet] = useState<WSPin>(null);
   const [toSort, setToSort] = useState(0);
@@ -586,8 +583,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<UIState>(() => ({
     snack: showSnack, openCapture: () => setSheet('cap'), openRecord: () => setSheet('cap'), quickVoiceNote: voiceNote, withMic, uploadFile,
-    lastRoot, setLastRoot, importCount, setImportCount, workingSet, setWorkingSet, toSort, setToSort, bar, setBar, setPinnedHeight,
-  }), [showSnack, withMic, uploadFile, voiceNote, lastRoot, importCount, workingSet, toSort, bar]);
+    importCount, setImportCount, workingSet, setWorkingSet, toSort, setToSort, bar, setBar, setPinnedHeight,
+  }), [showSnack, withMic, uploadFile, voiceNote, importCount, workingSet, toSort, bar]);
 
   return (
     <Ctx.Provider value={value}>

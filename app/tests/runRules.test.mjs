@@ -41,6 +41,17 @@ if (process.argv.includes("--red")) {
   process.exit(caught && real ? 0 : 1);
 }
 
+// ---- on stage: the line beside the clock and the line over Next
+{
+  check(R.stageHeader(1, 5, 480) === "2 of 5 · 8 min slot" && R.stageHeader(0, 3, 0) === "1 of 3" && R.stageHeader(9, 3, 420) === "3 of 3 · 7 min slot" && R.stageHeader(0, 0, 420) === "7 min slot", "the line beside the clock: where he is, and the slot when there is one");
+  const names = ["Gym at 5 a.m.", "Self-checkout", "My dad's voicemails"];
+  check(R.nextLine(names, 1) === "Next: My dad's voicemails" && R.nextLine(names, 0) === "Next: Self-checkout", "the line over Next names the bit that comes after this one");
+  check(R.nextLine(names, 2) === "Last bit" && R.nextLine([], 0) === "", "on the last bit it says so; an empty set says nothing");
+  // the red arm, run here so it cannot be skipped: a line that names the bit he is ON would pass none of the above
+  const wrong = (n, i) => (n[i] ? `Next: ${n[i]}` : "");
+  check(wrong(names, 1) !== R.nextLine(names, 1) && wrong(names, 2) !== R.nextLine(names, 2), "red arm: a line that names the current bit is caught");
+  check(R.HOLD_MS >= 500 && R.HOLD_MS <= 1000, "Hold to end is a real hold, and a short one");
+}
 // ---- Next then Back then Next: three spans, the second visit to a bit is its own span
 {
   let r = R.runStart(R.runIdle(), 0);

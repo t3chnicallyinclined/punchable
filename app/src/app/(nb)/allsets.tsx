@@ -1,3 +1,5 @@
+// All sets (/allsets; SPEC 2026-11-17 one notebook: this was the Sets tab's root, kept behind Notebook's ⋯ for what the
+// one list does not carry: the drafts the app made, Rename, Duplicate, Archive, tonight's list).
 // Sets (MixSets, docs/UX_2026-10.md): HIS set lists as cards (lib/SetCard: the name, how many bits and how long, the
 // bits' names in order; the boards list carries `names`, one request), tonight's first. What he recorded is on Tapes
 // (SPEC 2026-11-16 Slice 6: the Recorded segment moved there). A topic of the old Rant tab that no list was made from
@@ -28,7 +30,7 @@ import { getPrefs, setPrefs } from '@/lib/prefs';
 import { newSetList } from '@/lib/newSetList';
 import { C, F } from '@/lib/theme';
 import { haptics } from '@/lib/haptics';
-import { Avatar, Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
+import { Btn, Empty, ErrorCard, FixtureBanner, Icon, IconBtn, List, ListRow, MenuItem, MenuSheet, Sheet, SheetHead, Skeleton, T, TextBtn, useUI, useWide } from '@/lib/ui';
 import { Screen } from '@/lib/Screen';
 import { TonightCard } from '@/lib/SetBar';
 import { useTonight } from '@/lib/tonight';
@@ -167,10 +169,10 @@ export default function Sets() {
   ];
   const groupItems: MenuItem[] = [{ label: 'Archive all drafts', icon: 'archivebox', onPress: archiveAll, testID: 'drafts-archive-all-menu' }];
   return (
-    <Screen title="Sets" testID="sets" onRefresh={refresh} largeTitle={native} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+    <Screen title="All sets" back testID="sets" onRefresh={refresh} right={native ? undefined : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <IconBtn testID="sets-more" label="More" onPress={() => setMenu({ title: 'Sets', items: moreItems })}><Icon name="more" size={22} color={C.amber} /></IconBtn>
       <IconBtn testID="new-setlist" label="New set list" onPress={startList}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></IconBtn>
-      <Avatar /></View>}>
+      </View>}>
       {native && (
         <Stack.Toolbar placement="right">
           {/* HIG/toolbars: the primary action ("+") acts, trailing; Record a set and Archived in the ⋯ menu */}
@@ -179,7 +181,6 @@ export default function Sets() {
             <Stack.Toolbar.MenuAction icon="archivebox" onPress={openArchived}>Archived</Stack.Toolbar.MenuAction>
           </Stack.Toolbar.Menu>
           <Stack.Toolbar.Button icon="plus" accessibilityLabel="New set list" accessibilityHint="Starts an empty list named for today" onPress={startList}>New set list</Stack.Toolbar.Button>
-          <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
         </Stack.Toolbar>
       )}
       <View testID="sets-tonight" style={{ gap: 4 }}>
@@ -211,7 +212,7 @@ export default function Sets() {
             <View style={{ gap: 2 }}>
               {/* HIG/disclosure-controls: one row, collapsed by default, remembered per device; the chevron swaps
                   symbols (no rotation: Reduce Motion). Its menu and the group's last row both archive all. */}
-              <RowMenu href="/sets" items={groupItems}>
+              <RowMenu href="/allsets" items={groupItems}>
                 <Pressable testID="drafts-row" accessibilityRole="button" accessibilityState={{ expanded: draftsOpen }} accessibilityLabel={label} accessibilityHint={draftsOpen ? 'Hides the drafts' : 'Shows the drafts'}
                   onPress={toggleDrafts} onLongPress={ios ? undefined : () => { haptics.light(); setMenu({ title: label, items: groupItems }); }} delayLongPress={350} {...rowActions(groupItems)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10 }}>

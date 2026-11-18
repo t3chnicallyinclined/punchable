@@ -220,7 +220,7 @@ export default function SetScreen() {
       bar={<SayBar testID="set-say" placeholder="Why'd it die at 3:40? Ask about this set" hint={null}
         onSay={(text) => router.push({ pathname: '/say', params: { text, set: id, screen: 'set' } } as any)} />}>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        <Btn small v="add" testID="fix-tonight" label="Fix it for tonight" onPress={() => router.push('/sets' as any)} />
+        <Btn small v="add" testID="fix-tonight" label="Fix it for tonight" onPress={() => router.push('/allsets' as any)} />
       </View>
       <FixtureBanner show={sets.fixture} what="GET /api/venues (per-set laugh stats)" />
       <View style={{ gap: 2 }}>

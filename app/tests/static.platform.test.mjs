@@ -20,7 +20,7 @@ const check = (c, m) => { if (!c) fails.push(m); };
 /** Split files that still branch on Platform.OS === 'ios' (2026-10-28): the KeyboardAvoidingView fork in the screen
  *  shell (both twins), the Liquid Glass probe, and the Android fallbacks in Icon.native / RowMenu.native (those two
  *  become Icon.ios.tsx / RowMenu.ios.tsx with the plain file serving Android and the web). Delete each line as it goes. */
-const KNOWN_PLATFORM_BRANCHES = new Set(['lib/Screen.tsx', 'lib/Screen.native.tsx', 'lib/accessory.native.ts', 'lib/Icon.native.tsx', 'lib/RowMenu.native.tsx']);
+const KNOWN_PLATFORM_BRANCHES = new Set(['lib/Screen.tsx', 'lib/Screen.native.tsx', 'lib/Icon.native.tsx', 'lib/RowMenu.native.tsx']);
 
 const files = walk(SRC).filter((p) => /\.(ts|tsx)$/.test(p) && !/\.d\.ts$/.test(p));
 

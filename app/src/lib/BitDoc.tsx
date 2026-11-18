@@ -20,6 +20,9 @@
 // has not sent are drawn as quiet highlights behind his words while the keyboard is down (`marks`; a copy of the text
 // laid out exactly as the input lays it out, in transparent ink, its marked runs on a tinted ground: lib/MarkedText
 // MarkLayer). Nothing in the text changes: a mark is a highlight, never a character.
+// One notebook (SPEC 2026-11-17): a marked range stays marked while he types too (the layer is drawn again on every
+// change of the text), and the page can put the caret in the document (`focus`: Return in the title field) and ask
+// where it is (`caret`: Punch it up on this paragraph).
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { AppState, PixelRatio, Platform, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +64,8 @@ export type BitDocHandle = {
   /** A version of ours was undone: take the server's text again when it arrives. */ undone: () => void;
   /** The scroll view changed height (the keyboard): bring the caret into view. */ follow: () => void;
   /** Put the keyboard away (Done). */ blur: () => void;
+  /** Put the caret in the document and bring the keyboard up (Return in the title). */ focus: () => void;
+  /** Where the caret was last (a UTF-16 index into `text()`). */ caret: () => number;
   /** The version the words on the page are (null while they are not a version yet). */ unit: () => string | null;
 };
 
@@ -99,6 +104,8 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
   const [pending, setPending] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [webH, setWebH] = useState(0);
+  // the marks are drawn again as the text changes under them (the web has no other render per keystroke)
+  const [, setDrawn] = useState(0);
   // while typing the field is at least as tall as the page, so a tap under a short document moves the caret to its
   // end (as Notes does) instead of landing on nothing and putting the keyboard away
   const [fillH, setFillH] = useState(0);
@@ -251,6 +258,7 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
   const onChange = (t: string) => {
     text.current = t;
     if (native) setMirror(L.mirrorText(t, caret.current));
+    else if (props.current.marks?.length) setDrawn((n) => n + 1);
     clearTimeout(timers.current.draft);
     timers.current.draft = setTimeout(() => { void keepLocal().then((ok) => { if (alive.current && !ok && dirty()) setNote('This iPhone could not keep the words'); }); }, L.DRAFT_SETTLE_MS);
     clearTimeout(timers.current.pause);
@@ -321,6 +329,8 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
     undone: () => { expect.current = null; },
     follow,
     blur: () => input.current?.blur(),
+    focus: () => input.current?.focus(),
+    caret: () => caret.current,
     unit: () => (dirty() || inFlight.current ? null : baseUnit.current),
   }), [save, show, follow]);
 
@@ -355,14 +365,14 @@ export const BitDoc = forwardRef<BitDocHandle, BitDocProps>(function BitDoc(p, r
           onLayout={(e) => { caretY.current = e.nativeEvent.layout.height; follow(); }}
           style={[style, { position: 'absolute', left: 0, right: 0, top: 0, opacity: 0 }]}>{mirror + '​'}</Text>
       )}
-      {!typing && !!p.marks?.length && (
-        // his marks, quiet, behind his words (the input above draws the words themselves)
+      {!!p.marks?.length && (
+        // his marks, quiet, behind his words (the input above draws the words themselves), while he types too
         <MarkLayer text={text.current} marks={p.marks} style={style} />
       )}
       <TextInput key={mount.n} ref={input} testID={p.testID ? `${p.testID}-input` : undefined} multiline scrollEnabled={false} defaultValue={mount.text}
         autoFocus={!!p.autoFocus && mount.n === 0} textAlignVertical="top" maxFontSizeMultiplier={PROSE_CAP}
-        accessibilityLabel="Bit text" accessibilityHint={p.marks?.length ? `Saves by itself. ${p.marks.length === 1 ? 'One mark' : `${p.marks.length} marks`} on it, in the marks tray` : 'Saves by itself'}
-        placeholder={p.fresh ? 'Write the bit. The first line names it.' : 'Write the bit.'} placeholderTextColor={C.dim}
+        accessibilityLabel="Bit text" accessibilityHint={p.marks?.length ? `Saves by itself. ${p.marks.length === 1 ? 'One mark' : `${p.marks.length} marks`} on it, listed under the page` : 'Saves by itself'}
+        placeholder={p.fresh ? 'Start typing. The first line names the page.' : 'Start typing.'} placeholderTextColor={C.dim}
         onChangeText={onChange}
         onSelectionChange={(e) => {
           caret.current = e.nativeEvent.selection.end;

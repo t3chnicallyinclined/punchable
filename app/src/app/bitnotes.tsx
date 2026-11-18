@@ -76,7 +76,7 @@ export default function BitNotesRoute() {
   // the root provider's inset (this route is not inside lib/Screen): the sheet's own window, the home indicator alone;
   // react-native-screens lays unstable_sheetFooter flush with the sheet's bottom edge and adds no inset of its own
   const bottom = useBottomInset();
-  const close = () => (router.canGoBack() ? router.back() : router.navigate('/sets' as any));
+  const close = () => (router.canGoBack() ? router.back() : router.navigate('/?show=sets' as any));
   const steps = notes?.steps || [];
   const i = Math.max(0, Math.min(steps.length - 1, notes?.index ?? 0));
   const step: Step | undefined = steps[i];

@@ -1,3 +1,5 @@
+// All bits (/allbits; SPEC 2026-11-17 one notebook: this was the Bits tab's root, kept behind Notebook's ⋯ for what the
+// one list does not carry: the sort, Select to make several bits one, the Memos view, the status legend).
 // Bits (MixBits, docs/UX_2026-10.md): every bit as a list, a status dot (kills · working · fresh · resting) and how
 // long it runs; a search box that also takes a question (a question goes to the conversation); Bits · Memos · Map
 // (Memos: the voice memos on this phone with play, then the earlier ones; its toolbar mic records one, SPEC 2026-10-31);
@@ -26,7 +28,7 @@ import { MomentRow } from '@/lib/MomentRow';
 import type { SearchResult } from '@/rules/searchRows';
 import { isQuestion, shortNameOf } from '@/lib/say';
 import { C, F } from '@/lib/theme';
-import { Avatar, Btn, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
+import { Btn, Empty, ErrorCard, Icon, IconBtn, Seg, Skeleton, T, TextBtn, useRefresh, useWide } from '@/lib/ui';
 import { getPrefs, setPrefs } from '@/lib/prefs';
 import { mergeInto, pickMain, undoMerge } from '@/lib/bitWork';
 import { actionSheet } from '@/lib/actionSheet';
@@ -171,8 +173,6 @@ export default function Bits() {
       <Stack.Toolbar.Button icon="map" accessibilityLabel="Map of all your bits" onPress={() => router.push('/map' as any)}>Map</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="mic" accessibilityLabel="Record a memo" onPress={recordMemo}>Record a memo</Stack.Toolbar.Button>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
-      {/* You and Settings behind the avatar on every tab root (SPEC 2026-11-16 Slice 6: they lived in the Rant tab) */}
-      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
     </Stack.Toolbar>
   ) : (
     <Stack.Toolbar placement="right">
@@ -187,15 +187,12 @@ export default function Bits() {
         </Stack.Toolbar.Menu>
       </Stack.Toolbar.Menu>
       <Stack.Toolbar.Button icon="plus" accessibilityLabel="New bit" accessibilityHint="Opens a blank bit with the keyboard up" onPress={newBit}>New bit</Stack.Toolbar.Button>
-      {/* You and Settings behind the avatar on every tab root (SPEC 2026-11-16 Slice 6: they lived in the Rant tab) */}
-      <Stack.Toolbar.View><Avatar ask={false} /></Stack.Toolbar.View>
     </Stack.Toolbar>
   );
   const right = native ? undefined : (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <IconBtn testID="bits-new" label="New bit" onPress={newBit}><Icon name="plus" size={24} color={C.amber} sw={2.4} /></IconBtn>
       <IconBtn testID="bits-map" label="Map of all your bits" onPress={() => router.push('/map' as any)}><Icon name="map" size={22} color={C.amber} /></IconBtn>
-      <Avatar />
     </View>
   );
 
@@ -276,7 +273,7 @@ export default function Bits() {
 
   if (view === 'notes') {
     return (
-      <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} onRefresh={list.reload}>
+      <Screen title="All bits" back testID="bits" right={right} search={search} onRefresh={list.reload}>
         {mapBtn}
         {header}
         <PhoneMemos />
@@ -285,7 +282,7 @@ export default function Bits() {
     );
   }
   return (
-    <Screen title="Bits" testID="bits" right={right} largeTitle={native} search={search} scroll={false}>
+    <Screen title="All bits" back testID="bits" right={right} search={search} scroll={false}>
       {mapBtn}
       <FlatList contentInsetAdjustmentBehavior="automatic"
         data={items} keyExtractor={(j) => j.id} renderItem={({ item }) => <Row j={item} selecting={selecting} selected={picked.includes(item.id)} onToggle={toggle} />}
