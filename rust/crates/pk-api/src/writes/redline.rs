@@ -34,7 +34,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use pk_core::py;
 use pk_creative::Items;
-use pk_creative::redline::{self as rl, Kind, MAX_MARKS, MAX_NOTE_CHARS, MAX_QUOTE_CHARS, Mark, WHOLE_CAP};
+use pk_creative::redline::{self as rl, Intent, Kind, MAX_MARKS, MAX_NOTE_CHARS, MAX_QUOTE_CHARS, Mark, WHOLE_CAP};
 use pk_creative::reducers::redline::{last_round, open_round};
 use pk_kb::View;
 use serde_json::{Map, Value, json};
@@ -72,6 +72,8 @@ pub struct Sent {
     pub at: Option<usize>,
     /// His note or question (empty on a Keep).
     pub note: String,
+    /// How he asked for a Change (Funnier, Shorter, 3 options, another take); never on an Ask or a Keep.
+    pub intent: Option<Intent>,
 }
 
 /// `marks` of a body: 1 to [`MAX_MARKS`], each a known type, its words within [`MAX_QUOTE_CHARS`], a note within
@@ -117,11 +119,23 @@ pub fn marks_arg(v: Option<&Value>) -> ApiResult<Vec<Sent>> {
             return Err(http(400, "an Ask needs its question"));
         }
         let note = if kind == Kind::Keep { String::new() } else { note };
+        // the selection's own buttons (the one-notebook page): a known word on a Change. An older phone sends none;
+        // on an Ask or a Keep it means nothing and is left out
+        let intent = match o.get("intent") {
+            None | Some(Value::Null) => None,
+            Some(x) => Some(
+                x.as_str()
+                    .and_then(Intent::parse)
+                    .ok_or_else(|| http(400, "a mark's intent is funnier, shorter, options or again"))?,
+            ),
+        }
+        .filter(|_| kind == Kind::Change);
         out.push(Sent {
             kind,
             text: text.to_string(),
             at,
             note,
+            intent,
         });
     }
     if !out.iter().any(|m| m.kind != Kind::Keep) {
@@ -146,6 +160,7 @@ pub fn locate_all(base: &str, sent: &[Sent]) -> ApiResult<Vec<Mark>> {
             start,
             note: s.note.clone(),
             carried: false,
+            intent: s.intent,
         });
     }
     out.sort_by_key(|m| (m.start, m.text.len()));
@@ -190,6 +205,7 @@ pub fn carried_keeps(prev: Option<&Value>, base: &str, marks: &[Mark]) -> Vec<Ma
                 start,
                 note: String::new(),
                 carried: true,
+                intent: None,
             };
             let mut with = marks.to_vec();
             with.push(k.clone());
@@ -206,8 +222,13 @@ fn marks_json(base: &str, marks: &[Mark]) -> Vec<Value> {
     marks
         .iter()
         .map(|m| {
-            json!({"type": m.kind.name(), "text": m.text, "start": m.start, "at": rl::utf16_of(base, m.start),
-                   "note": m.note, "carried": m.carried})
+            let mut row = json!({"type": m.kind.name(), "text": m.text, "start": m.start,
+                                 "at": rl::utf16_of(base, m.start), "note": m.note, "carried": m.carried});
+            // only when he asked with one: a mark without it is stored, and keyed, exactly as before this field
+            if let (Some(i), Some(o)) = (m.intent, row.as_object_mut()) {
+                o.insert("intent".into(), json!(i.name()));
+            }
+            row
         })
         .collect()
 }
@@ -657,6 +678,42 @@ mod tests {
             sent(&json!([{"type": "keep", "text": "a", "note": "ignored"}, {"type": "change", "text": "b", "at": 3}]));
         assert_eq!(ok[0].note, "", "a Keep carries no note");
         assert_eq!(ok[1].at, Some(3));
+    }
+
+    #[test]
+    fn an_intent_rides_on_a_change_only_and_an_unknown_one_is_refused() {
+        let s = sent(&json!([
+            {"type": "change", "text": "the milk is sad", "intent": "funnier"},
+            {"type": "change", "text": "judges my outfits", "intent": "options", "note": "about the door"},
+            {"type": "keep", "text": "My fridge has an app now.", "intent": "shorter"},
+            {"type": "change", "text": "The doorbell", "intent": null}]));
+        assert_eq!(
+            s.iter().map(|m| m.intent).collect::<Vec<_>>(),
+            [Some(Intent::Funnier), Some(Intent::Options), None, None],
+            "a Keep carries none"
+        );
+        let msg = |v: Value| marks_arg(Some(&v)).unwrap_err().msg;
+        assert_eq!(
+            msg(json!([{"type": "change", "text": "x", "intent": "louder"}])),
+            "a mark's intent is funnier, shorter, options or again"
+        );
+        assert_eq!(
+            msg(json!([{"type": "change", "text": "x", "intent": 3}])),
+            "a mark's intent is funnier, shorter, options or again"
+        );
+        // stored and keyed: the field is there only when he asked with one (a plain mark's row is the row of before)
+        let bit = "My fridge has an app now.\nIt texts me when the milk is sad.\n\nThe doorbell judges my outfits.";
+        let located = locate_all(bit, &s[..1]).unwrap();
+        let rows = marks_json(bit, &located);
+        assert_eq!(rows[0]["intent"], "funnier");
+        let plain = locate_all(bit, &sent(&json!([{"type": "change", "text": "the milk is sad"}]))).unwrap();
+        let rows = marks_json(bit, &plain);
+        assert!(rows[0].get("intent").is_none(), "{}", rows[0]);
+        assert_eq!(
+            rows[0],
+            json!({"type": "change", "text": "the milk is sad", "start": bit.find("the milk").unwrap(),
+                   "at": bit.find("the milk").unwrap(), "note": "", "carried": false})
+        );
     }
 
     #[test]

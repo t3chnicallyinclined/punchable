@@ -22,7 +22,7 @@ use std::ops::Range;
 use std::sync::LazyLock;
 
 use pk_core::py;
-use pk_creative::redline::{self as rl, Kind, Mark};
+use pk_creative::redline::{self as rl, Intent, Kind, Mark};
 use pk_creative::write::DRAFT_LABEL;
 use pk_llm::ChatMessage;
 use regex::Regex;
@@ -46,6 +46,8 @@ pub const MAX_WHY_CHARS: usize = 80;
 /// A quoted mark longer than this is shown to the model as its start and its end (Redline's "…"): the bit itself
 /// carries the whole of it.
 const QUOTE_SHOWN: usize = 300;
+/// One option's text, at most (code points): a take on the marked words, never a second bit.
+pub const MAX_OPTION_CHARS: usize = 2000;
 /// The rule between two items (Redline's).
 const RULE: &str = "──────────────────────────────────────────────────────────────";
 
@@ -80,6 +82,35 @@ fn notes_schema() -> Value {
     json!({"type": "array", "items": {"type": "object", "properties": {
         "item": {"type": "integer"}, "was": {"type": "string"}, "why": {"type": "string"}},
         "required": ["item", "was", "why"], "additionalProperties": false}})
+}
+
+fn options_schema() -> Value {
+    json!({"type": "array", "items": {"type": "object", "properties": {
+        "item": {"type": "integer"}, "texts": {"type": "array", "items": {"type": "string"}}},
+        "required": ["item", "texts"], "additionalProperties": false}})
+}
+
+/// The same answers with `options` beside them: asked for only when a mark asks for 3 options, so a round without one
+/// is the request it always was.
+fn with_options(schema: &Value) -> Value {
+    let mut s = schema.clone();
+    if let Some(p) = s.get_mut("properties").and_then(Value::as_object_mut) {
+        p.insert("options".into(), options_schema());
+    }
+    if let Some(r) = s.get_mut("required").and_then(Value::as_array_mut) {
+        r.push(json!("options"));
+    }
+    s
+}
+
+/// [`WHOLE_SCHEMA`] with `options`.
+pub static WHOLE_OPTIONS_SCHEMA: LazyLock<Value> = LazyLock::new(|| with_options(&WHOLE_SCHEMA));
+/// [`PARTS_SCHEMA`] with `options`.
+pub static PARTS_OPTIONS_SCHEMA: LazyLock<Value> = LazyLock::new(|| with_options(&PARTS_SCHEMA));
+
+/// Whether a mark of this round asks for 3 options.
+pub fn asks_options(marks: &[Mark]) -> bool {
+    marks.iter().any(|m| m.intent == Some(Intent::Options))
 }
 
 /// The answer when the bit is rewritten whole.
@@ -121,6 +152,10 @@ pub struct WireMark {
     /// A Keep carried from the round before.
     #[serde(default)]
     pub carried: bool,
+    /// How he asked for a Change: `funnier` | `shorter` | `options` | `again` (absent on a plain mark; an unknown
+    /// word is a plain Change).
+    #[serde(default)]
+    pub intent: Option<String>,
 }
 
 /// The job.
@@ -173,6 +208,11 @@ impl RoundJob {
                     start,
                     note: py::strip(&w.note).to_string(),
                     carried: w.carried,
+                    intent: w
+                        .intent
+                        .as_deref()
+                        .and_then(Intent::parse)
+                        .filter(|_| kind == Kind::Change),
                 }),
                 _ => lost += 1,
             }
@@ -237,11 +277,25 @@ its first line to its last; every word outside them stays exactly as it is.\n",
             m.kind.label(),
             shown_quote(&m.text)
         );
+        // what he asked for from the selection's buttons, then his own note when he typed one
+        if let Some(i) = m.intent {
+            let _ = write!(msg, "\n    {}\n", i.ask());
+        }
         if !m.note.is_empty() {
             let _ = write!(msg, "\n    {}\n", m.note.replace('\n', " "));
         }
     }
     let _ = writeln!(msg, "{RULE}");
+    if asks_options(marks) {
+        let _ = write!(
+            msg,
+            "\nFor each item that asks for {} options, add one row to `options`: `item` is its number and `texts` are \
+{} different takes on the marked words, each one able to stand in the same place; the first is exactly the words you \
+put in the draft there.\n",
+            rl::OPTION_COUNT,
+            rl::OPTION_COUNT
+        );
+    }
     if on_draft {
         if let Some(bit) = job.bit.as_deref().filter(|b| !b.trim().is_empty()) {
             let _ = write!(
@@ -429,6 +483,57 @@ pub fn checked_notes(
     (out, dropped)
 }
 
+/// The options, checked: one row per item that asked for them (the first), each take trimmed, not empty, within
+/// [`MAX_OPTION_CHARS`] and different from the others; at least two takes, at most [`rl::OPTION_COUNT`]; and the first is
+/// the take that stands in the draft (a row whose takes are none of them in the draft is dropped: there is no place to
+/// put the others). They are the model's words, shown as the draft is. `(options, dropped)`.
+pub fn checked_options(data: Option<&Value>, marks: &[Mark], draft: &str) -> (Vec<Value>, Vec<Value>) {
+    let (mut out, mut dropped) = (Vec::new(), Vec::new());
+    let mut seen: HashSet<usize> = HashSet::new();
+    let rows = data.and_then(|d| d.get("options")).and_then(Value::as_array);
+    for o in rows.into_iter().flatten() {
+        let item = o
+            .get("item")
+            .and_then(Value::as_i64)
+            .and_then(|k| usize::try_from(k).ok());
+        let Some(item) = item
+            .filter(|k| {
+                marks
+                    .get(k.wrapping_sub(1))
+                    .is_some_and(|m| m.intent == Some(Intent::Options))
+            })
+            .filter(|k| seen.insert(*k))
+        else {
+            dropped.push(json!({"item": item, "reason": "options for an item that did not ask for them"}));
+            continue;
+        };
+        let mut texts: Vec<String> = Vec::new();
+        for t in o.get("texts").and_then(Value::as_array).into_iter().flatten() {
+            let t = py::strip(t.as_str().unwrap_or("")).to_string();
+            if !t.is_empty() && py::len(&t) <= MAX_OPTION_CHARS && !texts.contains(&t) {
+                texts.push(t);
+            }
+        }
+        // the take in the draft leads (the phone swaps the others in at its place)
+        let Some(k) = texts.iter().position(|t| draft.contains(t.as_str())) else {
+            dropped.push(json!({"item": item, "reason": "none of its options is in the draft"}));
+            continue;
+        };
+        texts.swap(0, k);
+        texts.truncate(rl::OPTION_COUNT);
+        if texts.len() < 2 {
+            dropped.push(json!({"item": item, "reason": "fewer than two different options"}));
+            continue;
+        }
+        let at = draft.find(texts[0].as_str()).map_or(0, |b| rl::utf16_of(draft, b));
+        out.push(
+            json!({"item": item, "quote": marks[item - 1].text, "texts": texts, "at": at,
+                        "draft": true, "label": DRAFT_LABEL}),
+        );
+    }
+    (out, dropped)
+}
+
 /// Whether the round marks a draft (round two) rather than his bit.
 fn round_two(job: &RoundJob) -> bool {
     job.on.as_str().is_some_and(|s| !s.is_empty())
@@ -440,8 +545,12 @@ fn marks_out(marks: &[Mark], base: &str) -> Vec<Value> {
         .iter()
         .enumerate()
         .map(|(i, m)| {
-            json!({"item": i + 1, "type": m.kind.name(), "text": m.text, "at": rl::utf16_of(base, m.start),
-                   "note": m.note, "carried": m.carried})
+            let mut row = json!({"item": i + 1, "type": m.kind.name(), "text": m.text,
+                                 "at": rl::utf16_of(base, m.start), "note": m.note, "carried": m.carried});
+            if let (Some(k), Some(o)) = (m.intent, row.as_object_mut()) {
+                o.insert("intent".into(), json!(k.name()));
+            }
+            row
         })
         .collect()
 }
@@ -488,7 +597,13 @@ impl Runner for Redline {
             return done(base);
         }
         let task_system = format!("{SYSTEM}\n\n{METHOD}");
-        let schema: &Value = if whole { &WHOLE_SCHEMA } else { &PARTS_SCHEMA };
+        let options = asks_options(&marks);
+        let schema: &Value = match (whole, options) {
+            (true, false) => &WHOLE_SCHEMA,
+            (false, false) => &PARTS_SCHEMA,
+            (true, true) => &WHOLE_OPTIONS_SCHEMA,
+            (false, true) => &PARTS_OPTIONS_SCHEMA,
+        };
         let first = user_turn(&job, &marks, &parts, whole);
         let mut turns = vec![ChatMessage::user(first)];
         let (mut tokens_in, mut tokens_out) = (0u64, 0u64);
@@ -537,6 +652,12 @@ impl Runner for Redline {
                     his_words(t, s).map(str::to_string)
                 });
                 dropped.extend(d2);
+                if options {
+                    // only a round that asked for them carries the key (a round without is the result it always was)
+                    let (opts, d3) = checked_options(r.data.as_ref(), &marks, draft.as_deref().unwrap_or(""));
+                    dropped.extend(d3);
+                    base.insert("options".into(), Value::Array(opts));
+                }
                 if let Some(Value::Array(had)) = base.get_mut("dropped") {
                     had.extend(dropped);
                 }
@@ -604,6 +725,94 @@ My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers
         assert!(t.contains("[3] KEEP \u{b7} idea 3\n    \"My parrot only says legal disclaimers.\"\n"));
         assert!(t.contains("<bit>\nMy fridge has an app now."));
         assert!(t.contains("Return the full revised bit as `draft`"));
+    }
+
+    fn intent_job() -> RoundJob {
+        serde_json::from_value(json!({
+        "joke": "joke:fridge", "title": "Smart home", "unit": "unit:v3", "on": null, "n": 1, "base": BIT,
+        "marks": [
+            {"type": "change", "text": "when the milk is sad", "intent": "funnier"},
+            {"type": "change", "text": "judges my outfits", "intent": "options", "note": "about the door, not me"},
+            {"type": "change", "text": "He will not confirm or deny the crackers.", "intent": "shorter"},
+            {"type": "keep", "text": "My fridge has an app now.", "intent": "funnier"},
+            {"type": "change", "text": "The doorbell has a camera too.", "intent": "louder"}
+        ]}))
+        .unwrap()
+    }
+
+    #[test]
+    fn an_intent_reaches_the_prompt_and_a_plain_mark_reads_as_before() {
+        let j = intent_job();
+        let (m, lost) = j.marks();
+        assert_eq!(lost, 0);
+        let intents: Vec<Option<Intent>> = m.iter().map(|x| x.intent).collect();
+        assert_eq!(
+            intents,
+            [
+                None,
+                Some(Intent::Funnier),
+                None,
+                Some(Intent::Options),
+                Some(Intent::Shorter)
+            ],
+            "document order; a Keep carries none; an unknown word is a plain Change"
+        );
+        let t = user_turn(&j, &m, &rl::parts(&j.base, &m), true);
+        assert!(t.contains("[2] CHANGE \u{b7} idea 1\n    \"when the milk is sad\"\n\n    Make this funnier.\n"));
+        assert!(t.contains(
+            "[4] CHANGE \u{b7} idea 2\n    \"judges my outfits\"\n\n    Give 3 options for these words: put the one you \
+would pick in the draft and list all three under `options`.\n\n    about the door, not me\n"
+        ));
+        assert!(t.contains("Make this shorter: fewer words, the same joke."));
+        assert!(t.contains("For each item that asks for 3 options, add one row to `options`"));
+        assert!(asks_options(&m));
+        // a round with no intent: no word of any of this (the golden prompt of before, tests/redline.rs)
+        let plain = job();
+        let (pm, _) = plain.marks();
+        let pt = user_turn(&plain, &pm, &rl::parts(&plain.base, &pm), true);
+        assert!(!asks_options(&pm) && !pt.contains("options") && !pt.contains("funnier"));
+        // the schema asks for `options` only then
+        assert!(WHOLE_SCHEMA["properties"].get("options").is_none());
+        assert_eq!(
+            WHOLE_OPTIONS_SCHEMA["required"],
+            json!(["answers", "notes", "draft", "options"])
+        );
+        assert_eq!(
+            PARTS_OPTIONS_SCHEMA["required"],
+            json!(["answers", "notes", "parts", "options"])
+        );
+    }
+
+    #[test]
+    fn options_are_kept_only_for_the_item_that_asked_and_the_take_in_the_draft_leads() {
+        let j = intent_job();
+        let (m, _) = j.marks();
+        let draft = BIT.replace("judges my outfits", "reviews my outfits");
+        let data = json!({"options": [
+            {"item": 4, "texts": ["grades my outfits", " reviews my outfits ", "reviews my outfits", "has notes on my outfits", "a fifth"]},
+            {"item": 4, "texts": ["a second row", "for the same item"]},
+            {"item": 2, "texts": ["not asked", "for options"]},
+            {"item": 9, "texts": ["no such", "item"]}]});
+        let (o, d) = checked_options(Some(&data), &m, &draft);
+        assert_eq!(o.len(), 1, "{o:?}");
+        assert_eq!(o[0]["item"], 4);
+        assert_eq!(
+            o[0]["texts"],
+            json!(["reviews my outfits", "grades my outfits", "has notes on my outfits"]),
+            "the one in the draft first, no repeat, three at most"
+        );
+        assert_eq!(o[0]["quote"], "judges my outfits");
+        assert_eq!(o[0]["at"], draft.find("reviews my outfits").unwrap());
+        assert_eq!(d.len(), 3, "{d:?}");
+        // none of the takes is in the draft: there is no place to swap them in
+        let lost = json!({"options": [{"item": 4, "texts": ["grades my outfits", "has notes on my outfits"]}]});
+        let (o, d) = checked_options(Some(&lost), &m, &draft);
+        assert!(o.is_empty());
+        assert_eq!(d[0]["reason"], "none of its options is in the draft");
+        // one take alone is not a choice
+        let one = json!({"options": [{"item": 4, "texts": ["reviews my outfits", ""]}]});
+        assert!(checked_options(Some(&one), &m, &draft).0.is_empty());
+        assert!(checked_options(None, &m, &draft).0.is_empty());
     }
 
     #[test]
@@ -685,6 +894,7 @@ My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers
             start: draft.find("the milk gives up").unwrap(),
             note: String::new(),
             carried: false,
+            intent: None,
         }];
         let his = j.bit.as_deref().unwrap_or("");
         let (n, d) = checked_notes(Some(&data), &m, his, |t, s| his_words(t, s).map(str::to_string));

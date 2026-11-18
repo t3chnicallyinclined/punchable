@@ -3338,3 +3338,72 @@ async fn rants_to_sets_makes_one_board_per_topic_and_is_safe_twice() {
     );
     assert_eq!(cr.lines("storyboards").await.unwrap().len(), n);
 }
+
+/// The one-notebook page (`docs/design/SPEC-2026-11-17-one-notebook.md` §4): how he asked for a Change (the selection's
+/// buttons) rides on the mark as `intent`, into the job the worker claims and back out of the round the phone reads. A
+/// mark without one is stored as it always was (no key), and a word that is not an intent writes nothing. Red arm:
+/// `marks_json` dropping the field fails the two `intent` reads below.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_selection_intent_reaches_the_job_and_reads_back() {
+    let Some((_srv, env, port)) = scratch().await else {
+        return;
+    };
+    let (_writer, st) = setup(&env, port).await;
+    let v0 = st.data().await.expect("data").view(false).await.expect("view");
+    let joke = v0.jokes.first().cloned().expect("a joke");
+    let bit = "My fridge has an app now.\nIt texts me when the milk is sad.\n\n\
+The doorbell judges my outfits.\n\nMy parrot only says legal disclaimers.";
+    let (s, r) = send(
+        &st,
+        "POST",
+        &format!("/api/jokes/{joke}/versions"),
+        json!({"text": bit}),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    let unit = r["unit"].as_str().unwrap().to_string();
+    let path = format!("/api/jokes/{joke}/redline");
+    let rounds = || async { Creative::new(st.clone()).lines("redline").await.unwrap().len() };
+    let n0 = rounds().await;
+    let (s, r) = send(
+        &st,
+        "POST",
+        &path,
+        json!({"unit": unit, "marks": [{"type": "change", "text": "the milk is sad", "intent": "louder"}]}),
+    )
+    .await;
+    assert_eq!(
+        (s.as_u16(), r["error"].as_str()),
+        (400, Some("a mark's intent is funnier, shorter, options or again"))
+    );
+    assert_eq!(rounds().await, n0, "a refusal writes nothing");
+
+    let marks = json!([
+        {"type": "change", "text": "the milk is sad", "intent": "funnier"},
+        {"type": "change", "text": "judges my outfits", "intent": "options", "note": "about the door"},
+        {"type": "change", "text": "My fridge has an app now.", "note": "plain"},
+        {"type": "keep", "text": "My parrot only says legal disclaimers.", "intent": "shorter"}]);
+    let (s, r) = send(&st, "POST", &path, json!({"unit": unit, "marks": marks})).await;
+    assert_eq!((s, r["status"].as_str()), (StatusCode::ACCEPTED, Some("queued")), "{r}");
+    let j1 = r["job"]["id"].as_str().unwrap().to_string();
+    let jobs = Creative::new(st.clone()).items("jobs").await.unwrap();
+    let got = jobs[&j1]["input"]["marks"].as_array().unwrap().clone();
+    let intents: Vec<Value> = got
+        .iter()
+        .map(|m| m.get("intent").cloned().unwrap_or(Value::Null))
+        .collect();
+    assert_eq!(
+        intents,
+        [Value::Null, json!("funnier"), json!("options"), Value::Null],
+        "document order; a plain Change and a Keep carry no key: {got:?}"
+    );
+    assert!(got[0].get("intent").is_none() && got[3].get("intent").is_none());
+    let (s, r) = get_path(&st, &path).await;
+    assert_eq!(s, StatusCode::OK, "{r}");
+    assert_eq!(r["round"]["marks"][1]["intent"], "funnier", "{r}");
+    assert_eq!(r["round"]["marks"][2]["intent"], "options");
+    assert_eq!(r["round"]["marks"][2]["note"], "about the door");
+    // the same marks again are the same round (the key reads the intent too: a different ask is a different job)
+    let (_, again) = send(&st, "POST", &path, json!({"unit": unit, "marks": marks})).await;
+    assert_eq!(again["job"]["id"], json!(j1), "{again}");
+}

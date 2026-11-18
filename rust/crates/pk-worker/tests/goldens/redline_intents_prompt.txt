@@ -1,0 +1,46 @@
+Review of his bit "Smart home". 4 items, in document order.
+
+Please apply the CHANGEs, answer the QUESTIONs before revising, leave the KEEPs exactly as they are.
+Return the full revised bit as `draft`, not a diff or a summary of changes.
+
+──────────────────────────────────────────────────────────────
+[1] CHANGE · idea 1
+    "the milk is sad"
+
+    Make this funnier.
+
+──────────────────────────────────────────────────────────────
+[2] CHANGE · idea 2
+    "judges my outfits"
+
+    Give 3 options for these words: put the one you would pick in the draft and list all three under `options`.
+
+    about the door, not me
+
+──────────────────────────────────────────────────────────────
+[3] KEEP · idea 3
+    "My parrot only says legal disclaimers."
+
+──────────────────────────────────────────────────────────────
+[4] CHANGE · idea 4
+    "It knows where I cry."
+
+    Make this shorter: fewer words, the same joke.
+──────────────────────────────────────────────────────────────
+
+For each item that asks for 3 options, add one row to `options`: `item` is its number and `texts` are 3 different takes on the marked words, each one able to stand in the same place; the first is exactly the words you put in the draft there.
+
+The bit as it stands, his words exactly:
+<bit>
+My fridge has an app now.
+It texts me when the milk is sad.
+
+The doorbell has a camera too.
+Now my front door judges my outfits.
+
+My parrot only says legal disclaimers.
+He will not confirm or deny the crackers.
+
+The vacuum maps my house.
+It knows where I cry.
+</bit>

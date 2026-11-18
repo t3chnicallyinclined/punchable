@@ -76,6 +76,54 @@ impl Kind {
     }
 }
 
+/// How he asked for a Change, when he asked from the selection's own buttons (the one-notebook page,
+/// `docs/design/SPEC-2026-11-17-one-notebook.md` §4): a mark with no intent is a plain Change with his note, as before.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Intent {
+    /// Make these words funnier.
+    Funnier,
+    /// Say it in fewer words.
+    Shorter,
+    /// Three takes on these words: one in the draft, all three listed beside it.
+    Options,
+    /// He passed on the take the draft has here: write another.
+    Again,
+}
+
+/// How many takes an [`Intent::Options`] mark asks for.
+pub const OPTION_COUNT: usize = 3;
+
+impl Intent {
+    /// The wire name.
+    pub fn name(self) -> &'static str {
+        match self {
+            Intent::Funnier => "funnier",
+            Intent::Shorter => "shorter",
+            Intent::Options => "options",
+            Intent::Again => "again",
+        }
+    }
+
+    /// The intent with that wire name.
+    pub fn parse(s: &str) -> Option<Intent> {
+        [Intent::Funnier, Intent::Shorter, Intent::Options, Intent::Again]
+            .into_iter()
+            .find(|k| k.name() == s)
+    }
+
+    /// The line the prompt puts under the quoted words.
+    pub fn ask(self) -> &'static str {
+        match self {
+            Intent::Funnier => "Make this funnier.",
+            Intent::Shorter => "Make this shorter: fewer words, the same joke.",
+            Intent::Options => {
+                "Give 3 options for these words: put the one you would pick in the draft and list all three under `options`."
+            }
+            Intent::Again => "He passed on this take. Write a different one.",
+        }
+    }
+}
+
 /// One mark, located in the text it was made on.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mark {
@@ -89,6 +137,8 @@ pub struct Mark {
     pub note: String,
     /// A Keep from an earlier round on the draft this round marks (round two): sent again so nothing kept is lost.
     pub carried: bool,
+    /// How he asked for a Change (the selection's buttons); `None` on a plain Change, an Ask and a Keep.
+    pub intent: Option<Intent>,
 }
 
 impl Mark {
@@ -298,6 +348,16 @@ mod tests {
 The doorbell has a camera too.\nNow my front door judges my outfits.\n\n\
 My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers.";
 
+    #[test]
+    fn an_intent_has_one_wire_name_and_an_unknown_one_is_none() {
+        for i in [Intent::Funnier, Intent::Shorter, Intent::Options, Intent::Again] {
+            assert_eq!(Intent::parse(i.name()), Some(i));
+            assert!(!i.ask().is_empty());
+        }
+        assert_eq!(Intent::parse("louder"), None);
+        assert_eq!(Intent::parse(""), None);
+    }
+
     fn mark(kind: Kind, text: &str, note: &str) -> Mark {
         let start = locate(BIT, text, None).expect("in the bit");
         Mark {
@@ -306,6 +366,7 @@ My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers
             start,
             note: note.into(),
             carried: false,
+            intent: None,
         }
     }
 
@@ -422,6 +483,7 @@ My parrot only says legal disclaimers.\nHe will not confirm or deny the crackers
             start: locate(&base, q, None).unwrap(),
             note: String::new(),
             carried: false,
+            intent: None,
         };
         let p = parts(&base, std::slice::from_ref(&m));
         assert_eq!(p.len(), 1);

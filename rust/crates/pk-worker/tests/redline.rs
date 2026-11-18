@@ -95,6 +95,7 @@ impl Respond for Anthropic {
 
 struct Api {
     handed: AtomicBool,
+    job: Value,
 }
 
 impl Respond for Api {
@@ -105,7 +106,7 @@ impl Respond for Api {
                 if self.handed.swap(true, Ordering::SeqCst) {
                     ResponseTemplate::new(204)
                 } else {
-                    ok(json!({"job": job()}))
+                    ok(json!({"job": self.job.clone()}))
                 }
             }
             ("GET", "/api/worker/profile/voice") => ok(json!({"kind": "voice", "text": VOICE,
@@ -126,12 +127,17 @@ struct Run {
 }
 
 async fn run(answers: Vec<String>) -> Run {
+    run_job(job(), answers).await
+}
+
+async fn run_job(job: Value, answers: Vec<String>) -> Run {
     let api = MockServer::start().await;
     let anthropic = MockServer::start().await;
     let pages = MockServer::start().await;
     Mock::given(any())
         .respond_with(Api {
             handed: AtomicBool::new(false),
+            job,
         })
         .mount(&api)
         .await;
@@ -271,6 +277,134 @@ async fn a_round_is_one_call_in_redlines_shape_and_a_whole_new_draft_comes_back(
     assert_eq!(res["notes"][0]["was"], "when the milk is sad");
     assert_eq!(res["marks"].as_array().unwrap().len(), 3);
     assert_eq!(res["joke"], "joke:fridge");
+    assert_eq!(shown_but_bad(&r.result), Vec::<&str>::new());
+}
+
+/// The one-notebook page (`docs/design/SPEC-2026-11-17-one-notebook.md` §4): the selection's buttons ride on a Change
+/// as `intent`. An older phone sends none, and that round is the golden above, word for word.
+fn intent_job() -> Value {
+    let at = |t: &str| BIT.find(t).unwrap();
+    json!({"id": "job:redline-test000002", "kind": "redline", "status": "claimed", "attempts": 1,
+           "input": {"joke": "joke:fridge", "title": "Smart home", "unit": "unit:v3", "on": null, "n": 1,
+                     "base": BIT, "bit": null, "marks": [
+               {"type": "change", "text": "the milk is sad", "start": at("the milk is sad"), "note": "",
+                "intent": "funnier"},
+               {"type": "change", "text": "judges my outfits", "start": at("judges my outfits"),
+                "note": "about the door, not me", "intent": "options"},
+               {"type": "keep", "text": KEEP, "start": at(KEEP), "note": "", "carried": false},
+               {"type": "change", "text": "It knows where I cry.", "start": at("It knows where I cry."), "note": "",
+                "intent": "shorter"}]}})
+}
+
+fn intent_draft() -> String {
+    BIT.replace("the milk is sad.", "the milk is lonely.")
+        .replace("judges my outfits", "reviews my outfits")
+        .replace("It knows where I cry.", "It knows.")
+}
+
+fn intent_answer(draft: &str, options: &Value) -> String {
+    json!({
+        "answers": [],
+        "notes": [{"item": 1, "was": "the milk is sad", "why": "sadder is funnier"}],
+        "draft": draft,
+        "options": options,
+    })
+    .to_string()
+}
+
+#[tokio::test]
+async fn the_selection_buttons_reach_the_model_and_three_options_come_back() {
+    let options = json!([{"item": 2, "texts": ["grades my outfits", "reviews my outfits", "has notes on my outfits"]},
+                         {"item": 1, "texts": ["never asked", "for these"]}]);
+    let r = run_job(intent_job(), vec![intent_answer(&intent_draft(), &options)]).await;
+    assert_eq!(r.calls.len(), 1, "one model call");
+    let call = &r.calls[0];
+    // the golden prompt: the user turn word for word (written by hand from the spec, never generated from the code)
+    let golden = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/goldens/redline_intents_prompt.txt"),
+    )
+    .unwrap()
+    .replace("\r\n", "\n");
+    assert_eq!(
+        turn_text(&call["messages"][0]),
+        golden,
+        "the user turn differs from the golden"
+    );
+    // the answer's shape asks for `options` in this round
+    let asked = call.to_string();
+    assert!(
+        asked.contains("\"options\""),
+        "the schema of a round with a 3-options mark names options"
+    );
+
+    let res = &r.result["result"];
+    assert_eq!(res["status"], "ok", "{}", r.result);
+    assert_eq!(res["draft"], json!(intent_draft()));
+    let opts = res["options"]
+        .as_array()
+        .expect("a round that asked for options carries the key");
+    assert_eq!(opts.len(), 1, "{opts:?}");
+    assert_eq!(opts[0]["item"], 2);
+    assert_eq!(
+        opts[0]["texts"],
+        json!(["reviews my outfits", "grades my outfits", "has notes on my outfits"]),
+        "the take that stands in the draft leads"
+    );
+    assert_eq!(opts[0]["quote"], "judges my outfits");
+    let marks = res["marks"].as_array().unwrap();
+    assert_eq!(
+        marks.iter().map(|m| m["intent"].clone()).collect::<Vec<_>>(),
+        [json!("funnier"), json!("options"), Value::Null, json!("shorter")],
+        "the phone reads back how each change was asked for"
+    );
+    assert!(
+        res["draft"].as_str().unwrap().contains(KEEP),
+        "a Keep is a Keep in every round"
+    );
+    assert_eq!(shown_but_bad(&r.result), Vec::<&str>::new());
+}
+
+#[tokio::test]
+async fn a_round_without_a_selection_button_is_the_request_it_always_was() {
+    let r = run(vec![answer(&good_draft())]).await;
+    let call = r.calls[0].to_string();
+    assert!(
+        !call.contains("\"options\""),
+        "no options in the schema or the prompt of a plain round"
+    );
+    let res = &r.result["result"];
+    assert!(res.get("options").is_none(), "{res}");
+    assert!(
+        res["marks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|m| m.get("intent").is_none())
+    );
+}
+
+#[tokio::test]
+async fn options_never_weaken_the_checks_on_the_draft() {
+    // the draft the options came with changed a Keep: asked again, exactly as a round without options
+    let broken = intent_draft().replace(KEEP, "My parrot only says legal disclaimers!");
+    let options = json!([{"item": 2, "texts": ["reviews my outfits", "grades my outfits"]}]);
+    let r = run_job(
+        intent_job(),
+        vec![
+            intent_answer(&broken, &options),
+            intent_answer(&intent_draft(), &options),
+        ],
+    )
+    .await;
+    assert_eq!(r.calls.len(), 2, "asked again once");
+    let res = &r.result["result"];
+    assert_eq!(
+        (res["status"].as_str(), res["tries"].as_i64()),
+        (Some("ok"), Some(2)),
+        "{}",
+        r.result
+    );
+    assert_eq!(res["options"][0]["texts"].as_array().unwrap().len(), 2);
     assert_eq!(shown_but_bad(&r.result), Vec::<&str>::new());
 }
 
