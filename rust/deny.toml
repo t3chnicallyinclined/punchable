@@ -22,6 +22,18 @@ ignore = [
     # pin-utils <- wasmtimer <- surrealdb(-core): archived upstream 2026-10-01 ("unmaintained", no vulnerability, no
     # patched release); it is a pinning helper macro crate in surrealdb's wasm timer, which moves with surrealdb.
     { id = "RUSTSEC-2026-0441", reason = "pin-utils (unmaintained, no flaw) via wasmtimer via surrealdb" },
+    # chrono 0.4: declared unmaintained upstream on 2026-09-14 (`informational = "unmaintained"`, no vulnerability, no
+    # patched release; read in the advisory database on 2026-11-18). Ours directly, as the workspace's one clock and
+    # date type (pk-api, pk-backup, pk-core, pk-gsync, pk-kb, pk-llm, pk-obs, pk-worker, tools/pk-load), and
+    # surrealdb's (surrealdb, surrealdb-types, -common, -parse-common, -protocol, revision), so removing our use alone
+    # does not clear it. Owner decision 2026-11-18: known, replace later (jiff or time) in its own change, since the
+    # timestamps are on the differentials' path. Review by 2027-02-18, or sooner if a chrono vulnerability is filed
+    # (that is a new id and still fails this gate) or surrealdb drops it.
+    { id = "RUSTSEC-2026-0543", reason = "chrono (unmaintained, no flaw): our clock type and surrealdb's; replace later, review by 2027-02-18" },
+    # humantime 2.4: unmaintained by the same announcement (no vulnerability, no patched release). Not ours:
+    # humantime <- surrealdb-rpc 3.3.5 <- surrealdb 3.3.4 <- pk-store <- pk-api; `cargo update` has no release of that
+    # path without it (2026-11-18). It goes when surrealdb drops it. Review by 2027-02-18 or on the next surrealdb bump.
+    { id = "RUSTSEC-2026-0542", reason = "humantime (unmaintained, no flaw) via surrealdb-rpc via surrealdb; review by 2027-02-18" },
 ]
 
 [licenses]
