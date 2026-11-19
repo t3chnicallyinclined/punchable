@@ -17,6 +17,21 @@ settings live in `~/.punchable/` and are never printed or committed.
 | Google Docs sync | `pk-gsync` (Rust, T11 round 4) is **merged, not deployed**: the owner's PC still runs the Python gsync task; the switch-over is **waiting on owner** (`rust/crates/pk-gsync/README.md`). |
 | iPhone | TestFlight build 26 (the Rant workspace); owner checks in `docs/design/SPEC-2026-11-06-rant-tab.md` §10 are **waiting on owner**. |
 
+**CI gates (2026-11-18, branch `ci/green-gates`; not merged or pushed when written):** both standing reds on `main`
+are fixed there. No app code and no Rust code changed; `rust/Cargo.lock` is unchanged, so **no server image changes**.
+- **`cargo deny`:** the chrono and humantime advisories (RUSTSEC-2026-0543, RUSTSEC-2026-0542) are "unmaintained"
+  notices, not vulnerabilities, and no release clears them. Both are in `rust/deny.toml`'s `ignore` with who pulls
+  them in and a review date of 2027-02-18 (owner: known, replace later). While deny was red, CI's gate job stopped
+  there and ran **no clippy and no tests**; it runs them again once this is on `main`.
+- **`expo-doctor` 20/20:** the SDK 58 patch releases of 2026-11-17 are taken (`expo-web-browser` 58.1.0, `expo`,
+  `expo-router`, `expo-auth-session`, `expo-dev-client`, `@expo/ui`; `expo-file-system` in the lockfile). The only
+  native iOS change that reaches TestFlight is an optional headers argument in `expo-web-browser` that the app never
+  passes; no config plugin, pod or plist change (iOS dev review, read in both `node_modules` trees, nothing run on a
+  phone). **After the merge run `npm ci` in `app/` on main, and it needs a new binary** (the next phone build).
+  Owner checks on that build: sign in and out with email and with Google, record a short set, film a short take.
+- Expo publishes patches often: `expo-doctor` goes red on `main` with no change of ours. `npx expo install --check`
+  lists them; take them in the pre-build bump.
+
 **Worktree rule (2026-11-07):** each agent worktree under `.claude/worktrees/` builds its own `rust/target` (13-33 GB).
 Delete `rust/target`, or the whole worktree, as soon as its branch is merged. If `app/node_modules` in a worktree is a
 junction, unlink it with `cmd /c rmdir` first and never delete recursively through it.
@@ -210,8 +225,8 @@ stage paths explicitly (never `git add -A`), message ending with a `Co-Authored-
      --i-have-a-backup` once; rollback = archive the lists whose `seed` names a topic or a rant → the phone build.
      The build works before the migration too (topics show under "Topics not yet in a set").
    - **Found on the way:** `cargo deny check` fails on main as well: two new upstream advisories (chrono and humantime
-     unmaintained, RUSTSEC-2026-0543 and the humantime one); no fix released. Needs a decision (ignore with a reason
-     in `rust/deny.toml`, or replace the crates) before CI's gate is green again.
+     unmaintained, RUSTSEC-2026-0543 and RUSTSEC-2026-0542); no fix released. **Decided 2026-11-18:** known, with the
+     reason in `rust/deny.toml`; replace later (see "CI gates" at the top).
 
 0l. **Usage metering, phase 1 (owner 2026-11-17: "lets make sure we monitor account usage so we can tell how much
    users are using and how actinve/how much a user would cost or pay per month"). Built on branch
